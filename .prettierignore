@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Template output (don't format template variables)
+{{cookiecutter.project_slug}}/
+
+# Python
+*.pyc
+__pycache__/
+
+# Other
+.git/
