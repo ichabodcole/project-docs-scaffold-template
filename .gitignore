@@ -37,3 +37,7 @@ tmp-template-test/
 
 # Logs
 *.log
+
+# Local Agent Files
+/.claude
+/.cursor

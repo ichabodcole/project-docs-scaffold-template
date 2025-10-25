@@ -1,7 +1,22 @@
 # Project Documentation Scaffold Template
 
-A [Cookiecutter](https://github.com/cookiecutter/cookiecutter) template for
-scaffolding a standardized documentation and tooling structure for new projects.
+A [Cookiecutter](https://github.com/cookiecutter/cookiecutter) template that
+instantly generates a complete, standardized documentation structure for
+software projects.
+
+## Why Use This?
+
+Instead of creating documentation folders ad-hoc or copy-pasting from old
+projects, get a battle-tested, consistent structure in seconds. Perfect for
+developers and teams who want organized, AI-assistant-friendly documentation
+without building the structure from scratch each time.
+
+**Key benefits:**
+
+- Pre-organized folders with best practices built in
+- AI-ready with CLAUDE.md context templates
+- Optional Claude Code and Cursor IDE configurations
+- Supports both project-specific and cross-project documentation patterns
 
 ## What This Template Provides
 
