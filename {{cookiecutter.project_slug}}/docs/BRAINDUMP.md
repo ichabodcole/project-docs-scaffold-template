@@ -48,25 +48,28 @@ The Braindump MCP server allows AI agents (like Claude) to access your Braindump
 
 ### Installation
 
-1. **Install Braindump Application** (if not already installed)
+1. **Install and Run Braindump Application**
 
-2. **Configure MCP Server** in your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+   Braindump includes a built-in MCP server that runs on `http://localhost:3100/mcp`
+   when the application is running.
+
+2. **Configure MCP Server** in your Claude Desktop config (`~/Library/Application
+   Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "braindump": {
-      "command": "node",
-      "args": ["/path/to/braindump-mcp-server/build/index.js"],
-      "env": {
-        "BRAINDUMP_DB_PATH": "/path/to/your/braindump.db"
-      }
+      "url": "http://localhost:3100/mcp"
     }
   }
 }
 ```
 
 3. **Restart Claude Desktop** to load the MCP server
+
+**Note:** The Braindump application must be running for the MCP server to be
+accessible. The server starts automatically when you launch Braindump.
 
 ### Available Operations
 
