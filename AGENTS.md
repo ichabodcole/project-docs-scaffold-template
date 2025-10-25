@@ -39,8 +39,8 @@ files. Key variables:
 - `project_slug` - Directory-safe version (auto-generated from project_name)
 - `project_description` - Brief project description
 - `author_name` - Author's name
-- `include_ai_commands`, `include_cursor_rules`, `include_global_docs` - Boolean
-  flags for optional features
+- `include_ai_commands`, `include_cursor_rules`, `include_global_docs`,
+  `include_braindump_docs` - Boolean flags for optional features
 
 ### Post-Generation Hook
 
@@ -48,8 +48,8 @@ The `hooks/post_gen_project.py` script:
 
 1. Renames `_claude` → `.claude` and `_cursor` → `.cursor` (underscore prefix
    prevents Cookiecutter from treating them as template directories)
-2. Conditionally removes `.claude/`, `.cursor/`, or `global-docs/` based on user
-   preferences
+2. Conditionally removes `.claude/`, `.cursor/`, `global-docs/`, or
+   `docs/BRAINDUMP.md` based on user preferences
 3. Provides user feedback about next steps
 
 ## Development Commands
@@ -120,6 +120,22 @@ Each docs subdirectory has a README explaining:
 - Changelog auto-generated in `CHANGELOG.md`
 - Releases trigger on merge to `main` branch
 
+## Optional Features
+
+### Braindump Integration
+
+The template includes optional Braindump integration via
+`include_braindump_docs`:
+
+- **BRAINDUMP.md** - Comprehensive guide to using Braindump as an intake layer
+  for documentation
+- **Conditional sections** in `AGENTS.md` and `docs/README.md` using Jinja2
+  `{% if cookiecutter.include_braindump_docs == 'y' %}` blocks
+- **Post-generation cleanup** - Hook removes BRAINDUMP.md if not requested
+
+Braindump is a quick-capture application for messy thoughts that feeds into
+formal documentation workflows (investigations → proposals → plans).
+
 ## Important Notes
 
 - This is a template repository - changes here affect what gets generated for
@@ -128,3 +144,5 @@ Each docs subdirectory has a README explaining:
 - Markdown must pass Prettier formatting checks before commit
 - The generated documentation structure is designed to work well with AI
   assistants (Claude Code, Cursor)
+- Use Jinja2 conditionals (`{% if cookiecutter.variable %}`) for optional
+  features

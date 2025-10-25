@@ -1,6 +1,19 @@
 # Documentation
 
 This directory contains project documentation organized into focused subdirectories. Each subdirectory serves a specific purpose in capturing knowledge throughout the development lifecycle.
+{% if cookiecutter.include_braindump_docs == 'y' %}
+
+## Braindump Integration
+
+This project uses **[Braindump](./BRAINDUMP.md)** as an intake layer for quick-capture thoughts and ideas. Braindump documents often serve as the starting point for formal documentation:
+
+- **Feature ideas** in Braindump → Investigation or Proposal
+- **Bug reports** in Braindump → Lesson Learned
+- **Architecture thoughts** in Braindump → Architecture documentation
+- **Work context** in Braindump → Referenced in Sessions
+
+See [BRAINDUMP.md](./BRAINDUMP.md) for detailed integration guide and MCP server setup.
+{% endif %}
 
 ## Structure
 
