@@ -1,22 +1,39 @@
 # Project Documentation Scaffold Template
 
-A [Cookiecutter](https://github.com/cookiecutter/cookiecutter) template for
-scaffolding a standardized documentation and tooling structure for new projects.
+A [Cookiecutter](https://github.com/cookiecutter/cookiecutter) template that
+instantly generates a complete, standardized documentation structure for
+software projects.
+
+## Why Use This?
+
+Instead of creating documentation folders ad-hoc or copy-pasting from old
+projects, get a battle-tested, consistent structure in seconds. Perfect for
+developers and teams who want organized, AI-assistant-friendly documentation
+without building the structure from scratch each time.
+
+**Key benefits:**
+
+- Pre-organized folders with best practices built in
+- AI-ready with CLAUDE.md context templates
+- Optional Claude Code and Cursor IDE configurations
+- Supports both project-specific and cross-project documentation patterns
 
 ## What This Template Provides
 
 This template creates a complete documentation structure for your project,
 including:
 
-- **Structured documentation folders** for sessions, plans, proposals,
-  playbooks, architecture, and lessons learned
+- **Structured documentation folders** for investigations, sessions, plans,
+  proposals, playbooks, architecture, and lessons learned
 - **README files** in each folder explaining purpose and best practices
+- **Template files** for quick-start document creation
 - **CLAUDE.md** template with project context for AI assistants (in docs/)
 - **Optional AI CLI configurations** (.claude/commands/) for custom Claude Code
   commands
 - **Optional Cursor IDE configurations** (.cursor/rules/) for custom Cursor
   commands
 - **Optional global-docs folder** for cross-project documentation like playbooks
+- **Optional Braindump integration** for quick-capture thought workflows
 - **Project README** template with standard sections
 
 ## Installation
@@ -45,6 +62,8 @@ You'll be prompted to provide:
 - **include_ai_commands** - Include .claude/ directory? (y/n, default: y)
 - **include_cursor_rules** - Include .cursor/ directory? (y/n, default: y)
 - **include_global_docs** - Include global-docs/ directory? (y/n, default: y)
+- **include_braindump_docs** - Include Braindump integration docs? (y/n,
+  default: y)
 
 ### Example
 

@@ -1,89 +1,84 @@
-Sessions README
+# Sessions
 
-Purpose
+## Purpose
 
-- Sessions capture a concise, chronological record of focused work (e.g., upgrades, bug hunts, refactors, feature slices).
-- They make it easy to resume work later and audit changes without reading commits or logs.
+Sessions are **dev journals** - informal records of what happened during implementation work. They capture the journey: what went smoothly, what didn't, what was unexpected, and what you learned.
 
-When to Create a Session
+Think of sessions as a **developer's diary** or **dream journal** - you're jotting down what stands out, not documenting every detail. The goal is to capture notable moments that might be useful later for synthesis, learning, or understanding why certain decisions were made.
 
-- At the start of a new, non‑trivial task that will involve multiple steps or touch several files.
-- If a same‑day session with the same topic exists, continue there instead of creating a new one.
+**Important:** Sessions also serve as **handoff documentation** - when another developer takes over work mid-flight, your session provides the breadcrumbs to understand where things ended, what issues were encountered, and what deviated from the plan. The plan shows what's been checked off; the session shows what actually happened along the way.
 
-File Naming
+### Why Document Sessions?
+
+- **Enable handoffs** - Another developer can pick up your work and understand where you left off, what you struggled with, and what's off-plan
+- **Capture deviations** - Record when things went off-plan (bugs, unexpected complexity, closed gas stations)
+- **Preserve context** - Future you (or teammates) can understand what happened and why
+- **Enable synthesis** - Patterns across sessions can reveal refactoring opportunities or recurring issues
+- **Learn from experience** - Reflect on what worked, what didn't, and what you'd do differently
+- **Resume work easily** - Pick up where you left off without re-discovering what you already learned
+
+## When to Create a Session
+
+Create a session when:
+
+- **Something notable happened** during implementation work worth recording
+- **Work went off-plan** - bugs, unexpected complexity, architectural discoveries
+- **You want to resume later** and need to capture current state and context
+- **There are lessons to preserve** - things you learned that might be useful later
+
+**Flexibility:** Sessions can be written during work (to capture discoveries in the moment) or after work (reflective summary). Do what feels natural.
+
+## When NOT to Create a Session
+
+- **Everything went smoothly** - If you followed the plan with no surprises, you might not need a session
+- **Trivial work** - Small changes with nothing interesting to capture
+- **Planning work** - Use proposals/plans for prospective thinking, not sessions
+- **Nothing stands out** - Sessions capture what's notable, not routine work
+
+**Rule of thumb:** If there's nothing interesting to write about, don't write a session. Sessions should feel worthwhile, not obligatory.
+
+## File Naming
 
 - `YYYY-MM-DD-short-topic.md`
 - Examples:
   - `2025-09-06-upgrade-test-fix-session.md`
   - `2025-08-15-job-queue-stability-session.md`
 
-Recommended Structure
+## Template
 
-- Context — Background and what changed.
-- Scope & Objectives — Boundaries and goals.
-- Plan — Short, verifiable steps (5–7 words each).
-- Environment — Runners, configs, cautions (e.g., cleanup commands).
-- Findings Log — Timestamped notes as you learn things.
-- Fixes Applied — Concrete changes made.
-- Open Questions — Decisions or clarifications needed.
-- Lessons Learned — Tips for future similar work.
-- Next Steps — Optional checklist for handoff/continuation.
+A ready-to-use template is available: **[YYYY-MM-DD-TEMPLATE-session.md](./YYYY-MM-DD-TEMPLATE-session.md)**
 
-Starter Template
+The template provides suggested sections, but **sessions should be freeform and flexible**. Write what's relevant, skip what's not. Some sessions might be a few paragraphs, others might be detailed logs of a complex debugging journey.
 
-```
-# <Topic> — YYYY-MM-DD
+### Suggested Sections
 
-Context
+- **Context** - What were you working on and why?
+- **What Happened** - The journey - what went smoothly, what didn't, deviations from plan
+- **Notable Discoveries** - Bugs found, insights gained, things that weren't expected
+- **Changes Made** - Key files/components modified (with rationale if interesting)
+- **Lessons Learned** - What would you do differently? What tips would help future work?
+- **Follow-up** - Open questions, next steps, things to revisit
 
-- <why this session exists>
+**Use what helps. Skip the rest.** Sessions are personal dev journals, not formal reports.
 
-Scope & Objectives
+## Tips
 
-- <what’s in>
-- <what’s out>
+### Writing Sessions
 
-Plan
+- **Capture what stands out** - The car wreck, the closed gas station, the unexpected detour. Not every mile marker.
+- **Write naturally** - Use prose, bullets, diagrams, code snippets - whatever communicates clearly
+- **Link generously** - Reference files, commits, issues, other docs for context
+- **Be honest about struggles** - "Spent 2 hours debugging X, turned out to be Y" is valuable information
+- **Note deviations from plan** - When reality diverged from the plan, explain what happened and why
 
-1. <step>
-2. <step>
-3. <step>
+### Synthesis Opportunities
 
-Environment
+- **Patterns across sessions** - If you hit the same issue repeatedly, that might signal a refactoring opportunity
+- **Extract to playbooks** - If a solution pattern emerges, document it as a playbook for future use
+- **Update plans** - If multiple sessions reveal plan inaccuracies, update the plan
+- **Create investigations** - If sessions surface questions worth exploring, spin up an investigation
 
-- Test runner: <tool>
-- Notes: <any important cautions>
+### Before Starting New Work
 
-Findings Log
-
-- YYYY-MM-DD HH:MM — <note>
-
-Fixes Applied
-
-- <change summary>
-
-Open Questions
-
-- <question>
-
-Lessons Learned
-
-- <lesson>
-
-Next Steps
-
-- <action>
-```
-
-Agent Duties (TL;DR)
-
-- Create a new session file at the start of qualifying work (see naming above).
-- Keep it updated as you proceed; don’t wait until the end.
-- Use the plan tool to reflect current steps and status.
-- Prefer minimal, high‑signal notes and actionable bullets.
-
-Tips
-
-- Link to relevant files with repository‑relative paths for quick navigation.
-- Record deviations (e.g., updated tests to new API behavior) under “Fixes Applied” with rationale.
-- When tests are involved, include a short summary of pass/fail counts and any skipped areas.
+- **Review recent sessions** - See what's been worked on recently, what issues were encountered, what's in flight
+- **Check for context** - Sessions often contain valuable context about why things are the way they are
