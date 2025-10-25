@@ -4,27 +4,46 @@ This directory contains lessons learned from issues encountered during developme
 
 ## Purpose
 
-The main purpose of lessons learned is to **preserve hard-won knowledge** that isn't obvious or easily found in documentation. These entries help developers and AI agents avoid repeating mistakes and quickly identify solutions to previously-solved problems.
+The main purpose of lessons learned is to **preserve hard-won knowledge** - the diamonds found through making mistakes, wrestling with problems, and discovering non-obvious solutions. These are actionable, concrete insights that aren't easily Googled or obvious in hindsight.
+
+Lessons learned can be:
+
+- **Specific bugs/issues** - Non-obvious problems with tools, dependencies, or configurations
+- **Code patterns** - "Don't do X, do Y" guidance based on repeated encounters or painful discovery
+- **Synthesis from sessions** - Patterns that emerge across multiple debugging sessions
+
+### Why Document Lessons?
+
+- **Avoid repeating mistakes** - Future you (or teammates) won't waste hours on the same issue
+- **Capture non-obvious knowledge** - Things that aren't in docs, are buried in GitHub issues, or require specific context
+- **Enable quick reference** - When you encounter similar issues, find the solution fast
+- **Share hard-won insights** - Make your struggle valuable for others
+- **Build institutional memory** - Preserve knowledge even as dependencies and team members change
 
 Lessons learned differ from other documentation:
-- **Sessions** document what happened during work
-- **Plans** describe how to implement something
-- **Playbooks** provide repeatable patterns for common tasks
-- **Lessons learned** capture specific problems and their fixes
+
+- **Sessions** document what happened during work (the journey)
+- **Playbooks** provide repeatable workflows for common tasks
+- **Lessons learned** capture specific problems/patterns and their solutions (the diamonds)
 
 ## When to Create a Lesson
 
-Create a lesson learned when you encounter:
-- Non-obvious bugs that took significant time to diagnose
-- Configuration issues with specific tools or versions
-- Behavior that contradicts documentation or expectations
-- Integration problems between dependencies
-- Platform-specific quirks or edge cases
+Create a lesson learned when:
+
+- **Hard-won discovery** - You spent significant time figuring something out that wasn't obvious
+- **Non-obvious solution** - The fix wasn't easily found in docs or by Googling
+- **Pattern emerges** - You've hit the same issue multiple times and want to document the solution
+- **Configuration gotcha** - Specific tool/version behavior that's easy to get wrong
+- **Code pattern lesson** - "Don't do X, do Y" guidance based on painful experience
+
+**Key test:** Does this feel like a hard-won insight? If someone told you this upfront, would it have saved you meaningful time?
 
 **Don't create lessons for:**
-- Obvious mistakes (typos, syntax errors)
-- Well-documented behavior in official docs
-- Trivial issues that are quickly resolved
+
+- Obvious mistakes (typos, syntax errors, things you "should have known")
+- Well-documented behavior easily found in official docs
+- Trivial issues resolved in minutes
+- One-off flukes unlikely to recur
 
 ## File Naming
 
@@ -34,49 +53,49 @@ Create a lesson learned when you encounter:
   - `vitest-esm-import-resolution.md`
   - `postgres-connection-pool-exhaustion.md`
 
-## Recommended Structure
+## Template
 
-```markdown
-# <Short Descriptive Title>
+A ready-to-use template is available: **[TEMPLATE.md](./TEMPLATE.md)**
 
-## Symptom
+The template is flexible to accommodate different types of lessons:
 
-- What error or behavior did you observe?
-- What made you notice something was wrong?
+- **Bug/issue lessons** - Use Problem/Environment/Root Cause/Solution structure
+- **Pattern lessons** - Focus on Don't/Do/Why format with examples
 
-## Environment
+### Core Sections
 
-- Tool/framework versions (e.g., Node 20.5, Nuxt 4.1.2)
-- Platform details (macOS, Linux, Docker, etc.)
-- Any relevant configuration
+- **The Lesson** - Clear, actionable takeaway (what should people know?)
+- **Context** - When/why this matters, what prompted the discovery
+- **The Fix/Pattern** - Concrete solution with code examples if relevant
+- **Why This Works** - Explain the reasoning, not just the what
 
-## Behavior Observed
+### Optional Sections (Use as Needed)
 
-- What was happening vs. what you expected
-- Steps to reproduce if applicable
-- Any misleading error messages
+- **Environment** - Only if specific to OS/runtime/versions
+- **How We Discovered This** - The journey if it adds value
+- **Related Resources** - Links to docs, issues, similar lessons
 
-## Fix Pattern
-
-- The solution that worked
-- Why this fix addresses the root cause
-- Code example or configuration snippet
-
-```example
-// Minimal code showing the fix
-```
-
-## References
-
-- Link to related issues, PRs, or documentation
-- Date discovered: YYYY-MM-DD
-```
+**Keep it concise and actionable** - aim for quick reference, not exhaustive explanation.
 
 ## Tips
 
-- **Be specific** with version numbers and product names so we can recognize when a lesson becomes stale
-- **Include minimal code examples** that demonstrate the fix pattern
-- **Focus on the "why"** behind the fix, not just the "what"
-- **Keep it concise** — aim for quick reference, not exhaustive explanation
-- **Link to external resources** (GitHub issues, Stack Overflow, official docs) when relevant
-- **Update or archive** lessons when dependencies change and the issue no longer applies
+### Writing Lessons
+
+- **Lead with the takeaway** - Don't bury the lesson in backstory; make it immediately actionable
+- **Show, don't just tell** - Include minimal code examples demonstrating the wrong→right pattern
+- **Explain the "why"** - Help people understand the reasoning, not just memorize the fix
+- **Be specific when relevant** - Version numbers and environment details when they matter for recognizing stale lessons
+- **Keep it concise** - These are quick reference docs, not deep-dive articles
+
+### Maintenance
+
+- **Tag clearly** - Use tags to make lessons searchable (e.g., `#toolname`, `#framework`, `#platform`)
+- **Link generously** - Connect to GitHub issues, Stack Overflow, official docs, related lessons
+- **Update or archive** - When dependencies change and a lesson no longer applies, mark it as outdated
+- **Extract to playbooks** - If a lesson becomes a repeatable pattern, consider creating a playbook
+
+### Synthesis from Sessions
+
+- **Watch for patterns** - If you hit the same issue across multiple sessions, create a lesson
+- **Reference sessions** - Link back to the session(s) where you encountered this
+- **Generalize appropriately** - Abstract the lesson enough to be useful beyond the specific instance
