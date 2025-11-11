@@ -24,7 +24,7 @@ This template creates a complete documentation structure for your project,
 including:
 
 - **Structured documentation folders** for investigations, sessions, plans,
-  proposals, playbooks, architecture, and lessons learned
+  proposals, playbooks, architecture, lessons learned, and fragments
 - **README files** in each folder explaining purpose and best practices
 - **Template files** for quick-start document creation
 - **CLAUDE.md** template with project context for AI assistants (in docs/)
@@ -91,6 +91,7 @@ my-awesome-project/
 │   ├── playbooks/README.md
 │   ├── architecture/README.md
 │   ├── lessons-learned/README.md
+│   ├── fragments/README.md
 │   ├── README.md
 │   ├── CLAUDE.md
 │   └── AGENTS.md
@@ -134,6 +135,12 @@ specifications.
 
 Specific problems encountered and their solutions, preserving hard-won
 knowledge.
+
+### `/docs/fragments`
+
+Incomplete observations and "something doesn't feel right" moments captured
+during development. Fragments are breadcrumbs for patterns and concerns that
+don't warrant immediate investigation but might become important later.
 
 ### `/global-docs` (optional)
 
