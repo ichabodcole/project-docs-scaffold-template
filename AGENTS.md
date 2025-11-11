@@ -18,7 +18,8 @@ The template is organized with these key directories:
 
 - `{{cookiecutter.project_slug}}/docs/` - Contains the documentation scaffold
   that gets generated, with READMEs explaining each subdirectory's purpose
-  (sessions, plans, proposals, playbooks, architecture, lessons-learned)
+  (sessions, plans, proposals, playbooks, architecture, lessons-learned,
+  fragments)
 - `{{cookiecutter.project_slug}}/_claude/` - Template for Claude Code custom
   commands (renamed to `.claude/` post-generation)
 - `{{cookiecutter.project_slug}}/_cursor/` - Template for Cursor IDE rules

@@ -45,6 +45,10 @@ Maps of the landscape - what systems exist, where their boundaries are, and how 
 
 Hard-won insights and non-obvious solutions discovered through experience. Captures specific bugs/issues or code patterns ("don't do X, do Y") that aren't easily Googled. These are the diamonds found through making mistakes.
 
+### `/fragments`
+
+Incomplete observations and "this doesn't feel quite right" moments that don't fit into other document types. Fragments capture mysteries, workarounds, and open questions without commitment to investigate. They're food for thought - pieces that might become investigations, proposals, or lessons learned when you have more context.
+
 ## Choosing the Right Document Type
 
 Not sure which type of document to create? Use this decision flowchart:
@@ -58,9 +62,15 @@ Not sure which type of document to create? Use this decision flowchart:
                     │   is needed?            │
                     └─────────────────────────┘
                               ↓
-                         ┌────┴────┐
-                         │   YES   │
-                         └────┬────┘
+                    ┌─────────┴─────────┐
+                    │   YES             │
+                    └─────────┬─────────┘
+                              ↓
+                    Ready to investigate now?
+                              ↓
+                    ┌─────────┴─────────┐
+                    │   YES             │   NO → FRAGMENT
+                    └─────────┬─────────┘     (Capture for later)
                               ↓
                       INVESTIGATION
                   (lightweight-moderate)
@@ -125,6 +135,7 @@ PLAYBOOK          (How does X work?)
 - **Playbook:** "Here's how to do X repeatedly." (reusable pattern)
 - **Architecture:** "Here's how X works in our system." (as-built documentation)
 - **Lesson Learned:** "We hit problem Y, here's the fix." (specific issue + solution)
+- **Fragment:** "Something doesn't feel right about this solution" or "What if we tried X instead?" (incomplete observations)
 
 **Special cases:**
 
@@ -132,6 +143,7 @@ PLAYBOOK          (How does X work?)
 - **Still figuring out the approach?** → Investigation first, then Proposal
 - **Need to document an existing system?** → Architecture
 - **Recurring task pattern?** → Playbook (after 2-3 implementations)
+- **Something feels off or what if we did X instead, but can't investigate now?** → Fragment (revisit when you have more context)
 
 ## Usage
 
