@@ -18,8 +18,8 @@ The template is organized with these key directories:
 
 - `{{cookiecutter.project_slug}}/docs/` - Contains the documentation scaffold
   that gets generated, with READMEs explaining each subdirectory's purpose
-  (sessions, plans, proposals, playbooks, architecture, lessons-learned,
-  fragments)
+  (reports, investigations, sessions, plans, proposals, playbooks, architecture,
+  lessons-learned, fragments)
 - `{{cookiecutter.project_slug}}/_claude/` - Template for Claude Code custom
   commands (renamed to `.claude/` post-generation)
 - `{{cookiecutter.project_slug}}/_cursor/` - Template for Cursor IDE rules
@@ -135,7 +135,7 @@ The template includes optional Braindump integration via
 - **Post-generation cleanup** - Hook removes BRAINDUMP.md if not requested
 
 Braindump is a quick-capture application for messy thoughts that feeds into
-formal documentation workflows (investigations → proposals → plans).
+formal documentation workflows (reports → investigations → proposals → plans).
 
 ## Important Notes
 
