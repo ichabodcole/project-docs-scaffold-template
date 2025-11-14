@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.2.0...v1.3.0) (2025-11-14)
+
+
+### Features
+
+* add reports documentation folder and update review-docs command ([9698104](https://github.com/ichabodcole/project-docs-scaffold-template/commit/96981042c961cbcf4ebb95f0f2f783f8ca659f44))
+* add reports documentation folder and update review-docs command ([8174467](https://github.com/ichabodcole/project-docs-scaffold-template/commit/817446793d40ddd8a295a4dc19654e55a7540743))
+
 ## [1.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.1.0...v1.2.0) (2025-11-12)
 
 ### Features
