@@ -28,9 +28,9 @@ Braindump serves as the **intake layer** for your documentation workflow:
 │  Documentation Workflow                 │
 ├─────────────────────────────────────────┤
 │                                         │
-│  Investigation → Proposal → Plan →     │
-│  Session → Architecture/Playbook/       │
-│  Lesson Learned                         │
+│  Report → Investigation → Proposal →   │
+│  Plan → Session → Architecture/         │
+│  Playbook/Lesson Learned                │
 │                                         │
 └─────────────────────────────────────────┘
 ```
@@ -183,6 +183,7 @@ The documentation workflow is designed to work with or without Braindump as an i
 **Related Documentation:**
 
 - [Documentation Overview](./README.md)
+- [Reports](./reports/README.md)
 - [Investigations](./investigations/README.md)
 - [Proposals](./proposals/README.md)
 - [Sessions](./sessions/README.md)
