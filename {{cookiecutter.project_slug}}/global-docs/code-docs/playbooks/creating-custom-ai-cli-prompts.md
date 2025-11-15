@@ -28,13 +28,15 @@ similar but slightly different structures. The key is to:
 
 ## Tool Comparison
 
-| Feature         | Claude Code                         | Codex CLI                                |
-| --------------- | ----------------------------------- | ---------------------------------------- |
-| **Location**    | `.claude/commands/` (project-level) | `~/.codex/prompts/` (global, user-level) |
-| **Format**      | Markdown with YAML frontmatter      | Markdown with YAML frontmatter           |
-| **Frontmatter** | `description`, `allowed_tools`      | `description`, `argument-hint`           |
-| **Parameters**  | `$1` through `$9`, `$ARGUMENTS`     | `$1` through `$9`, `$ARGUMENTS`          |
-| **Scope**       | Per-project (committed to repo)     | Global (user-specific, not committed)    |
+| Feature         | Claude Code                         | Cursor                                  | Codex CLI                                |
+| --------------- | ----------------------------------- | --------------------------------------- | ---------------------------------------- |
+| **Location**    | `.claude/commands/` (project-level) | `.cursor/commands/` (project-level)     | `~/.codex/prompts/` (global, user-level) |
+| **Format**      | Markdown with YAML frontmatter      | **Plain Markdown (no frontmatter)**     | Markdown with YAML frontmatter           |
+| **Frontmatter** | `description`, `allowed_tools`      | **Not supported**                       | `description`, `argument-hint`           |
+| **Parameters**  | `$1` through `$9`, `$ARGUMENTS`     | `$1` through `$9`, `$ARGUMENTS`         | `$1` through `$9`, `$ARGUMENTS`          |
+| **Scope**       | Per-project (committed to repo)     | Per-project (committed to repo)         | Global (user-specific, not committed)    |
+
+**Important:** Cursor commands do NOT support YAML frontmatter. They are plain markdown files with just the prompt content.
 
 ## Steps / Phases
 
@@ -81,6 +83,35 @@ similar but slightly different structures. The key is to:
 
 5. Commit to version control for team sharing
 
+#### For Cursor (Project-Level)
+
+1. Create the file in `.cursor/commands/[command-name].md`
+
+2. **Do NOT add frontmatter** - Cursor does not support YAML frontmatter
+
+3. Start directly with your prompt content:
+
+   ```markdown
+   # Command Title
+
+   You are tasked with [description of what this command does].
+
+   **Your workflow:**
+
+   1. [Step 1]
+   2. [Step 2]
+   ...
+   ```
+
+4. Use parameter substitution where needed:
+   - `$1` through `$9` for positional arguments
+   - `$ARGUMENTS` for all arguments
+   - Example: `docs/proposals/$1`
+
+5. Commit to version control for team sharing
+
+**Key difference:** Unlike Claude Code, Cursor commands are plain markdown with no metadata section at the top.
+
 #### For Codex CLI (Global)
 
 1. Ensure directory exists:
@@ -112,6 +143,7 @@ similar but slightly different structures. The key is to:
 
 1. **Test the command**
    - Claude Code: `/[command-name] [args]`
+   - Cursor: `/[command-name] [args]`
    - Codex CLI: `/[command-name] [args]`
 
 2. **Evaluate results**
@@ -156,6 +188,35 @@ feature proposal.
 an appropriate filename.
 ```
 
+### Cursor Version (`.cursor/commands/plan-proposal.md`)
+
+```markdown
+# Create Development Plan from Proposal
+
+You are tasked with creating a comprehensive development plan for implementing a
+feature proposal.
+
+**Proposal to analyze:** `docs/proposals/$1`
+
+**Your workflow:**
+
+1. **Read and understand the proposal**
+   - Read the full proposal document at `docs/proposals/$1`
+   - Identify the core features, requirements, and technical considerations
+
+2. **Analyze the current codebase**
+   - Search for relevant existing code that relates to this proposal
+   - Identify components, services, stores, or workflows that will need
+     modification
+
+[... additional steps ...]
+
+**Output:** Create a detailed, actionable development plan in `docs/plans/` with
+an appropriate filename.
+```
+
+**Note:** No frontmatter - Cursor commands start directly with the content.
+
 ### Codex CLI Version (`~/.codex/prompts/plan-proposal.md`)
 
 ```markdown
@@ -182,10 +243,11 @@ feature proposal.
 
 **Location Confusion**
 
-- **Risk:** Creating Codex prompts in project directory or Claude prompts in
-  home directory
-- **Mitigation:** Remember: Claude Code = project `.claude/`, Codex CLI = global
-  `~/.codex/`
+- **Risk:** Creating prompts in the wrong directory for each tool
+- **Mitigation:** Remember:
+  - Claude Code = project `.claude/commands/`
+  - Cursor = project `.cursor/commands/`
+  - Codex CLI = global `~/.codex/prompts/`
 
 **Parameter Substitution Issues**
 
@@ -207,8 +269,15 @@ feature proposal.
 
 **Frontmatter Syntax Errors**
 
-- **Risk:** Invalid YAML frontmatter prevents command from working
+- **Risk:** Invalid YAML frontmatter prevents command from working (Claude Code, Codex CLI)
 - **Mitigation:** Use proper YAML syntax with dashes and quotes where needed
+- **Important:** Cursor does NOT support frontmatter - adding it will cause issues
+
+**Cursor Frontmatter Mistake**
+
+- **Risk:** Adding YAML frontmatter to Cursor commands (not supported)
+- **Mitigation:** Cursor commands are plain markdown only - start directly with `# Title`
+- **Common mistake:** Copying from Claude Code commands and forgetting to remove frontmatter
 
 **Global vs Project Scope**
 
@@ -222,7 +291,7 @@ feature proposal.
 A custom prompt is successfully implemented when:
 
 - ✅ The file is in the correct location for the respective tool
-- ✅ The frontmatter is valid and includes required fields
+- ✅ The frontmatter is valid and includes required fields (Claude Code, Codex CLI only - Cursor has no frontmatter)
 - ✅ The command appears in the slash command menu
 - ✅ Invoking the command with parameters works as expected
 - ✅ The AI follows the instructions and produces the desired output
@@ -231,11 +300,14 @@ A custom prompt is successfully implemented when:
 ## References / Links
 
 - **Claude Code Documentation:** https://docs.claude.com/en/docs/claude-code
+- **Cursor Documentation:** https://docs.cursor.com
 - **Codex CLI Custom Prompts:**
   https://zread.ai/openai/codex/23-custom-prompts-and-agents-md
 - **Codex CLI GitHub:** https://github.com/openai/codex
-- **Example Implementation:** This project's `/plan-proposal` command in both
-  `.claude/commands/` and `~/.codex/prompts/`
+- **Example Implementations:** This project contains multiple command examples:
+  - `.claude/commands/` - Claude Code versions (with frontmatter)
+  - `.cursor/commands/` - Cursor versions (plain markdown, no frontmatter)
+  - Commands: `/plan-proposal`, `/review-docs`, `/update-deps`, `/project-summary`, `/project-recipe`
 
 ## Tips
 
