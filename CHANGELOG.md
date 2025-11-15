@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.3.0...v1.4.0) (2025-11-15)
+
+
+### Features
+
+* add project-summary and project-recipe commands ([8b7bbe8](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8b7bbe89fbf11ede58868845bb0f31b0c869955b))
+* add project-summary and project-recipe commands ([88f33d0](https://github.com/ichabodcole/project-docs-scaffold-template/commit/88f33d0794807933c1f1877411beae05c4ec2fcb))
+
 ## [1.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.2.0...v1.3.0) (2025-11-14)
 
 
