@@ -1,6 +1,10 @@
 # Documentation
 
 This directory contains project documentation organized into focused subdirectories. Each subdirectory serves a specific purpose in capturing knowledge throughout the development lifecycle.
+
+## Foundational Document
+
+**[PROJECT_MANIFESTO.md](./PROJECT_MANIFESTO.md)** - The constitution of this project. Defines what the project is, who it's for, core principles, what it does and doesn't do. Read this first to understand the foundational vision and boundaries.
 {% if cookiecutter.include_braindump_docs == 'y' %}
 
 ## Braindump Integration
@@ -10,6 +14,7 @@ This project uses **[Braindump](./BRAINDUMP.md)** as an intake layer for quick-c
 - **Feature ideas** in Braindump → Investigation or Proposal
 - **Bug reports** in Braindump → Lesson Learned
 - **Architecture thoughts** in Braindump → Architecture documentation
+- **UX flow thoughts** in Braindump → Interaction Design documentation
 - **Work context** in Braindump → Referenced in Sessions
 
 See [BRAINDUMP.md](./BRAINDUMP.md) for detailed integration guide and MCP server setup.
@@ -44,6 +49,10 @@ Reusable dev plans for recurring tasks or augmenting existing systems (e.g., add
 ### `/architecture`
 
 Maps of the landscape - what systems exist, where their boundaries are, and how major pieces fit together. Focus on building mental models at high to mid-level; avoid exhaustive detail that's better found by reading code.
+
+### `/interaction-design`
+
+User experience flow documentation that captures how users interact with features and subsystems. Documents user journeys, decision points, and design rationale behind interaction patterns. Complements architecture docs by explaining how features work from the user's perspective rather than the technical perspective.
 
 ### `/lessons-learned`
 
@@ -122,12 +131,15 @@ Not sure which type of document to create? Use this decision flowchart:
       │ Documenting...    │
       └───────────────────┘
               ↓
-    ┌─────────┴─────────┐
-    ↓                   ↓
-[Pattern for       [System as-built]
- reuse]                  ↓
-    ↓                ARCHITECTURE
-PLAYBOOK          (How does X work?)
+    ┌─────────┴─────────────────────┐
+    ↓                               ↓
+[Pattern for                [System as-built]
+ reuse]                              ↓
+    ↓                    ┌───────────┴───────────┐
+PLAYBOOK                 ↓                       ↓
+                    ARCHITECTURE          INTERACTION DESIGN
+                 (How does X work       (How does the user
+                  technically?)          interact with X?)
 ```
 
 **Quick Reference:**
@@ -138,7 +150,8 @@ PLAYBOOK          (How does X work?)
 - **Plan:** "Here's how we'll build X, step by step." (implementation roadmap)
 - **Session:** "Here's what I did today while building X." (work log)
 - **Playbook:** "Here's how to do X repeatedly." (reusable pattern)
-- **Architecture:** "Here's how X works in our system." (as-built documentation)
+- **Architecture:** "Here's how X works in our system." (technical as-built documentation)
+- **Interaction Design:** "Here's how users interact with X and why." (UX flow as-built documentation)
 - **Lesson Learned:** "We hit problem Y, here's the fix." (specific issue + solution)
 - **Fragment:** "Something doesn't feel right about this solution" or "What if we tried X instead?" (incomplete observations)
 
@@ -146,7 +159,8 @@ PLAYBOOK          (How does X work?)
 
 - **Specific problem solved?** → Lesson Learned
 - **Still figuring out the approach?** → Investigation first, then Proposal
-- **Need to document an existing system?** → Architecture
+- **Need to document an existing technical system?** → Architecture
+- **Need to document how users interact with a feature?** → Interaction Design
 - **Recurring task pattern?** → Playbook (after 2-3 implementations)
 - **Something feels off or what if we did X instead, but can't investigate now?** → Fragment (revisit when you have more context)
 
