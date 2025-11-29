@@ -1,6 +1,10 @@
 # Documentation
 
 This directory contains project documentation organized into focused subdirectories. Each subdirectory serves a specific purpose in capturing knowledge throughout the development lifecycle.
+
+## Foundational Document
+
+**[PROJECT_MANIFESTO.md](./PROJECT_MANIFESTO.md)** - The constitution of this project. Defines what the project is, who it's for, core principles, what it does and doesn't do. Read this first to understand the foundational vision and boundaries.
 {% if cookiecutter.include_braindump_docs == 'y' %}
 
 ## Braindump Integration
