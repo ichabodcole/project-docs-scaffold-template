@@ -2,6 +2,10 @@
 
 For a complete overview of the documentation structure and how to use it, see [README.md](./README.md).
 
+## Foundational Document
+
+- **PROJECT_MANIFESTO.md** - The constitution of this project. Defines what the project is, who it's for, core principles, what it does and doesn't do. Read this first to understand the foundational vision and boundaries.
+
 ## Documentation Types
 
 This project uses a structured documentation approach with these key directories:
@@ -13,6 +17,7 @@ This project uses a structured documentation approach with these key directories
 - **sessions/** - Dev journals documenting what happened during work
 - **playbooks/** - Reusable patterns for recurring tasks
 - **architecture/** - System design and how things work
+- **interaction-design/** - User experience flow documentation that captures how users interact with features
 - **lessons-learned/** - Specific problems and their solutions
 - **fragments/** - Incomplete observations for later synthesis
 
