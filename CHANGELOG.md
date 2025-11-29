@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.4.0...v1.5.0) (2025-11-29)
+
+
+### Features
+
+* add interaction-design documentation directory ([9088946](https://github.com/ichabodcole/project-docs-scaffold-template/commit/9088946c4a9f1a82e84570ce317ad5dd57bb11de))
+* add PROJECT_MANIFESTO.md foundational document ([8305ff9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8305ff991faa39455808579be756b4d4093efaa1))
+
 ## [1.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.3.0...v1.4.0) (2025-11-15)
 
 
