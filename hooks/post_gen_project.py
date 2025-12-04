@@ -38,11 +38,11 @@ def main():
             shutil.rmtree('global-docs')
             print("✓ Removed global-docs (not requested)")
 
-    # Remove Braindump documentation if not requested
-    if '{{ cookiecutter.include_braindump_docs }}' != 'y':
-        if os.path.exists('docs/BRAINDUMP.md'):
-            os.remove('docs/BRAINDUMP.md')
-            print("✓ Removed docs/BRAINDUMP.md (not requested)")
+    # Remove Operator documentation if not requested
+    if '{{ cookiecutter.include_operator_docs }}' != 'y':
+        if os.path.exists('docs/OPERATOR.md'):
+            os.remove('docs/OPERATOR.md')
+            print("✓ Removed docs/OPERATOR.md (not requested)")
 
     print("\n✅ Project documentation structure created successfully!\n")
     print("📁 Project: {{ cookiecutter.project_name }}")

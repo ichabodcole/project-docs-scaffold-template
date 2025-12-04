@@ -5,19 +5,19 @@ This directory contains project documentation organized into focused subdirector
 ## Foundational Document
 
 **[PROJECT_MANIFESTO.md](./PROJECT_MANIFESTO.md)** - The constitution of this project. Defines what the project is, who it's for, core principles, what it does and doesn't do. Read this first to understand the foundational vision and boundaries.
-{% if cookiecutter.include_braindump_docs == 'y' %}
+{% if cookiecutter.include_operator_docs == 'y' %}
 
-## Braindump Integration
+## Operator Integration
 
-This project uses **[Braindump](./BRAINDUMP.md)** as an intake layer for quick-capture thoughts and ideas. Braindump documents often serve as the starting point for formal documentation:
+This project uses **[Operator](./OPERATOR.md)** as an intake layer for quick-capture thoughts and ideas. Operator documents often serve as the starting point for formal documentation:
 
-- **Feature ideas** in Braindump → Investigation or Proposal
-- **Bug reports** in Braindump → Lesson Learned
-- **Architecture thoughts** in Braindump → Architecture documentation
-- **UX flow thoughts** in Braindump → Interaction Design documentation
-- **Work context** in Braindump → Referenced in Sessions
+- **Feature ideas** in Operator → Investigation or Proposal
+- **Bug reports** in Operator → Lesson Learned
+- **Architecture thoughts** in Operator → Architecture documentation
+- **UX flow thoughts** in Operator → Interaction Design documentation
+- **Work context** in Operator → Referenced in Sessions
 
-See [BRAINDUMP.md](./BRAINDUMP.md) for detailed integration guide and MCP server setup.
+See [OPERATOR.md](./OPERATOR.md) for detailed integration guide and MCP server setup.
 {% endif %}
 
 ## Structure

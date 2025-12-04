@@ -33,7 +33,7 @@ including:
 - **Optional Cursor IDE configurations** (.cursor/rules/) for custom Cursor
   commands
 - **Optional global-docs folder** for cross-project documentation like playbooks
-- **Optional Braindump integration** for quick-capture thought workflows
+- **Optional Operator integration** for quick-capture thought workflows
 - **Project README** template with standard sections
 
 ## Installation
@@ -62,8 +62,8 @@ You'll be prompted to provide:
 - **include_ai_commands** - Include .claude/ directory? (y/n, default: y)
 - **include_cursor_rules** - Include .cursor/ directory? (y/n, default: y)
 - **include_global_docs** - Include global-docs/ directory? (y/n, default: y)
-- **include_braindump_docs** - Include Braindump integration docs? (y/n,
-  default: y)
+- **include_operator_docs** - Include Operator integration docs? (y/n, default:
+  y)
 
 ### Example
 
