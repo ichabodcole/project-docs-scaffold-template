@@ -41,7 +41,7 @@ files. Key variables:
 - `project_description` - Brief project description
 - `author_name` - Author's name
 - `include_ai_commands`, `include_cursor_rules`, `include_global_docs`,
-  `include_braindump_docs` - Boolean flags for optional features
+  `include_operator_docs` - Boolean flags for optional features
 
 ### Post-Generation Hook
 
@@ -50,7 +50,7 @@ The `hooks/post_gen_project.py` script:
 1. Renames `_claude` → `.claude` and `_cursor` → `.cursor` (underscore prefix
    prevents Cookiecutter from treating them as template directories)
 2. Conditionally removes `.claude/`, `.cursor/`, `global-docs/`, or
-   `docs/BRAINDUMP.md` based on user preferences
+   `docs/OPERATOR.md` based on user preferences
 3. Provides user feedback about next steps
 
 ## Development Commands
@@ -123,18 +123,17 @@ Each docs subdirectory has a README explaining:
 
 ## Optional Features
 
-### Braindump Integration
+### Operator Integration
 
-The template includes optional Braindump integration via
-`include_braindump_docs`:
+The template includes optional Operator integration via `include_operator_docs`:
 
-- **BRAINDUMP.md** - Comprehensive guide to using Braindump as an intake layer
-  for documentation
+- **OPERATOR.md** - Comprehensive guide to using Operator as an intake layer for
+  documentation
 - **Conditional sections** in `AGENTS.md` and `docs/README.md` using Jinja2
-  `{% if cookiecutter.include_braindump_docs == 'y' %}` blocks
-- **Post-generation cleanup** - Hook removes BRAINDUMP.md if not requested
+  `{% if cookiecutter.include_operator_docs == 'y' %}` blocks
+- **Post-generation cleanup** - Hook removes OPERATOR.md if not requested
 
-Braindump is a quick-capture application for messy thoughts that feeds into
+Operator is a quick-capture application for messy thoughts that feeds into
 formal documentation workflows (reports → investigations → proposals → plans).
 
 ## Important Notes

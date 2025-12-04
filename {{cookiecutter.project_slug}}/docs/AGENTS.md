@@ -35,26 +35,26 @@ When working with reports:
 - Findings can spawn investigations, proposals, or direct action
 - Link back to reports when creating follow-up documentation
 - Generate new reports periodically to track progress
-{% if cookiecutter.include_braindump_docs == 'y' %}
+{% if cookiecutter.include_operator_docs == 'y' %}
 
-## Braindump Integration
+## Operator Integration
 
-This project uses [Braindump](https://github.com/ichabodcole/braindump) as an intake layer for quick-capture thoughts and ideas. When working with this project:
+This project uses [Operator](https://github.com/ichabodcole/operator) as an intake layer for quick-capture thoughts and ideas. When working with this project:
 
-### Checking Braindump for Context
+### Checking Operator for Context
 
-Before creating formal documentation (investigations, proposals, plans), **check if relevant Braindump entries exist**:
+Before creating formal documentation (investigations, proposals, plans), **check if relevant Operator entries exist**:
 
-- Search Braindump for keywords related to the current task
-- Review recent Braindump entries for context
-- Ask the user if they have Braindump notes about the topic
+- Search Operator for keywords related to the current task
+- Review recent Operator entries for context
+- Ask the user if they have Operator notes about the topic
 
-### Using Braindump Entries
+### Using Operator Entries
 
-When Braindump entries are found:
+When Operator entries are found:
 
 1. **For Feature Ideas** → Synthesize into Investigation or Proposal
-2. **For Bug Reports** → Create Lesson Learned with Braindump context
+2. **For Bug Reports** → Create Lesson Learned with Operator context
 3. **For Architecture Thoughts** → Incorporate into Architecture docs
 4. **For General Context** → Reference in Sessions or Plans
 
@@ -63,20 +63,20 @@ When Braindump entries are found:
 ```
 User: "Let's work on improving keyboard shortcuts"
 
-Agent: "Let me check your Braindump for any existing notes about
-keyboard shortcuts..." [searches Braindump via MCP]
+Agent: "Let me check your Operator for any existing notes about
+keyboard shortcuts..." [searches Operator via MCP]
 
-Agent: "I found 3 Braindump entries related to keyboard shortcuts.
+Agent: "I found 3 Operator entries related to keyboard shortcuts.
 Would you like me to create an investigation document synthesizing
 these ideas?"
 ```
 
 ### Best Practices
 
-- **Proactively search Braindump** when starting new work
-- **Link back to Braindump entries** in formal docs for traceability
-- **Suggest archiving Braindump entries** once formalized into documentation
-- **Use Braindump as context** for understanding user's thinking and priorities
+- **Proactively search Operator** when starting new work
+- **Link back to Operator entries** in formal docs for traceability
+- **Suggest archiving Operator entries** once formalized into documentation
+- **Use Operator as context** for understanding user's thinking and priorities
 
-For detailed information about Braindump integration, see [BRAINDUMP.md](./BRAINDUMP.md).
+For detailed information about Operator integration, see [OPERATOR.md](./OPERATOR.md).
 {% endif %}

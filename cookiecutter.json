@@ -7,5 +7,5 @@
   "include_ai_commands": ["y", "n"],
   "include_cursor_rules": ["y", "n"],
   "include_global_docs": ["y", "n"],
-  "include_braindump_docs": ["y", "n"]
+  "include_operator_docs": ["y", "n"]
 }
