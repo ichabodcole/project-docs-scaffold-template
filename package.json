@@ -6,7 +6,8 @@
   "scripts": {
     "format": "prettier --write \"**/*.md\"",
     "format:check": "prettier --check \"**/*.md\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d"
   },
   "devDependencies": {
     "husky": "^9.1.7",
