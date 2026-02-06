@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.6.0...v1.6.1) (2026-02-06)
+
+
+### Bug Fixes
+
+* remove stale include_operator_docs references from template ([8c4e84e](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8c4e84eb8b42e97ab9a130aaa75a72a309f77ae4))
+* remove stale include_operator_docs references from template ([8dfbf78](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8dfbf780089e765d1dfe25905d59ab09f21fa775))
+
 ## [1.6.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.5.0...v1.6.0) (2026-02-06)
 
 
