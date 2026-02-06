@@ -19,17 +19,12 @@ The template is organized with these key directories:
 - `{{cookiecutter.project_slug}}/docs/` - Contains the documentation scaffold
   that gets generated, with READMEs explaining each subdirectory's purpose
   (reports, investigations, sessions, plans, proposals, playbooks, architecture,
-  lessons-learned, fragments)
-- `{{cookiecutter.project_slug}}/_claude/` - Template for Claude Code custom
-  commands (renamed to `.claude/` post-generation)
-- `{{cookiecutter.project_slug}}/_cursor/` - Template for Cursor IDE rules
-  (renamed to `.cursor/` post-generation)
-- `{{cookiecutter.project_slug}}/global-docs/` - Optional cross-project
-  documentation structure
+  specifications, lessons-learned, fragments)
 - `hooks/post_gen_project.py` - Python hook that runs after template generation
-  to rename directories and conditionally remove optional features
 - `cookiecutter.json` - Template configuration defining user prompts and
   variables
+- `plugins/project-docs/` - Claude Code plugin providing documentation
+  management commands
 
 ### Variable Substitution
 
@@ -40,18 +35,11 @@ files. Key variables:
 - `project_slug` - Directory-safe version (auto-generated from project_name)
 - `project_description` - Brief project description
 - `author_name` - Author's name
-- `include_ai_commands`, `include_cursor_rules`, `include_global_docs`,
-  `include_operator_docs` - Boolean flags for optional features
 
 ### Post-Generation Hook
 
-The `hooks/post_gen_project.py` script:
-
-1. Renames `_claude` → `.claude` and `_cursor` → `.cursor` (underscore prefix
-   prevents Cookiecutter from treating them as template directories)
-2. Conditionally removes `.claude/`, `.cursor/`, `global-docs/`, or
-   `docs/OPERATOR.md` based on user preferences
-3. Provides user feedback about next steps
+The `hooks/post_gen_project.py` script provides user feedback about next steps,
+including plugin installation instructions.
 
 ## Development Commands
 
@@ -79,22 +67,44 @@ cookiecutter .
 cookiecutter . --overwrite-if-exists
 ```
 
-## Custom AI Commands
+## Claude Code Plugins
 
-The template includes two custom Claude Code commands in
-`{{cookiecutter.project_slug}}/_claude/commands/`:
+This repository develops Claude Code plugins alongside the cookiecutter
+template. Plugins live in the `plugins/` directory.
 
-1. **plan-proposal.md** - Reads a proposal from `docs/proposals/` and generates
-   a comprehensive implementation plan in `docs/plans/`
-2. **update-deps.md** - Automates dependency updates with git branching,
-   testing, and verification
+### project-docs Plugin
 
-When modifying these commands:
+The main plugin at `plugins/project-docs/` provides documentation management
+capabilities for projects that use the generated scaffold. It contains:
 
-- Follow the YAML frontmatter format with `description` and `allowed_tools`
-- Use `$1` for command arguments (e.g., proposal filename)
-- Structure as detailed workflows with numbered steps
-- Include error handling and validation steps
+- **Commands** (`plugins/project-docs/commands/`) - User-invoked slash commands
+  (e.g., `/project-docs:finalize-branch`, `/project-docs:project-summary`)
+- **Agents** (`plugins/project-docs/agents/`) - Specialized sub-agents for
+  autonomous tasks (e.g., `docs-curator`, `investigator`, `proposal-writer`)
+- **Skills** (`plugins/project-docs/skills/`) - Auto-invoked capabilities that
+  Claude uses when relevant (e.g., `generate-spec`, `document-validation`,
+  `review-docs`)
+
+The plugin manifest is at `plugins/project-docs/.claude-plugin/plugin.json`.
+
+### Plugin Development Conventions
+
+When working on plugin components:
+
+- **Commands** use YAML frontmatter with `description` and `allowed_tools`;
+  support `$1`, `$2` for arguments
+- **Skills** use YAML frontmatter with `name` and `description`; the description
+  controls when Claude auto-invokes the skill
+- **Agents** use YAML frontmatter with `name`, `description`, and tool
+  configuration
+- Structure all components as detailed workflows with numbered steps
+- See `plugins/project-docs/README.md` for full documentation
+
+### Marketplace Configuration
+
+The `.claude-plugin/marketplace.json` at the repo root defines which plugins are
+available for installation. This is how end users discover and install the
+plugins after generating a project from the template.
 
 ## File Structure Conventions
 
@@ -120,21 +130,6 @@ Each docs subdirectory has a README explaining:
 - Version tracked in `.release-please-manifest.json`
 - Changelog auto-generated in `CHANGELOG.md`
 - Releases trigger on merge to `main` branch
-
-## Optional Features
-
-### Operator Integration
-
-The template includes optional Operator integration via `include_operator_docs`:
-
-- **OPERATOR.md** - Comprehensive guide to using Operator as an intake layer for
-  documentation
-- **Conditional sections** in `AGENTS.md` and `docs/README.md` using Jinja2
-  `{% if cookiecutter.include_operator_docs == 'y' %}` blocks
-- **Post-generation cleanup** - Hook removes OPERATOR.md if not requested
-
-Operator is a quick-capture application for messy thoughts that feeds into
-formal documentation workflows (reports → investigations → proposals → plans).
 
 ## Important Notes
 

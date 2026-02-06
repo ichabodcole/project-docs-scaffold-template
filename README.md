@@ -15,8 +15,8 @@ without building the structure from scratch each time.
 
 - Pre-organized folders with best practices built in
 - AI-ready with CLAUDE.md context templates
-- Optional Claude Code and Cursor IDE configurations
-- Supports both project-specific and cross-project documentation patterns
+- Works seamlessly with the project-docs Claude Code plugin
+- Structured for effective AI-assisted development workflows
 
 ## What This Template Provides
 
@@ -28,13 +28,33 @@ including:
 - **README files** in each folder explaining purpose and best practices
 - **Template files** for quick-start document creation
 - **CLAUDE.md** template with project context for AI assistants (in docs/)
-- **Optional AI CLI configurations** (.claude/commands/) for custom Claude Code
-  commands
-- **Optional Cursor IDE configurations** (.cursor/rules/) for custom Cursor
-  commands
-- **Optional global-docs folder** for cross-project documentation like playbooks
-- **Optional Operator integration** for quick-capture thought workflows
+- **AGENTS.md** guidance file for AI coding assistants
 - **Project README** template with standard sections
+
+## Claude Code Plugin
+
+This template is designed to work with the **project-docs** Claude Code plugin,
+which provides specialized commands for managing your documentation structure:
+
+- `/project-docs:project-summary` - Generate comprehensive project state
+  analysis
+- `/project-docs:project-recipe` - Extract reusable project patterns
+- `/project-docs:update-deps` - Automated dependency management
+- `/project-docs:review-docs` - Documentation health checks
+- `/project-docs:proposal-to-plan` - Convert proposals to implementation plans
+
+**Installation:**
+
+```bash
+# Add this repository as a marketplace
+/plugin marketplace add ichabodcole/project-docs-scaffold-template
+
+# Install the project-docs plugin
+/plugin install project-docs
+```
+
+See [plugins/project-docs/README.md](plugins/project-docs/README.md) for
+detailed documentation on each command.
 
 ## Installation
 
@@ -59,11 +79,6 @@ You'll be prompted to provide:
 - **project_description** - Brief description of the project
 - **author_name** - Your name
 - **year** - Current year (auto-filled)
-- **include_ai_commands** - Include .claude/ directory? (y/n, default: y)
-- **include_cursor_rules** - Include .cursor/ directory? (y/n, default: y)
-- **include_global_docs** - Include global-docs/ directory? (y/n, default: y)
-- **include_operator_docs** - Include Operator integration docs? (y/n, default:
-  y)
 
 ### Example
 
@@ -75,9 +90,6 @@ project_slug [my-awesome-project]:
 project_description [A brief description of the project]: A revolutionary new app
 author_name [Your Name]: Jane Doe
 year [2025]:
-include_ai_commands [y]:
-include_cursor_rules [n]:
-include_global_docs [y]:
 ```
 
 This creates:
@@ -94,15 +106,12 @@ my-awesome-project/
 │   ├── architecture/README.md
 │   ├── lessons-learned/README.md
 │   ├── fragments/README.md
+│   ├── specifications/README.md
+│   ├── interaction-design/README.md
 │   ├── README.md
 │   ├── CLAUDE.md
-│   └── AGENTS.md
-├── global-docs/
-│   └── playbooks/
-│       └── README.md
-├── .claude/
-│   └── commands/
-│       └── plan-proposal.md
+│   ├── AGENTS.md
+│   └── PROJECT_MANIFESTO.md
 └── README.md
 ```
 
@@ -151,18 +160,17 @@ specifications.
 Specific problems encountered and their solutions, preserving hard-won
 knowledge.
 
+### `/docs/specifications`
+
+Technology-agnostic specification documents that describe what the application
+is, what it does, and how it behaves — organized by domain. Portable enough to
+rebuild the application in any technology stack.
+
 ### `/docs/fragments`
 
 Incomplete observations and "something doesn't feel right" moments captured
 during development. Fragments are breadcrumbs for patterns and concerns that
 don't warrant immediate investigation but might become important later.
-
-### `/global-docs` (optional)
-
-Cross-project documentation that can be referenced across multiple projects.
-Currently includes a `playbooks/` subdirectory for organization-wide or personal
-development patterns. This is separate from project-specific `docs/` and is
-intended for documentation that spans multiple repositories.
 
 ## Customization
 
@@ -173,9 +181,8 @@ After generating your project:
 2. **Customize README.md** with actual installation and development instructions
 3. **Review docs/README.md** and subfolder READMEs - they're ready to use but
    can be adapted
-4. **Add custom Claude Code commands** in `.claude/commands/` (if included)
-5. **Add custom Cursor commands** in `.cursor/commands/` (if included)
-6. **Add global playbooks** in `global-docs/playbooks/` (if included)
+4. **Install the project-docs plugin** to leverage documentation management
+   commands
 
 ## Adding to Existing Projects
 
@@ -195,22 +202,6 @@ to generate a project in a location that already exists, you'll get an error.
 
 **Recommended approach for existing projects:** Generate in a temporary
 location, review the generated files, then selectively copy what you need.
-
-## Global Playbooks
-
-This template references global playbooks stored in `~/.code-docs/playbooks/`
-(your home directory). This is an optional setup for playbooks that apply across
-multiple projects.
-
-**To set up global playbooks:**
-
-```bash
-mkdir -p ~/.code-docs/playbooks
-```
-
-You can then create reusable playbooks in this directory that are referenced
-from any project generated with this template. This is useful for
-organization-wide or personal development patterns that span multiple projects.
 
 ## Requirements
 

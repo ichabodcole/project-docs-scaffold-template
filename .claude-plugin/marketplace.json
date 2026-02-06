@@ -1,0 +1,42 @@
+{
+  "name": "project-docs-marketplace",
+  "owner": {
+    "name": "Cole Reed",
+    "email": "alienlobsterbuffet.dev@gmail.com"
+  },
+  "metadata": {
+    "description": "Personal collection of Claude Code plugins for use with project documentation workflows",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "project-docs",
+      "source": "./plugins/project-docs",
+      "description": "Documentation management commands, agents, and skills for structured project documentation workflows",
+      "version": "1.0.0",
+      "author": {
+        "name": "Cole Reed"
+      },
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "planning",
+        "proposals",
+        "specifications",
+        "reports",
+        "workflow"
+      ]
+    },
+    {
+      "name": "operator",
+      "source": "./plugins/operator",
+      "description": "Operator integration for triaging quick-capture notes into the project documentation structure",
+      "version": "1.0.0",
+      "author": {
+        "name": "Cole Reed"
+      },
+      "category": "documentation",
+      "tags": ["operator", "triage", "intake", "documentation"]
+    }
+  ]
+}

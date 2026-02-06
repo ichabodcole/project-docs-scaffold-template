@@ -3,9 +3,5 @@
   "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-').replace('_', '-') }}",
   "project_description": "A brief description of the project",
   "author_name": "Your Name",
-  "year": "{% now 'utc', '%Y' %}",
-  "include_ai_commands": ["y", "n"],
-  "include_cursor_rules": ["y", "n"],
-  "include_global_docs": ["y", "n"],
-  "include_operator_docs": ["y", "n"]
+  "year": "{% now 'utc', '%Y' %}"
 }

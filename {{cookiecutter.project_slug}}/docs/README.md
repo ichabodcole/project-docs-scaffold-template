@@ -50,6 +50,10 @@ Reusable dev plans for recurring tasks or augmenting existing systems (e.g., add
 
 Maps of the landscape - what systems exist, where their boundaries are, and how major pieces fit together. Focus on building mental models at high to mid-level; avoid exhaustive detail that's better found by reading code.
 
+### `/specifications`
+
+Technology-agnostic specification documents that describe what the application is, what it does, and how it behaves — organized by domain. Specifications are portable: they contain no framework or library references and could be used to rebuild the application in any technology stack. They serve as the living, authoritative description of application behavior.
+
 ### `/interaction-design`
 
 User experience flow documentation that captures how users interact with features and subsystems. Documents user journeys, decision points, and design rationale behind interaction patterns. Complements architecture docs by explaining how features work from the user's perspective rather than the technical perspective.
@@ -61,6 +65,14 @@ Hard-won insights and non-obvious solutions discovered through experience. Captu
 ### `/fragments`
 
 Incomplete observations and "this doesn't feel quite right" moments that don't fit into other document types. Fragments capture mysteries, workarounds, and open questions without commitment to investigate. They're food for thought - pieces that might become investigations, proposals, or lessons learned when you have more context.
+
+## Specifications: A Living Application Description
+
+Specifications live outside the per-feature lifecycle below. They describe the **whole application's behavior** in technology-agnostic terms — a living document that answers "what does this application do?" independent of how it's built.
+
+Specifications can be **created before development begins** (defining what to build from an idea) or **generated from an existing codebase** (reverse-engineering a portable description). Either way, they should be **updated as features are completed** to stay current.
+
+While the flowchart below tracks individual features from idea to completion, specifications track the cumulative state of the application itself. When you finish building a feature, update the relevant specifications to reflect the new behavior.
 
 ## Choosing the Right Document Type
 
@@ -150,6 +162,7 @@ PLAYBOOK                 ↓                       ↓
 - **Plan:** "Here's how we'll build X, step by step." (implementation roadmap)
 - **Session:** "Here's what I did today while building X." (work log)
 - **Playbook:** "Here's how to do X repeatedly." (reusable pattern)
+- **Specification:** "Here's what the application does, described so anyone could rebuild it." (technology-agnostic behavior documentation)
 - **Architecture:** "Here's how X works in our system." (technical as-built documentation)
 - **Interaction Design:** "Here's how users interact with X and why." (UX flow as-built documentation)
 - **Lesson Learned:** "We hit problem Y, here's the fix." (specific issue + solution)
@@ -159,6 +172,7 @@ PLAYBOOK                 ↓                       ↓
 
 - **Specific problem solved?** → Lesson Learned
 - **Still figuring out the approach?** → Investigation first, then Proposal
+- **Need a portable, technology-agnostic description of the application?** → Specification
 - **Need to document an existing technical system?** → Architecture
 - **Need to document how users interact with a feature?** → Interaction Design
 - **Recurring task pattern?** → Playbook (after 2-3 implementations)

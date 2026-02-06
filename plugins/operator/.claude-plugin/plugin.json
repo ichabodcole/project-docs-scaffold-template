@@ -1,0 +1,11 @@
+{
+  "name": "operator",
+  "version": "1.0.0",
+  "description": "Specialized commands for user operator with the project docs structure",
+  "author": {
+    "name": "Cole Reed"
+  },
+  "homepage": "https://github.com/ichabodcole/project-docs-scaffold-template",
+  "repository": "https://github.com/ichabodcole/project-docs-scaffold-template",
+  "license": "MIT"
+}

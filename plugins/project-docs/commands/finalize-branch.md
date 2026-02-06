@@ -1,0 +1,88 @@
+---
+description:
+  "Code review, documentation, and merge workflow for completed branches"
+allowed_tools:
+  ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task", "AskUserQuestion"]
+---
+
+You are tasked with finalizing a feature/fix/refactor/chore branch before
+merging to develop.
+
+**Playbook reference:** Follow the workflow in
+[docs/playbooks/branch-finalization-playbook.md](../../docs/playbooks/branch-finalization-playbook.md)
+
+## Workflow Summary
+
+1. **Understand Branch Scope** - Review commits, files changed, overall
+   accomplishment
+2. **Code Review** - Review all commits, check new/modified files against
+   patterns
+3. **Run Quality Tools** - `pnpm run format`, `lint`, `check-types`, `test`
+4. **Create Session Document** - Always create in `docs/sessions/`
+5. **Assess Additional Docs** - Architecture, interaction design,
+   specifications, lessons learned, playbooks
+6. **Commit Documentation** - Stage and commit any new docs
+7. **Squash Commits** - `git reset --soft develop` then single commit
+8. **Merge to Develop with Approval** - Ask for user approval before merging
+   `git merge --ff-only <branch>`
+9. **Cleanup** - Delete branch, remove worktree if applicable
+
+## Claude-Specific Guidance
+
+### Code Review Approach
+
+- Use Grep/Glob to find similar implementations for comparison
+- Read files to understand established patterns before judging new code
+- Use Task tool with Explore agent for broader codebase understanding if needed
+
+### Quality Checks
+
+Run these in sequence, fixing issues as they arise:
+
+```bash
+pnpm run format
+pnpm run lint
+pnpm run check-types
+pnpm run test
+```
+
+### Documentation
+
+- Session docs: Reference
+  [docs/sessions/README.md](../../docs/sessions/README.md)
+- Architecture: Reference
+  [docs/architecture/README.md](../../docs/architecture/README.md)
+- Interaction design: Reference
+  [docs/interaction-design/README.md](../../docs/interaction-design/README.md)
+- Specifications: Check if `docs/specifications/` exists and whether changes on
+  this branch affect documented behavior. If specs exist, flag any that may need
+  updating based on the implemented changes.
+- Present documentation recommendations to user and get confirmation before
+  creating
+
+### User Checkpoints
+
+Ask for user confirmation at these points:
+
+- After code review findings (before proceeding)
+- Before creating additional documentation (beyond session)
+- Before squashing commits (review commit message)
+- Before merging to develop
+
+### Important Constraints
+
+- **Stay local** - Do NOT push to remote repositories
+- **Fast-forward only** - Never create merge commits
+- **Squash before merge** - One clean commit per branch on develop
+- **Always create session doc** - Even for smooth work
+
+## Output
+
+At completion, summarize:
+
+- Branch finalized
+- Code review findings and resolutions
+- Quality check results
+- Documentation created/updated
+- Final commit message
+- Any follow-up items

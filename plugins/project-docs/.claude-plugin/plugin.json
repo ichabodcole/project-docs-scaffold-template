@@ -1,0 +1,11 @@
+{
+  "name": "project-docs",
+  "version": "1.0.0",
+  "description": "Specialized commands for managing structured project documentation, proposals, plans, and reports",
+  "author": {
+    "name": "Cole Reed"
+  },
+  "homepage": "https://github.com/ichabodcole/project-docs-scaffold-template",
+  "repository": "https://github.com/ichabodcole/project-docs-scaffold-template",
+  "license": "MIT"
+}
