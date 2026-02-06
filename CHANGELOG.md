@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.5.0...v1.6.0) (2026-02-06)
+
+
+### Features
+
+* migrate to Claude Code plugin system and add specifications doc type ([0103c57](https://github.com/ichabodcole/project-docs-scaffold-template/commit/0103c57b55e507c90f2df6ab1143c9a68c3f5bfe))
+
 ## [1.5.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.4.0...v1.5.0) (2025-11-29)
 
 
