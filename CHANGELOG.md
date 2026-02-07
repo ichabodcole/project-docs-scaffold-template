@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.6.1...v1.7.0) (2026-02-07)
+
+
+### Features
+
+* add recipes plugin with reusable project recipe skills ([bd3775d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/bd3775df171f71201c14883680bd03994e5f3de7))
+* add recipes plugin with reusable project recipe skills ([2ac7a82](https://github.com/ichabodcole/project-docs-scaffold-template/commit/2ac7a825f1cc855208f1b7acd25b61f6d0524a8b))
+
 ## [1.6.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.6.0...v1.6.1) (2026-02-06)
 
 

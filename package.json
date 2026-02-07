@@ -1,6 +1,6 @@
 {
   "name": "project-docs-scaffold-template",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Cookiecutter template for scaffolding project documentation structure",
   "private": true,
   "scripts": {
