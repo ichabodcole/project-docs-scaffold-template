@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.7.0...v1.7.1) (2026-02-07)
+
+
+### Bug Fixes
+
+* skill naming format must be dashed and lowercase ([59ae509](https://github.com/ichabodcole/project-docs-scaffold-template/commit/59ae5097c36f2c3865deb334fa550bb10711608c))
+
 ## [1.7.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.6.1...v1.7.0) (2026-02-07)
 
 
