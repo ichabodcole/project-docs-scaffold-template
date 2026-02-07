@@ -37,6 +37,17 @@
       },
       "category": "documentation",
       "tags": ["operator", "triage", "intake", "documentation"]
+    },
+    {
+      "name": "recipes",
+      "source": "./plugins/recipes",
+      "description": "Technical recipes for implementing project scaffolding and integrating libraries.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Cole Reed"
+      },
+      "category": "documentation",
+      "tags": ["recipes", "scaffolding", "documentation"]
     }
   ]
 }
