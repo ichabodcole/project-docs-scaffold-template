@@ -12,7 +12,7 @@ based on whether the recipe is technology-specific or technology-agnostic.
 
 ```markdown
 ---
-name: <Human-Readable Recipe Name>
+name: <name-of-recipe-lowercased-with-dashes>
 description: >
   <1-3 sentence description of what this recipe implements. Include trigger
   phrases: "Use when the user asks to..." followed by 4-6 natural language
