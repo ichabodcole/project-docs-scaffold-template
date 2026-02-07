@@ -1,5 +1,5 @@
 ---
-name: Elysia + BetterAuth API
+name: elysia-and-better-auth-api
 description: >
   Scaffold and implement a Bun + Elysia + BetterAuth + Drizzle + PostgreSQL API
   server. Use when the user asks to "set up an API with Elysia and BetterAuth",

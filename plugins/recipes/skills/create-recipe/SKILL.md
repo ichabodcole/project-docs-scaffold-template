@@ -1,5 +1,5 @@
 ---
-name: Create Recipe
+name: create-recipe
 description: >
   Analyze a project or subsystem and extract its structure, patterns, and
   integration glue into a reusable recipe skill. Use when the user asks to

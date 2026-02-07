@@ -1,5 +1,5 @@
 ---
-name: Document Versioning
+name: document-versioning
 description: >
   Implement a linear document versioning system with active version tracking,
   manual milestones, configurable limits, and optional AI integration. Use when
