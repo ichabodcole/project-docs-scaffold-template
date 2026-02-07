@@ -1,0 +1,9 @@
+{
+  "name": "recipes",
+  "version": "1.0.0",
+  "description": "Reusable project recipes - executable blueprints for scaffolding and implementing specific technology stacks and patterns",
+  "author": {
+    "name": "Cole Reed"
+  },
+  "license": "MIT"
+}
