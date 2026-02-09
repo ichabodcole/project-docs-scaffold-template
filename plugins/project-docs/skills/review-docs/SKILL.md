@@ -46,11 +46,11 @@ document requires:
 List the documents that need review:
 
 ```bash
-# List proposals
-ls docs/proposals/*.md
+# List project proposals
+ls docs/projects/*/proposal.md
 
-# List plans
-ls docs/plans/*.md
+# List project plans
+ls docs/projects/*/plan.md
 
 # List architecture docs
 ls docs/architecture/*.md
@@ -61,8 +61,9 @@ ls docs/specifications/*.md
 
 Or use Glob to find specific patterns:
 
-- `docs/proposals/*.md` - All proposals
-- `docs/plans/2026-01-*.md` - Recent plans
+- `docs/projects/*/proposal.md` - All project proposals
+- `docs/projects/*/plan.md` - All project plans
+- `docs/projects/*/sessions/*.md` - All project sessions
 - `docs/architecture/*.md` - All architecture docs
 - `docs/specifications/*.md` - All specifications
 
@@ -72,8 +73,8 @@ Different document types have different review goals:
 
 **Temporal Documents** (check for completion/archival):
 
-- `docs/proposals/` - Archive when implemented
-- `docs/plans/` - Archive when complete
+- `docs/projects/*/proposal.md` - Archive project when implemented
+- `docs/projects/*/plan.md` - Archive project when complete
 - `docs/investigations/` - Archive when concluded
 - `docs/reports/` - Archive when acted upon
 
@@ -95,7 +96,7 @@ Task(
   description: "Review [document-name]",
   prompt: "Review this document for accuracy and implementation status:
 
-  **Document:** docs/proposals/2026-01-15-feature-x-proposal.md
+  **Document:** docs/projects/feature-x/proposal.md
 
   Read the document, search the codebase for evidence of implementation,
   check git history for related commits, and provide your findings with
@@ -130,8 +131,8 @@ As agents complete, collect their findings:
 
    ### Ready to Archive (5 documents)
 
-   - proposals/feature-x.md - Fully implemented
-   - proposals/feature-y.md - Superseded by feature-z ...
+   - projects/feature-x/ - Fully implemented
+   - projects/feature-y/ - Superseded by feature-z ...
 
    ### Needs Update (2 documents)
 
@@ -192,37 +193,37 @@ Tasks:
 Provide findings in the standard docs-curator output format.
 ```
 
-## Example: Reviewing All Proposals
+## Example: Reviewing All Project Proposals
 
 ```bash
-# 1. List proposals (excluding archive)
-ls docs/proposals/*.md | grep -v archive
+# 1. List active project proposals (excluding archive)
+ls docs/projects/*/proposal.md | grep -v archive
 
-# Result: 8 proposals to review
+# Result: 8 projects to review
 ```
 
 ```
 # 2. Launch 4 agents in parallel (first batch)
-Task(subagent_type: "docs-curator", description: "Review proposal-a", prompt: "...")
-Task(subagent_type: "docs-curator", description: "Review proposal-b", prompt: "...")
-Task(subagent_type: "docs-curator", description: "Review proposal-c", prompt: "...")
-Task(subagent_type: "docs-curator", description: "Review proposal-d", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review project-a proposal", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review project-b proposal", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review project-c proposal", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review project-d proposal", prompt: "...")
 ```
 
 ```
 # 3. After first batch completes, launch remaining 4
-Task(subagent_type: "docs-curator", description: "Review proposal-e", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review project-e proposal", prompt: "...")
 ...
 ```
 
 ```
 # 4. Consolidate results and present to user
-"8 proposals reviewed:
+"8 projects reviewed:
 - 5 ready for archive (fully implemented)
 - 2 partially complete (list what remains)
 - 1 not started
 
-Would you like me to archive the 5 completed proposals?"
+Would you like me to archive the 5 completed project folders?"
 ```
 
 ## Checklist: Documentation Review

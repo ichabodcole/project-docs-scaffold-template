@@ -139,7 +139,7 @@ Concrete examples of this playbook in use (add examples as they occur)
 **Context:** [What was the situation]
 **Outcome:** [What happened]
 **Lessons:** [What was learned or refined from this use]
-**Reference:** [Link to plan/session/PR]
+**Reference:** [Link to project plan/session/PR]
 
 [Add more examples as this playbook gets used - they validate and refine the approach]
 

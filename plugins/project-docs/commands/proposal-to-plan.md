@@ -6,12 +6,14 @@ allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
 You are tasked with creating a comprehensive development plan for implementing a
 feature proposal.
 
-**Proposal to analyze:** `docs/proposals/$1`
+**Project:** `docs/projects/$1`
 
 **Your workflow:**
 
 1. **Read and understand the proposal**
-   - Read the full proposal document at `docs/proposals/$1`
+   - Read the project's proposal at `docs/projects/$1/proposal.md`
+   - Read the projects README at `docs/projects/README.md` to understand
+     conventions
    - Identify the core features, requirements, and technical considerations
 
 2. **Analyze the current codebase**
@@ -38,9 +40,10 @@ feature proposal.
    - Identify pivotal points - complex areas, migrations, architectural changes
 
 5. **Create the development plan**
-   - Choose an appropriate filename: `YYYY-MM-DD-topic-plan.md`
-   - Write a development plan to `docs/plans/[your-chosen-filename].md`
-   - Use plan template as scaffolding, not a mandatory form
+   - Write the plan to `docs/projects/$1/plan.md` (same project folder as the
+     proposal)
+   - Use the plan template at `docs/projects/TEMPLATES/PLAN.template.md` as
+     scaffolding
    - Think "gas stations on a road trip" - highlight important stops, not
      turn-by-turn directions
    - Include relevant sections:
@@ -63,5 +66,5 @@ feature proposal.
      - Ground in current codebase with specific file references
      - Trust the developer to execute
 
-**Output:** Create a development plan in `docs/plans/` with an appropriate
-filename. Inform the user of the chosen filename and location when complete.
+**Output:** Create a development plan at `docs/projects/$1/plan.md`. Inform the
+user of the location when complete.

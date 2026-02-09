@@ -224,5 +224,5 @@ Match your research effort to the question's complexity:
 - Compare multiple approaches if they exist
 - Stop when you have clear recommendations with trade-offs explained
 
-**Too complex?** If you've checked 15+ sources and still need more depth, or the question involves architectural decisions beyond simple integration, consider using the research-investigator agent instead.
+**Too complex?** If you've checked 15+ sources and still need more depth, or the question involves architectural decisions beyond simple integration, consider using the investigator agent instead.
 ```

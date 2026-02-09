@@ -43,10 +43,15 @@ investigation document.
    - Outline implementation complexity and risks
    - Suggest phased approach if appropriate
 
-6. **Create the proposal**
-   - Choose an appropriate filename: `YYYY-MM-DD-topic-proposal.md`
-   - Write a structured proposal to `docs/proposals/[your-chosen-filename].md`
-   - Use proposal template as scaffolding, not a mandatory form
+6. **Create the project folder and proposal**
+   - Choose a descriptive project folder name (kebab-case, no date prefix):
+     e.g., `oauth-upgrade`, `search-enhancement`, `milkdown-editor`
+   - Create the project folder: `docs/projects/<project-name>/`
+   - Read the projects README at `docs/projects/README.md` to understand
+     conventions
+   - Use the proposal template at `docs/projects/TEMPLATES/PROPOSAL.template.md`
+     as scaffolding
+   - Write the proposal to `docs/projects/<project-name>/proposal.md`
    - Focus on high to mid-level ("capitals not gas stations")
    - Include relevant sections:
      - **Metadata:** Date, Status, Related investigation link
@@ -66,7 +71,7 @@ investigation document.
 7. **Link documents together**
    - Reference the investigation in the proposal's "Related Documents" section
    - Note in the proposal: "This proposal is based on
-     [Investigation: Topic](../investigations/investigation-file.md)"
+     [Investigation: Topic](../../investigations/investigation-file.md)"
 
 **Important guidelines:**
 
@@ -83,10 +88,10 @@ investigation document.
 
 **Output:**
 
-Create a comprehensive, well-structured proposal in `docs/proposals/` with an
-appropriate filename. Inform the user of:
+Create a project folder in `docs/projects/` with a `proposal.md` inside it.
+Inform the user of:
 
-- The chosen filename and location
+- The project folder name and location
 - How the investigation findings informed the proposal
 - Key elements added beyond the investigation
 - Any concerns or questions that arose during the transformation

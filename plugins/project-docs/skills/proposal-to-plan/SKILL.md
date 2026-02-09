@@ -7,12 +7,14 @@ allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
 You are tasked with creating a comprehensive development plan for implementing a
 feature proposal.
 
-**Proposal to analyze:** `docs/proposals/$1`
+**Project:** `docs/projects/$1`
 
 **Your workflow:**
 
 1. **Read and understand the proposal**
-   - Read the full proposal document at `docs/proposals/$1`
+   - Read the project's proposal at `docs/projects/$1/proposal.md`
+   - Read the projects README at `docs/projects/README.md` to understand
+     conventions
    - Identify the core features, requirements, and technical considerations
 
 2. **Analyze the current codebase**
@@ -37,10 +39,10 @@ feature proposal.
    - Consider performance, security, or UX implications
 
 5. **Create the development plan**
-   - Choose an appropriate filename for the plan (e.g.,
-     `ai-script-editing-plan.md`, `tts-version-history-implementation-plan.md`)
-   - Write a structured development plan to
-     `docs/plans/[your-chosen-filename].md`
+   - Write the plan to `docs/projects/$1/plan.md` (same project folder as the
+     proposal)
+   - Use the plan template at `docs/projects/TEMPLATES/PLAN.template.md` as
+     scaffolding
    - Include:
      - **Overview**: Summary of the proposal and implementation approach
      - **Current State Analysis**: What exists today and what needs to change
@@ -53,6 +55,5 @@ feature proposal.
      - **References**: Links to relevant existing code, docs, or related
        proposals
 
-**Output:** Create a detailed, actionable development plan in `docs/plans/` with
-an appropriate filename. Inform the user of the chosen filename and location
-when complete.
+**Output:** Create a development plan at `docs/projects/$1/plan.md`. Inform the
+user of the location when complete.

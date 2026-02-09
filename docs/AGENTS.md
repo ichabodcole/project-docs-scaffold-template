@@ -9,37 +9,49 @@ For a complete overview of the documentation structure and how to use it, see
   project is, who it's for, core principles, what it does and doesn't do. Read
   this first to understand the foundational vision and boundaries.
 
-## Documentation Types
+## Quick Onboarding
 
-This project uses a structured documentation approach with these key
-directories:
+- **memories/** - Summaries of recent work. Read this folder at the start of a
+  new session to understand what's been happening lately.
+
+## Documentation Structure
+
+This project organizes documentation by purpose and lifecycle:
+
+### Permanent Reference (type-based)
+
+- **architecture/** - System design and how things work
+- **specifications/** - Technology-agnostic description of application behavior,
+  organized by domain
+- **interaction-design/** - User experience flow documentation
+- **playbooks/** - Reusable patterns for recurring tasks
+- **lessons-learned/** - Specific problems and their solutions
+- **fragments/** - Incomplete observations for later synthesis
+
+### Discovery & Assessment (type-based)
 
 - **reports/** - Structured assessments of current state (code reviews, security
   audits, doc status)
 - **investigations/** - Research exploring whether action is needed
-- **proposals/** - Feature ideas and design proposals
-- **plans/** - Implementation roadmaps
-- **sessions/** - Dev journals documenting what happened during work
-- **playbooks/** - Reusable patterns for recurring tasks
-- **architecture/** - System design and how things work
-- **specifications/** - Technology-agnostic description of application behavior,
-  organized by domain
-- **interaction-design/** - User experience flow documentation that captures how
-  users interact with features
-- **lessons-learned/** - Specific problems and their solutions
-- **fragments/** - Incomplete observations for later synthesis
+
+### Work Tracking (domain-based)
+
+- **projects/** - Co-located pipeline documents (proposal, plan, sessions,
+  artifacts) for defined bodies of work
+- **backlog/** - Small, self-contained tasks that don't need a project folder
+- **projects/archive/** - Completed project folders
 
 ### The Documentation Cycle
 
-Reports often trigger the documentation lifecycle:
-
 ```
-Report → Investigation → Proposal → Plan → Implementation (Sessions) → Report
+Report → Investigation → Project (proposal → plan → sessions) → Report
 ```
 
-When working with reports:
+Reports and investigations are the connective tissue between projects:
 
 - Reports assess current state and identify findings
-- Findings can spawn investigations, proposals, or direct action
-- Link back to reports when creating follow-up documentation
-- Generate new reports periodically to track progress
+- Findings can spawn investigations or new projects
+- Investigations determine whether a project is warranted
+- Projects contain the full pipeline (proposal → plan → sessions → artifacts)
+- Completed projects may trigger new reports to assess outcomes
+- Small tasks that don't need the full pipeline go in the backlog

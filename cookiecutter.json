@@ -1,7 +1,4 @@
 {
   "project_name": "My Project",
-  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-').replace('_', '-') }}",
-  "project_description": "A brief description of the project",
-  "author_name": "Your Name",
-  "year": "{% now 'utc', '%Y' %}"
+  "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-').replace('_', '-') }}"
 }

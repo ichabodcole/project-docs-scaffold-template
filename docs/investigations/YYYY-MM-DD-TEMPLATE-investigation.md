@@ -72,5 +72,5 @@ schedule follow-up, etc.]
 **Related Documents:**
 
 - [Code analyzed](../../src/path/to/code.ts)
-- [Related proposal](../proposals/proposal-name.md) (if created)
+- [Related proposal](../projects/project-name/proposal.md) (if created)
 - [Related architecture](../architecture/architecture-name.md)

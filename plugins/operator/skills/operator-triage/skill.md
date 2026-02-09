@@ -90,15 +90,15 @@ Not ready to act on?
 
 **Quick Actions:**
 
-| Route              | Next Action                                           |
-| ------------------ | ----------------------------------------------------- |
-| **Investigation**  | Move to on-deck, launch `research-investigator` agent |
-| **Proposal**       | Create proposal doc using `proposal-writer` agent     |
-| **Plan**           | Create dev plan using `dev-plan-generator` agent      |
-| **Development**    | Create worktree using `parallel-worktree-dev` skill   |
-| **Lesson Learned** | Create doc in `docs/lessons-learned/`                 |
-| **Fragment**       | Move to fragments folder, revisit later               |
-| **Defer**          | Move to backlog, note reason                          |
+| Route              | Next Action                                         |
+| ------------------ | --------------------------------------------------- |
+| **Investigation**  | Move to on-deck, launch `investigator` agent        |
+| **Proposal**       | Create proposal doc using `proposal-writer` agent   |
+| **Plan**           | Create dev plan using `dev-plan-generator` agent    |
+| **Development**    | Create worktree using `parallel-worktree-dev` skill |
+| **Lesson Learned** | Create doc in `docs/lessons-learned/`               |
+| **Fragment**       | Move to fragments folder, revisit later             |
+| **Defer**          | Move to backlog, note reason                        |
 
 #### C. Record Decision as Task
 
@@ -128,7 +128,7 @@ Description:
 
 **Next Steps:**
 1. Move to on-deck folder
-2. Launch research-investigator agent
+2. Launch investigator agent
 3. Create proposal based on findings
 ```
 

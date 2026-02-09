@@ -1,6 +1,6 @@
 ---
 name: dev-plan-generator
-description: Use this agent when you need to create a detailed technical development plan from a proposal, feature request, or implementation instructions. This includes transforming high-level requirements into actionable development guidance, breaking down complex features into implementable phases, or creating structured plans that developers can follow for implementation.\n\n<example>\nContext: User has a proposal document and needs a development plan created from it.\nuser: "I have a proposal for adding real-time notifications to our app. Can you create a dev plan for it?"\nassistant: "I'll use the dev-plan-generator agent to create a comprehensive development plan from your proposal."\n<uses Task tool to launch dev-plan-generator agent>\n</example>\n\n<example>\nContext: User describes a feature they want implemented and needs a plan.\nuser: "We need to implement OAuth2 authentication with support for Google and GitHub providers. Please create a development plan for this."\nassistant: "Let me use the dev-plan-generator agent to create a detailed technical development plan for the OAuth2 implementation."\n<uses Task tool to launch dev-plan-generator agent>\n</example>\n\n<example>\nContext: User has completed a proposal review and needs to move to planning phase.\nuser: "The team approved the API versioning proposal in docs/proposals/api-versioning.md. Now I need a dev plan."\nassistant: "I'll launch the dev-plan-generator agent to transform this approved proposal into an actionable development plan."\n<uses Task tool to launch dev-plan-generator agent>\n</example>
+description: Use this agent when you need to create a detailed technical development plan from a proposal, feature request, or implementation instructions. This includes transforming high-level requirements into actionable development guidance, breaking down complex features into implementable phases, or creating structured plans that developers can follow for implementation.\n\n<example>\nContext: User has a proposal document and needs a development plan created from it.\nuser: "I have a proposal for adding real-time notifications to our app. Can you create a dev plan for it?"\nassistant: "I'll use the dev-plan-generator agent to create a comprehensive development plan from your proposal."\n<uses Task tool to launch dev-plan-generator agent>\n</example>\n\n<example>\nContext: User describes a feature they want implemented and needs a plan.\nuser: "We need to implement OAuth2 authentication with support for Google and GitHub providers. Please create a development plan for this."\nassistant: "Let me use the dev-plan-generator agent to create a detailed technical development plan for the OAuth2 implementation."\n<uses Task tool to launch dev-plan-generator agent>\n</example>\n\n<example>\nContext: User has completed a proposal review and needs to move to planning phase.\nuser: "The team approved the API versioning proposal in docs/projects/api-versioning/proposal.md. Now I need a dev plan."\nassistant: "I'll launch the dev-plan-generator agent to transform this approved proposal into an actionable development plan."\n<uses Task tool to launch dev-plan-generator agent>\n</example>
 model: opus
 color: blue
 ---
@@ -20,8 +20,11 @@ specifications, and implementation guidance.
 
 ## Plan Structure and Format
 
-Review the plans README file at `docs/plans/README.md` and use the template file
-as a starting point for your plans: `docs/plans/YYYY-MM-DD-TEMPLATE-plan.md`
+Review the projects README at `docs/projects/README.md` to understand the
+project folder structure and plan conventions. Use the plan template at
+`docs/projects/TEMPLATES/PLAN.template.md` as a starting point. Plans are
+written as `plan.md` inside the relevant project folder (e.g.,
+`docs/projects/<project-name>/plan.md`).
 
 ## Your Working Process
 
@@ -80,9 +83,9 @@ When the input is unclear or incomplete:
 
 ## Output Format
 
-Produce your development plan in clean Markdown format, suitable for storage in
-a docs/plans/ directory. Use consistent heading levels, code blocks for
-technical specifications, and tables where they improve clarity.
+Produce your development plan as `plan.md` in the relevant project folder (e.g.,
+`docs/projects/<project-name>/plan.md`). Use consistent heading levels, code
+blocks for technical specifications, and tables where they improve clarity.
 
 ## Self-Verification Checklist
 

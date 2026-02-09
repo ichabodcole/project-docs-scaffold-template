@@ -32,8 +32,8 @@ analyzing the codebase and documentation.
    - List all documents in each docs subdirectory:
      - `docs/architecture/` - What systems are documented?
      - `docs/specifications/` - What application behavior is specified?
-     - `docs/proposals/` - What's been proposed?
-     - `docs/plans/` - What's planned?
+     - `docs/projects/` - What projects exist? Check each project folder for
+       proposal.md, plan.md, and sessions/
      - `docs/investigations/` - What's being researched?
      - `docs/playbooks/` - What patterns are codified?
      - `docs/lessons-learned/` - What problems were solved?
@@ -42,7 +42,9 @@ analyzing the codebase and documentation.
    - Identify which proposals/plans are in active vs archive folders
 
 4. **Understand recent activity and current state**
-   - Check `docs/sessions/` for recent session notes (read 3-5 most recent)
+   - Check `docs/projects/*/sessions/` for recent session notes (read 3-5 most
+     recent across all projects)
+   - Check `docs/memories/` for recent work summaries
    - Use git to find recently modified files:
      `git log --since="30 days ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -20`
    - Look at recent commits for context:
@@ -133,8 +135,7 @@ analyzing the codebase and documentation.
 
    **Active vs Archived:**
 
-   - Proposals: X active, Y archived
-   - Plans: X active, Y archived
+   - Projects: X active, Y archived (check docs/projects/)
    - Investigations: X active
 
    **Key Docs Read:**
@@ -283,8 +284,7 @@ analyzing the codebase and documentation.
    ```
 
    src/ ├── components/ [if applicable] ├── services/ [if applicable] ├──
-   models/ [if applicable] └── ... docs/ ├── architecture/ ├── proposals/ └──
-   ...
+   models/ [if applicable] └── ... docs/ ├── architecture/ ├── projects/ └── ...
 
    ```
 
@@ -314,8 +314,8 @@ analyzing the codebase and documentation.
    - [Area 2]: [Brief description based on sessions/commits]
 
    **Recent Sessions:**
-   - [Date]: [Session topic/focus] (see `docs/sessions/...`)
-   - [Date]: [Session topic/focus] (see `docs/sessions/...`)
+   - [Date]: [Session topic/focus] (see `docs/projects/<project>/sessions/...`)
+   - [Date]: [Session topic/focus] (see `docs/projects/<project>/sessions/...`)
 
    **Notable Changes:**
    - [Summary of significant commits or features added]
@@ -324,11 +324,8 @@ analyzing the codebase and documentation.
 
    [Based on proposals, plans, and recent activity - where is this project heading?]
 
-   **Active Proposals:**
-   - [Proposal name/topic] (see `docs/proposals/...`)
-
-   **Active Plans:**
-   - [Plan name/topic] (see `docs/plans/...`)
+   **Active Projects:**
+   - [Project name] - [status: proposal only / planned / in progress] (see `docs/projects/<name>/`)
 
    **In Progress Investigations:**
    - [Investigation topic] (see `docs/investigations/...`)

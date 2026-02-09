@@ -64,13 +64,14 @@ Proposal/Investigation exists
 
 ### What Goes Where
 
-| Artifact               | Location                                    | Created By                  |
-| ---------------------- | ------------------------------------------- | --------------------------- |
-| Proposal/Investigation | `docs/proposals/` or `docs/investigations/` | Main repo (before worktree) |
-| WORKTREE_TASK.md       | Worktree root                               | Main repo (during setup)    |
-| Discovery artifacts    | `.artifacts/<branch>/`                      | Cloud agent (in worktree)   |
-| Development plan       | `docs/plans/`                               | Cloud agent (in worktree)   |
-| Implementation         | Various                                     | Cloud agent (in worktree)   |
+| Artifact            | Location                       | Created By                  |
+| ------------------- | ------------------------------ | --------------------------- |
+| Project folder      | `docs/projects/<name>/`        | Main repo (before worktree) |
+| Investigation       | `docs/investigations/`         | Main repo (before worktree) |
+| WORKTREE_TASK.md    | Worktree root                  | Main repo (during setup)    |
+| Discovery artifacts | `.artifacts/<branch>/`         | Cloud agent (in worktree)   |
+| Development plan    | `docs/projects/<name>/plan.md` | Cloud agent (in worktree)   |
+| Implementation      | Various                        | Cloud agent (in worktree)   |
 
 ## Quick Start
 
@@ -103,7 +104,8 @@ Proposal/Investigation exists
 
 Before creating a worktree, you need:
 
-- A **proposal** (`docs/proposals/`) - What to build and why
+- A **project folder** (`docs/projects/<name>/proposal.md`) - What to build and
+  why
 - OR an **investigation** (`docs/investigations/`) - Research that's ready for
   implementation
 
@@ -166,7 +168,8 @@ Each cloud agent:
 2. Reads WORKTREE_TASK.md
 3. Runs `pnpm install`
 4. **Runs dev-discovery** to understand the codebase
-5. **Creates development plan** in `docs/plans/`
+5. **Creates development plan** in the project folder
+   (`docs/projects/<name>/plan.md`)
 6. Implements according to the plan
 7. Commits and notifies when complete
 
@@ -205,7 +208,7 @@ approach.
 ## Source Documents
 
 **Proposal:**
-[Milkdown Editor Integration Spike](docs/proposals/2026-02-04-milkdown-editor-integration-spike.md)
+[Milkdown Editor Integration Spike](docs/projects/milkdown-editor/proposal.md)
 
 **Related Investigation:**
 [Rich Text Editor Library Investigation](docs/investigations/2026-02-04-rich-text-editor-library-investigation.md)
@@ -221,7 +224,7 @@ approach.
 
 1. Run `pnpm install`
 2. Run `/dev-discovery` to understand the current editor implementation
-3. Create a development plan in `docs/plans/`
+3. Create a development plan in the project folder
 4. Implement according to the plan
 5. Document findings in the proposal (update "Findings" section)
 ```
@@ -320,7 +323,7 @@ Track parallel work progress:
 ### Agent Reports "Missing Plan"
 
 - Verify the plan path in WORKTREE_TASK.md is correct
-- Plans should be relative from worktree root: `docs/plans/...`
+- Plans live in the project folder: `docs/projects/<name>/plan.md`
 
 ### Agent Makes Wrong Architectural Decisions
 
@@ -357,7 +360,7 @@ When a cloud agent starts in a worktree, it should:
 2. **Read source documents** - Proposal and/or investigation
 3. **Run `pnpm install`** - Set up dependencies
 4. **Run `/dev-discovery`** - Understand affected codebase areas
-5. **Create development plan** - In `docs/plans/` with today's date
+5. **Create development plan** - In the project folder as `plan.md`
 6. **Implement** - Follow the plan it created
 7. **Test** - Verify with `pnpm verify` or relevant tests
 8. **Commit** - With clear commit messages

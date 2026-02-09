@@ -49,7 +49,7 @@ Create specification documents when:
 - Implementation details or technology choices (use an Implementation Blueprint for that)
 - Architecture of the current codebase (use architecture docs)
 - One-off tasks or processes (use playbooks)
-- Ideas that haven't been validated (use proposals or investigations first)
+- Ideas that haven't been validated (use investigations first, then create a project)
 
 ## File Naming and Organization
 

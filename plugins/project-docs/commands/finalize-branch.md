@@ -18,14 +18,21 @@ merging to develop.
 2. **Code Review** - Review all commits, check new/modified files against
    patterns
 3. **Run Quality Tools** - `pnpm run format`, `lint`, `check-types`, `test`
-4. **Create Session Document** - Always create in `docs/sessions/`
-5. **Assess Additional Docs** - Architecture, interaction design,
+4. **Create Session Document** - Always create in the relevant project's
+   `docs/projects/<project-name>/sessions/` folder. If no project folder exists
+   for this work, create the session in a new or existing project folder. See
+   `docs/projects/README.md` for conventions.
+5. **Create Memory** - Create a short memory in `docs/memories/` summarizing
+   what was done. Use the template at `docs/memories/TEMPLATE.md`. Name it
+   `YYYY-MM-DD-short-description.md`. Skip for trivial changes where the commit
+   message alone provides sufficient context.
+6. **Assess Additional Docs** - Architecture, interaction design,
    specifications, lessons learned, playbooks
-6. **Commit Documentation** - Stage and commit any new docs
-7. **Squash Commits** - `git reset --soft develop` then single commit
-8. **Merge to Develop with Approval** - Ask for user approval before merging
+7. **Commit Documentation** - Stage and commit any new docs
+8. **Squash Commits** - `git reset --soft develop` then single commit
+9. **Merge to Develop with Approval** - Ask for user approval before merging
    `git merge --ff-only <branch>`
-9. **Cleanup** - Delete branch, remove worktree if applicable
+10. **Cleanup** - Delete branch, remove worktree if applicable
 
 ## Claude-Specific Guidance
 
@@ -49,7 +56,11 @@ pnpm run test
 ### Documentation
 
 - Session docs: Reference
-  [docs/sessions/README.md](../../docs/sessions/README.md)
+  [docs/projects/README.md](../../docs/projects/README.md) (see Sessions
+  section)
+- Memories: Reference [docs/memories/README.md](../../docs/memories/README.md)
+  and use [docs/memories/TEMPLATE.md](../../docs/memories/TEMPLATE.md). Keep it
+  short — a heading, 1-3 sentences, key files, and a link to deeper docs.
 - Architecture: Reference
   [docs/architecture/README.md](../../docs/architecture/README.md)
 - Interaction design: Reference

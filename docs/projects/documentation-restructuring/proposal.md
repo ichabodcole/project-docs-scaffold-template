@@ -389,7 +389,7 @@ convention.
 
 - Projects: Move the entire project folder from `projects/` to `archive/`.
   Internal references remain valid. External references to archived projects use
-  `../../archive/project-name/` paths.
+  `../archive/project-name/` paths (from the projects directory).
 - Backlog items: Move completed items from `backlog/` to `backlog/archive/`.
 
 ### Migration strategy
@@ -457,8 +457,9 @@ The following would need updating:
 - **Migration effort.** Existing documents have cross-references that would need
   updating. Mitigation: incremental migration reduces blast radius.
 - **"What's active?" visibility.** Scanning `projects/` tells you what exists
-  but not what's in progress vs. stalled. Mitigation: a `README.md` index in
-  `projects/` listing active work, or frontmatter metadata.
+  but not what's in progress vs. stalled. Mitigation: directory scanning is
+  sufficient at current scale; project folders are archived when complete, so
+  active folders represent in-progress or pending work.
 - **Tooling updates.** Plugin commands, skills, and agents reference current
   paths. Mitigation: update as part of rollout, not separately. Defer specifics
   to implementation phase.
@@ -494,21 +495,24 @@ discussion:
    reference documentation. They capture incomplete observations that precede
    any defined work and don't belong to a specific project.
 
-## Open Questions
+5. **Index/status tracking** — Resolved: `projects/README.md` does NOT maintain
+   an index of active projects. Scanning the directory is sufficient for both
+   humans and agents, and avoids unnecessary maintenance burden.
 
-1. **Index/status tracking** — Should `projects/README.md` maintain an index of
-   active projects with status? Or is scanning the folder sufficient?
-
-2. **Investigation lifecycle** — When an investigation leads to a project,
-   should the investigation's status be updated to reference the project? (e.g.,
-   "Outcome: Project created → `projects/oauth-upgrade/`")
+6. **Investigation lifecycle** — Resolved: When an investigation leads to a
+   project, update the existing `**Outcome:**` metadata field to reference the
+   project (e.g., `Project created → projects/oauth-upgrade/`). Also update the
+   Related Documents section to link to the project's proposal. Archive
+   investigations once any resulting project work has been completed; if no
+   action was needed, archive immediately.
 
 ---
 
 **Related Documents:**
 
-- [Current Documentation README](../README.md)
-- [Documentation CLAUDE.md](../CLAUDE.md)
+- [Current Documentation README](../../README.md)
+- [Documentation CLAUDE.md](../../CLAUDE.md)
+- [Development Plan](./plan.md)
 
 ---
 
