@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.7.1...v1.8.0) (2026-02-09)
+
+
+### Features
+
+* add elysia-betterauth-oauth skill ([b4693b2](https://github.com/ichabodcole/project-docs-scaffold-template/commit/b4693b2d9289b61bfd94aa51a67efd86b2344f0a))
+* **recipes:** add 7 recipe skills extracted from Operator monorepo ([91579ec](https://github.com/ichabodcole/project-docs-scaffold-template/commit/91579ecbdf8520729012600600a61dc1702a10aa))
+
 ## [1.7.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/v1.7.0...v1.7.1) (2026-02-07)
 
 
