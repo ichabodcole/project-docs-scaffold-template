@@ -116,7 +116,8 @@ The overview spec (`01-overview.md`) should always exist and should:
 ## Phase 3: Write Specifications
 
 For each domain spec, include these sections as applicable. Consult
-`references/spec-writing-guide.md` for detailed templates and examples.
+[references/spec-writing-guide.md](references/spec-writing-guide.md) for
+detailed templates and examples.
 
 **Required sections:**
 
@@ -325,5 +326,5 @@ first-class project artifacts, not one-time documents.
 
 For detailed guidance on writing individual spec sections:
 
-- **`references/spec-writing-guide.md`** - Templates, formatting rules, and
-  examples for each section type
+- **[references/spec-writing-guide.md](references/spec-writing-guide.md)** -
+  Templates, formatting rules, and examples for each section type

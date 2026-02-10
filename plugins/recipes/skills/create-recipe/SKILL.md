@@ -211,8 +211,10 @@ The `<recipe-name>` directory should already match the branch name you created
 in Phase 0 (e.g., if the branch is `recipe/document-versioning`, the directory
 is `document-versioning`).
 
-Consult `references/recipe-skill-template.md` for the full template structure,
-writing principles, and examples of good vs bad recipe content.
+Consult
+[references/recipe-skill-template.md](references/recipe-skill-template.md) for
+the full template structure, writing principles, and examples of good vs bad
+recipe content.
 
 ### Phase 5: Verify, Publish, and Present
 
@@ -279,6 +281,7 @@ writing principles, and examples of good vs bad recipe content.
 
 ### Reference Files
 
-- **`references/recipe-skill-template.md`** - Full skill file template, writing
-  principles, recipe type characteristics (technology-specific vs
-  technology-agnostic vs hybrid), and examples of good vs bad recipe content
+- **[references/recipe-skill-template.md](references/recipe-skill-template.md)** -
+  Full skill file template, writing principles, recipe type characteristics
+  (technology-specific vs technology-agnostic vs hybrid), and examples of good
+  vs bad recipe content
