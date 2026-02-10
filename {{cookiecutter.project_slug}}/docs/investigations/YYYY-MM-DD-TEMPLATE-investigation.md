@@ -16,7 +16,7 @@ Focus on: What did you investigate? What did you find? What should happen next?
 **Date Started:** YYYY-MM-DD
 **Investigator:** [Name or "Claude Code"]
 **Status:** Active | Concluded
-**Outcome:** [TBD | Proposal Recommended | No Action Needed | Needs More Research | Monitoring]
+**Outcome:** [TBD | Project created → projects/project-name/ | No Action Needed | Needs More Research | Monitoring]
 
 ---
 
@@ -48,7 +48,7 @@ What did we discover through analysis?
 
 Based on findings, what should we do? (Check one and explain)
 
-- [ ] **Create Proposal** - Action is warranted
+- [ ] **Create Project** - Action is warranted; create a project folder with a proposal
 - [ ] **No Action Needed** - Current state is acceptable
 - [ ] **Monitor** - Watch for specific signals/thresholds
 - [ ] **More Research Needed** - Outstanding questions remain
@@ -57,7 +57,7 @@ Based on findings, what should we do? (Check one and explain)
 
 ## Next Steps
 
-[Concrete actions based on recommendation - create proposal, document decision, schedule follow-up, etc.]
+[Concrete actions based on recommendation - create project folder with proposal, document decision, schedule follow-up, etc.]
 
 ## Open Questions (Optional)
 
@@ -68,5 +68,5 @@ Based on findings, what should we do? (Check one and explain)
 **Related Documents:**
 
 - [Code analyzed](../../src/path/to/code.ts)
-- [Related proposal](../proposals/proposal-name.md) (if created)
+- [Related project](../projects/project-name/proposal.md) (if created)
 - [Related architecture](../architecture/architecture-name.md)

@@ -131,7 +131,7 @@ Things to keep in mind when working with this system
 
 - [Playbook for augmenting this system](../playbooks/playbook-name.md) (if applicable)
 - [Related architecture doc](./other-doc.md)
-- [Proposal that introduced this](../proposals/proposal-name.md)
+- [Project that introduced this](../projects/project-name/proposal.md)
 - [External documentation](URL)
 
 ---

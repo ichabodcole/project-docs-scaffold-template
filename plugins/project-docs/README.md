@@ -157,6 +157,35 @@ plans, investigations, and reports.
 
 ---
 
+### `/project-docs:create-project`
+
+**Description:** Create a new project folder with a scaffolded proposal.
+
+**Usage:**
+
+```
+/project-docs:create-project [project-name]
+```
+
+**Arguments:**
+
+- `project-name` (optional) - Kebab-case name for the project folder (e.g.,
+  `search-enhancement`). If omitted, you'll be asked.
+
+**What it does:**
+
+- Creates `docs/projects/<name>/` folder
+- Scaffolds `proposal.md` from the project template
+- Links to an investigation if one is referenced
+
+**Use cases:**
+
+- Starting a new feature or significant change
+- Following up on a completed investigation
+- Creating the project home for a body of work
+
+---
+
 ### `/project-docs:proposal-to-plan`
 
 **Description:** Create a detailed development plan from a proposal document.
@@ -169,16 +198,16 @@ plans, investigations, and reports.
 
 **Arguments:**
 
-- `filename` - Name of the proposal file in `docs/proposals/` (e.g.,
-  `new-feature.md`)
+- `project-name` - Name of the project folder in `docs/projects/` (e.g.,
+  `search-enhancement`)
 
 **What it does:**
 
-- Reads the specified proposal
+- Reads the project's proposal at `docs/projects/<name>/proposal.md`
 - Analyzes current codebase for relevant patterns
 - Identifies implementation requirements
 - Assesses complexity and risks
-- Generates `docs/plans/[filename].md` with:
+- Generates `docs/projects/<name>/plan.md` with:
   - Overview and approach
   - Current state analysis
   - Ordered implementation steps
@@ -202,15 +231,19 @@ This plugin is designed for projects using the documentation structure from
 
 ```
 docs/
+├── projects/          # Co-located project folders (proposal + plan + sessions)
+│   ├── TEMPLATES/     # Proposal, plan, and session templates
+│   └── archive/       # Completed project folders
+├── backlog/           # Small, self-contained work items
+├── memories/          # Quick-reference summaries of recent work
 ├── reports/           # Generated assessments and analysis
 ├── investigations/    # Research and exploration documents
-├── sessions/          # Work session notes
-├── plans/            # Development plans (generated from proposals)
-├── proposals/        # Feature proposals and design ideas
-├── playbooks/        # Reusable implementation guides
-├── architecture/     # System design documentation
-├── lessons-learned/  # Problem-solution documentation
-└── fragments/        # Incomplete observations and breadcrumbs
+├── playbooks/         # Reusable implementation guides
+├── architecture/      # System design documentation
+├── specifications/    # Technology-agnostic behavior descriptions
+├── interaction-design/ # User experience flow documentation
+├── lessons-learned/   # Problem-solution documentation
+└── fragments/         # Incomplete observations and breadcrumbs
 ```
 
 ## Requirements

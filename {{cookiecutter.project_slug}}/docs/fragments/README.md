@@ -76,7 +76,7 @@ Create a fragment when you notice something during development that:
 Fragments can evolve into:
 
 - **Investigation** - When you decide to actively research the question
-- **Proposal** - When you have enough context to propose a solution
+- **Project** - When you have enough context to propose a solution (create a project folder)
 - **Lesson Learned** - If the issue manifests as a bug and you fix it
 - **Architecture Doc** - If it reveals insights about system design
 - **Nothing** - Some fragments age out as irrelevant (and that's fine!)
@@ -88,7 +88,7 @@ Fragments are intentionally non-conformist. Common elements include:
 - **Context** - Where/when this came up
 - **Observation** - What doesn't feel right
 - **Why It Might Matter** - Potential future impact
-- **Related Docs** - Links to sessions, proposals, etc. that spawned this
+- **Related Docs** - Links to project sessions, investigations, etc. that spawned this
 - **Trigger for Revisit** - What would make this worth investigating
 
 ## Naming Convention
@@ -102,7 +102,7 @@ Example: `2025-11-11-testing-infrastructure-unknowns.md`
 ## Tips
 
 - **Keep it lightweight** - Don't overanalyze, just capture the thought
-- **Link liberally** - Connect to sessions, code locations, related docs
+- **Link liberally** - Connect to project sessions, code locations, related docs
 - **Date them** - Helps understand context when reviewing later
 - **Review periodically** - When starting new work, scan fragments for relevant observations
 - **Archive freely** - Move stale fragments to `fragments/archive/` when no longer relevant

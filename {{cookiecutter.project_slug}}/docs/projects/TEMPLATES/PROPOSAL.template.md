@@ -1,16 +1,14 @@
 <!--
-IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
-create proposals and when NOT to create them.
+USAGE: Copy this file to your project folder as `proposal.md`.
 
-USING THIS TEMPLATE:
-
-This template helps you tell the story of what you're proposing and why. It's not a specification form.
-Think of it as mapping out the major landmarks ("the capitals") without detailing every step along the way.
+This template helps you tell the story of what you're proposing and why.
+Think of it as mapping out the major landmarks without detailing every step.
 
 Adapt sections as needed. Merge, skip, or add sections based on what helps tell your story clearly.
-Use prose and narrative flow - this is a story about where we're going, not a questionnaire to fill out.
 
 Core questions to answer: What are we building? Why? What's the high-level approach? What's in/out of scope?
+
+For more guidance on proposals, see the projects README: ../README.md
 -->
 
 # [Proposal Title]
@@ -75,9 +73,8 @@ What are the key dependencies (existing features, systems, or external libraries
 
 **Related Documents:**
 
-- [Investigation](../investigations/investigation-name.md) (if applicable)
-- [Architecture docs](../architecture/doc-name.md) (if applicable)
-- [Related proposals](../proposals/related-proposal.md) (if applicable)
+- [Investigation](../../investigations/investigation-name.md) (if applicable)
+- [Architecture docs](../../architecture/doc-name.md) (if applicable)
 
 ---
 

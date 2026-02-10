@@ -144,7 +144,7 @@ When investigating performance concerns:
 
 **Example:**
 
-> Based on [Investigation: AI Composable Refactoring](../investigations/2025-10-14-ai-composable-refactoring-investigation.md), we found 70% code duplication across AI workflows. This proposal outlines a composable factory pattern to reduce duplication.
+> Based on [Investigation: AI Composable Refactoring](../../investigations/2025-10-14-ai-composable-refactoring-investigation.md), we found 70% code duplication across AI workflows. This proposal outlines a composable factory pattern to reduce duplication.
 
 ### Outcome: No Action Needed
 
@@ -188,8 +188,7 @@ When investigating performance concerns:
 - Every new workflow requires 200+ lines boilerplate
 - Inconsistent error handling led to 3 bugs
 
-**Outcome:** Proposal Recommended
-**Proposal created:** `ai-composable-factory-pattern-proposal.md`
+**Outcome:** Project created → `projects/ai-composable-factory/`
 
 ### Example 2: Technology Evaluation
 
@@ -215,18 +214,39 @@ When investigating performance concerns:
 - Perceived slowness due to lack of loading indicator
 - Actual bottleneck: initial app startup, not document loading
 
-**Outcome:** Proposal Recommended (different problem)
-**Proposal created:** `loading-states-improvement-proposal.md`
+**Outcome:** Project created → `projects/loading-states-improvement/`
 
 ---
 
+## Investigation → Project Flow
+
+Investigations precede projects. When an investigation concludes with "yes, build this":
+
+1. **Create a project folder** in `projects/` with a descriptive kebab-case name
+2. **Write the project's proposal** referencing this investigation
+3. **Update the investigation's Outcome field** to point to the project (e.g., `Project created → projects/oauth-upgrade/`)
+4. **Update Related Documents** to link to the project's proposal
+
+The investigation stays in `investigations/` — it never moves into the project folder. This keeps the link stable and acknowledges that investigations can feed multiple projects.
+
+## Archival
+
+Archive an investigation when:
+
+- **Action was taken:** The resulting project work has been completed. The investigation's value is now captured in the project's documents.
+- **No action needed:** The investigation concluded that no work is warranted. Archive it to document the decision.
+- **Superseded:** A newer investigation covers the same ground.
+
+**Don't archive** an investigation while its resulting project is still active — the investigation provides context that may be referenced during implementation.
+
+Move completed investigations to `investigations/archive/`.
+
 ## Relationship to Other Documentation
 
-- **Proposals** capture ideas for features to build; investigations determine if proposals are warranted
-- **Plans** outline implementation roadmaps; investigations happen before plans
-- **Sessions** document work in progress; investigations are pre-work analysis
+- **Projects** contain proposals, plans, and sessions; investigations determine whether a project is warranted
 - **Architecture** documents existing systems; investigations analyze if those systems need changes
 - **Lessons Learned** capture specific problems solved; investigations explore potential problems
+- **Reports** assess current state; both reports and investigations can trigger new projects
 
 ---
 

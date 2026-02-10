@@ -8,16 +8,19 @@ allowed_tools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task"]
 You are tasked with reviewing project documentation to determine implementation
 status and perform cleanup operations.
 
-**Documentation types to review:** reports, investigations, plans, proposals,
-and specifications in `docs/` directory
+**Documentation types to review:** reports, investigations, project pipeline
+documents (proposals, plans, sessions), and specifications in `docs/` directory
 
 **Your workflow:**
 
 1. **Discover documents to review**
-   - List all documents in `docs/reports/`, `docs/investigations/`,
-     `docs/plans/`, `docs/proposals/`, and `docs/specifications/`
-   - Exclude template files (TEMPLATE in filename) and README files
-   - Exclude files already in archive folders
+   - List all documents in `docs/reports/`, `docs/investigations/`, and
+     `docs/specifications/`
+   - List project pipeline documents by scanning `docs/projects/` for
+     `proposal.md`, `plan.md`, and `sessions/*.md` in each project folder
+   - Exclude template files (TEMPLATE in filename), README files, and the
+     `TEMPLATES/` directory
+   - Exclude files already in `docs/projects/archive/`
    - Present the user with a list of documents found and ask which ones to
      review (or confirm to review all)
 
@@ -33,8 +36,8 @@ and specifications in `docs/` directory
      - Looking for code that implements the described functionality
      - Checking git history for related commits (use `git log --grep` with
        relevant keywords)
-     - Scanning `docs/sessions/` for session notes that might reference this
-       work
+     - Scanning `docs/projects/*/sessions/` for session notes that might
+       reference this work
      - Cross-referencing with other related documents
 
    - **Determine status** based on findings:
@@ -61,12 +64,15 @@ and specifications in `docs/` directory
 
 4. **Archive completed documents**
    - For documents marked as **Completed** or **Abandoned**:
-     - Move the document to the `archive/` subdirectory within its type folder
-     - Example: `docs/plans/feature-plan.md` →
-       `docs/plans/archive/feature-plan.md`
+     - For standalone docs (reports, investigations, specifications): move to
+       the `archive/` subdirectory within its type folder. Use `git mv` to
+       preserve history.
+     - For project pipeline docs (proposals, plans, sessions): move the **entire
+       project folder** to `docs/projects/archive/`. Example:
+       `docs/projects/my-feature/` → `docs/projects/archive/my-feature/`
      - Use `git mv` command to preserve history
    - For **Partially Completed** or **Not Started**:
-     - Leave in the main folder (active work area)
+     - Leave in the active area
 
 5. **Generate documentation status report**
 

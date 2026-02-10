@@ -1,8 +1,6 @@
 <!--
-IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
-create sessions and when they're optional.
-
-USING THIS TEMPLATE:
+USAGE: Copy this file to your project's `sessions/` folder, replacing YYYY-MM-DD with the current date
+and renaming to describe the session topic (e.g., 2026-02-09-initial-implementation.md).
 
 This is your dev journal - write what's relevant, skip what's not. Sessions are informal and flexible.
 Focus on what stands out: deviations from plan, unexpected discoveries, lessons learned.
@@ -15,7 +13,7 @@ Sessions serve two audiences:
 If everything went smoothly and there's nothing notable, you might only need a few lines.
 If you wrestled with a complex bug for hours, write as much as helps capture what happened.
 
-Think "developer's diary" - capture the journey in whatever format makes sense.
+For more guidance on sessions, see the projects README: ../../README.md
 -->
 
 # [Topic] — YYYY-MM-DD
@@ -65,6 +63,7 @@ This is especially valuable for capturing solutions to tricky problems or insigh
 
 **Related Documents:**
 
-- [Plan](../plans/plan-name.md) (if implementing from a plan)
-- [Architecture](../architecture/doc-name.md) (if relevant)
+- [Plan](../plan.md) (if implementing from a plan)
+- [Proposal](../proposal.md) (if relevant)
+- [Architecture](../../architecture/doc-name.md) (if relevant)
 - [Commit hash or PR](link) (if merged)

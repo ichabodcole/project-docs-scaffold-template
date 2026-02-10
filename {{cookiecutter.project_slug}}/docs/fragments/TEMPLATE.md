@@ -27,7 +27,7 @@
 
 ## Related Documentation
 
-- Session: [Link to session doc if applicable]
+- Session: [Link to project session if applicable](../projects/project-name/sessions/session-name.md)
 - Code: [Link to relevant files/locations]
 - Related: [Other docs that provide context]
 

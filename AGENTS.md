@@ -17,9 +17,11 @@ Cookiecutter variable substitution.
 The template is organized with these key directories:
 
 - `{{cookiecutter.project_slug}}/docs/` - Contains the documentation scaffold
-  that gets generated, with READMEs explaining each subdirectory's purpose
-  (reports, investigations, sessions, plans, proposals, playbooks, architecture,
-  specifications, lessons-learned, fragments)
+  that gets generated, with READMEs explaining each subdirectory's purpose.
+  Organized into permanent reference (architecture, specifications,
+  interaction-design, playbooks, lessons-learned, fragments), discovery &
+  assessment (reports, investigations), and work tracking (projects, backlog,
+  archive, memories)
 - `hooks/post_gen_project.py` - Python hook that runs after template generation
 - `cookiecutter.json` - Template configuration defining user prompts and
   variables

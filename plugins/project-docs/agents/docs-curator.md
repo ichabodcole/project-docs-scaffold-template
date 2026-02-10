@@ -7,8 +7,8 @@ description:
   codebase and recommends appropriate actions based on document
   type.\n\nExamples:\n\n<example>\nContext: User wants to check if a specific
   proposal has been implemented.\nuser: \"Can you review
-  docs/proposals/2025-12-28-user-defined-ai-operations-proposal.md?\"\nassistant:
-  \"I'll launch the docs-curator agent to review this proposal against the
+  docs/projects/user-defined-ai-operations/proposal.md?\"\nassistant: \"I'll
+  launch the docs-curator agent to review this proposal against the
   codebase.\"\n<Task tool call to launch docs-curator agent with the document
   path>\n</example>\n\n<example>\nContext: User completed work and wants to
   verify a plan is done.\nuser: \"Check if the PowerSync migration plan is
@@ -20,9 +20,9 @@ description:
   architecture doc against current code.\"\n<Task tool call to launch
   docs-curator agent>\n</example>\n\n<example>\nContext: User wants batch review
   of multiple documents.\nuser: \"Review all the proposals in
-  docs/proposals/\"\nassistant: \"I'll launch multiple docs-curator agents in
-  parallel, one per proposal, for thorough review.\"\n<Multiple Task tool calls,
-  one per document>\n</example>"
+  docs/projects/\"\nassistant: \"I'll launch multiple docs-curator agents in
+  parallel, one per project proposal, for thorough review.\"\n<Multiple Task
+  tool calls, one per document>\n</example>"
 model: haiku
 color: pink
 skills: document-validation

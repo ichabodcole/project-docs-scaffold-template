@@ -181,10 +181,10 @@ Core questions to answer: What did we assess? What did we find? What should we d
 - [ ] [Investigation topic - link to file when created]
 - [ ] [Investigation topic - link to file when created]
 
-**Proposals to Consider:**
+**Projects to Create:**
 
-- [ ] [Proposal topic - link to file when created]
-- [ ] [Proposal topic - link to file when created]
+- [ ] [Project topic - link to project folder when created](../projects/project-name/)
+- [ ] [Project topic - link to project folder when created](../projects/project-name/)
 
 **Monitor/Review:**
 
@@ -221,7 +221,7 @@ Core questions to answer: What did we assess? What did we find? What should we d
 
 - **Previous Reports:** [Link to prior report of same type for comparison]
 - **Related Investigations:** [Link to relevant investigations]
-- **Related Proposals:** [Link to relevant proposals]
+- **Related Projects:** [Link to relevant project proposals](../projects/project-name/proposal.md)
 - **External References:** [Links to docs, issues, standards]
 
 ---

@@ -81,7 +81,7 @@ This section can be useful context but isn't required if the lesson is self-evid
 ## Related Resources
 
 - [Related lesson learned](./other-lesson.md)
-- [Session where this was encountered](../sessions/session-name.md)
+- [Session where this was encountered](../projects/project-name/sessions/session-name.md)
 - [GitHub issue](URL)
 - [Official docs](URL)
 - [Stack Overflow answer](URL)

@@ -1,8 +1,5 @@
 <!--
-IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
-create plans and how they differ from proposals.
-
-USING THIS TEMPLATE:
+USAGE: Copy this file to your project folder as `plan.md`.
 
 This template helps you create a development roadmap - showing the route from current codebase to completed feature.
 Focus on pivotal points: complex areas, significant changes, migration concerns, key validation gates.
@@ -12,12 +9,14 @@ The developer drives; you're providing the map and calling out where things get 
 
 Adapt sections freely. Not every plan needs all sections (e.g., many won't need Rollback Plans or Observability).
 Ground your plan in the actual codebase - reference files, analyze current patterns, show the path forward.
+
+For more guidance on plans, see the projects README: ../README.md
 -->
 
 # [Feature Name] Implementation Plan
 
 **Created:** YYYY-MM-DD
-**Related Proposal:** [Link to proposal](../proposals/proposal-name.md)
+**Related Proposal:** [Link to proposal](./proposal.md)
 **Status:** Draft | Active | Completed | Superseded
 
 ---
@@ -120,9 +119,9 @@ How will we validate this works?
 
 **Related Documents:**
 
-- [Proposal](../proposals/proposal-name.md)
-- [Architecture docs](../architecture/doc-name.md)
-- [Sessions](../sessions/) (created during implementation)
+- [Proposal](./proposal.md)
+- [Architecture docs](../../architecture/doc-name.md)
+- [Sessions](./sessions/) (created during implementation)
 
 ---
 

@@ -20,20 +20,23 @@ rules based on what you're reviewing.
 
 These documents have a lifecycle that ends in archival.
 
-**Proposals** (`docs/proposals/`)
+**Project Pipeline Documents** (`docs/projects/<name>/`)
 
-- Lifecycle: Draft → Approved → Implemented → Archived
-- Archive when: All described features are implemented in code
-- Archive to: `docs/proposals/archive/`
+Proposals, plans, and sessions live together in project folders. They share a
+lifecycle and are archived as a unit.
+
+- **Proposals** (`docs/projects/<name>/proposal.md`)
+  - Lifecycle: Draft → Approved → Implemented → Archived
+  - Archive when: All described features are implemented in code
+- **Plans** (`docs/projects/<name>/plan.md`)
+  - Lifecycle: Draft → Active → Complete → Archived
+  - Archive when: All phases complete, work is done
+- **Sessions** (`docs/projects/<name>/sessions/*.md`)
+  - Historical work logs, part of the project record
+- Archive the **entire project folder** to `docs/projects/archive/<name>/` when
+  all work is complete
 - Status format: `**Status:** Archived (Implemented)` or
   `**Status:** Archived (Superseded by X)`
-
-**Plans** (`docs/plans/`)
-
-- Lifecycle: Draft → Active → Complete → Archived
-- Archive when: All phases complete, work is done
-- Archive to: `docs/plans/archive/`
-- Status format: `**Status:** Complete` then move to archive
 
 **Investigations** (`docs/investigations/`)
 
@@ -87,11 +90,6 @@ These documents are living and should be updated rather than archived.
 
 ### Special Types
 
-**Sessions** (`docs/sessions/`)
-
-- Historical work logs, archived by time period
-- Typically don't review for accuracy (they're journals)
-
 **Fragments** (`docs/fragments/`)
 
 - Incomplete thoughts, eventually become other docs or deleted
@@ -121,7 +119,7 @@ Search for evidence using multiple techniques:
 5. **Database changes**: Look at schema files for mentioned tables/columns
 6. **Git history**: `git log --oneline --all --grep="[keyword]"` for related
    commits
-7. **Session docs**: Search `docs/sessions/` for implementation notes
+7. **Session docs**: Search `docs/projects/*/sessions/` for implementation notes
 
 ### Phase 3: Categorize Findings
 
