@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.0.0...project-docs-scaffold-template-v2.0.1) (2026-02-10)
+
+
+### Bug Fixes
+
+* improve v1-to-v2 migration guide and skill file references ([aa71e6e](https://github.com/ichabodcole/project-docs-scaffold-template/commit/aa71e6e18f7edf21a5cb217befc91ae7c530029c))
+* improve v1-to-v2 migration guide and skill file references ([151d167](https://github.com/ichabodcole/project-docs-scaffold-template/commit/151d167903388f9299a899f959b5d90793392ba7))
+
 ## [2.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v1.8.0...project-docs-scaffold-template-v2.0.0) (2026-02-10)
 
 
