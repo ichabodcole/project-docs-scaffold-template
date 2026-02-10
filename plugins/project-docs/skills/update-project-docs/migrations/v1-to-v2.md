@@ -113,6 +113,12 @@ having to write them from scratch.
 fine. You may want to compare your README against the scaffold's version to pick
 up any convention changes.
 
+**Naming collision note:** If your project already has a `docs/project/`
+(singular) directory for product-level documents, it is unrelated to the new
+`docs/projects/` (plural) directory. `docs/project/` typically contains product
+direction or vision documents; `docs/projects/` contains co-located development
+pipeline documents. Both can coexist.
+
 ### 4. Create project folders and move documents
 
 For each group of related documents:
@@ -142,8 +148,16 @@ mv docs/sessions/2026-02-03-milkdown-initial-setup.md \
 **Proposal-only projects** (no plan or sessions yet): just create the folder
 with `proposal.md`. Don't pre-create `sessions/` or `plan.md`.
 
-**Orphaned sessions** (no matching proposal): create a minimal project folder,
-or archive if purely historical.
+**Orphaned sessions** (no matching proposal):
+
+- **Many orphaned sessions from early development?** Group them under
+  `docs/projects/archive/early-development/sessions/` rather than creating
+  individual project folders. These are historical records, not active projects.
+- **A few orphaned sessions on distinct topics?** Create individual project
+  folders if the topic might become active again. Archive if purely historical.
+- **Sessions spanning different topics?** Group by theme into a few archive
+  buckets (e.g., `archive/early-ui-work/`, `archive/early-backend-work/`) rather
+  than creating one project per session.
 
 ### 5. Migrate archives
 
@@ -191,10 +205,13 @@ If no `MEMORIES.md` exists, skip this step.
 
 ### 7. Update cross-references
 
-Search for and update all paths referencing the old structure:
+Search for and update all paths referencing the old structure. This step has
+three parts: document content, template files, and root-level files.
+
+**7a. Scan document content:**
 
 ```bash
-# Find stale references
+# Find stale references in all docs
 grep -rn "docs/proposals/" docs/ --include="*.md"
 grep -rn "docs/plans/" docs/ --include="*.md"
 grep -rn "docs/sessions/" docs/ --include="*.md"
@@ -202,6 +219,39 @@ grep -rn "\.\./proposals/" docs/ --include="*.md"
 grep -rn "\.\./plans/" docs/ --include="*.md"
 grep -rn "\.\./sessions/" docs/ --include="*.md"
 ```
+
+**7b. Scan template files in non-migrated directories:**
+
+Template files in directories that don't move (architecture, interaction-design,
+lessons-learned, investigations) often contain relative paths to the old
+structure. These are easy to miss but important — they seed broken links into
+every new document created from the template.
+
+```bash
+# Find stale references in template files specifically
+grep -rn "\.\./proposals/\|\.\./plans/\|\.\./sessions/" docs/ --include="TEMPLATE*"
+grep -rn "\.\./proposals/\|\.\./plans/\|\.\./sessions/" docs/ --include="*TEMPLATE*"
+```
+
+Template path transformations:
+
+| Old Template Path               | New Template Path                                   |
+| ------------------------------- | --------------------------------------------------- |
+| `../proposals/proposal-name.md` | `../projects/project-name/proposal.md`              |
+| `../sessions/session-name.md`   | `../projects/project-name/sessions/session-name.md` |
+| `../plans/plan-name.md`         | `../projects/project-name/plan.md`                  |
+
+**7c. Scan root-level files:**
+
+`AGENTS.md` and `CLAUDE.md` at the project root are read by AI tools and often
+contain session creation instructions or path references. Check and update both:
+
+```bash
+grep -n "proposals/\|plans/\|sessions/" AGENTS.md CLAUDE.md docs/CLAUDE.md 2>/dev/null
+```
+
+Also check `docs/README.md` and any architecture docs that reference the
+pipeline.
 
 **Common path transformations:**
 
@@ -217,12 +267,6 @@ grep -rn "\.\./sessions/" docs/ --include="*.md"
 deeper than before. A proposal that was at `docs/proposals/foo.md` referencing
 `../investigations/bar.md` now lives at `docs/projects/foo/proposal.md` and
 needs `../../investigations/bar.md`.
-
-**Also check:**
-
-- `AGENTS.md` / `CLAUDE.md` at project root
-- `docs/README.md` (documentation index)
-- Architecture docs that reference the pipeline
 
 ### 8. Audit .claude/ local overrides
 
@@ -292,6 +336,14 @@ rm -f docs/proposals/TEMPLATE*.md
 rm -f docs/plans/TEMPLATE*.md
 rm -f docs/sessions/TEMPLATE*.md
 
+# Remove .gitkeep files (these block rmdir)
+git rm -f docs/proposals/archive/.gitkeep 2>/dev/null
+git rm -f docs/plans/archive/.gitkeep 2>/dev/null
+git rm -f docs/sessions/archive/.gitkeep 2>/dev/null
+git rm -f docs/proposals/.gitkeep 2>/dev/null
+git rm -f docs/plans/.gitkeep 2>/dev/null
+git rm -f docs/sessions/.gitkeep 2>/dev/null
+
 # Remove empty archive directories
 rmdir docs/proposals/archive 2>/dev/null
 rmdir docs/plans/archive 2>/dev/null
@@ -353,10 +405,11 @@ grep -rn "proposals/\|plans/\|sessions/" .claude/ --include="*.md" 2>/dev/null
 - [ ] Handled orphaned sessions
 - [ ] Migrated archived documents (grouped by project or bulk-moved to legacy)
 - [ ] Converted `MEMORIES.md` to individual files (if applicable)
-- [ ] Updated all cross-references in documentation
+- [ ] Updated cross-references in document content
+- [ ] Updated cross-references in template files (TEMPLATE*, *TEMPLATE\*)
+- [ ] Updated `AGENTS.md` / `CLAUDE.md` / `docs/CLAUDE.md` for old paths
 - [ ] Audited `.claude/` local overrides for stale paths
 - [ ] Updated `docs/README.md` from scaffold (with version frontmatter)
-- [ ] Updated `AGENTS.md` / `CLAUDE.md` if they reference old paths
 - [ ] Removed old empty directories (`proposals/`, `plans/`, `sessions/`)
 - [ ] Removed `.scaffold-tmp/` directory
 - [ ] Verified no stale references remain
