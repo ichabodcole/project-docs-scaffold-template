@@ -67,7 +67,7 @@ later rounds fill in depth.
 ## Process Overview
 
 Each round below lists key questions. For expanded question banks organized by
-domain, read `references/interview-guide.md`.
+domain, read [references/interview-guide.md](references/interview-guide.md).
 
 ### Round 1: The Elevator Pitch (0% → ~15%)
 
@@ -325,6 +325,7 @@ precision.
 
 For detailed guidance on conducting effective specification interviews:
 
-- **`references/interview-guide.md`** - Question banks organized by domain,
-  techniques for eliciting requirements, common patterns across app types, and
-  red flags that indicate missing specification areas
+- **[references/interview-guide.md](references/interview-guide.md)** - Question
+  banks organized by domain, techniques for eliciting requirements, common
+  patterns across app types, and red flags that indicate missing specification
+  areas

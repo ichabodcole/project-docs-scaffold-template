@@ -4,8 +4,8 @@
 
 The v2 structure replaces flat documentation directories (`proposals/`,
 `plans/`, `sessions/`) with co-located **project folders** (`projects/<name>/`).
-It also introduces two new directories: `backlog/` for small tasks and
-`memories/` for quick-reference work summaries.
+It also introduces several new directories for document types that were added
+between v1 and v2 but before versioning was established.
 
 **Why this changed:** The flat structure scattered related documents across
 three directories, making it hard to follow the full story of a feature. Project
@@ -21,6 +21,10 @@ side and archive as a unit.
 | `projects/archive/`   | Completed project folders                               |
 | `backlog/`            | Small, self-contained work items                        |
 | `memories/`           | Quick-reference summaries of recent work                |
+| `specifications/`     | Technology-agnostic application behavior descriptions   |
+| `fragments/`          | Incomplete observations and open questions              |
+| `interaction-design/` | User experience flow documentation                      |
+| `reports/`            | Structured assessment and analysis reports              |
 
 ## What Moved
 
@@ -51,7 +55,23 @@ side and archive as a unit.
 
 ## Step-by-Step Migration
 
-### 1. Inventory existing documents
+### 1. Generate v2 scaffold locally
+
+Use cookiecutter to generate a fresh v2 documentation structure in a temporary
+directory within your project. This gives you all the new READMEs, templates,
+and directory structures locally — no need to fetch files from GitHub.
+
+```bash
+cookiecutter gh:ichabodcole/project-docs-scaffold-template -o .scaffold-tmp
+```
+
+This creates `.scaffold-tmp/<project-name>/docs/` with the complete v2
+structure. You'll copy files from here throughout the migration.
+
+**Tip:** Add `.scaffold-tmp/` to your `.gitignore` temporarily, or just remember
+to delete it in the cleanup step.
+
+### 2. Inventory existing documents
 
 List what you have in the old structure:
 
@@ -64,32 +84,34 @@ ls docs/sessions/*.md 2>/dev/null | grep -v README | grep -v TEMPLATE
 Group them by project — which proposals, plans, and sessions belong together.
 Look for matching names, cross-references, or shared topics.
 
-### 2. Create new directories
+### 3. Copy new directories and files from scaffold
+
+Copy the new v2 directories (with their READMEs and templates) from the scaffold
+into your `docs/` folder. Only copy directories that don't already exist in your
+project:
 
 ```bash
-mkdir -p docs/projects/TEMPLATES
-mkdir -p docs/projects/archive
-mkdir -p docs/backlog
-mkdir -p docs/backlog/archive
-mkdir -p docs/memories
+SCAFFOLD=".scaffold-tmp/<project-name>/docs"
+
+# Core v2 directories (always needed)
+cp -r "$SCAFFOLD/projects" docs/projects
+cp -r "$SCAFFOLD/backlog" docs/backlog
+cp -r "$SCAFFOLD/memories" docs/memories
+
+# New document types (copy if you don't already have them)
+[ ! -d docs/specifications ] && cp -r "$SCAFFOLD/specifications" docs/specifications
+[ ! -d docs/fragments ] && cp -r "$SCAFFOLD/fragments" docs/fragments
+[ ! -d docs/interaction-design ] && cp -r "$SCAFFOLD/interaction-design" docs/interaction-design
+[ ! -d docs/reports ] && cp -r "$SCAFFOLD/reports" docs/reports
 ```
 
-### 3. Move templates
+This gives you all the correct READMEs, templates, and `.gitkeep` files without
+having to write them from scratch.
 
-```bash
-# Rename and move proposal template
-cp docs/proposals/TEMPLATE*.md docs/projects/TEMPLATES/PROPOSAL.template.md
-
-# Rename and move plan template
-cp docs/plans/TEMPLATE*.md docs/projects/TEMPLATES/PLAN.template.md
-
-# Rename and move session template
-cp docs/sessions/TEMPLATE*.md docs/projects/TEMPLATES/YYYY-MM-DD-SESSION.template.md
-```
-
-Review each template after moving — update any path references that assumed the
-old flat structure. In particular, cross-reference paths change depth (e.g.,
-`../investigations/` becomes `../../investigations/`).
+**If directories already exist:** If you already have `specifications/`,
+`fragments/`, etc. from a previous update, skip those — your existing content is
+fine. You may want to compare your README against the scaffold's version to pick
+up any convention changes.
 
 ### 4. Create project folders and move documents
 
@@ -125,7 +147,7 @@ or archive if purely historical.
 
 ### 5. Migrate archives
 
-For each archived proposal/plan/session, group into project folders:
+**For small archives** (under ~50 files), group into project folders:
 
 ```bash
 mkdir -p docs/projects/archive/old-feature
@@ -138,31 +160,26 @@ mv docs/plans/archive/old-feature-plan.md \
 Don't stress about perfection for old archives — grouping what you can is
 sufficient.
 
-### 6. Create README and template files for new directories
+**For large archives** (50+ files), use a bulk move instead of trying to
+organize everything by project:
 
-You need three new READMEs and two new templates. Copy these from the scaffold
-template, or write them following these purposes:
+```bash
+# Create a legacy archive bucket
+mkdir -p docs/projects/archive/legacy-proposals
+mkdir -p docs/projects/archive/legacy-plans
+mkdir -p docs/projects/archive/legacy-sessions
 
-**`docs/projects/README.md`** — Explains project folder conventions: when to
-create a project, folder structure, naming, proposals, plans, sessions,
-artifacts, archival. This is the most important new file — it replaces the three
-old READMEs.
+# Bulk move all archived files
+mv docs/proposals/archive/*.md docs/projects/archive/legacy-proposals/ 2>/dev/null
+mv docs/plans/archive/*.md docs/projects/archive/legacy-plans/ 2>/dev/null
+mv docs/sessions/archive/*.md docs/projects/archive/legacy-sessions/ 2>/dev/null
+```
 
-**`docs/backlog/README.md`** — Explains backlog items: small self-contained
-tasks that don't warrant a project folder. Include a template reference.
+You can reorganize legacy archives into project folders later if needed, but
+it's not required. The priority is getting active documents into the new
+structure.
 
-**`docs/backlog/TEMPLATE.md`** — Simple template for backlog items.
-
-**`docs/memories/README.md`** — Explains memories: short summaries for
-onboarding context. When to create, naming convention, pruning guidance.
-
-**`docs/memories/TEMPLATE.md`** — Short template: heading, date, 1-3 sentences,
-key files, doc links.
-
-The easiest approach: download the latest scaffold template and copy these files
-from its `docs/` directory.
-
-### 7. Convert MEMORIES.md (if applicable)
+### 6. Convert MEMORIES.md (if applicable)
 
 If a `MEMORIES.md` file exists (at project root or in docs/):
 
@@ -172,7 +189,7 @@ If a `MEMORIES.md` file exists (at project root or in docs/):
 
 If no `MEMORIES.md` exists, skip this step.
 
-### 8. Update cross-references
+### 7. Update cross-references
 
 Search for and update all paths referencing the old structure:
 
@@ -206,21 +223,49 @@ needs `../../investigations/bar.md`.
 - `AGENTS.md` / `CLAUDE.md` at project root
 - `docs/README.md` (documentation index)
 - Architecture docs that reference the pipeline
-- Plugin command/skill files (if using the project-docs plugin)
+
+### 8. Audit .claude/ local overrides
+
+If your project has local command, agent, or skill overrides in `.claude/`
+(copied from the project-docs plugin), these likely reference the old directory
+structure.
+
+```bash
+# Check for stale references in local overrides
+grep -rn "proposals/" .claude/ --include="*.md" 2>/dev/null
+grep -rn "plans/" .claude/ --include="*.md" 2>/dev/null
+grep -rn "sessions/" .claude/ --include="*.md" 2>/dev/null
+```
+
+**If the project-docs plugin has been updated to v2:** Delete your local
+overrides and let the plugin's updated versions take effect. Local copies in
+`.claude/` override plugin files — stale local copies will prevent you from
+getting the plugin's v2-aware commands and agents.
+
+```bash
+# Example: remove local overrides that the plugin now handles
+# (only remove files you copied from the plugin, not custom files)
+rm .claude/commands/finalize-branch.md    # if copied from plugin
+rm .claude/agents/investigator.md         # if copied from plugin
+```
+
+**If you have custom (non-plugin) files in `.claude/`:** Update paths manually
+using the same transformations from Step 7.
 
 ### 9. Update docs/README.md
 
-Update the documentation index to reflect the new structure:
+Replace your existing `docs/README.md` with the scaffold's version, then
+customize it:
 
-- Replace references to `proposals/`, `plans/`, `sessions/` as separate
-  categories
-- Add `projects/` section explaining project folders
-- Add `backlog/` section
-- Add `memories/` section
-- Update any directory tree diagrams
+```bash
+cp "$SCAFFOLD/README.md" docs/README.md
+```
 
-Add the version frontmatter at the top of the file (before the `# Documentation`
-heading):
+Review the copied file and adjust:
+
+- Remove sections for document types you don't use
+- Add any project-specific guidance
+- Verify the `docs_version` frontmatter is present at the top:
 
 ```yaml
 ---
@@ -229,9 +274,8 @@ docs_template: https://github.com/ichabodcole/project-docs-scaffold-template
 ---
 ```
 
-The `x-release-please-version` annotation keeps the version in sync with the
-scaffold template's package version automatically. The `docs_template` link
-points to the source repository for updates and documentation.
+**Note:** Set the `docs_version` to match the scaffold template version you're
+upgrading to.
 
 ### 10. Remove old directories
 
@@ -261,6 +305,14 @@ rmdir docs/sessions 2>/dev/null
 
 If `rmdir` fails, the directory isn't empty — check for files you missed.
 
+### 11. Clean up scaffold
+
+Remove the temporary scaffold directory:
+
+```bash
+rm -rf .scaffold-tmp
+```
+
 ## Verification
 
 After completing the migration:
@@ -276,26 +328,35 @@ ls docs/projects/
 ls docs/backlog/
 ls docs/memories/
 
+# New document types should exist
+ls docs/specifications/
+ls docs/fragments/
+ls docs/interaction-design/
+ls docs/reports/
+
 # Version marker should be present
 grep "docs_version" docs/README.md
+
+# No stale local overrides
+grep -rn "proposals/\|plans/\|sessions/" .claude/ --include="*.md" 2>/dev/null
 ```
 
 ## Checklist
 
+- [ ] Generated v2 scaffold locally via cookiecutter
 - [ ] Inventoried all proposals, plans, and sessions
 - [ ] Grouped related documents into project sets
-- [ ] Created `docs/projects/`, `docs/projects/TEMPLATES/`,
-      `docs/projects/archive/`
-- [ ] Created `docs/backlog/` with README and template
-- [ ] Created `docs/memories/` with README and template
-- [ ] Moved templates to `docs/projects/TEMPLATES/`
+- [ ] Copied new directories from scaffold (`projects/`, `backlog/`,
+      `memories/`, `specifications/`, `fragments/`, `interaction-design/`,
+      `reports/`)
 - [ ] Created project folders and moved documents into them
 - [ ] Handled orphaned sessions
-- [ ] Migrated archived documents into project archive folders
+- [ ] Migrated archived documents (grouped by project or bulk-moved to legacy)
 - [ ] Converted `MEMORIES.md` to individual files (if applicable)
 - [ ] Updated all cross-references in documentation
-- [ ] Updated `docs/README.md` (structure sections + version frontmatter with
-      `docs_version` and `docs_template`)
+- [ ] Audited `.claude/` local overrides for stale paths
+- [ ] Updated `docs/README.md` from scaffold (with version frontmatter)
 - [ ] Updated `AGENTS.md` / `CLAUDE.md` if they reference old paths
 - [ ] Removed old empty directories (`proposals/`, `plans/`, `sessions/`)
+- [ ] Removed `.scaffold-tmp/` directory
 - [ ] Verified no stale references remain

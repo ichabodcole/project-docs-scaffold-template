@@ -324,5 +324,6 @@ platform-specific divergences.
 
 For detailed guidance on evaluating technology options:
 
-- **`references/tech-decision-guide.md`** - Common technology trade-offs,
-  framework comparison criteria, and decision matrices for frequent choices
+- **[references/tech-decision-guide.md](references/tech-decision-guide.md)** -
+  Common technology trade-offs, framework comparison criteria, and decision
+  matrices for frequent choices
