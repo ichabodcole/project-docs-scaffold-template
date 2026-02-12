@@ -1039,7 +1039,7 @@ import { Elysia } from 'elysia';
 import { oauthProviderAuthServerMetadata } from '@better-auth/oauth-provider';
 import { auth } from '@features/auth';
 
-const handler = oauthProviderAuthServerMetadata(auth as any);
+const handler = oauthProviderAuthServerMetadata(auth);
 
 export const authServerMetadataRoute = new Elysia().get(
   '/.well-known/oauth-authorization-server',
