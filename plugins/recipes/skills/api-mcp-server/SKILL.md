@@ -3,10 +3,10 @@ name: api-mcp-server
 description: >
   Add a cloud-hosted MCP (Model Context Protocol) server to a Bun/Elysia API
   with multi-tenant isolation, agent key authentication, and database-backed
-  sessions. Use when the user asks to "add MCP to an API", "set up an MCP
-  server for agents", "implement MCP endpoint with authentication", "add AI
-  agent access to my API", "create an MCP server with bcrypt key validation",
-  or wants to let AI agents access cloud-hosted data through the MCP protocol.
+  sessions. Use when the user asks to "add MCP to an API", "set up an MCP server
+  for agents", "implement MCP endpoint with authentication", "add AI agent
+  access to my API", "create an MCP server with bcrypt key validation", or wants
+  to let AI agents access cloud-hosted data through the MCP protocol.
 ---
 
 # API-Level MCP Server Recipe
@@ -35,20 +35,20 @@ together.
 
 ## Technology Stack
 
-| Layer            | Technology                          | Version |
-| ---------------- | ----------------------------------- | ------- |
-| Runtime          | Bun                                 | 1.2+    |
-| Framework        | Elysia                              | 1.4+    |
-| MCP SDK          | @modelcontextprotocol/sdk           | 1.26+   |
-| ORM              | Drizzle ORM with postgres.js        | 0.45+   |
-| Database         | PostgreSQL                          | 15+     |
-| Key Hashing      | bcryptjs                            | 2.4+    |
-| Validation       | Zod 4                               | 4.x     |
+| Layer       | Technology                   | Version |
+| ----------- | ---------------------------- | ------- |
+| Runtime     | Bun                          | 1.2+    |
+| Framework   | Elysia                       | 1.4+    |
+| MCP SDK     | @modelcontextprotocol/sdk    | 1.26+   |
+| ORM         | Drizzle ORM with postgres.js | 0.45+   |
+| Database    | PostgreSQL                   | 15+     |
+| Key Hashing | bcryptjs                     | 2.4+    |
+| Validation  | Zod 4                        | 4.x     |
 
 **Prerequisite Recipes:**
 
-- [Elysia + BetterAuth API](../elysia-betterauth-api/SKILL.md) — Base API
-  server setup
+- [Elysia + BetterAuth API](../elysia-betterauth-api/SKILL.md) — Base API server
+  setup
 - [BetterAuth OAuth Provider](../elysia-betterauth-oauth/SKILL.md) — OAuth 2.1
   for transport-level authentication (required for production multi-tenant
   deployments)
@@ -174,65 +174,81 @@ isolation.
 
 ```typescript
 import {
-  pgTable, text, timestamp, index, uniqueIndex, jsonb,
-} from 'drizzle-orm/pg-core';
+  pgTable,
+  text,
+  timestamp,
+  index,
+  uniqueIndex,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
 // Agent identities
-export const mcpAgents = pgTable('mcp_agents', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  ownerId: text('owner_id').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
-}, (table) => [
-  index('idx_mcp_agents_owner').on(table.ownerId),
-]);
+export const mcpAgents = pgTable(
+  "mcp_agents",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    ownerId: text("owner_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("idx_mcp_agents_owner").on(table.ownerId)]
+);
 
 // Agent credentials — links agents to access groups with roles
-export const mcpAgentGroupMembership = pgTable('mcp_agent_group_membership', {
-  id: text('id').primaryKey(),
-  agentId: text('agent_id').notNull(),
-  accessGroupId: text('access_group_id').notNull(),
-  roleId: text('role_id').notNull(),
-  keyHash: text('key_hash').notNull(),        // bcrypt hash
-  keyPrefix: text('key_prefix').notNull(),    // first 8 chars for prefiltering
-  key: text('key').notNull().default(''),     // full key (shown to user once)
-  ownerId: text('owner_id').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-  revokedAt: timestamp('revoked_at', { withTimezone: true }), // soft revoke
-  lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
-}, (table) => [
-  uniqueIndex('idx_mcp_membership_key_hash').on(table.keyHash),
-  index('idx_mcp_membership_owner').on(table.ownerId),
-  uniqueIndex('idx_mcp_membership_unique').on(table.agentId, table.accessGroupId),
-]);
+export const mcpAgentGroupMembership = pgTable(
+  "mcp_agent_group_membership",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    accessGroupId: text("access_group_id").notNull(),
+    roleId: text("role_id").notNull(),
+    keyHash: text("key_hash").notNull(), // bcrypt hash
+    keyPrefix: text("key_prefix").notNull(), // first 8 chars for prefiltering
+    key: text("key").notNull().default(""), // full key (shown to user once)
+    ownerId: text("owner_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }), // soft revoke
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("idx_mcp_membership_key_hash").on(table.keyHash),
+    index("idx_mcp_membership_owner").on(table.ownerId),
+    uniqueIndex("idx_mcp_membership_unique").on(
+      table.agentId,
+      table.accessGroupId
+    ),
+  ]
+);
 
 // Roles — named permission sets
-export const mcpRoles = pgTable('mcp_roles', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  permissions: text('permissions').notNull(), // JSON array: ["browse", "read_document", ...]
-  ownerId: text('owner_id').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+export const mcpRoles = pgTable("mcp_roles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  permissions: text("permissions").notNull(), // JSON array: ["browse", "read_document", ...]
+  ownerId: text("owner_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
 });
 
 // Sessions — database-backed, caches resolved permissions
-export const mcpSessions = pgTable('mcp_sessions', {
-  id: text('id').primaryKey(),
-  agentId: text('agent_id').notNull(),
-  membershipId: text('membership_id').notNull(),
-  accessGroupId: text('access_group_id').notNull(),
-  allowedGroupIds: jsonb('allowed_group_ids').notNull().$type<string[]>(),
-  permissions: jsonb('permissions').notNull().$type<string[]>(),
-  ownerId: text('owner_id').notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-}, (table) => [
-  index('idx_mcp_sessions_expires').on(table.expiresAt),
-]);
+export const mcpSessions = pgTable(
+  "mcp_sessions",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    membershipId: text("membership_id").notNull(),
+    accessGroupId: text("access_group_id").notNull(),
+    allowedGroupIds: jsonb("allowed_group_ids").notNull().$type<string[]>(),
+    permissions: jsonb("permissions").notNull().$type<string[]>(),
+    ownerId: text("owner_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [index("idx_mcp_sessions_expires").on(table.expiresAt)]
+);
 ```
 
 **Key constraints:**
@@ -247,21 +263,21 @@ export const mcpSessions = pgTable('mcp_sessions', {
 
 ### Permission Constants
 
-Define a central registry of permission names that map 1:1 with tool names.
-This registry is used for role definitions, session caching, and enforcement.
+Define a central registry of permission names that map 1:1 with tool names. This
+registry is used for role definitions, session caching, and enforcement.
 
 ```typescript
 // permissions/constants.ts
 export const MCP_PERMISSIONS = {
   // Define your tool permissions here
   // Example read permissions:
-  browse: 'browse',
-  search: 'search',
-  read_item: 'read_item',
+  browse: "browse",
+  search: "search",
+  read_item: "read_item",
   // Example write permissions:
-  create_item: 'create_item',
-  update_item: 'update_item',
-  delete_item: 'delete_item',
+  create_item: "create_item",
+  update_item: "update_item",
+  delete_item: "delete_item",
 } as const;
 
 export type McpPermission =
@@ -277,13 +293,13 @@ export const ALL_PERMISSIONS = Object.values(MCP_PERMISSIONS);
 export function enforcePermission(
   session: { permissions: string[] },
   permission: string,
-  toolName: string,
+  toolName: string
 ): void {
   const perms = session.permissions as string[];
   if (!perms.includes(permission)) {
     throw new Error(
       `Permission denied: tool "${toolName}" requires "${permission}" permission. ` +
-      `Your permissions are: ${perms.join(', ')}`,
+        `Your permissions are: ${perms.join(", ")}`
     );
   }
 }
@@ -300,7 +316,7 @@ to see if any ancestor is in the allowed list.
 export async function isGroupOrAncestorAllowed(
   groupId: string,
   allowedGroupIds: string[],
-  ownerId: string,
+  ownerId: string
 ): Promise<boolean> {
   const allowedSet = new Set(allowedGroupIds);
   const visited = new Set<string>(); // Circular reference guard
@@ -326,12 +342,12 @@ The 3-stage validation flow with prefix prefiltering:
 
 ```typescript
 // services/membership.service.ts
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcryptjs";
 
 export const membershipService = {
   async validateAgentKey(agentKey: string) {
     // Stage 1: Basic validation
-    if (!agentKey || typeof agentKey !== 'string' || agentKey.length < 10) {
+    if (!agentKey || typeof agentKey !== "string" || agentKey.length < 10) {
       return null;
     }
 
@@ -343,8 +359,8 @@ export const membershipService = {
       .where(
         and(
           eq(mcpAgentGroupMembership.keyPrefix, prefix),
-          isNull(mcpAgentGroupMembership.revokedAt), // Exclude revoked
-        ),
+          isNull(mcpAgentGroupMembership.revokedAt) // Exclude revoked
+        )
       );
 
     // Stage 3: bcrypt compare — slow but secure, only 1-2 candidates
@@ -358,34 +374,49 @@ export const membershipService = {
     if (!membership) return null;
 
     // Load related entities (agent, access group, role, folder access)
-    const [agent] = await db.select().from(mcpAgents)
-      .where(eq(mcpAgents.id, membership.agentId)).limit(1);
+    const [agent] = await db
+      .select()
+      .from(mcpAgents)
+      .where(eq(mcpAgents.id, membership.agentId))
+      .limit(1);
     if (!agent) return null;
 
-    const [accessGroup] = await db.select().from(mcpAccessGroups)
-      .where(eq(mcpAccessGroups.id, membership.accessGroupId)).limit(1);
+    const [accessGroup] = await db
+      .select()
+      .from(mcpAccessGroups)
+      .where(eq(mcpAccessGroups.id, membership.accessGroupId))
+      .limit(1);
     if (!accessGroup) return null;
 
-    const [role] = await db.select().from(mcpRoles)
-      .where(eq(mcpRoles.id, membership.roleId)).limit(1);
+    const [role] = await db
+      .select()
+      .from(mcpRoles)
+      .where(eq(mcpRoles.id, membership.roleId))
+      .limit(1);
     if (!role) return null;
 
     const permissions = JSON.parse(role.permissions) as string[];
 
-    const folderAccess = await db.select({ groupId: mcpGroupFolderAccess.groupId })
+    const folderAccess = await db
+      .select({ groupId: mcpGroupFolderAccess.groupId })
       .from(mcpGroupFolderAccess)
       .where(eq(mcpGroupFolderAccess.accessGroupId, accessGroup.id));
     const allowedFolderIds = folderAccess.map((fa) => fa.groupId);
 
     return {
-      membership, agent, accessGroup, role,
-      allowedFolderIds, permissions,
+      membership,
+      agent,
+      accessGroup,
+      role,
+      allowedFolderIds,
+      permissions,
       ownerId: membership.ownerId,
     };
   },
 
   async updateLastUsed(membershipId: string): Promise<void> {
-    await db.update(mcpAgentGroupMembership)
+    await db
+      .update(mcpAgentGroupMembership)
       .set({ lastUsedAt: new Date() })
       .where(eq(mcpAgentGroupMembership.id, membershipId));
   },
@@ -397,6 +428,7 @@ export const membershipService = {
 ```typescript
 // services/session.service.ts
 const SESSION_TTL_HOURS = 24;
+const HOUR_IN_MS = 60 * 60 * 1000;
 
 export const sessionService = {
   async createSession(
@@ -405,26 +437,33 @@ export const sessionService = {
     accessGroupId: string,
     allowedGroupIds: string[],
     permissions: string[],
-    ownerId: string,
+    ownerId: string
   ): Promise<{ sessionId: string; expiresAt: Date }> {
     const sessionId = crypto.randomUUID(); // or nanoid()
     const now = new Date();
-    const expiresAt = new Date(
-      now.getTime() + SESSION_TTL_HOURS * 60 * 60 * 1000,
-    );
+    const expiresAt = new Date(now.getTime() + SESSION_TTL_HOURS * HOUR_IN_MS);
 
     await db.insert(mcpSessions).values({
-      id: sessionId, agentId, membershipId, accessGroupId,
-      allowedGroupIds, permissions, ownerId,
-      createdAt: now, expiresAt,
+      id: sessionId,
+      agentId,
+      membershipId,
+      accessGroupId,
+      allowedGroupIds,
+      permissions,
+      ownerId,
+      createdAt: now,
+      expiresAt,
     });
 
     return { sessionId, expiresAt };
   },
 
   async getSession(sessionId: string) {
-    const [session] = await db.select().from(mcpSessions)
-      .where(eq(mcpSessions.id, sessionId)).limit(1);
+    const [session] = await db
+      .select()
+      .from(mcpSessions)
+      .where(eq(mcpSessions.id, sessionId))
+      .limit(1);
 
     if (!session) return null;
     if (new Date() > session.expiresAt) {
@@ -440,7 +479,8 @@ export const sessionService = {
   },
 
   async cleanupExpiredSessions(): Promise<number> {
-    const result = await db.delete(mcpSessions)
+    const result = await db
+      .delete(mcpSessions)
       .where(lt(mcpSessions.expiresAt, new Date()))
       .returning({ id: mcpSessions.id });
     return result.length;
@@ -459,8 +499,8 @@ bun add @modelcontextprotocol/sdk bcryptjs zod
 bun add -d @types/bcryptjs
 ```
 
-**IMPORTANT — Zod version:** MCP SDK 1.26+ requires Zod 4. If your project is
-on Zod 3, upgrade to Zod 4 first. They are different packages and Zod 4 is a
+**IMPORTANT — Zod version:** MCP SDK 1.26+ requires Zod 4. If your project is on
+Zod 3, upgrade to Zod 4 first. They are different packages and Zod 4 is a
 monorepo-wide change — budget time for it.
 
 **1.2 Create directory structure**
@@ -472,9 +512,8 @@ mkdir -p src/routes/mcp
 
 **1.3 Create the database schema**
 
-Create `src/features/mcp/db.ts` with the six tables from the Data Model
-section. Adapt the table and column names to your project conventions, but
-preserve:
+Create `src/features/mcp/db.ts` with the six tables from the Data Model section.
+Adapt the table and column names to your project conventions, but preserve:
 
 - `owner_id` on every table
 - `key_hash` + `key_prefix` on the membership table
@@ -504,8 +543,8 @@ natively with Fetch API `Request`/`Response` and requires no adapter.
 `StreamableHTTPServerTransport` (which expects Node.js `IncomingMessage` /
 `ServerResponse`).
 
-**The Problem:** The MCP SDK historically expected Node.js HTTP primitives.
-Bun, Deno, Cloudflare Workers, and similar runtimes use Web Standard
+**The Problem:** The MCP SDK historically expected Node.js HTTP primitives. Bun,
+Deno, Cloudflare Workers, and similar runtimes use Web Standard
 `Request`/`Response`. Passing a `Request` where the SDK expects
 `IncomingMessage` crashes on `.on()`, `.pipe()`, `.writeHead()`, etc.
 
@@ -514,8 +553,8 @@ Bun, Deno, Cloudflare Workers, and similar runtimes use Web Standard
 Create `src/features/mcp/adapter.ts`:
 
 ```typescript
-import { IncomingMessage, ServerResponse } from 'node:http';
-import { Socket } from 'node:net';
+import { IncomingMessage, ServerResponse } from "node:http";
+import { Socket } from "node:net";
 
 /**
  * Convert Web Standard Request to Node.js IncomingMessage + ServerResponse
@@ -557,10 +596,10 @@ export function toFetchResponse(res: MockServerResponse): Response {
   }
 
   const body = res.getBody();
-  const contentType = headers.get('content-type') || '';
+  const contentType = headers.get("content-type") || "";
 
   // Handle SSE streams
-  if (contentType.includes('text/event-stream')) {
+  if (contentType.includes("text/event-stream")) {
     const stream = new ReadableStream({
       start(controller) {
         if (body.length > 0) {
@@ -585,12 +624,14 @@ export class MockServerResponse extends ServerResponse {
   constructor(req: IncomingMessage) {
     super(req);
     this.assignSocket(
-      new CaptureSocket(this._chunks, () => { this._ended = true; }),
+      new CaptureSocket(this._chunks, () => {
+        this._ended = true;
+      })
     );
   }
 
   getBody(): string {
-    return Buffer.concat(this._chunks).toString('utf-8');
+    return Buffer.concat(this._chunks).toString("utf-8");
   }
 
   hasEnded(): boolean {
@@ -604,20 +645,20 @@ export class MockServerResponse extends ServerResponse {
 class CaptureSocket extends Socket {
   constructor(
     private chunks: Buffer[],
-    private onEnd: () => void,
+    private onEnd: () => void
   ) {
     super();
-    Object.defineProperty(this, 'writable', { value: true, writable: true });
+    Object.defineProperty(this, "writable", { value: true, writable: true });
   }
 
   override write(
     data: Uint8Array | string,
     encodingOrCb?: BufferEncoding | ((err?: Error) => void),
-    cb?: (err?: Error) => void,
+    cb?: (err?: Error) => void
   ): boolean {
-    const encoding = typeof encodingOrCb === 'string' ? encodingOrCb : 'utf-8';
-    const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
-    if (typeof data === 'string') {
+    const encoding = typeof encodingOrCb === "string" ? encodingOrCb : "utf-8";
+    const callback = typeof encodingOrCb === "function" ? encodingOrCb : cb;
+    if (typeof data === "string") {
       this.chunks.push(Buffer.from(data, encoding));
     } else {
       this.chunks.push(Buffer.from(data));
@@ -629,52 +670,56 @@ class CaptureSocket extends Socket {
   override end(
     data?: unknown,
     encodingOrCb?: BufferEncoding | (() => void),
-    cb?: () => void,
+    cb?: () => void
   ): this {
     if (data) {
-      if (typeof data === 'string') {
-        const encoding = typeof encodingOrCb === 'string' ? encodingOrCb : 'utf-8';
+      if (typeof data === "string") {
+        const encoding =
+          typeof encodingOrCb === "string" ? encodingOrCb : "utf-8";
         this.chunks.push(Buffer.from(data, encoding));
       } else if (Buffer.isBuffer(data) || data instanceof Uint8Array) {
         this.chunks.push(Buffer.from(data));
       }
     }
     this.onEnd();
-    const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
+    const callback = typeof encodingOrCb === "function" ? encodingOrCb : cb;
     if (callback) callback();
     return this;
   }
 
-  override destroy(): this { return this; }
+  override destroy(): this {
+    return this;
+  }
 }
 ```
 
 **When to use which approach:**
 
-| SDK Version | Transport Class                              | Adapter Needed? |
-| ----------- | -------------------------------------------- | --------------- |
-| < 1.30      | `StreamableHTTPServerTransport`               | Yes             |
-| >= 1.30     | `WebStandardStreamableHTTPServerTransport`    | No              |
+| SDK Version | Transport Class                            | Adapter Needed? |
+| ----------- | ------------------------------------------ | --------------- |
+| < 1.30      | `StreamableHTTPServerTransport`            | Yes             |
+| >= 1.30     | `WebStandardStreamableHTTPServerTransport` | No              |
 
 **Validate:**
 
 - [ ] POST to `/api/mcp` with `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
-  returns a tool list (after auth is set up)
+      returns a tool list (after auth is set up)
 
 ### Phase 3: MCP Server Factory and Route Handler
 
 **3.1 Server factory** (`src/features/mcp/server.ts`)
 
-Create a new MCP server per request. Pass the OAuth user ID for cross-validation.
+Create a new MCP server per request. Pass the OAuth user ID for
+cross-validation.
 
 ```typescript
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { registerTools } from './tools';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerTools } from "./tools";
 
 export function createMCPServer(oauthUserId: string): McpServer {
   const server = new McpServer(
-    { name: 'your-app-api', version: '1.0.0' },
-    { capabilities: { tools: {} } },
+    { name: "your-app-api", version: "1.0.0" },
+    { capabilities: { tools: {} } }
   );
 
   registerTools(server, oauthUserId);
@@ -690,53 +735,49 @@ SDK, and returns the response.
 **With WebStandardStreamableHTTPServerTransport (SDK 1.30+):**
 
 ```typescript
-import { Elysia } from 'elysia';
-import {
-  WebStandardStreamableHTTPServerTransport,
-} from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import { createMCPServer } from '@features/mcp/server';
-import { sessionMiddleware } from '@core/http';
-import { env } from '@core/config';
-import type { User } from '@features/auth';
+import { Elysia } from "elysia";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { createMCPServer } from "@features/mcp/server";
+import { sessionMiddleware } from "@core/http";
+import { env } from "@core/config";
+import type { User } from "@features/auth";
 
-const RESOURCE_METADATA_URL =
-  `${env.BETTER_AUTH_URL}/.well-known/oauth-protected-resource`;
+const RESOURCE_METADATA_URL = `${env.BETTER_AUTH_URL}/.well-known/oauth-protected-resource`;
 
 function unauthorizedResponse(): Response {
   return new Response(
     JSON.stringify({
-      jsonrpc: '2.0',
-      error: { code: -32001, message: 'Authentication required' },
+      jsonrpc: "2.0",
+      error: { code: -32001, message: "Authentication required" },
     }),
     {
       status: 401,
       headers: {
-        'content-type': 'application/json',
-        'www-authenticate':
-          `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`,
+        "content-type": "application/json",
+        "www-authenticate": `Bearer resource_metadata="${RESOURCE_METADATA_URL}"`,
       },
-    },
+    }
   );
 }
 
-export const mcpRoutes = new Elysia({ prefix: '/api/mcp' })
+export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
   .use(sessionMiddleware)
-  .post('', async ({ request, user }) => {
+  .post("", async ({ request, user }) => {
     if (!user) return unauthorizedResponse();
     return handleMcpRequest(request, user);
   })
-  .get('', async ({ request, user }) => {
+  .get("", async ({ request, user }) => {
     if (!user) return unauthorizedResponse();
     return handleMcpRequest(request, user);
   })
-  .delete('', async ({ request, user }) => {
+  .delete("", async ({ request, user }) => {
     if (!user) return unauthorizedResponse();
     return handleMcpRequest(request, user);
   });
 
 async function handleMcpRequest(
   request: Request,
-  user: User,
+  user: User
 ): Promise<Response> {
   try {
     const server = createMCPServer(user.id);
@@ -749,21 +790,21 @@ async function handleMcpRequest(
     const response = await transport.handleRequest(request);
 
     // Clean up non-streaming responses
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('text/event-stream')) {
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("text/event-stream")) {
       await transport.close();
       await server.close();
     }
 
     return response;
   } catch (err) {
-    console.error('[mcp] handleMcpRequest error:', err);
+    console.error("[mcp] handleMcpRequest error:", err);
     return new Response(
       JSON.stringify({
-        jsonrpc: '2.0',
-        error: { code: -32603, message: 'Internal server error' },
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
       }),
-      { status: 500, headers: { 'content-type': 'application/json' } },
+      { status: 500, headers: { "content-type": "application/json" } }
     );
   }
 }
@@ -775,10 +816,8 @@ Replace `WebStandardStreamableHTTPServerTransport` with
 `StreamableHTTPServerTransport` and use the adapter:
 
 ```typescript
-import {
-  StreamableHTTPServerTransport,
-} from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { toReqRes, toFetchResponse } from '@features/mcp/adapter';
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { toReqRes, toFetchResponse } from "@features/mcp/adapter";
 
 async function handleMcpRequest(request: Request, user: User) {
   const server = createMCPServer(user.id);
@@ -811,17 +850,14 @@ Every tool except `authenticate` needs this:
 
 ```typescript
 // tools.ts
-async function getValidatedSession(
-  sessionId: string,
-  oauthUserId: string,
-) {
+async function getValidatedSession(sessionId: string, oauthUserId: string) {
   const session = await sessionService.getSession(sessionId);
   if (!session) {
-    throw new Error('Session expired or invalid. Please re-authenticate.');
+    throw new Error("Session expired or invalid. Please re-authenticate.");
   }
   // Cross-validate: session owner must match OAuth user
   if (session.ownerId !== oauthUserId) {
-    throw new Error('Session does not belong to the authenticated user.');
+    throw new Error("Session does not belong to the authenticated user.");
   }
   return session;
 }
@@ -832,28 +868,23 @@ async function getValidatedSession(
 This tool exchanges an agent key for a session ID:
 
 ```typescript
-import { z } from 'zod';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from "zod";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export function registerTools(
-  server: McpServer,
-  oauthUserId: string,
-): void {
+export function registerTools(server: McpServer, oauthUserId: string): void {
   // Always register authenticate first
   server.tool(
-    'authenticate',
-    'Authenticate with an agent key to get a session ID. ' +
-      'Must be called before any other tool.',
+    "authenticate",
+    "Authenticate with an agent key to get a session ID. " +
+      "Must be called before any other tool.",
     { agentKey: z.string() },
     async ({ agentKey }) => {
       const result = await membershipService.validateAgentKey(agentKey);
-      if (!result) throw new Error('Invalid or revoked agent key');
+      if (!result) throw new Error("Invalid or revoked agent key");
 
       // Cross-validate: key owner must match OAuth user
       if (result.ownerId !== oauthUserId) {
-        throw new Error(
-          'Agent key does not belong to the authenticated user',
-        );
+        throw new Error("Agent key does not belong to the authenticated user");
       }
 
       const { sessionId, expiresAt } = await sessionService.createSession(
@@ -862,40 +893,47 @@ export function registerTools(
         result.accessGroup.id,
         result.allowedFolderIds,
         result.permissions,
-        result.ownerId,
+        result.ownerId
       );
 
       await membershipService.updateLastUsed(result.membership.id);
 
       // Tell the agent what it can and cannot do
-      const deniedTools = ALL_PERMISSIONS
-        .filter((p) => !result.permissions.includes(p));
+      const deniedTools = ALL_PERMISSIONS.filter(
+        (p) => !result.permissions.includes(p)
+      );
 
-      let instructions = 'Use sessionId in all subsequent tool calls. ';
-      instructions += `Your permissions: ${result.permissions.join(', ')}. `;
+      let instructions = "Use sessionId in all subsequent tool calls. ";
+      instructions += `Your permissions: ${result.permissions.join(", ")}. `;
       if (deniedTools.length > 0) {
-        instructions += `NOT available: ${deniedTools.join(', ')}.`;
+        instructions += `NOT available: ${deniedTools.join(", ")}.`;
       }
 
       return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify({
-            sessionId,
-            expiresAt: expiresAt.toISOString(),
-            accessGroup: {
-              id: result.accessGroup.id,
-              name: result.accessGroup.name,
-            },
-            role: result.role
-              ? { id: result.role.id, name: result.role.name }
-              : null,
-            permissions: result.permissions,
-            instructions,
-          }, null, 2),
-        }],
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                sessionId,
+                expiresAt: expiresAt.toISOString(),
+                accessGroup: {
+                  id: result.accessGroup.id,
+                  name: result.accessGroup.name,
+                },
+                role: result.role
+                  ? { id: result.role.id, name: result.role.name }
+                  : null,
+                permissions: result.permissions,
+                instructions,
+              },
+              null,
+              2
+            ),
+          },
+        ],
       };
-    },
+    }
   );
 
   // Register your domain-specific tools below
@@ -910,8 +948,8 @@ Every read tool follows this structure:
 
 ```typescript
 server.tool(
-  'your_read_tool',
-  'Description of what this tool reads. Requires your_read_tool permission.',
+  "your_read_tool",
+  "Description of what this tool reads. Requires your_read_tool permission.",
   {
     sessionId: z.string(),
     // ... your tool-specific parameters
@@ -921,35 +959,37 @@ server.tool(
     const session = await getValidatedSession(sessionId, oauthUserId);
 
     // 2. Enforce permission
-    enforcePermission(session, 'your_read_tool', 'your_read_tool');
+    enforcePermission(session, "your_read_tool", "your_read_tool");
 
     // 3. Check resource access (if applicable)
     const allowedGroupIds = session.allowedGroupIds as string[];
     const isAllowed = await isGroupOrAncestorAllowed(
-      targetGroupId, allowedGroupIds, session.ownerId,
+      targetGroupId,
+      allowedGroupIds,
+      session.ownerId
     );
-    if (!isAllowed) throw new Error('Resource not accessible');
+    if (!isAllowed) throw new Error("Resource not accessible");
 
     // 4. Call service layer with ownerId
     const data = await yourService.get(params.id, session.ownerId);
 
     // 5. Return JSON result
     return {
-      content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
     };
-  },
+  }
 );
 ```
 
 **4.4 Write tool pattern**
 
-Write tools add resource existence validation and may include
-domain-specific logic:
+Write tools add resource existence validation and may include domain-specific
+logic:
 
 ```typescript
 server.tool(
-  'your_write_tool',
-  'Description. Requires your_write_tool permission and folder access.',
+  "your_write_tool",
+  "Description. Requires your_write_tool permission and folder access.",
   {
     sessionId: z.string(),
     targetGroupId: z.string(),
@@ -960,7 +1000,7 @@ server.tool(
     const session = await getValidatedSession(sessionId, oauthUserId);
 
     // 2. Enforce permission
-    enforcePermission(session, 'your_write_tool', 'your_write_tool');
+    enforcePermission(session, "your_write_tool", "your_write_tool");
 
     // 3. Validate target resource exists
     const group = await groupService.get(targetGroupId, session.ownerId);
@@ -969,7 +1009,9 @@ server.tool(
     // 4. Check folder access (subtree model)
     const allowedGroupIds = session.allowedGroupIds as string[];
     const isAllowed = await isGroupOrAncestorAllowed(
-      targetGroupId, allowedGroupIds, session.ownerId,
+      targetGroupId,
+      allowedGroupIds,
+      session.ownerId
     );
     if (!isAllowed) {
       throw new Error(`Folder ${targetGroupId} is not accessible`);
@@ -979,17 +1021,19 @@ server.tool(
     const result = await yourService.create(
       params,
       session.ownerId,
-      `ai:agent:${session.agentId}`, // Track who created it
+      `ai:agent:${session.agentId}` // Track who created it
     );
 
     // 6. Return result
     return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify({ id: result.id, ...result }, null, 2),
-      }],
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ id: result.id, ...result }, null, 2),
+        },
+      ],
     };
-  },
+  }
 );
 ```
 
@@ -1014,17 +1058,17 @@ This tells MCP clients where to find the authorization server:
 
 ```typescript
 // src/routes/mcp/resource-metadata.ts
-import { Elysia } from 'elysia';
-import { env } from '@core/config';
+import { Elysia } from "elysia";
+import { env } from "@core/config";
 
 export const resourceMetadataRoute = new Elysia().get(
-  '/.well-known/oauth-protected-resource',
+  "/.well-known/oauth-protected-resource",
   () => ({
     resource: `${env.BETTER_AUTH_URL}/api/mcp`,
     authorization_servers: [env.BETTER_AUTH_URL],
-    bearer_methods_supported: ['header'],
-    scopes_supported: ['openid', 'profile', 'email', 'offline_access'],
-  }),
+    bearer_methods_supported: ["header"],
+    scopes_supported: ["openid", "profile", "email", "offline_access"],
+  })
 );
 ```
 
@@ -1035,15 +1079,15 @@ to generate this metadata:
 
 ```typescript
 // src/routes/mcp/auth-server-metadata.ts
-import { Elysia } from 'elysia';
-import { oauthProviderAuthServerMetadata } from '@better-auth/oauth-provider';
-import { auth } from '@features/auth';
+import { Elysia } from "elysia";
+import { oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider";
+import { auth } from "@features/auth";
 
 const handler = oauthProviderAuthServerMetadata(auth as any);
 
 export const authServerMetadataRoute = new Elysia().get(
-  '/.well-known/oauth-authorization-server',
-  async ({ request }) => handler(request),
+  "/.well-known/oauth-authorization-server",
+  async ({ request }) => handler(request)
 );
 ```
 
@@ -1052,16 +1096,16 @@ export const authServerMetadataRoute = new Elysia().get(
 
 ```typescript
 // src/index.ts
-import { resourceMetadataRoute } from './routes/mcp/resource-metadata';
-import { authServerMetadataRoute } from './routes/mcp/auth-server-metadata';
-import { mcpRoutes } from './routes/mcp';
+import { resourceMetadataRoute } from "./routes/mcp/resource-metadata";
+import { authServerMetadataRoute } from "./routes/mcp/auth-server-metadata";
+import { mcpRoutes } from "./routes/mcp";
 
 const app = new Elysia()
   // ... cors, session middleware, auth handler ...
-  .use(resourceMetadataRoute)      // /.well-known/oauth-protected-resource
-  .use(authServerMetadataRoute)     // /.well-known/oauth-authorization-server
-  .use(mcpRoutes)                   // /api/mcp
-  .listen({ hostname: '0.0.0.0', port: env.BUN_PORT });
+  .use(resourceMetadataRoute) // /.well-known/oauth-protected-resource
+  .use(authServerMetadataRoute) // /.well-known/oauth-authorization-server
+  .use(mcpRoutes) // /api/mcp
+  .listen({ hostname: "0.0.0.0", port: env.BUN_PORT });
 ```
 
 **How the discovery flow works:**
@@ -1084,10 +1128,10 @@ provider.
 **Validate:**
 
 - [ ] `GET /.well-known/oauth-protected-resource` returns valid JSON with
-  `authorization_servers`
+      `authorization_servers`
 - [ ] `GET /.well-known/oauth-authorization-server` returns valid OAuth metadata
 - [ ] Unauthenticated POST to `/api/mcp` returns 401 with `WWW-Authenticate`
-  header containing the resource metadata URL
+      header containing the resource metadata URL
 
 ### Phase 6: Testing
 
@@ -1096,14 +1140,14 @@ provider.
 The MCP SDK provides `InMemoryTransport` for testing without HTTP:
 
 ```typescript
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 
 async function createTestClient(oauthUserId: string) {
   const server = createMCPServer(oauthUserId);
   const [clientTransport, serverTransport] =
     InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: 'test', version: '1.0.0' });
+  const client = new Client({ name: "test", version: "1.0.0" });
 
   await Promise.all([
     client.connect(clientTransport),
@@ -1164,8 +1208,8 @@ response and perform the PKCE flow in a browser.
 
 ### With Your Existing Auth System
 
-The MCP endpoint uses your existing session middleware to resolve the OAuth user.
-The specific integration depends on your auth library:
+The MCP endpoint uses your existing session middleware to resolve the OAuth
+user. The specific integration depends on your auth library:
 
 - **BetterAuth:** `auth.api.getSession({ headers: request.headers })` for
   cookies, or route through `auth.handler` for OAuth bearer tokens
@@ -1201,14 +1245,14 @@ This can be:
 The recipe covers the auth _validation_ side. Key _generation_ is:
 
 ```typescript
-import { randomBytes } from 'crypto';
-import bcrypt from 'bcryptjs';
+import { randomBytes } from "crypto";
+import bcrypt from "bcryptjs";
 
-const KEY_PREFIX = 'mcp_';
+const KEY_PREFIX = "mcp_";
 const KEY_LENGTH = 60; // hex characters
 
 function generateAgentKey(): string {
-  return KEY_PREFIX + randomBytes(KEY_LENGTH / 2).toString('hex');
+  return KEY_PREFIX + randomBytes(KEY_LENGTH / 2).toString("hex");
 }
 
 // When creating a membership:
@@ -1239,8 +1283,9 @@ const keyPrefix = key.substring(0, 8);
   PostgreSQL for session storage in API servers.
 
 - **Missing ownerId filter leaks data between users.** The most dangerous bug in
-  a multi-tenant system. Establish the convention that every service method takes
-  `ownerId` and every query includes it. Write tests specifically for isolation.
+  a multi-tenant system. Establish the convention that every service method
+  takes `ownerId` and every query includes it. Write tests specifically for
+  isolation.
 
 - **MCP client connections can be fragile.** The connection flow involves
   multiple round-trips (OAuth discovery, PKCE flow, MCP initialization). Proxy
@@ -1266,8 +1311,7 @@ const keyPrefix = key.substring(0, 8);
 - **MCP TypeScript SDK:** https://github.com/modelcontextprotocol/typescript-sdk
 - **RFC 9728 (Protected Resource Metadata):**
   https://www.rfc-editor.org/rfc/rfc9728
-- **RFC 8414 (OAuth Server Metadata):**
-  https://www.rfc-editor.org/rfc/rfc8414
+- **RFC 8414 (OAuth Server Metadata):** https://www.rfc-editor.org/rfc/rfc8414
 - **bcryptjs:** https://github.com/dcodeIO/bcrypt.js
 - **Drizzle ORM:** https://orm.drizzle.team
 - **Elysia:** https://elysiajs.com
