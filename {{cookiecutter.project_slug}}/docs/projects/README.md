@@ -46,6 +46,7 @@ projects/
     artifacts/           — Working research generated during the project
       codebase-exploration.md
       dependency-analysis.md
+    handoff.md           — Deployment steps (only when needed)
 ```
 
 A small project might just have a `proposal.md`. A complex project might have all of the above plus additional documents. The folder accommodates whatever the work requires.
@@ -56,6 +57,7 @@ A small project might just have a `proposal.md`. A complex project might have al
 - **plan.md** — The _how_. Phased implementation roadmap with validation criteria. Created when implementation begins. See `TEMPLATES/PLAN.template.md`.
 - **sessions/** — Dev journals capturing what happened during implementation. Created during work. See `TEMPLATES/YYYY-MM-DD-SESSION.template.md`.
 - **artifacts/** — Freeform working research: codebase exploration, dependency analysis, source code mapping, architecture sketches. No template — these are whatever the work generates.
+- **handoff.md** — Deployment or integration steps required to ship the work. Created during branch finalization when the work requires more than merging code — database migrations, service redeployments, environment config changes, manual coordination. Most projects won't need this. See `TEMPLATES/HANDOFF.template.md`.
 
 ### Proposals
 
@@ -168,5 +170,6 @@ Project-scoped templates are available in the `TEMPLATES/` subfolder:
 - `TEMPLATES/PROPOSAL.template.md` — Starting point for project proposals
 - `TEMPLATES/PLAN.template.md` — Starting point for implementation plans
 - `TEMPLATES/YYYY-MM-DD-SESSION.template.md` — Starting point for session journals
+- `TEMPLATES/HANDOFF.template.md` — Starting point for deployment handoffs
 
 Copy the relevant template into your project folder when needed.

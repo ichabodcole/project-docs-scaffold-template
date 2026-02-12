@@ -196,14 +196,14 @@ Not sure what to create? Use this decision flowchart:
              │ Post-completion:      │
              └───────────────────────┘
                          ↓
-           ┌─────────────┼─────────────────────┐
-           ↓             ↓                     ↓
-     [Reusable      [System docs]        [Assessment]
-      pattern]           ↓                     ↓
-           ↓      ┌──────┴──────┐          REPORT
-       PLAYBOOK   ↓             ↓     (triggers next
-              ARCHITECTURE  INTERACTION  cycle)
-              (technical)   DESIGN (UX)
+      ┌──────────────────┼──────────────────────┐
+      ↓                  ↓                      ↓
+[Deployment    [Reusable      [System docs]  [Assessment]
+ steps?]        pattern]           ↓              ↓
+      ↓             ↓      ┌──────┴──────┐   REPORT
+  HANDOFF      PLAYBOOK    ↓             ↓  (triggers next
+  (in project)         ARCHITECTURE  INTERACTION  cycle)
+                       (technical)   DESIGN (UX)
 ```
 
 **The documentation cycle:**
