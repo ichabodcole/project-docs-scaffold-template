@@ -26,7 +26,7 @@ merging to develop.
    what was done. Use the template at `docs/memories/TEMPLATE.md`. Name it
    `YYYY-MM-DD-short-description.md`. Skip for trivial changes where the commit
    message alone provides sufficient context.
-6. **Assess Additional Docs** - Architecture, interaction design,
+6. **Assess Additional Docs** - Handoff, architecture, interaction design,
    specifications, lessons learned, playbooks
 7. **Commit Documentation** - Stage and commit any new docs
 8. **Squash Commits** - `git reset --soft develop` then single commit
@@ -61,6 +61,10 @@ pnpm run test
 - Memories: Reference [docs/memories/README.md](../../docs/memories/README.md)
   and use [docs/memories/TEMPLATE.md](../../docs/memories/TEMPLATE.md). Keep it
   short — a heading, 1-3 sentences, key files, and a link to deeper docs.
+- Handoff: Does this work require specific deployment steps beyond merging code?
+  (DB migrations, service redeployments, environment config changes, manual
+  coordination.) If so, create `handoff.md` in the project folder using
+  `docs/projects/TEMPLATES/HANDOFF.template.md`.
 - Architecture: Reference
   [docs/architecture/README.md](../../docs/architecture/README.md)
 - Interaction design: Reference
