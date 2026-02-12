@@ -33,8 +33,9 @@ project than where the recipes plugin lives. The workflow is:
 3. **Write** the new recipe skill into the clone
 4. **Push** a branch and create a PR for the user to review and merge
 
-The recipes plugin location is available via `${CLAUDE_PLUGIN_ROOT}`. The
-project-docs repo root is two directories up from there (`../../`).
+The recipes repo is always cloned fresh from the canonical URL — this ensures
+the skill works regardless of how the plugin was installed (local path, remote
+URL, etc.).
 
 ## When to Use
 
@@ -66,31 +67,17 @@ A recipe does NOT capture:
 
 ### Phase 0: Set Up Recipe Workspace
 
-Before anything else, set up access to the recipes repo so you can reference
-existing recipes and eventually write the new one.
+Before anything else, clone the recipes repo so you can reference existing
+recipes and eventually write the new one.
 
-1. **Resolve the plugin location.** The recipes plugin root is
-   `${CLAUDE_PLUGIN_ROOT}`. The project-docs repo root is two directories up:
-
-   ```
-   PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}"
-   PROJECT_DOCS_ROOT="$(cd "$PLUGIN_ROOT/../.." && pwd)"
-   ```
-
-2. **Get the remote URL** from the project-docs repo:
-
-   ```bash
-   cd "$PROJECT_DOCS_ROOT" && git remote get-url origin
-   ```
-
-3. **Clone into a temp directory.** Use the scratchpad or `/tmp`:
+1. **Clone the project-docs repo** into a temp directory:
 
    ```bash
    RECIPE_WORKSPACE="/tmp/recipe-workspace-$(date +%s)"
-   git clone "$REMOTE_URL" "$RECIPE_WORKSPACE"
+   git clone git@github.com:ichabodcole/project-docs-scaffold-template.git "$RECIPE_WORKSPACE"
    ```
 
-4. **Create a branch** for the new recipe:
+2. **Create a branch** for the new recipe:
 
    ```bash
    cd "$RECIPE_WORKSPACE" && git checkout -b recipe/<recipe-name>
@@ -99,7 +86,7 @@ existing recipes and eventually write the new one.
    Use kebab-case for the recipe name (e.g., `recipe/document-versioning`,
    `recipe/elysia-betterauth-api`).
 
-5. **Read existing recipe skills** from the clone at
+3. **Read existing recipe skills** from the clone at
    `plugins/recipes/skills/*/SKILL.md` to understand the output format and
    quality bar. Skim at least 2 existing recipes if available.
 
