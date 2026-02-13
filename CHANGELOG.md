@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.2.0...project-docs-scaffold-template-v2.2.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* add v2.0-to-v2.3 migration guide for design resolution and hando… ([65447c3](https://github.com/ichabodcole/project-docs-scaffold-template/commit/65447c36f41f21d3cf9b3b6ed11942015942981e))
+* add v2.0-to-v2.3 migration guide for design resolution and handoff templates ([9db85df](https://github.com/ichabodcole/project-docs-scaffold-template/commit/9db85df46701b0f6934be14ca0d400edc174d8e6))
+
 ## [2.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.1.0...project-docs-scaffold-template-v2.2.0) (2026-02-13)
 
 
