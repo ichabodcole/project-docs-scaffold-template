@@ -15,10 +15,11 @@ description: >
 ## Purpose
 
 Set up a Nuxt 4 admin dashboard that authenticates against a separate BetterAuth
-+ Elysia API server. This recipe captures the integration glue between Nuxt's
-SSR architecture, BetterAuth's cookie-based session model, and Elysia's route
-guards -- the parts that aren't documented in any single library's docs and that
-you'd discover through trial and error.
+
+- Elysia API server. This recipe captures the integration glue between Nuxt's
+  SSR architecture, BetterAuth's cookie-based session model, and Elysia's route
+  guards -- the parts that aren't documented in any single library's docs and
+  that you'd discover through trial and error.
 
 The core challenge: BetterAuth uses HTTPOnly cookies for sessions, but the Nuxt
 app and API run on different ports. Without a specific proxy and middleware
@@ -38,7 +39,7 @@ setup, authentication silently fails.
 
 | Layer         | Technology               | Version |
 | ------------- | ------------------------ | ------- |
-| Frontend      | Nuxt 4 (Vue 3)          | 4.2+    |
+| Frontend      | Nuxt 4 (Vue 3)           | 4.2+    |
 | Auth Client   | BetterAuth (Vue client)  | 1.4+    |
 | UI Components | shadcn-vue + Tailwind v4 | --      |
 | API Server    | Elysia (Bun)             | --      |
@@ -50,10 +51,10 @@ setup, authentication silently fails.
 ### The Cookie Proxy Problem
 
 BetterAuth uses HTTPOnly cookies for session management. When the Nuxt app
-(port 3000) makes requests to the Elysia API (port 3011), they are
-cross-origin. Browsers do not send cookies cross-origin by default, and even
-with `credentials: 'include'`, the `Set-Cookie` response header is blocked
-because the origins differ.
+(port 3000) makes requests to the Elysia API (port 3011), they are cross-origin.
+Browsers do not send cookies cross-origin by default, and even with
+`credentials: 'include'`, the `Set-Cookie` response header is blocked because
+the origins differ.
 
 **The solution:** Nuxt's `routeRules` proxy. The Nuxt server proxies all
 `/api/**` requests to the Elysia backend. From the browser's perspective, it's
@@ -84,8 +85,8 @@ ELYSIA API (port 3011)
 
 ### Why Not Direct API Calls?
 
-You might think: "just set CORS headers and use `credentials: 'include'`."
-This fails because:
+You might think: "just set CORS headers and use `credentials: 'include'`." This
+fails because:
 
 1. `Set-Cookie` with `SameSite=Lax` (BetterAuth's default) is blocked
    cross-origin
@@ -322,17 +323,17 @@ export default defineNuxtConfig({
 ```
 
 **Why `routeRules` and not `nitro.devProxy`:** `routeRules` works in both
-development AND production. `nitro.devProxy` only works during `nuxt dev`.
-Since the admin dashboard is a real deployed app (not just a dev tool),
-`routeRules` is the correct choice.
+development AND production. `nitro.devProxy` only works during `nuxt dev`. Since
+the admin dashboard is a real deployed app (not just a dev tool), `routeRules`
+is the correct choice.
 
 **Why the API URL is read from an env var:** In development, the API is at
 `localhost:3011`. In production, it might be at a different host. The env var
 allows deployment-time configuration without rebuilding.
 
 **Validate:** Start both the Nuxt app and Elysia API. Navigate to
-`http://localhost:3000/api/auth/ok` in the browser -- it should proxy to
-Elysia and return a response.
+`http://localhost:3000/api/auth/ok` in the browser -- it should proxy to Elysia
+and return a response.
 
 ### Phase 4: BetterAuth Client Plugin
 
@@ -390,9 +391,9 @@ const session = $auth.useSession();
 const { users } = await $auth.admin.listUsers();
 ```
 
-**Validate:** Open the Nuxt app, open DevTools Network tab, sign in. Verify
-that the sign-in request goes to `/api/auth/sign-in/email` (same origin, port
-3000), and the response includes a `Set-Cookie` header.
+**Validate:** Open the Nuxt app, open DevTools Network tab, sign in. Verify that
+the sign-in request goes to `/api/auth/sign-in/email` (same origin, port 3000),
+and the response includes a `Set-Cookie` header.
 
 ### Phase 5: Auth Middleware (Client-Side Only)
 
@@ -447,8 +448,8 @@ original page.
 **6.1 Create the admin layout**
 
 The admin layout adds a second layer of protection: role checking. While the
-auth middleware checks "is the user logged in?", the admin layout checks "is
-the user an admin?"
+auth middleware checks "is the user logged in?", the admin layout checks "is the
+user an admin?"
 
 ```vue
 <!-- app/layouts/admin.vue -->
@@ -497,10 +498,10 @@ watchEffect(() => {
 </template>
 ```
 
-**Why `v-show` not `v-if` for the slot:** `v-show` renders the DOM but hides
-it with CSS, so child components are created during hydration. `v-if` would
-delay child component creation until the session check completes, causing a
-jarring layout shift. With `v-show`, the transition is smoother.
+**Why `v-show` not `v-if` for the slot:** `v-show` renders the DOM but hides it
+with CSS, so child components are created during hydration. `v-if` would delay
+child component creation until the session check completes, causing a jarring
+layout shift. With `v-show`, the transition is smoother.
 
 **6.2 Apply the admin layout to admin pages**
 
@@ -511,8 +512,8 @@ definePageMeta({
 });
 ```
 
-**Note:** The admin layout includes its own auth check, so pages using the
-admin layout don't also need the auth middleware. Using both is harmless but
+**Note:** The admin layout includes its own auth check, so pages using the admin
+layout don't also need the auth middleware. Using both is harmless but
 redundant.
 
 **Validate:** Sign in as a non-admin user and navigate to `/admin/users` --
@@ -550,8 +551,8 @@ const session = $auth.useSession();
 
 **7.2 Using `useSession()` in composables**
 
-In composables, you must use `toValue()` to safely unwrap the session Ref
-inside computed properties:
+In composables, you must use `toValue()` to safely unwrap the session Ref inside
+computed properties:
 
 ```typescript
 import { computed, toValue } from "vue";
@@ -592,8 +593,8 @@ watch(
 ```
 
 **Why `{ immediate: true }`:** Without it, the watcher doesn't fire on initial
-load, and the redirect logic doesn't run until the session changes. With it,
-the check runs immediately when the component mounts.
+load, and the redirect logic doesn't run until the session changes. With it, the
+check runs immediately when the component mounts.
 
 ### Phase 8: Making Authenticated API Calls
 
@@ -617,10 +618,10 @@ async function fetchUsers() {
 ```
 
 **Why `credentials: 'include'` is needed:** Even though the request is
-same-origin (thanks to the proxy), the `fetch` API defaults to `same-origin`
-for credentials. BetterAuth's session cookie has specific attributes that
-require explicit credential inclusion. Without this, the API sees no session
-and returns 401.
+same-origin (thanks to the proxy), the `fetch` API defaults to `same-origin` for
+credentials. BetterAuth's session cookie has specific attributes that require
+explicit credential inclusion. Without this, the API sees no session and
+returns 401.
 
 **8.2 Pattern for pages with admin data**
 
@@ -725,14 +726,13 @@ async function handleSignIn() {
 
 - BetterAuth's `signIn.email()` returns `{ data, error }` -- it does NOT throw
   on auth failures. Check `result.error` explicitly.
-- The `EMAIL_NOT_VERIFIED` error code requires special handling if you use
-  email verification. Show a "Resend verification email" button when this
-  occurs.
-- Pre-fill the email from query params (`route.query.email`) to support
-  redirect flows from email verification links.
+- The `EMAIL_NOT_VERIFIED` error code requires special handling if you use email
+  verification. Show a "Resend verification email" button when this occurs.
+- Pre-fill the email from query params (`route.query.email`) to support redirect
+  flows from email verification links.
 
-**Validate:** Sign in with valid admin credentials. Verify redirect to the
-admin dashboard. Sign in with wrong password -- should show error. Sign in as
+**Validate:** Sign in with valid admin credentials. Verify redirect to the admin
+dashboard. Sign in with wrong password -- should show error. Sign in as
 non-admin -- should redirect to `/` (handled by index page or admin layout).
 
 ## Data Flow
@@ -803,10 +803,10 @@ Component lifecycle:
 
 ## Settings / Configuration
 
-| Setting              | Default                  | Purpose                                  |
-| -------------------- | ------------------------ | ---------------------------------------- |
-| `NUXT_PUBLIC_API_URL`| `http://localhost:3011`  | Elysia API URL (used by Nuxt proxy)      |
-| `ADMIN_EMAIL`        | (none)                   | Email of user to promote to admin        |
+| Setting               | Default                 | Purpose                             |
+| --------------------- | ----------------------- | ----------------------------------- |
+| `NUXT_PUBLIC_API_URL` | `http://localhost:3011` | Elysia API URL (used by Nuxt proxy) |
+| `ADMIN_EMAIL`         | (none)                  | Email of user to promote to admin   |
 
 ## Gotchas & Important Notes
 
@@ -821,9 +821,8 @@ Component lifecycle:
   causing an infinite redirect loop.
 
 - **`routeRules` proxy, not `nitro.devProxy`.** Use `routeRules` for the API
-  proxy, not Nitro's `devProxy`. The `devProxy` only works during `nuxt dev`
-  and silently stops working in production builds. `routeRules` works
-  everywhere.
+  proxy, not Nitro's `devProxy`. The `devProxy` only works during `nuxt dev` and
+  silently stops working in production builds. `routeRules` works everywhere.
 
 - **No `baseURL` in `createAuthClient()`.** BetterAuth defaults to `/api/auth`
   on the current origin. Setting an explicit `baseURL` pointing to the Elysia
