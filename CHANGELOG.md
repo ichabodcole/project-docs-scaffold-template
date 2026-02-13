@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.0.1...project-docs-scaffold-template-v2.1.0) (2026-02-12)
+
+
+### Features
+
+* add handoff.md document type for deployment steps ([fb91b6e](https://github.com/ichabodcole/project-docs-scaffold-template/commit/fb91b6ecd0d85609723022d69d5e7603a022fb5b))
+
+
+### Bug Fixes
+
+* improve v1-to-v2 migration guide based on second round of testing ([5de0452](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5de045264ccbbae54ea9f5b483a0233f74005c79))
+* remove CLAUDE_PLUGIN_ROOT dependency from create-recipe skill ([02ca63f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/02ca63fd35a51b4a0d6ec01c48ae6fa9eacffff5))
+
 ## [2.0.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.0.0...project-docs-scaffold-template-v2.0.1) (2026-02-10)
 
 
