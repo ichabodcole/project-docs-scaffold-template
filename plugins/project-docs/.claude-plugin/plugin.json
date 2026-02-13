@@ -1,6 +1,6 @@
 {
   "name": "project-docs",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Specialized commands for managing structured project documentation, proposals, plans, and reports",
   "author": {
     "name": "Cole Reed"
