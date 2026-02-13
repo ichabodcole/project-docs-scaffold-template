@@ -39,5 +39,5 @@ tmp-template-test/
 *.log
 
 # Local Agent Files
-/.claude
+**/.claude/settings.local.json
 /.cursor
