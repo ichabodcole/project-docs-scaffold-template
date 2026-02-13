@@ -12,11 +12,6 @@
     {
       "name": "project-docs",
       "source": "./plugins/project-docs",
-      "description": "Documentation management commands, agents, and skills for structured project documentation workflows",
-      "version": "1.0.0",
-      "author": {
-        "name": "Cole Reed"
-      },
       "category": "documentation",
       "tags": [
         "documentation",
@@ -30,22 +25,12 @@
     {
       "name": "operator",
       "source": "./plugins/operator",
-      "description": "Operator integration for triaging quick-capture notes into the project documentation structure",
-      "version": "1.0.0",
-      "author": {
-        "name": "Cole Reed"
-      },
       "category": "documentation",
       "tags": ["operator", "triage", "intake", "documentation"]
     },
     {
       "name": "recipes",
       "source": "./plugins/recipes",
-      "description": "Technical recipes for implementing project scaffolding and integrating libraries.",
-      "version": "1.0.0",
-      "author": {
-        "name": "Cole Reed"
-      },
       "category": "documentation",
       "tags": ["recipes", "scaffolding", "documentation"]
     }

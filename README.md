@@ -44,6 +44,8 @@ which provides specialized commands for managing your documentation structure:
 - `/project-docs:project-recipe` - Extract reusable project patterns
 - `/project-docs:update-deps` - Automated dependency management
 - `/project-docs:review-docs` - Documentation health checks
+- `/project-docs:proposal-to-design-resolution` - Resolve design ambiguity via
+  interactive Q&A
 - `/project-docs:proposal-to-plan` - Convert proposals to implementation plans
 
 **Installation:**
@@ -152,8 +154,8 @@ Cross-cutting documents that precede and follow projects.
 ### Work Tracking
 
 - **`/docs/projects`** — Co-located pipeline documents for defined bodies of
-  work. Each project folder contains its proposal, plan, sessions, and artifacts
-  together
+  work. Each project folder contains its proposal, design resolution (optional),
+  plan, sessions, and artifacts together
 - **`/docs/backlog`** — Small, self-contained work items (bugs, minor refactors,
   papercuts) that don't warrant a full project
 - **`/docs/projects/archive`** — Completed project folders moved here when done

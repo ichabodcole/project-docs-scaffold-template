@@ -118,6 +118,19 @@ Not sure what to create? Use this decision flowchart:
               Create PROJECT folder            Document decision
               with proposal.md                  (investigation
                          ↓                       conclusion)
+              ┌──────────────────────┐
+              │ Unresolved system    │
+              │ behavior, data, or   │
+              │ architecture?        │
+              └──────────────────────┘
+                    ↓           ↓
+                  YES           NO
+                    ↓           │
+         Add design-resolution  │
+         .md to project         │
+                    ↓           │
+                    └─────┬─────┘
+                          ↓
                Ready to implement?
                          ↓
                      ┌───┴───┐
@@ -158,7 +171,7 @@ Not sure what to create? Use this decision flowchart:
 **The documentation cycle:**
 
 ```
-Report → Investigation → Project (proposal → plan → sessions) → Report
+Report → Investigation → Project (proposal → [design-resolution] → plan → sessions) → Report
 ```
 
 Reports and investigations are the connective tissue between projects. They trigger new work and assess completed work, but live outside any single project.
@@ -167,7 +180,7 @@ Reports and investigations are the connective tissue between projects. They trig
 
 - **Report:** "Here's what we found when assessing X." (retrospective, current-state assessment)
 - **Investigation:** "Should we even do this? Let me research..." (uncertain, exploratory)
-- **Project:** "Here's the full story of building X — proposal, plan, sessions, artifacts in one place." (co-located body of work)
+- **Project:** "Here's the full story of building X — proposal, design resolution (optional), plan, sessions, artifacts in one place." (co-located body of work)
 - **Backlog:** "Here's a small task that just needs doing." (lightweight work item)
 - **Playbook:** "Here's how to do X repeatedly." (reusable pattern)
 - **Specification:** "Here's what the application does, described so anyone could rebuild it." (technology-agnostic behavior)
@@ -187,6 +200,7 @@ Reports and investigations are the connective tissue between projects. They trig
 - **Need to document an existing technical system?** → Architecture
 - **Need to document how users interact with a feature?** → Interaction Design
 - **Recurring task pattern?** → Playbook (after 2-3 implementations)
+- **Proposal has unresolved system-level questions?** → Design resolution before planning
 - **Something feels off but can't investigate now?** → Fragment (revisit later)
 - **Want to assess current state?** → Report
 

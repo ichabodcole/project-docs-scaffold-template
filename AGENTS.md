@@ -104,9 +104,11 @@ When working on plugin components:
 
 ### Marketplace Configuration
 
-The `.claude-plugin/marketplace.json` at the repo root defines which plugins are
-available for installation. This is how end users discover and install the
-plugins after generating a project from the template.
+The `.claude-plugin/marketplace.json` at the repo root is a discovery index that
+defines which plugins are available for installation. It contains only plugin
+names, source paths, and discovery metadata (category, tags). All authoritative
+metadata (version, description, author) lives in each plugin's own
+`.claude-plugin/plugin.json` — do not duplicate these fields in the marketplace.
 
 ## File Structure Conventions
 

@@ -59,15 +59,16 @@ A project folder is flexible. Not everything needs every file:
 ```
 projects/
   my-feature/
-    proposal.md          — What we're building and why
-    plan.md              — How we're building it (when implementation begins)
-    sessions/            — Development session journals
+    proposal.md              — What we're building and why
+    design-resolution.md     — System-level decisions resolved (optional)
+    plan.md                  — How we're building it (when implementation begins)
+    sessions/                — Development session journals
       2026-01-15-initial-implementation.md
       2026-01-20-edge-case-fixes.md
-    artifacts/           — Working research generated during the project
+    artifacts/               — Working research generated during the project
       codebase-exploration.md
       dependency-analysis.md
-    handoff.md           — Deployment steps (only when needed)
+    handoff.md               — Deployment steps (only when needed)
 ```
 
 A small project might just have a `proposal.md`. A complex project might have
@@ -79,6 +80,11 @@ work requires.
 - **proposal.md** — The _why_ and _what_. Problem statement, proposed solution,
   scope, technical approach. Created when the project starts. See
   `TEMPLATES/PROPOSAL.template.md`.
+- **design-resolution.md** — System-level clarity. Resolves behavioral
+  ambiguity, data model questions, boundaries, and architectural positioning
+  before planning begins. Optional — use when the proposal has unresolved
+  system-level questions that would make the plan speculative. See
+  `TEMPLATES/DESIGN-RESOLUTION.template.md`.
 - **plan.md** — The _how_. Phased implementation roadmap with validation
   criteria. Created when implementation begins. See
   `TEMPLATES/PLAN.template.md`.
@@ -117,6 +123,30 @@ explore options, constraints, and expected outcomes.
 - Standard (200-500 lines): Moderate complexity, some alternatives to explore
 - Comprehensive (500-1,000 lines): Complex systems, multiple components
 - Very large (> 1,000 lines): Consider splitting into multiple proposals
+
+### Design Resolutions
+
+Design resolutions crystallize system-level decisions before development
+planning begins. They resolve behavioral ambiguity, data model questions,
+boundaries, and architectural positioning that the proposal leaves open.
+
+**When to write a design resolution:**
+
+- The proposal contains unresolved behavioral or structural questions
+- The system introduces new entities or state models
+- The work affects architecture or cross-cutting concerns
+- The development plan would otherwise require speculative assumptions
+- Parallel agent execution requires clear system contracts
+
+**When NOT to write a design resolution:**
+
+- The feature is small and bounded
+- The proposal is already behaviorally precise
+- The work is refactoring-only with no new system behavior
+
+This aligns with the principle: **Lightweight where possible, formal when
+valuable.** A design resolution is a bridge between "what are we building?" and
+"how do we build it?" — use it when that bridge has gaps.
 
 ### Plans
 
@@ -216,6 +246,8 @@ External references to archived projects use `./archive/project-name/` paths
 Project-scoped templates are available in the `TEMPLATES/` subfolder:
 
 - `TEMPLATES/PROPOSAL.template.md` — Starting point for project proposals
+- `TEMPLATES/DESIGN-RESOLUTION.template.md` — Starting point for design
+  resolutions
 - `TEMPLATES/PLAN.template.md` — Starting point for implementation plans
 - `TEMPLATES/YYYY-MM-DD-SESSION.template.md` — Starting point for session
   journals

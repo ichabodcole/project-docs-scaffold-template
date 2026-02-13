@@ -186,6 +186,39 @@ plans, investigations, and reports.
 
 ---
 
+### `/project-docs:proposal-to-design-resolution`
+
+**Description:** Resolve design ambiguity in a proposal through interactive Q&A.
+
+**Usage:**
+
+```
+/project-docs:proposal-to-design-resolution [project-name]
+```
+
+**Arguments:**
+
+- `project-name` - Name of the project folder in `docs/projects/` (e.g.,
+  `search-enhancement`)
+
+**What it does:**
+
+- Reads the project's proposal at `docs/projects/<name>/proposal.md`
+- Analyzes the proposal for unresolved behavioral, structural, and architectural
+  questions
+- Conducts structured Q&A with the user, organized by design resolution sections
+- Generates `docs/projects/<name>/design-resolution.md` with resolved decisions
+
+**Use cases:**
+
+- Proposal has unresolved system behavior questions
+- New entities or state models need clarity before planning
+- Architecture or cross-cutting concerns need resolution
+- Preventing speculative assumptions in development plans
+- Clarifying contracts for parallel agent execution
+
+---
+
 ### `/project-docs:proposal-to-plan`
 
 **Description:** Create a detailed development plan from a proposal document.
@@ -257,7 +290,8 @@ docs/
 1. **Regular summaries** - Run `/project-docs:project-summary` monthly or before
    major planning sessions
 2. **Pre-implementation planning** - Use `/project-docs:proposal-to-plan` before
-   starting feature work
+   starting feature work. Use `/project-docs:proposal-to-design-resolution`
+   first when a proposal has unresolved system-level questions
 3. **Periodic cleanup** - Run `/project-docs:review-docs` quarterly to maintain
    documentation health
 4. **Dependency hygiene** - Schedule `/project-docs:update-deps` weekly or
@@ -266,6 +300,12 @@ docs/
    significantly
 
 ## Version History
+
+### 1.2.0 (2026-02-13)
+
+- Added `proposal-to-design-resolution` command and skill
+- New `DESIGN-RESOLUTION.template.md` for project lifecycle
+- `proposal-to-plan` now reads `design-resolution.md` when present
 
 ### 1.0.0 (2025-12-26)
 
