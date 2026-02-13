@@ -110,9 +110,10 @@ Run a final check that no stale references to old structure remain:
 
 ## Available Migrations
 
-| Migration                                        | From    | To    | Summary                                                                                               |
-| ------------------------------------------------ | ------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| [migrations/v1-to-v2.md](migrations/v1-to-v2.md) | pre-2.0 | 2.0.0 | Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports |
+| Migration                                                | From    | To    | Summary                                                                                               |
+| -------------------------------------------------------- | ------- | ----- | ----------------------------------------------------------------------------------------------------- |
+| [migrations/v1-to-v2.md](migrations/v1-to-v2.md)         | pre-2.0 | 2.0.0 | Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports |
+| [migrations/v2.0-to-v2.3.md](migrations/v2.0-to-v2.3.md) | 2.0–2.2 | 2.3.0 | Add design resolution and handoff templates, update READMEs with new pipeline stage                   |
 
 ## Creating New Migration Guides
 
