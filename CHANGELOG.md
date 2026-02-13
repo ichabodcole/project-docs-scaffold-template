@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.1.0...project-docs-scaffold-template-v2.2.0) (2026-02-13)
+
+
+### Features
+
+* add design resolution document type and proposal-to-design-reso… ([67fd449](https://github.com/ichabodcole/project-docs-scaffold-template/commit/67fd4498de73450b69b2e19bed3d458c77e7e210))
+* add design resolution document type and proposal-to-design-resolution workflow ([4cb6c29](https://github.com/ichabodcole/project-docs-scaffold-template/commit/4cb6c293770a1970ad29829e0b0998342da7ef01))
+
 ## [2.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.0.1...project-docs-scaffold-template-v2.1.0) (2026-02-12)
 
 
