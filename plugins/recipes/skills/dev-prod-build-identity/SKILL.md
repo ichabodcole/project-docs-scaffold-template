@@ -22,8 +22,8 @@ machine or device. This lets developers use their own app as a real user
 build, without either build interfering with the other.
 
 This recipe is a hybrid: the architecture pattern is technology-agnostic, but
-implementation guidance is provided for three common stacks (Electron, Expo/React
-Native, and server-side Node/Bun APIs).
+implementation guidance is provided for three common stacks (Electron,
+Expo/React Native, and server-side Node/Bun APIs).
 
 ## When to Use
 
@@ -95,7 +95,8 @@ taskbar, or home screen. This is the single most important visual cue.
 
 **Why separate data directories?** Database operations during development
 (migrations, test data, schema experiments) must never touch production data.
-Separate directories provide complete isolation without any code-level filtering.
+Separate directories provide complete isolation without any code-level
+filtering.
 
 **Why dotenv-flow?** It provides cascading environment files (`.env` →
 `.env.{NODE_ENV}` → `.env.local`) with no custom code. The `NODE_ENV` variable
@@ -322,8 +323,8 @@ baked into the native build at compile time via `app.config.ts`.
 
 **3.3 Use the config everywhere**
 
-Every place in the app that needs variant-aware behavior imports from this single
-module. Components, services, and initialization code never detect the
+Every place in the app that needs variant-aware behavior imports from this
+single module. Components, services, and initialization code never detect the
 environment themselves.
 
 ```typescript
@@ -376,7 +377,10 @@ const path = require("path");
 const dotenvFlow = require("dotenv-flow");
 
 // Load .env (development mode)
-dotenvFlow.config({ node_env: "development", path: path.join(__dirname, "..") });
+dotenvFlow.config({
+  node_env: "development",
+  path: path.join(__dirname, ".."),
+});
 
 // Set dev identity
 process.env.APP_ID = "com.myapp.dev";
@@ -448,8 +452,8 @@ prevent command injection.
 ```
 
 **Key distinction:** `electron-vite build --mode X` compiles the app code with
-the correct environment. The build wrapper script then packages the compiled code
-into an installer with the correct identity. These are two separate steps.
+the correct environment. The build wrapper script then packages the compiled
+code into an installer with the correct identity. These are two separate steps.
 
 **4.4 Runtime icon selection (window icon)**
 
@@ -493,9 +497,7 @@ dotenvFlow.config();
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const appVariant =
-    process.env.EXPO_PUBLIC_APP_VARIANT ||
-    process.env.NODE_ENV ||
-    "production";
+    process.env.EXPO_PUBLIC_APP_VARIANT || process.env.NODE_ENV || "production";
   const isDev = appVariant === "development";
   const iconFolder = isDev ? "dev" : "prod";
   const iconPath = `./assets/images/${iconFolder}`;
@@ -552,11 +554,12 @@ Set `NODE_ENV` and `EXPO_PUBLIC_APP_VARIANT` explicitly in each script:
 }
 ```
 
-**Why set both NODE_ENV and your app variant variable in Expo scripts?** `NODE_ENV`
-controls which `.env` files `dotenv-flow` loads. `EXPO_PUBLIC_APP_VARIANT` is the
-explicit variant flag baked into the Expo config. They serve different purposes
-and both are needed because dotenv-flow runs at config evaluation time, while the
-variant flag propagates into the runtime bundle.
+**Why set both NODE_ENV and your app variant variable in Expo scripts?**
+`NODE_ENV` controls which `.env` files `dotenv-flow` loads.
+`EXPO_PUBLIC_APP_VARIANT` is the explicit variant flag baked into the Expo
+config. They serve different purposes and both are needed because dotenv-flow
+runs at config evaluation time, while the variant flag propagates into the
+runtime bundle.
 
 **5.3 Runtime branding module**
 
@@ -620,8 +623,8 @@ if (!parsed.success) {
 export const env = parsed.data;
 ```
 
-**Key insight:** The API uses feature detection (is `SMTP_HOST` set?) rather than
-environment detection (is `NODE_ENV` production?). This is more flexible --
+**Key insight:** The API uses feature detection (is `SMTP_HOST` set?) rather
+than environment detection (is `NODE_ENV` production?). This is more flexible --
 features activate based on what credentials are available, not what environment
 label is set.
 
@@ -692,8 +695,8 @@ environment variables.
 ### Deep Links / URL Schemes
 
 Both variants register different URL schemes (`myapp://` vs `myapp-dev://`). The
-API's trusted origins list must include both schemes. If using OAuth callbacks or
-deep links, ensure the redirect URIs are registered for both variants.
+API's trusted origins list must include both schemes. If using OAuth callbacks
+or deep links, ensure the redirect URIs are registered for both variants.
 
 ### Database Migrations
 
@@ -704,16 +707,16 @@ using proper migrations on the production database.
 
 ## Settings / Configuration
 
-| Setting        | Dev Value                 | Prod Value              | Where Set               |
-| -------------- | ------------------------- | ----------------------- | ----------------------- |
-| App Name       | "MyApp Dev"               | "MyApp"                 | `.env` / `.env.production` |
-| Bundle ID      | com.myapp.dev             | com.myapp               | Build script / app.config.ts |
-| Icon           | resources/dev/icon        | resources/prod/icon     | Build script / app.config.ts |
-| Data Directory | MyAppDev                  | MyApp                   | app-config.ts           |
-| Database       | myapp.dev.db              | myapp.db                | app-config.ts           |
-| API URL        | http://localhost:3011     | https://api.myapp.com   | `.env` / `.env.production` |
-| URL Scheme     | myapp-dev://              | myapp://                | app-config.ts / app.config.ts |
-| Debug Logging  | Enabled                   | Disabled                | `.env`                  |
+| Setting        | Dev Value             | Prod Value            | Where Set                     |
+| -------------- | --------------------- | --------------------- | ----------------------------- |
+| App Name       | "MyApp Dev"           | "MyApp"               | `.env` / `.env.production`    |
+| Bundle ID      | com.myapp.dev         | com.myapp             | Build script / app.config.ts  |
+| Icon           | resources/dev/icon    | resources/prod/icon   | Build script / app.config.ts  |
+| Data Directory | MyAppDev              | MyApp                 | app-config.ts                 |
+| Database       | myapp.dev.db          | myapp.db              | app-config.ts                 |
+| API URL        | http://localhost:3011 | https://api.myapp.com | `.env` / `.env.production`    |
+| URL Scheme     | myapp-dev://          | myapp://              | app-config.ts / app.config.ts |
+| Debug Logging  | Enabled               | Disabled              | `.env`                        |
 
 ## Adapting to Different Tech Stacks
 
@@ -762,9 +765,9 @@ options:
   etc. for additional variants.
 
 - **Data directory separation is non-negotiable.** Even if you skip icon
-  differentiation, you MUST separate data directories and database files. Running
-  a dev migration on your production database is a disaster that's hard to
-  recover from.
+  differentiation, you MUST separate data directories and database files.
+  Running a dev migration on your production database is a disaster that's hard
+  to recover from.
 
 - **dotenv-flow loads `.env` first, then overlays.** The base `.env` file is
   always loaded. `.env.production` only overrides the values it explicitly sets.
@@ -787,8 +790,8 @@ options:
   electron-builder uses the YAML defaults. This is intentional -- the YAML
   defaults are production values, and the scripts override for dev.
 
-- **Set both NODE_ENV and your app variant variable in Expo scripts.** `NODE_ENV`
-  controls dotenv-flow file loading. The app variant variable (e.g.,
+- **Set both NODE_ENV and your app variant variable in Expo scripts.**
+  `NODE_ENV` controls dotenv-flow file loading. The app variant variable (e.g.,
   `EXPO_PUBLIC_APP_VARIANT`) is baked into the Expo config at build time. They
   serve different purposes and both are needed.
 
@@ -796,10 +799,10 @@ options:
   the dock/taskbar icon is too small to distinguish. The window title provides a
   second visual cue.
 
-- **Don't forget to update the API's trusted origins when adding a new variant.**
-  If your mobile app uses URL schemes for auth callbacks (e.g., OAuth redirect),
-  the API must trust both `myapp://` and `myapp-dev://`. Missing this causes auth
-  to silently fail only in development builds -- a confusing bug.
+- **Don't forget to update the API's trusted origins when adding a new
+  variant.** If your mobile app uses URL schemes for auth callbacks (e.g., OAuth
+  redirect), the API must trust both `myapp://` and `myapp-dev://`. Missing this
+  causes auth to silently fail only in development builds -- a confusing bug.
 
 - **Icon generation tip.** Design one master SVG with a parameterized background
   color. Generate all icon sizes and formats from this single source. When you
