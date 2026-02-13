@@ -47,10 +47,11 @@ iteration through real projects, which is what this project is doing.
 
 - **Organize by lifecycle, not just type.** Different documents serve different
   purposes and have different lifetimes. Permanent reference docs (architecture,
-  specs) stay organized by type. Pipeline docs (proposals, plans, sessions) are
-  co-located by project so the full story of a body of work lives in one folder.
-  This hybrid approach emerged from real scaling pain — the v2.0 restructuring
-  was driven by traceability and archival problems in a flat, type-only layout.
+  specs) stay organized by type. Pipeline docs (proposals, design resolutions,
+  plans, sessions) are co-located by project so the full story of a body of work
+  lives in one folder. This hybrid approach emerged from real scaling pain — the
+  v2.0 restructuring was driven by traceability and archival problems in a flat,
+  type-only layout.
 
 - **AI is a first-class consumer.** The documentation structure is designed so
   AI assistants can navigate, generate, validate, and act on docs without
@@ -66,8 +67,8 @@ iteration through real projects, which is what this project is doing.
 - **Lightweight where possible, formal when valuable.** Not every task needs a
   proposal and plan. The backlog folder exists for small work. Fragments capture
   half-formed thoughts. The system provides a spectrum from informal (fragment)
-  to formal (project with proposal, plan, sessions) and lets the work determine
-  the ceremony.
+  to formal (project with proposal, design resolution, plan, sessions) and lets
+  the work determine the ceremony.
 
 ## What It Does
 
@@ -75,14 +76,16 @@ iteration through real projects, which is what this project is doing.
   pre-organized folders with READMEs, templates, and conventions for
   architecture docs, specifications, investigations, projects, backlog, and more
 
-- **Provides a Claude Code plugin ecosystem** with 12 commands, 18 skills, and 7
+- **Provides a Claude Code plugin ecosystem** with 13 commands, 17 skills, and 7
   specialized agents that automate documentation workflows: starting
-  investigations, converting proposals to plans, generating project summaries,
-  reviewing documentation health, finalizing branches with session journals
+  investigations, resolving design ambiguity, converting proposals to plans,
+  generating project summaries, reviewing documentation health, finalizing
+  branches with session journals
 
 - **Manages the full documentation pipeline** from idea through completion:
-  investigation → proposal → plan → implementation sessions → archival, with
-  each stage having defined conventions and AI-assisted tooling
+  investigation → proposal → [design resolution] → plan → implementation
+  sessions → archival, with each stage having defined conventions and
+  AI-assisted tooling
 
 - **Ships a reusable recipe library** — 15 implementation recipes extracted from
   real projects (authentication patterns, sync strategies, IPC architectures,
@@ -117,10 +120,10 @@ iteration through real projects, which is what this project is doing.
   references. The recipes plugin _is_ technology-specific (Electron, Elysia,
   Expo), but the core documentation structure works for any stack.
 
-- **Not a rigid process.** The pipeline (investigation → proposal → plan →
-  sessions) is a convention, not a requirement. You can create a project with
-  just a proposal. You can skip investigations for clear features. The structure
-  enables but doesn't enforce.
+- **Not a rigid process.** The pipeline (investigation → proposal →
+  [design-resolution] → plan → sessions) is a convention, not a requirement. You
+  can create a project with just a proposal. You can skip investigations for
+  clear features. The structure enables but doesn't enforce.
 
 - **Not a finished product.** Some parts are battle-tested (documentation
   structure, project conventions); others are experimental (certain skills,
@@ -142,7 +145,7 @@ discovery docs that precede and follow projects, serving as connective tissue.
 **The documentation cycle is a loop:**
 
 ```
-Report → Investigation → Project (proposal → plan → sessions) → Report
+Report → Investigation → Project (proposal → [design-resolution] → plan → sessions) → Report
 ```
 
 Reports assess current state, investigations explore questions, projects execute

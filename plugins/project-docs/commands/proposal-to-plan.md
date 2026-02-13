@@ -12,6 +12,10 @@ feature proposal.
 
 1. **Read and understand the proposal**
    - Read the project's proposal at `docs/projects/$1/proposal.md`
+   - Check if a design resolution exists at
+     `docs/projects/$1/design-resolution.md` and read it if present — use
+     resolved decisions, boundaries, and data model to ground the plan in
+     already-made system-level decisions
    - Read the projects README at `docs/projects/README.md` to understand
      conventions
    - Identify the core features, requirements, and technical considerations
