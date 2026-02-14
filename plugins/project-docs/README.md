@@ -301,6 +301,12 @@ docs/
 
 ## Version History
 
+### 1.3.0 (2026-02-14)
+
+- `parallel-worktree-dev` skill now bundles generic worktree scripts
+- Scripts auto-discover gitignored `.env` files (no hardcoded paths)
+- Removed project-specific references (`pnpm install`, etc.) from skill
+
 ### 1.2.0 (2026-02-13)
 
 - Added `proposal-to-design-resolution` command and skill

@@ -79,7 +79,7 @@ Proposal/Investigation exists
 
 ```bash
 # 1. Create worktree (template is auto-generated)
-./scripts/create-worktree.sh feature my-feature
+scripts/create-worktree.sh feature my-feature
 
 # 2. Edit WORKTREE_TASK.md with lightweight handoff:
 # - Mission statement
@@ -91,9 +91,9 @@ Proposal/Investigation exists
 
 ```bash
 # Create worktrees for each feature
-./scripts/create-worktree.sh feature feature-a
-./scripts/create-worktree.sh feature feature-b
-./scripts/create-worktree.sh feature feature-c
+scripts/create-worktree.sh feature feature-a
+scripts/create-worktree.sh feature feature-b
+scripts/create-worktree.sh feature feature-c
 
 # Each gets a lightweight WORKTREE_TASK.md pointing to its proposal
 ```
@@ -135,7 +135,7 @@ Look for proposals/investigations that:
 For each piece of parallel work:
 
 ```bash
-./scripts/create-worktree.sh <type> <name>
+scripts/create-worktree.sh <type> <name>
 ```
 
 Types: `feature`, `fix`, `refactor`, `chore`, `docs`
@@ -166,7 +166,7 @@ Each cloud agent:
 
 1. Opens in the worktree directory
 2. Reads WORKTREE_TASK.md
-3. Runs `pnpm install`
+3. Installs dependencies
 4. **Runs dev-discovery** to understand the codebase
 5. **Creates development plan** in the project folder
    (`docs/projects/<name>/plan.md`)
@@ -179,9 +179,9 @@ Each cloud agent:
 # User has three proposals ready for implementation
 
 # 1. Create worktrees
-./scripts/create-worktree.sh feature milkdown-editor
-./scripts/create-worktree.sh feature media-file-types
-./scripts/create-worktree.sh feature document-linking
+scripts/create-worktree.sh feature milkdown-editor
+scripts/create-worktree.sh feature media-file-types
+scripts/create-worktree.sh feature document-linking
 
 # 2. Verify worktrees exist
 git worktree list
@@ -222,7 +222,7 @@ approach.
 
 ## Your Workflow
 
-1. Run `pnpm install`
+1. Install dependencies
 2. Run `/dev-discovery` to understand the current editor implementation
 3. Create a development plan in the project folder
 4. Implement according to the plan
@@ -258,10 +258,10 @@ done
 
 ### Sync Environment Files
 
-If `.env.local` files change in the main repo:
+If `.env` files change in the main repo:
 
 ```bash
-./scripts/copy-env-to-worktree.sh .worktrees/feature/my-feature
+scripts/copy-env-to-worktree.sh .worktrees/feature/my-feature
 ```
 
 ### Clean Up Completed Worktrees
@@ -312,11 +312,13 @@ Track parallel work progress:
 - [Agent Task Handoff Playbook](docs/playbooks/agent-task-handoff-playbook.md) -
   Writing effective handoffs
 
-**Scripts:**
+**Bundled Scripts** (relative to this skill):
 
-- `scripts/create-worktree.sh` - Creates worktree with template
-- `scripts/copy-env-to-worktree.sh` - Copies environment files
-- `scripts/templates/WORKTREE_TASK.template.md` - Handoff template
+- `scripts/create-worktree.sh` - Creates worktree with env file copying and task
+  template
+- `scripts/copy-env-to-worktree.sh` - Auto-discovers and copies gitignored
+  `.env` files to a worktree
+- `scripts/templates/WORKTREE_TASK.template.md` - Handoff document template
 
 ## Troubleshooting
 
@@ -347,8 +349,7 @@ Track parallel work progress:
 - [ ] Create worktree for each feature
 - [ ] Edit WORKTREE_TASK.md with mission, source doc link, and constraints
 - [ ] Verify proposal/investigation links are valid
-- [ ] Delegate to cloud agents (they will run `pnpm install`, discovery,
-      planning)
+- [ ] Delegate to cloud agents (they will install deps, run discovery, plan)
 - [ ] Document which agent/session is working on which worktree
 - [ ] Plan merge order based on dependencies
 
@@ -358,10 +359,10 @@ When a cloud agent starts in a worktree, it should:
 
 1. **Read WORKTREE_TASK.md** - Understand mission and constraints
 2. **Read source documents** - Proposal and/or investigation
-3. **Run `pnpm install`** - Set up dependencies
+3. **Install dependencies** - Set up the project environment
 4. **Run `/dev-discovery`** - Understand affected codebase areas
 5. **Create development plan** - In the project folder as `plan.md`
 6. **Implement** - Follow the plan it created
-7. **Test** - Verify with `pnpm verify` or relevant tests
+7. **Test** - Run the project's test/verification commands
 8. **Commit** - With clear commit messages
 9. **Notify** - Update WORKTREE_TASK.md with completion status
