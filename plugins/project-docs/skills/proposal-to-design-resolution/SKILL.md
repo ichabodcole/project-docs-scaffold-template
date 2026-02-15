@@ -132,6 +132,21 @@ Focus on integration and constraints. Good questions:
   proposal?"
 - "Does this impose constraints on future work you want to be explicit about?"
 
+**External dependencies check** (always ask, even briefly):
+
+- "Does this feature require anything outside the codebase — third-party
+  services, API keys, accounts, or infrastructure that a human needs to set up?"
+- "Are there environment variables that need to be populated before this can
+  work?"
+- "Does any of that need to be in place before implementation starts, or only
+  before testing?"
+
+This is an awareness check. Many features have no external dependencies, and
+that's a valid answer — just confirm it explicitly. When they do exist,
+identifying them early prevents blocked implementation and misleading test
+results later. Record external dependencies in the Architectural Positioning
+section of the design resolution.
+
 #### Irreversible Decisions (always ask at least one round)
 
 This section is always worth visiting, even for simple projects. Good questions:

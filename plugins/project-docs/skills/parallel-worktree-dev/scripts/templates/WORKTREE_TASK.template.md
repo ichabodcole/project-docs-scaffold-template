@@ -16,6 +16,7 @@
 - [Design Resolution](docs/projects/<project-name>/design-resolution.md) (if
   applicable)
 - [Plan](docs/projects/<project-name>/plan.md) (if applicable)
+- [Test Plan](docs/projects/<project-name>/test-plan.md) (if applicable)
 
 **Background context:**
 

@@ -33,7 +33,12 @@ feature proposal.
    - What new files/components need to be created?
    - What existing code needs to be modified?
    - Are there any architectural changes required?
-   - What are the dependencies (libraries, services, APIs)?
+   - What are the code dependencies (libraries, packages)?
+   - What are the external dependencies (third-party services, API keys,
+     accounts, environment variables)? If a design resolution exists, check its
+     External Dependencies section. Surface any human setup actions in the
+     plan's Assumptions & Constraints so they're addressed before implementation
+     begins.
    - What testing strategy is needed?
 
 4. **Assess complexity and risks**

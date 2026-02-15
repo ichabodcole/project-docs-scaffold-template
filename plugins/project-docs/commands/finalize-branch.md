@@ -72,6 +72,10 @@ pnpm run test
 - Specifications: Check if `docs/specifications/` exists and whether changes on
   this branch affect documented behavior. If specs exist, flag any that may need
   updating based on the implemented changes.
+- Test plan: If `docs/projects/<project-name>/test-plan.md` exists, verify that
+  a Results Addendum section is present with pass/fail/blocked statuses. Flag
+  any Tier 1 or Tier 2 scenarios without results. This is a soft check — don't
+  block the merge, but surface it to the user during the review.
 - Present documentation recommendations to user and get confirmation before
   creating
 

@@ -37,7 +37,7 @@ This project organizes documentation by purpose and lifecycle:
 ### The Documentation Cycle
 
 ```
-Report → Investigation → Project (proposal → plan → sessions) → Report
+Report → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report
 ```
 
 Reports and investigations are the connective tissue between projects:
@@ -45,6 +45,6 @@ Reports and investigations are the connective tissue between projects:
 - Reports assess current state and identify findings
 - Findings can spawn investigations or new projects
 - Investigations determine whether a project is warranted
-- Projects contain the full pipeline (proposal → plan → sessions → artifacts)
+- Projects contain the full pipeline (proposal → [design-resolution] → plan → [test-plan] → sessions → artifacts)
 - Completed projects may trigger new reports to assess outcomes
 - Small tasks that don't need the full pipeline go in the backlog

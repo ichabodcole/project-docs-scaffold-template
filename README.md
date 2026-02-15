@@ -47,6 +47,8 @@ which provides specialized commands for managing your documentation structure:
 - `/project-docs:proposal-to-design-resolution` - Resolve design ambiguity via
   interactive Q&A
 - `/project-docs:proposal-to-plan` - Convert proposals to implementation plans
+- `/project-docs:generate-test-plan` - Generate tiered verification scenarios
+  from a plan
 
 **Installation:**
 
