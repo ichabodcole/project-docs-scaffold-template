@@ -1,5 +1,5 @@
 ---
-docs_version: "2.3.0" # x-release-please-version
+docs_version: "2.4.0" # x-release-please-version
 docs_template: https://github.com/ichabodcole/project-docs-scaffold-template
 ---
 
@@ -190,6 +190,18 @@ Not sure what to create? Use this decision flowchart:
                          ↓
                 Add plan.md to project
                          ↓
+              ┌──────────────────────┐
+              │ Need structured      │
+              │ verification?        │
+              └──────────────────────┘
+                    ↓           ↓
+                  YES           NO
+                    ↓           │
+         Add test-plan.md       │
+         to project (optional)  │
+                    ↓           │
+                    └─────┬─────┘
+                          ↓
                   Working on it?
                          ↓
                      ┌───┴───┐
@@ -222,7 +234,7 @@ Not sure what to create? Use this decision flowchart:
 **The documentation cycle:**
 
 ```
-Report → Investigation → Project (proposal → [design-resolution] → plan → sessions) → Report
+Report → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report
 ```
 
 Reports and investigations are the connective tissue between projects. They
@@ -235,8 +247,8 @@ trigger new work and assess completed work, but live outside any single project.
 - **Investigation:** "Should we even do this? Let me research..." (uncertain,
   exploratory)
 - **Project:** "Here's the full story of building X — proposal, design
-  resolution (optional), plan, sessions, artifacts in one place." (co-located
-  body of work)
+  resolution (optional), plan, test plan (optional), sessions, artifacts in one
+  place." (co-located body of work)
 - **Backlog:** "Here's a small task that just needs doing." (lightweight work
   item)
 - **Playbook:** "Here's how to do X repeatedly." (reusable pattern)
@@ -266,6 +278,8 @@ trigger new work and assess completed work, but live outside any single project.
 - **Recurring task pattern?** → Playbook (after 2-3 implementations)
 - **Proposal has unresolved system-level questions?** → Design resolution before
   planning
+- **Need structured verification for agent-implemented features?** → Test plan
+  after planning
 - **Something feels off but can't investigate now?** → Fragment (revisit later)
 - **Want to assess current state?** → Report
 

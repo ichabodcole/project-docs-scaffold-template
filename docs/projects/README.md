@@ -62,6 +62,7 @@ projects/
     proposal.md              — What we're building and why
     design-resolution.md     — System-level decisions resolved (optional)
     plan.md                  — How we're building it (when implementation begins)
+    test-plan.md             — Tiered verification scenarios (optional)
     sessions/                — Development session journals
       2026-01-15-initial-implementation.md
       2026-01-20-edge-case-fixes.md
@@ -88,6 +89,9 @@ work requires.
 - **plan.md** — The _how_. Phased implementation roadmap with validation
   criteria. Created when implementation begins. See
   `TEMPLATES/PLAN.template.md`.
+- **test-plan.md** — Tiered verification scenarios. Defines what to test, how to
+  test it, and at what priority. Created after the plan when structured
+  verification is valuable. Optional. See `TEMPLATES/TEST-PLAN.template.md`.
 - **sessions/** — Dev journals capturing what happened during implementation.
   Created during work. See `TEMPLATES/YYYY-MM-DD-SESSION.template.md`.
 - **artifacts/** — Freeform working research: codebase exploration, dependency
@@ -172,6 +176,39 @@ at a practical level without micro-managing implementation.
 - Ground in the current codebase — reference specific files and patterns
 - Define validation criteria for each phase
 
+### Test Plans
+
+Test plans define structured verification scenarios for agent-implemented work.
+They translate proposal goals and plan phases into concrete, prioritized test
+scenarios using a three-tier system.
+
+**When to write a test plan:**
+
+- Features with UI that need visual verification
+- Work where "did the agent actually build what was asked?" is a real question
+- Parallel development where manual testing becomes a bottleneck
+- Complex features with multiple user flows to verify
+
+**When NOT to write a test plan:**
+
+- Pure refactoring with no behavioral changes
+- Documentation-only work
+- Trivial changes where the commit diff is the verification
+- Projects with comprehensive existing automated test coverage
+
+**The three-tier system:**
+
+- **Tier 1 (Smoke):** Non-negotiable. App builds, pages render, no console
+  errors.
+- **Tier 2 (Critical Path):** The real value. Core user flows mapped from
+  proposal goals. Key unit tests for non-trivial logic.
+- **Tier 3 (Edge Cases):** Explicitly deferred with rationale. Complex mocking,
+  error states, adversarial inputs.
+
+The tiered system prevents the common failure mode of test plans — trying to
+test everything and testing nothing well. Explicit deferral is a feature, not a
+gap.
+
 ### Sessions
 
 Sessions are dev journals — informal records of what happened during
@@ -249,6 +286,7 @@ Project-scoped templates are available in the `TEMPLATES/` subfolder:
 - `TEMPLATES/DESIGN-RESOLUTION.template.md` — Starting point for design
   resolutions
 - `TEMPLATES/PLAN.template.md` — Starting point for implementation plans
+- `TEMPLATES/TEST-PLAN.template.md` — Starting point for test plans
 - `TEMPLATES/YYYY-MM-DD-SESSION.template.md` — Starting point for session
   journals
 - `TEMPLATES/HANDOFF.template.md` — Starting point for deployment handoffs
