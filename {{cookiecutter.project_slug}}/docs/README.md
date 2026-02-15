@@ -5,75 +5,126 @@ docs_template: https://github.com/ichabodcole/project-docs-scaffold-template
 
 # Documentation
 
-This directory contains project documentation organized by purpose and lifecycle. Documents fall into three categories: **permanent reference** (living docs that evolve over time), **discovery and assessment** (research and evaluation that feeds into work), and **projects** (co-located pipeline documents for defined bodies of work).
+This directory contains project documentation organized by purpose and
+lifecycle. Documents fall into three categories: **permanent reference** (living
+docs that evolve over time), **discovery and assessment** (research and
+evaluation that feeds into work), and **projects** (co-located pipeline
+documents for defined bodies of work).
 
 ## Foundational Document
 
-**[PROJECT_MANIFESTO.md](./PROJECT_MANIFESTO.md)** - The constitution of this project. Defines what the project is, who it's for, core principles, what it does and doesn't do. Read this first to understand the foundational vision and boundaries.
+**[PROJECT_MANIFESTO.md](./PROJECT_MANIFESTO.md)** - The constitution of this
+project. Defines what the project is, who it's for, core principles, what it
+does and doesn't do. Read this first to understand the foundational vision and
+boundaries.
 
 ## Quick Onboarding
 
-**[memories/](./memories/)** - Summaries of recent work. Read this folder at the start of a new session to understand what's been happening lately without scanning git logs or exploring files.
+**[memories/](./memories/)** - Summaries of recent work. Read this folder at the
+start of a new session to understand what's been happening lately without
+scanning git logs or exploring files.
 
 ## Structure
 
 ### Permanent Reference
 
-These are living documents that evolve over time. They aren't tied to a specific body of work — they describe the system as it is.
+These are living documents that evolve over time. They aren't tied to a specific
+body of work — they describe the system as it is.
 
 #### `/architecture`
 
-Maps of the landscape - what systems exist, where their boundaries are, and how major pieces fit together. Focus on building mental models at high to mid-level; avoid exhaustive detail that's better found by reading code.
+Maps of the landscape - what systems exist, where their boundaries are, and how
+major pieces fit together. Focus on building mental models at high to mid-level;
+avoid exhaustive detail that's better found by reading code.
 
 #### `/specifications`
 
-Technology-agnostic specification documents that describe what the application is, what it does, and how it behaves — organized by domain. Specifications are portable: they contain no framework or library references and could be used to rebuild the application in any technology stack. They serve as the living, authoritative description of application behavior.
+Technology-agnostic specification documents that describe what the application
+is, what it does, and how it behaves — organized by domain. Specifications are
+portable: they contain no framework or library references and could be used to
+rebuild the application in any technology stack. They serve as the living,
+authoritative description of application behavior.
 
 #### `/interaction-design`
 
-User experience flow documentation that captures how users interact with features and subsystems. Documents user journeys, decision points, and design rationale behind interaction patterns. Complements architecture docs by explaining how features work from the user's perspective rather than the technical perspective.
+User experience flow documentation that captures how users interact with
+features and subsystems. Documents user journeys, decision points, and design
+rationale behind interaction patterns. Complements architecture docs by
+explaining how features work from the user's perspective rather than the
+technical perspective.
 
 #### `/playbooks`
 
-Reusable dev plans for recurring tasks or augmenting existing systems (e.g., adding AI workflows, database entities). Playbooks codify proven approaches for tasks you've done 2-3 times, including phases, pitfalls, and validation steps.
+Reusable dev plans for recurring tasks or augmenting existing systems (e.g.,
+adding AI workflows, database entities). Playbooks codify proven approaches for
+tasks you've done 2-3 times, including phases, pitfalls, and validation steps.
 
 #### `/lessons-learned`
 
-Hard-won insights and non-obvious solutions discovered through experience. Captures specific bugs/issues or code patterns ("don't do X, do Y") that aren't easily Googled. These are the diamonds found through making mistakes.
+Hard-won insights and non-obvious solutions discovered through experience.
+Captures specific bugs/issues or code patterns ("don't do X, do Y") that aren't
+easily Googled. These are the diamonds found through making mistakes.
 
 #### `/fragments`
 
-Incomplete observations and "this doesn't feel quite right" moments that don't fit into other document types. Fragments capture mysteries, workarounds, and open questions without commitment to investigate. They're food for thought - pieces that might become investigations, projects, or lessons learned when you have more context.
+Incomplete observations and "this doesn't feel quite right" moments that don't
+fit into other document types. Fragments capture mysteries, workarounds, and
+open questions without commitment to investigate. They're food for thought -
+pieces that might become investigations, projects, or lessons learned when you
+have more context.
 
 ### Discovery & Assessment
 
-These documents precede and follow projects. They're cross-cutting — not tied to any single body of work.
+These documents precede and follow projects. They're cross-cutting — not tied to
+any single body of work.
 
 #### `/reports`
 
-Structured assessment and analysis reports that evaluate current state of code, documentation, or systems. Reports are typically generated by automated processes or AI agents and serve as discovery mechanisms that can trigger investigations, projects, or direct action. Examples: documentation status reports, code reviews, security audits, performance analysis.
+Structured assessment and analysis reports that evaluate current state of code,
+documentation, or systems. Reports are typically generated by automated
+processes or AI agents and serve as discovery mechanisms that can trigger
+investigations, projects, or direct action. Examples: documentation status
+reports, code reviews, security audits, performance analysis.
 
 #### `/investigations`
 
-Research documents that explore questions before committing to action. Investigations gather evidence, analyze options, and determine whether action is warranted. They precede projects — an investigation determines whether a project folder gets created at all. Use these when you're uncertain if action is needed.
+Research documents that explore questions before committing to action.
+Investigations gather evidence, analyze options, and determine whether action is
+warranted. They precede projects — an investigation determines whether a project
+folder gets created at all. Use these when you're uncertain if action is needed.
 
 ### Work Tracking
 
 #### `/projects`
 
-Co-located pipeline documents for defined bodies of work. Each project folder contains its proposal, plan, sessions, and artifacts together — the full story of a piece of work in one place. See [projects/README.md](./projects/README.md) for conventions and templates.
+Co-located pipeline documents for defined bodies of work. Each project folder
+contains its proposal, plan, sessions, and artifacts together — the full story
+of a piece of work in one place. See [projects/README.md](./projects/README.md)
+for conventions and templates.
 
 #### `/backlog`
 
-Small, self-contained work items — bugs, minor refactors, papercuts, and clear tasks that don't warrant a full project folder. Individual files per item, archived when complete. See [backlog/README.md](./backlog/README.md) for format and conventions.
+Small, self-contained work items — bugs, minor refactors, papercuts, and clear
+tasks that don't warrant a full project folder. Individual files per item,
+archived when complete. See [backlog/README.md](./backlog/README.md) for format
+and conventions.
 
 ## Specifications: A Living Application Description
 
-Specifications live outside the per-feature lifecycle below. They describe the **whole application's behavior** in technology-agnostic terms — a living document that answers "what does this application do?" independent of how it's built.
+Specifications live outside the per-feature lifecycle below. They describe the
+**whole application's behavior** in technology-agnostic terms — a living
+document that answers "what does this application do?" independent of how it's
+built.
 
-Specifications can be **created before development begins** (defining what to build from an idea) or **generated from an existing codebase** (reverse-engineering a portable description). Either way, they should be **updated as features are completed** to stay current.
+Specifications can be **created before development begins** (defining what to
+build from an idea) or **generated from an existing codebase**
+(reverse-engineering a portable description). Either way, they should be
+**updated as features are completed** to stay current.
 
-While the flowchart below tracks individual features from idea to completion, specifications track the cumulative state of the application itself. When you finish building a feature, update the relevant specifications to reflect the new behavior.
+While the flowchart below tracks individual features from idea to completion,
+specifications track the cumulative state of the application itself. When you
+finish building a feature, update the relevant specifications to reflect the new
+behavior.
 
 ## Choosing the Right Document Type
 
@@ -139,6 +190,18 @@ Not sure what to create? Use this decision flowchart:
                          ↓
                 Add plan.md to project
                          ↓
+              ┌──────────────────────┐
+              │ Need structured      │
+              │ verification?        │
+              └──────────────────────┘
+                    ↓           ↓
+                  YES           NO
+                    ↓           │
+         Add test-plan.md       │
+         to project (optional)  │
+                    ↓           │
+                    └─────┬─────┘
+                          ↓
                   Working on it?
                          ↓
                      ┌───┴───┐
@@ -171,24 +234,36 @@ Not sure what to create? Use this decision flowchart:
 **The documentation cycle:**
 
 ```
-Report → Investigation → Project (proposal → [design-resolution] → plan → sessions) → Report
+Report → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report
 ```
 
-Reports and investigations are the connective tissue between projects. They trigger new work and assess completed work, but live outside any single project.
+Reports and investigations are the connective tissue between projects. They
+trigger new work and assess completed work, but live outside any single project.
 
 **Quick Reference:**
 
-- **Report:** "Here's what we found when assessing X." (retrospective, current-state assessment)
-- **Investigation:** "Should we even do this? Let me research..." (uncertain, exploratory)
-- **Project:** "Here's the full story of building X — proposal, design resolution (optional), plan, sessions, artifacts in one place." (co-located body of work)
-- **Backlog:** "Here's a small task that just needs doing." (lightweight work item)
+- **Report:** "Here's what we found when assessing X." (retrospective,
+  current-state assessment)
+- **Investigation:** "Should we even do this? Let me research..." (uncertain,
+  exploratory)
+- **Project:** "Here's the full story of building X — proposal, design
+  resolution (optional), plan, test plan (optional), sessions, artifacts in one
+  place." (co-located body of work)
+- **Backlog:** "Here's a small task that just needs doing." (lightweight work
+  item)
 - **Playbook:** "Here's how to do X repeatedly." (reusable pattern)
-- **Specification:** "Here's what the application does, described so anyone could rebuild it." (technology-agnostic behavior)
-- **Architecture:** "Here's how X works in our system." (technical as-built documentation)
-- **Interaction Design:** "Here's how users interact with X and why." (UX flow as-built documentation)
-- **Lesson Learned:** "We hit problem Y, here's the fix." (specific issue + solution)
-- **Fragment:** "Something doesn't feel right about this solution" or "What if we tried X instead?" (incomplete observations)
-- **Memories:** "Here's what we've been working on recently." (quick onboarding context)
+- **Specification:** "Here's what the application does, described so anyone
+  could rebuild it." (technology-agnostic behavior)
+- **Architecture:** "Here's how X works in our system." (technical as-built
+  documentation)
+- **Interaction Design:** "Here's how users interact with X and why." (UX flow
+  as-built documentation)
+- **Lesson Learned:** "We hit problem Y, here's the fix." (specific issue +
+  solution)
+- **Fragment:** "Something doesn't feel right about this solution" or "What if
+  we tried X instead?" (incomplete observations)
+- **Memories:** "Here's what we've been working on recently." (quick onboarding
+  context)
 
 **Special cases:**
 
@@ -196,11 +271,15 @@ Reports and investigations are the connective tissue between projects. They trig
 - **Big enough to need a proposal?** → Create a project folder
 - **Specific problem solved?** → Lesson Learned
 - **Still figuring out the approach?** → Investigation first, then project
-- **Need a portable, technology-agnostic description of the application?** → Specification
+- **Need a portable, technology-agnostic description of the application?** →
+  Specification
 - **Need to document an existing technical system?** → Architecture
 - **Need to document how users interact with a feature?** → Interaction Design
 - **Recurring task pattern?** → Playbook (after 2-3 implementations)
-- **Proposal has unresolved system-level questions?** → Design resolution before planning
+- **Proposal has unresolved system-level questions?** → Design resolution before
+  planning
+- **Need structured verification for agent-implemented features?** → Test plan
+  after planning
 - **Something feels off but can't investigate now?** → Fragment (revisit later)
 - **Want to assess current state?** → Report
 
@@ -214,6 +293,8 @@ Each subdirectory contains its own README with detailed guidance on:
 - Recommended structure
 - Tips and best practices
 
-Project-scoped templates (proposals, plans, sessions) live in `projects/TEMPLATES/`. Copy them into your project folder when needed.
+Project-scoped templates (proposals, plans, sessions) live in
+`projects/TEMPLATES/`. Copy them into your project folder when needed.
 
-Refer to the subdirectory READMEs for specific instructions on creating and maintaining documentation in each category.
+Refer to the subdirectory READMEs for specific instructions on creating and
+maintaining documentation in each category.

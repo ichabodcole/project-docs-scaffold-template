@@ -76,16 +76,16 @@ iteration through real projects, which is what this project is doing.
   pre-organized folders with READMEs, templates, and conventions for
   architecture docs, specifications, investigations, projects, backlog, and more
 
-- **Provides a Claude Code plugin ecosystem** with 13 commands, 17 skills, and 7
+- **Provides a Claude Code plugin ecosystem** with 14 commands, 18 skills, and 8
   specialized agents that automate documentation workflows: starting
   investigations, resolving design ambiguity, converting proposals to plans,
-  generating project summaries, reviewing documentation health, finalizing
-  branches with session journals
+  generating test plans, generating project summaries, reviewing documentation
+  health, finalizing branches with session journals
 
 - **Manages the full documentation pipeline** from idea through completion:
-  investigation → proposal → [design resolution] → plan → implementation
-  sessions → archival, with each stage having defined conventions and
-  AI-assisted tooling
+  investigation → proposal → [design resolution] → plan → [test plan] →
+  implementation sessions → archival, with each stage having defined conventions
+  and AI-assisted tooling
 
 - **Ships a reusable recipe library** — 15 implementation recipes extracted from
   real projects (authentication patterns, sync strategies, IPC architectures,
@@ -121,9 +121,9 @@ iteration through real projects, which is what this project is doing.
   Expo), but the core documentation structure works for any stack.
 
 - **Not a rigid process.** The pipeline (investigation → proposal →
-  [design-resolution] → plan → sessions) is a convention, not a requirement. You
-  can create a project with just a proposal. You can skip investigations for
-  clear features. The structure enables but doesn't enforce.
+  [design-resolution] → plan → [test-plan] → sessions) is a convention, not a
+  requirement. You can create a project with just a proposal. You can skip
+  investigations for clear features. The structure enables but doesn't enforce.
 
 - **Not a finished product.** Some parts are battle-tested (documentation
   structure, project conventions); others are experimental (certain skills,
@@ -145,7 +145,7 @@ discovery docs that precede and follow projects, serving as connective tissue.
 **The documentation cycle is a loop:**
 
 ```
-Report → Investigation → Project (proposal → [design-resolution] → plan → sessions) → Report
+Report → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report
 ```
 
 Reports assess current state, investigations explore questions, projects execute

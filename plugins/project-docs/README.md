@@ -257,6 +257,40 @@ plans, investigations, and reports.
 
 ---
 
+### `/project-docs:generate-test-plan`
+
+**Description:** Generate a tiered test plan from a development plan and
+proposal.
+
+**Usage:**
+
+```
+/project-docs:generate-test-plan [project-name]
+```
+
+**Arguments:**
+
+- `project-name` - Name of the project folder in `docs/projects/` (e.g.,
+  `search-enhancement`)
+
+**What it does:**
+
+- Reads the project's plan, proposal, and design resolution (if present)
+- Identifies testable surfaces from proposal goals and plan phases
+- Applies three-tier prioritization (Smoke, Critical Path, Edge Cases)
+- Surfaces external dependencies as prerequisites
+- Generates `docs/projects/<name>/test-plan.md` with tiered verification
+  scenarios
+
+**Use cases:**
+
+- Defining verification expectations before agent implementation
+- Preparing for parallel worktree development
+- Features with UI that need visual verification
+- Closing the gap between "implementation complete" and "actually verified"
+
+---
+
 ## Documentation Structure
 
 This plugin is designed for projects using the documentation structure from
@@ -300,6 +334,17 @@ docs/
    significantly
 
 ## Version History
+
+### 1.4.0 (2026-02-15)
+
+- Added `generate-test-plan` command, skill, and `test-plan-generator` agent
+- New `TEST-PLAN.template.md` for tiered verification scenarios
+- WORKTREE_TASK.md template now references test-plan.md
+- finalize-branch command now checks for test plan results
+- Updated lifecycle documentation across README, projects README, manifesto
+- Design resolution template gains External Dependencies subsection
+- `proposal-to-design-resolution` skill gains external dependencies Q&A
+- `proposal-to-plan` skill gains external dependencies awareness
 
 ### 1.3.0 (2026-02-14)
 
