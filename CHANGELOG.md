@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.2.1...project-docs-scaffold-template-v2.3.0) (2026-02-15)
+
+
+### Features
+
+* add test plan document type to project lifecycle ([e9a7107](https://github.com/ichabodcole/project-docs-scaffold-template/commit/e9a71071fb552d5b9ef570169d55bd1a5d4996a2))
+* add test plan document type to project lifecycle ([80aebe3](https://github.com/ichabodcole/project-docs-scaffold-template/commit/80aebe3f142b6b485362992574ad7e417784ff5b))
+
 ## [2.2.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.2.0...project-docs-scaffold-template-v2.2.1) (2026-02-13)
 
 
