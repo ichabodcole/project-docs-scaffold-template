@@ -95,6 +95,25 @@ constraints. Skip if the proposal already makes architectural placement clear.]
 - What depends on it?
 - What constraints does this impose on future work?
 
+### External Dependencies (Optional)
+
+[Does this work require anything outside the codebase that must be set up before
+implementation or testing can succeed? Skip if there are no external
+dependencies. This is an awareness check — many features have none, but when
+they exist, identifying them early prevents blocked implementation and
+misleading test results.]
+
+- **Third-party services** — Accounts, platforms, or infrastructure that must
+  exist (e.g., cloud storage bucket, payment processor sandbox, OAuth provider)
+- **Credentials & API keys** — Specific keys or tokens that must be obtained and
+  where they come from
+- **Environment variables** — `.env` values that must be populated for the
+  feature to function
+- **Human actions required** — Setup steps that cannot be automated (e.g.,
+  "create account on X", "request API access from Y", "configure DNS record")
+- **When needed** — Must these be in place before implementation starts, or only
+  before testing/deployment?
+
 ## Irreversible Decisions
 
 [What would be expensive to change later? What assumptions must be locked before
