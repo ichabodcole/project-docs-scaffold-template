@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.3.0...project-docs-scaffold-template-v2.3.1) (2026-02-15)
+
+
+### Bug Fixes
+
+* migration guide flowchart, authoring methodology, and plugin 1.4.1 ([ad89be4](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ad89be46ec3b0fd229e3a164d2527225672e3b12))
+
 ## [2.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.2.1...project-docs-scaffold-template-v2.3.0) (2026-02-15)
 
 
