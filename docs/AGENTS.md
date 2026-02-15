@@ -37,14 +37,15 @@ This project organizes documentation by purpose and lifecycle:
 ### Work Tracking (domain-based)
 
 - **projects/** - Co-located pipeline documents (proposal, plan, sessions,
-  artifacts) for defined bodies of work
+  artifacts) for defined bodies of work. Optional stages: design resolution
+  (between proposal and plan), test plan (between plan and sessions)
 - **backlog/** - Small, self-contained tasks that don't need a project folder
 - **projects/archive/** - Completed project folders
 
 ### The Documentation Cycle
 
 ```
-Report → Investigation → Project (proposal → plan → sessions) → Report
+Report → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report
 ```
 
 Reports and investigations are the connective tissue between projects:
@@ -52,6 +53,7 @@ Reports and investigations are the connective tissue between projects:
 - Reports assess current state and identify findings
 - Findings can spawn investigations or new projects
 - Investigations determine whether a project is warranted
-- Projects contain the full pipeline (proposal → plan → sessions → artifacts)
+- Projects contain the full pipeline (proposal → [design-resolution] → plan →
+  [test-plan] → sessions → artifacts)
 - Completed projects may trigger new reports to assess outcomes
 - Small tasks that don't need the full pipeline go in the backlog

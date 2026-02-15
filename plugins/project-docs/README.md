@@ -335,6 +335,13 @@ docs/
 
 ## Version History
 
+### 1.4.1 (2026-02-15)
+
+- Fixed v2.3-to-v2.4 migration guide: step 5a now provides exact before/after
+  ASCII art for flowchart update
+- Updated `update-project-docs` skill to reference `migration-authoring`
+  methodology for guide quality
+
 ### 1.4.0 (2026-02-15)
 
 - Added `generate-test-plan` command, skill, and `test-plan-generator` agent

@@ -121,8 +121,8 @@ Run a final check that no stale references to old structure remain:
 When the scaffold template releases structural changes:
 
 1. Create a new migration file: `migrations/vX-to-vY.md`
-2. Document: what changed, what to add/move/remove, what references break
-3. Include a verification checklist
+2. Use the `migration-authoring` skill to ensure every step is agent-executable
+3. Run the quality checklist before finalizing
 4. Update the table above
 5. The version in `docs/README.md` is bumped automatically by release-please
 

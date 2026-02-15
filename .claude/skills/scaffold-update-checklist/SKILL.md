@@ -78,7 +78,8 @@ reflected in the other.
 **Migration path (dogfood the update-project-docs skill):**
 
 - [ ] Create migration guide in
-      `plugins/project-docs/skills/update-project-docs/migrations/`
+      `plugins/project-docs/skills/update-project-docs/migrations/` — use the
+      `migration-authoring` skill for quality checks
 - [ ] Update migration table in
       `plugins/project-docs/skills/update-project-docs/skill.md`
 - [ ] Apply the migration to this project's own `docs/` — follow the same steps
