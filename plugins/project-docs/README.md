@@ -186,14 +186,14 @@ plans, investigations, and reports.
 
 ---
 
-### `/project-docs:proposal-to-design-resolution`
+### `/project-docs:generate-design-resolution`
 
 **Description:** Resolve design ambiguity in a proposal through interactive Q&A.
 
 **Usage:**
 
 ```
-/project-docs:proposal-to-design-resolution [project-name]
+/project-docs:generate-design-resolution [project-name]
 ```
 
 **Arguments:**
@@ -219,14 +219,14 @@ plans, investigations, and reports.
 
 ---
 
-### `/project-docs:proposal-to-plan`
+### `/project-docs:generate-dev-plan`
 
 **Description:** Create a detailed development plan from a proposal document.
 
 **Usage:**
 
 ```
-/project-docs:proposal-to-plan [filename]
+/project-docs:generate-dev-plan [project-name]
 ```
 
 **Arguments:**
@@ -323,8 +323,8 @@ docs/
 
 1. **Regular summaries** - Run `/project-docs:project-summary` monthly or before
    major planning sessions
-2. **Pre-implementation planning** - Use `/project-docs:proposal-to-plan` before
-   starting feature work. Use `/project-docs:proposal-to-design-resolution`
+2. **Pre-implementation planning** - Use `/project-docs:generate-dev-plan`
+   before starting feature work. Use `/project-docs:generate-design-resolution`
    first when a proposal has unresolved system-level questions
 3. **Periodic cleanup** - Run `/project-docs:review-docs` quarterly to maintain
    documentation health
@@ -334,6 +334,15 @@ docs/
    significantly
 
 ## Version History
+
+### 1.6.0 (2026-02-17)
+
+- Renamed `proposal-to-plan` → `generate-dev-plan` (skill + command)
+- Renamed `proposal-to-design-resolution` → `generate-design-resolution`
+  (skill + command)
+- Renamed `investigation-to-proposal` → `generate-proposal` (skill + command)
+- Updated all cross-references to use new names
+- WORKTREE_TASK template: added `generate-test-plan` step, user review gate
 
 ### 1.5.0 (2026-02-17)
 

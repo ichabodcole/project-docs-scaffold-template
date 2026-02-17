@@ -60,12 +60,12 @@ Tell the user:
 - Proposal scaffolded with template
 - Remind them of next steps:
   - Fill in the proposal (problem statement, proposed solution, scope)
-  - When ready, use `/project-docs:proposal-to-plan <name>` to generate a plan
+  - When ready, use `/project-docs:generate-dev-plan <name>` to generate a plan
 
 ## Important Constraints
 
 - **Don't create plan.md or sessions/ yet** — Those come later when
   implementation begins
 - **Don't fill in proposal content** beyond template defaults — The user or
-  another command (like `/project-docs:investigation-to-proposal`) handles that
+  another command (like `/project-docs:generate-proposal`) handles that
 - **Check conventions** at `docs/projects/README.md` if unsure about structure

@@ -1,4 +1,5 @@
 ---
+name: "generate-proposal"
 description: "Create proposal from investigation"
 allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
 ---

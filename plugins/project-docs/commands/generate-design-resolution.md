@@ -20,7 +20,7 @@ proposal's ambiguities via structured Q&A with the user.
    - Present your analysis to the user before starting Q&A — what's already
      clear, what needs resolution, what can be skipped
    - If the proposal is already precise enough across the board, suggest
-     proceeding directly to `/project-docs:proposal-to-plan $1` instead
+     proceeding directly to `/project-docs:generate-dev-plan $1` instead
 
 2. **Conduct structured Q&A**
    - Use `AskUserQuestion` to work through unresolved areas
@@ -49,9 +49,9 @@ proposal's ambiguities via structured Q&A with the user.
    - Present the document and highlight key decisions resolved
    - Note any items deferred to Boundaries or Open Questions
    - Apply revisions based on feedback
-   - Suggest next step: `/project-docs:proposal-to-plan $1`
+   - Suggest next step: `/project-docs:generate-dev-plan $1`
 
 **Output:** Create a design resolution at
 `docs/projects/$1/design-resolution.md`. Inform the user of the location, key
-decisions resolved, and suggest using `/project-docs:proposal-to-plan $1` as the
-next step.
+decisions resolved, and suggest using `/project-docs:generate-dev-plan $1` as
+the next step.

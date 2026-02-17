@@ -34,13 +34,15 @@
 1. Read the project documents linked above
 2. Install dependencies
 3. Use the `dev-discovery` skill to understand the relevant codebase areas
-4. Create a development plan in the project folder
+4. Create a development plan in the project folder using the `generate-dev-plan`
+   skill
 5. Have the user review the development plan and provide feedback
-6. Implement according to the plan using your best judgement on how to execute
+6. Use the `generate-test-plan` skill to create a test plan
+7. Implement according to the plan using your best judgement on how to execute
    the plan efficiently i.e. parallel sub-agents development, agent team, etc.
-7. Test and verify
-8. Commit with clear messages
-9. Update this file with completion status
+8. Test and verify
+9. Commit with clear messages
+10. Update this file with completion status
 
 ## Completion Status
 
