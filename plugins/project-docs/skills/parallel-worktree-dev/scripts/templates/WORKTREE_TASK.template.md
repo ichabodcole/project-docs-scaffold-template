@@ -33,12 +33,14 @@
 
 1. Read the project documents linked above
 2. Install dependencies
-3. Run `/dev-discovery` to understand the relevant codebase areas
+3. Use the `dev-discovery` skill to understand the relevant codebase areas
 4. Create a development plan in the project folder
-5. Implement according to the plan
-6. Test and verify
-7. Commit with clear messages
-8. Update this file with completion status
+5. Have the user review the development plan and provide feedback
+6. Implement according to the plan using your best judgement on how to execute
+   the plan efficiently i.e. parallel sub-agents development, agent team, etc.
+7. Test and verify
+8. Commit with clear messages
+9. Update this file with completion status
 
 ## Completion Status
 
