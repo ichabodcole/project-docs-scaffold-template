@@ -335,6 +335,12 @@ docs/
 
 ## Version History
 
+### 1.5.0 (2026-02-17)
+
+- New `screenshot-optimization` skill for converting PNG screenshots to WebP
+- Improved WORKTREE_TASK template: user plan review step, skill reference fix,
+  flexible execution guidance
+
 ### 1.4.1 (2026-02-15)
 
 - Fixed v2.3-to-v2.4 migration guide: step 5a now provides exact before/after
