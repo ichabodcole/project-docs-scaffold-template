@@ -90,7 +90,7 @@ reflected in the other.
 - [ ] Update `docs/PROJECT_MANIFESTO.md` — pipeline references (check ALL
       occurrences, not just the formal cycle diagram)
 - [ ] Check if downstream skills/commands need awareness of new type (e.g.,
-      `proposal-to-plan` needed to learn about `design-resolution.md`)
+      `generate-dev-plan` needed to learn about `design-resolution.md`)
 
 ### Adding or Modifying a Plugin Skill
 

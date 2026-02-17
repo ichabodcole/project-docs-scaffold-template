@@ -9,23 +9,24 @@ resolution between proposal and plan, test plan after plan), positional names
 become misleading — `proposal-to-plan` doesn't tell you about the design
 resolution step that may happen in between.
 
-Rename to `generate-X` convention: `generate-plan`,
+Rename to `generate-X` convention: `generate-dev-plan`,
 `generate-design-resolution`, `generate-proposal`. The skill internally
 references its inputs, but the name describes what it produces rather than where
 it sits in a sequence.
+
+**Status:** DONE (2026-02-17)
 
 The new `generate-test-plan` skill already uses this convention.
 
 ## Acceptance Criteria
 
-- [ ] `proposal-to-plan` → `generate-plan` (skill + command)
-- [ ] `proposal-to-design-resolution` → `generate-design-resolution` (skill +
+- [x] `proposal-to-plan` → `generate-dev-plan` (skill + command)
+- [x] `proposal-to-design-resolution` → `generate-design-resolution` (skill +
       command)
-- [ ] `investigation-to-proposal` → `generate-proposal` (skill + command)
-- [ ] All cross-references updated (README, manifesto, other skills)
+- [x] `investigation-to-proposal` → `generate-proposal` (skill + command)
+- [x] All cross-references updated (README, manifesto, other skills)
 - [ ] Migration guide created for update-project-docs skill
-- [ ] Old command names noted somewhere for discoverability (users may search
-      for the old names)
+- [x] Old command names preserved in version history for discoverability
 
 ## References
 

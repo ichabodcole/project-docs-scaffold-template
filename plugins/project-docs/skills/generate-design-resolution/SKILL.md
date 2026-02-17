@@ -1,5 +1,5 @@
 ---
-name: "proposal-to-design-resolution"
+name: "generate-design-resolution"
 description: >
   Resolve design ambiguity in a proposal through structured Q&A before
   development planning. Use when the user has a proposal with unresolved
@@ -69,7 +69,7 @@ The template defines point B. This skill is the methodology for getting there.
 
 6. **Gate check:** If the proposal is already precise enough across the board,
    tell the user. Suggest proceeding directly to
-   `/project-docs:proposal-to-plan` instead. Don't force design resolution on
+   `/project-docs:generate-dev-plan` instead. Don't force design resolution on
    work that doesn't need it.
 
 ### Phase 2: Structured Q&A
@@ -192,7 +192,7 @@ This section is always worth visiting, even for simple projects. Good questions:
    need to address
 4. Ask if any sections need revision or expansion
 5. Apply feedback and update as needed
-6. Suggest next step: `/project-docs:proposal-to-plan $1` to create the
+6. Suggest next step: `/project-docs:generate-dev-plan $1` to create the
    development plan
 
 ## Output
@@ -203,7 +203,7 @@ the user of:
 - The document location
 - Summary of key decisions resolved
 - Any items deferred to Boundaries or Open Questions
-- Suggested next step: `/project-docs:proposal-to-plan $1`
+- Suggested next step: `/project-docs:generate-dev-plan $1`
 
 ## Important Guidelines
 
