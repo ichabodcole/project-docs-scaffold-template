@@ -76,7 +76,7 @@ iteration through real projects, which is what this project is doing.
   pre-organized folders with READMEs, templates, and conventions for
   architecture docs, specifications, investigations, projects, backlog, and more
 
-- **Provides a Claude Code plugin ecosystem** with 14 commands, 18 skills, and 8
+- **Provides a Claude Code plugin ecosystem** with 14 commands, 19 skills, and 8
   specialized agents that automate documentation workflows: starting
   investigations, resolving design ambiguity, converting proposals to plans,
   generating test plans, generating project summaries, reviewing documentation
