@@ -44,9 +44,9 @@ which provides specialized commands for managing your documentation structure:
 - `/project-docs:project-recipe` - Extract reusable project patterns
 - `/project-docs:update-deps` - Automated dependency management
 - `/project-docs:review-docs` - Documentation health checks
-- `/project-docs:proposal-to-design-resolution` - Resolve design ambiguity via
+- `/project-docs:generate-design-resolution` - Resolve design ambiguity via
   interactive Q&A
-- `/project-docs:proposal-to-plan` - Convert proposals to implementation plans
+- `/project-docs:generate-dev-plan` - Convert proposals to implementation plans
 - `/project-docs:generate-test-plan` - Generate tiered verification scenarios
   from a plan
 

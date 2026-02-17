@@ -1,5 +1,5 @@
 ---
-name: "proposal-to-plan"
+name: "generate-dev-plan"
 description: "Create development plan from proposal"
 allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
 ---
