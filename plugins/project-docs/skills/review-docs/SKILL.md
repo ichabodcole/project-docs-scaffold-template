@@ -226,6 +226,32 @@ Task(subagent_type: "docs-curator", description: "Review project-e proposal", pr
 Would you like me to archive the 5 completed project folders?"
 ```
 
+## Generate Status Report
+
+After consolidating results, generate a report document:
+
+- **Path:** `docs/reports/YYYY-MM-DD-doc-status-report.md`
+- **Report Type:** "Doc Status"
+
+**Report sections:**
+
+- **Executive Summary** — High-level findings (X completed, Y partially done, Z
+  not started), top recommendations, overall documentation health assessment
+- **Scope** — Which document types were reviewed, date range
+- **Findings by Status:**
+  - **Completed & Archived** — Document name, archive path, brief summary,
+    evidence (files/commits)
+  - **Partially Completed** — Document name, percentage, what's done, what
+    remains, evidence
+  - **Not Started** — Document name, reason if apparent
+  - **Abandoned/Obsolete** — Document name, archive path, reason
+  - **Needs Attention** — Documents requiring clarification or decision
+- **Summary Statistics** — Total reviewed, completed, partial, not started,
+  abandoned
+- **Recommendations** — Prioritize partial completions, archive stale docs,
+  create investigations for uncertain items
+- **Follow-up Actions** — Checklist of concrete next steps
+
 ## Checklist: Documentation Review
 
 - [ ] Identify documents to review (list files)

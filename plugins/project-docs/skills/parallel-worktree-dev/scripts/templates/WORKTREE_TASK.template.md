@@ -1,6 +1,8 @@
 # Worktree Task: [Task Title]
 
-**Branch:** `{{BRANCH}}` **Created:** {{DATE}}
+**Branch:** `{{BRANCH}}`\
+**Based on:** `{{BASE_BRANCH}}`\
+**Created:** {{DATE}}
 
 ---
 
@@ -37,7 +39,9 @@
 4. Create a development plan in the project folder using the `generate-dev-plan`
    skill
 5. Have the user review the development plan and provide feedback
-6. Use the `generate-test-plan` skill to create a test plan
+6. Assess whether a test plan is needed — if the feature is complex (multiple
+   systems, complex state, 3+ phases), use the `generate-test-plan` skill; if
+   simple, testing strategy in the plan itself is sufficient
 7. Implement according to the plan using your best judgement on how to execute
    the plan efficiently i.e. parallel sub-agents development, agent team, etc.
 8. Test and verify

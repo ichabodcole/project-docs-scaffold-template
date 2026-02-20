@@ -1,6 +1,13 @@
 ---
 name: "create-investigation"
-description: "Start investigation from rough idea"
+description: >
+  Create a structured investigation document from a rough idea, voice note, or
+  freeform thoughts. Use when the user has an unstructured question or concern
+  they want to explore — transforms conversational input into a formal
+  investigation in docs/investigations/. Triggers when user says "investigate
+  this", "I've been thinking about", "should we look into", "start an
+  investigation", or provides rough voice-to-text or bullet-point input that
+  needs structuring.
 allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
 ---
 

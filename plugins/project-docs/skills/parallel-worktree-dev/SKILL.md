@@ -1,8 +1,13 @@
 ---
 name: parallel-worktree-dev
-description:
+description: >
   Orchestrate parallel development using git worktrees with lightweight handoffs
-  to cloud-managed agents
+  to cloud-managed agents. Use this instead of generic worktree skills when
+  working with the project-docs workflow — creates worktrees with
+  WORKTREE_TASK.md handoff documents, manages env file copying, and provides a
+  structured completion flow (merge → smoke test → remove). Triggers when user
+  mentions "worktree", "parallel branches", "set up worktrees", "delegate to
+  agents", "hand off tasks", or wants to prepare work for cloud agent sessions.
 ---
 
 # Parallel Worktree Development
@@ -46,7 +51,10 @@ Proposal/Investigation exists
                                            ↓
                                    Run dev-discovery
                                            ↓
-                                   Run dev-plan-generator
+                                   Run generate-dev-plan
+                                           ↓
+                                   Assess: test plan needed?
+                                   (yes → run generate-test-plan)
                                            ↓
                                    Implement
                                            ↓
@@ -264,13 +272,44 @@ If `.env` files change in the main repo:
 scripts/copy-env-to-worktree.sh .worktrees/feature/my-feature
 ```
 
-### Clean Up Completed Worktrees
+### Completing and Merging Worktree Work
 
-```bash
-# After merging the branch
-git worktree remove .worktrees/feature/my-feature
-git branch -d feature/my-feature  # If merged
-```
+When a worktree's work is complete:
+
+1. **Identify the target branch** — check the "Based on" field in
+   WORKTREE_TASK.md. If missing, use `git reflog show <branch> | tail -1` to see
+   what the branch was created from.
+
+2. **Merge into the target branch**
+
+   ```bash
+   # From main repo
+   git checkout develop  # or whatever the base branch is
+   git merge feature/my-feature --no-ff
+   ```
+
+3. **Smoke test before removing the worktree** — switch to the target branch and
+   verify the merged work is actually present. Check that key features work, new
+   files exist, and nothing was lost in the merge.
+
+   ```bash
+   # Verify key files exist
+   ls docs/projects/<name>/plan.md
+   # Run the app, check the feature, etc.
+   ```
+
+4. **Only then remove the worktree** — if something is missing, the worktree
+   still has the full working state and git history for recovery
+
+   ```bash
+   git worktree remove .worktrees/feature/my-feature
+   git branch -d feature/my-feature  # If merged
+   ```
+
+**Why this order matters:** Once a worktree is removed, its working directory is
+gone. If the merge was incomplete or something was missed, the worktree is your
+audit trail and recovery path. Deleting it prematurely means lost work with no
+way to inspect what happened.
 
 ## Coordination Between Parallel Work
 
@@ -352,17 +391,33 @@ Track parallel work progress:
 - [ ] Delegate to cloud agents (they will install deps, run discovery, plan)
 - [ ] Document which agent/session is working on which worktree
 - [ ] Plan merge order based on dependencies
+- [ ] After completion: merge worktree branch into target branch
+- [ ] Smoke test merged work on target branch before removing worktree
+- [ ] Remove worktree only after confirming work is present
 
 ## Cloud Agent Responsibilities
 
 When a cloud agent starts in a worktree, it should:
 
-1. **Read WORKTREE_TASK.md** - Understand mission and constraints
-2. **Read source documents** - Proposal and/or investigation
-3. **Install dependencies** - Set up the project environment
-4. **Run `/dev-discovery`** - Understand affected codebase areas
-5. **Create development plan** - In the project folder as `plan.md`
-6. **Implement** - Follow the plan it created
-7. **Test** - Run the project's test/verification commands
-8. **Commit** - With clear commit messages
-9. **Notify** - Update WORKTREE_TASK.md with completion status
+1. **Confirm you're in a worktree** — Check for `WORKTREE_TASK.md` in the
+   current directory
+2. **Read WORKTREE_TASK.md** — Understand mission and constraints
+3. **Acknowledge the mission** — Summarize what you'll be building in 1-2
+   sentences before proceeding
+4. **Read source documents** — Proposal and/or investigation linked in the task
+5. **Install dependencies** — Set up the project environment
+6. **Run `/dev-discovery`** — Understand affected codebase areas
+7. **Create development plan** — In the project folder as `plan.md`
+8. **Assess test plan need** — If the feature is complex (multiple systems,
+   complex state, 3+ phases), create a test plan using `generate-test-plan`. If
+   it's a simple change, note in the plan that testing strategy is covered
+   inline. When in doubt, ask the user.
+9. **Implement** — Follow the plan it created
+10. **Test** — Run the project's test/verification commands (and test plan
+    scenarios if one exists)
+11. **Commit** — With clear commit messages
+12. **Notify** — Update WORKTREE_TASK.md with completion status
+
+**Important:** Stay focused on the scope defined in the task document. If you
+discover work that's out of scope, note it in the WORKTREE_TASK.md Notes section
+but don't pursue it.

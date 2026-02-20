@@ -113,6 +113,7 @@ if [ ! -f "$TEMPLATE_FILE" ]; then
 fi
 
 sed -e "s|{{BRANCH}}|$FULL_BRANCH|g" \
+    -e "s|{{BASE_BRANCH}}|$BASE_BRANCH|g" \
     -e "s|{{DATE}}|$TODAY|g" \
     "$TEMPLATE_FILE" > "$TASK_FILE"
 echo -e "${GREEN}  Created WORKTREE_TASK.md from template${NC}"
