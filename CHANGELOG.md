@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.3.1...project-docs-scaffold-template-v2.4.0) (2026-02-20)
+
+
+### Features
+
+* consolidate commands into skills as primary delivery mechanism ([26bae8c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/26bae8c2bbc399798f93faf530b5fd7154c3c19c))
+
+
+### Bug Fixes
+
+* add worktree completion workflow to prevent lost work ([be9bcc4](https://github.com/ichabodcole/project-docs-scaffold-template/commit/be9bcc4387582b5c1b65db8578bd34b475f48821))
+* surface test plan decision point in dev plan and worktree workflows ([6bc2475](https://github.com/ichabodcole/project-docs-scaffold-template/commit/6bc247583e60a7a3734ff66e39ab66bca3efaf5f))
+
 ## [2.3.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.3.0...project-docs-scaffold-template-v2.3.1) (2026-02-15)
 
 
