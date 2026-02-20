@@ -133,3 +133,28 @@ When the project has a test framework, structure tasks as TDD cycles:
 
 **Output:** Create a development plan at `docs/projects/$1/plan.md`. Inform the
 user of the location when complete.
+
+## After the Plan Is Created
+
+Once the plan is written and the user has reviewed it, assess whether a **test
+plan** is warranted. Ask the user:
+
+> "Should we create a test plan for this feature? A test plan defines tiered
+> verification scenarios (smoke tests, critical path, edge cases) before
+> implementation begins."
+
+**Suggest a test plan when:**
+
+- The feature touches multiple systems or layers
+- There are complex state transitions, data flows, or failure modes
+- The plan has 3+ phases or significant integration points
+- The proposal mentions reliability, correctness, or safety concerns
+
+**Skip the test plan when:**
+
+- It's a simple refactor, rename, or config change
+- The plan is a single phase with straightforward validation
+- Testing strategy is adequately covered within the plan itself
+
+If the user agrees, run the `generate-test-plan` skill for the same project
+folder.

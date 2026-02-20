@@ -216,6 +216,15 @@ docs/
 
 ## Version History
 
+### 1.7.1 (2026-02-20)
+
+- `generate-dev-plan` now prompts user to assess test plan need after plan
+  creation, with criteria for when to suggest vs skip
+- `parallel-worktree-dev` cloud agent responsibilities and workflow diagram now
+  include test plan assessment step
+- WORKTREE_TASK template step 6 changed from unconditional test plan creation to
+  conditional assessment
+
 ### 1.7.0 (2026-02-20)
 
 - Consolidated 9 commands into skills — skills are now the primary delivery

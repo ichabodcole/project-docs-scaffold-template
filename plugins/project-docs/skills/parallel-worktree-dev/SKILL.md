@@ -51,7 +51,10 @@ Proposal/Investigation exists
                                            ↓
                                    Run dev-discovery
                                            ↓
-                                   Run dev-plan-generator
+                                   Run generate-dev-plan
+                                           ↓
+                                   Assess: test plan needed?
+                                   (yes → run generate-test-plan)
                                            ↓
                                    Implement
                                            ↓
@@ -405,10 +408,15 @@ When a cloud agent starts in a worktree, it should:
 5. **Install dependencies** — Set up the project environment
 6. **Run `/dev-discovery`** — Understand affected codebase areas
 7. **Create development plan** — In the project folder as `plan.md`
-8. **Implement** — Follow the plan it created
-9. **Test** — Run the project's test/verification commands
-10. **Commit** — With clear commit messages
-11. **Notify** — Update WORKTREE_TASK.md with completion status
+8. **Assess test plan need** — If the feature is complex (multiple systems,
+   complex state, 3+ phases), create a test plan using `generate-test-plan`. If
+   it's a simple change, note in the plan that testing strategy is covered
+   inline. When in doubt, ask the user.
+9. **Implement** — Follow the plan it created
+10. **Test** — Run the project's test/verification commands (and test plan
+    scenarios if one exists)
+11. **Commit** — With clear commit messages
+12. **Notify** — Update WORKTREE_TASK.md with completion status
 
 **Important:** Stay focused on the scope defined in the task document. If you
 discover work that's out of scope, note it in the WORKTREE_TASK.md Notes section
