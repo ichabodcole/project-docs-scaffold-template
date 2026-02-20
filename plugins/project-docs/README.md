@@ -335,6 +335,12 @@ docs/
 
 ## Version History
 
+### 1.6.1 (2026-02-20)
+
+- Worktree completion workflow: merge → smoke test → remove (prevents lost work)
+- WORKTREE_TASK template records source branch ("Based on" field)
+- create-worktree.sh substitutes base branch into task template
+
 ### 1.6.0 (2026-02-17)
 
 - Renamed `proposal-to-plan` → `generate-dev-plan` (skill + command)

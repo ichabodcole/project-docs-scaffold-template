@@ -1,6 +1,8 @@
 # Worktree Task: [Task Title]
 
-**Branch:** `{{BRANCH}}` **Created:** {{DATE}}
+**Branch:** `{{BRANCH}}`\
+**Based on:** `{{BASE_BRANCH}}`\
+**Created:** {{DATE}}
 
 ---
 

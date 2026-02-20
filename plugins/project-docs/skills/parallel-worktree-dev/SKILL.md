@@ -264,13 +264,44 @@ If `.env` files change in the main repo:
 scripts/copy-env-to-worktree.sh .worktrees/feature/my-feature
 ```
 
-### Clean Up Completed Worktrees
+### Completing and Merging Worktree Work
 
-```bash
-# After merging the branch
-git worktree remove .worktrees/feature/my-feature
-git branch -d feature/my-feature  # If merged
-```
+When a worktree's work is complete:
+
+1. **Identify the target branch** — check the "Based on" field in
+   WORKTREE_TASK.md. If missing, use `git reflog show <branch> | tail -1` to see
+   what the branch was created from.
+
+2. **Merge into the target branch**
+
+   ```bash
+   # From main repo
+   git checkout develop  # or whatever the base branch is
+   git merge feature/my-feature --no-ff
+   ```
+
+3. **Smoke test before removing the worktree** — switch to the target branch and
+   verify the merged work is actually present. Check that key features work, new
+   files exist, and nothing was lost in the merge.
+
+   ```bash
+   # Verify key files exist
+   ls docs/projects/<name>/plan.md
+   # Run the app, check the feature, etc.
+   ```
+
+4. **Only then remove the worktree** — if something is missing, the worktree
+   still has the full working state and git history for recovery
+
+   ```bash
+   git worktree remove .worktrees/feature/my-feature
+   git branch -d feature/my-feature  # If merged
+   ```
+
+**Why this order matters:** Once a worktree is removed, its working directory is
+gone. If the merge was incomplete or something was missed, the worktree is your
+audit trail and recovery path. Deleting it prematurely means lost work with no
+way to inspect what happened.
 
 ## Coordination Between Parallel Work
 
@@ -352,6 +383,9 @@ Track parallel work progress:
 - [ ] Delegate to cloud agents (they will install deps, run discovery, plan)
 - [ ] Document which agent/session is working on which worktree
 - [ ] Plan merge order based on dependencies
+- [ ] After completion: merge worktree branch into target branch
+- [ ] Smoke test merged work on target branch before removing worktree
+- [ ] Remove worktree only after confirming work is present
 
 ## Cloud Agent Responsibilities
 
