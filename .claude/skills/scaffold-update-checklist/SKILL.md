@@ -94,10 +94,16 @@ reflected in the other.
 
 ### Adding or Modifying a Plugin Skill
 
+Skills are the preferred delivery mechanism — they get auto-surfaced by the
+agent when relevant AND can be invoked explicitly by users. Prefer creating a
+skill over a command unless the action is purely explicit/user-initiated with no
+auto-surfacing value (e.g., `init-branch`, `update-deps`).
+
 - [ ] Create/update skill in `plugins/<plugin>/skills/<skill-name>/SKILL.md`
+- [ ] Include rich description with "Use when..." and "Triggers when..."
+      sections to ensure reliable agent routing
 - [ ] Bump plugin version in `plugins/<plugin>/.claude-plugin/plugin.json`
-- [ ] Update `plugins/<plugin>/README.md` — add skill documentation if
-      user-invocable
+- [ ] Update `plugins/<plugin>/README.md` — add to Skills table
 - [ ] Add version history entry in plugin README
 - [ ] Update `docs/PROJECT_MANIFESTO.md` — skill count
 - [ ] Verify skill count matches actual directories:
@@ -105,13 +111,18 @@ reflected in the other.
 
 ### Adding or Modifying a Plugin Command
 
+Commands are for explicit user actions only — things a user deliberately invokes
+that should NOT be auto-surfaced by the agent. If the action should also be
+triggered contextually by the agent, make it a skill instead.
+
 - [ ] Create/update command in `plugins/<plugin>/commands/<command>.md`
 - [ ] Bump plugin version in `plugins/<plugin>/.claude-plugin/plugin.json`
 - [ ] Update `plugins/<plugin>/README.md` — add command documentation section
 - [ ] Add version history entry in plugin README
 - [ ] Update root `README.md` — add to plugin command list
 - [ ] Update `docs/PROJECT_MANIFESTO.md` — command count
-- [ ] If command has a corresponding skill, ensure both exist and are consistent
+- [ ] Verify this shouldn't be a skill instead — if the agent should auto-invoke
+      it based on context, convert to a skill
 
 ### Adding or Modifying a Plugin Agent
 

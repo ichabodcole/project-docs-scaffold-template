@@ -37,18 +37,26 @@ including:
 ## Claude Code Plugin
 
 This template is designed to work with the **project-docs** Claude Code plugin,
-which provides specialized commands for managing your documentation structure:
+which provides commands and skills for managing your documentation structure:
+
+**Commands** (explicit user actions):
 
 - `/project-docs:project-summary` - Generate comprehensive project state
   analysis
 - `/project-docs:project-recipe` - Extract reusable project patterns
 - `/project-docs:update-deps` - Automated dependency management
-- `/project-docs:review-docs` - Documentation health checks
-- `/project-docs:generate-design-resolution` - Resolve design ambiguity via
-  interactive Q&A
-- `/project-docs:generate-dev-plan` - Convert proposals to implementation plans
+
+**Skills** (auto-surfaced by agent + user-invocable):
+
+- `/project-docs:create-project` - Scaffold a new project folder with proposal
+- `/project-docs:generate-dev-plan` - Create development plan from proposal
+- `/project-docs:generate-design-resolution` - Resolve design ambiguity via Q&A
 - `/project-docs:generate-test-plan` - Generate tiered verification scenarios
-  from a plan
+- `/project-docs:finalize-branch` - Code review, documentation, and merge
+  workflow
+- `/project-docs:review-docs` - Documentation health checks with parallel agents
+- `/project-docs:parallel-worktree-dev` - Orchestrate parallel worktree
+  development
 
 **Installation:**
 

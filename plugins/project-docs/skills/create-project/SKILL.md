@@ -1,11 +1,28 @@
 ---
-description: "Create a new project folder with proposal scaffold"
+name: "create-project"
+description: >
+  Create a new project folder with proposal scaffold in docs/projects/. Use when
+  work needs a project home — whether starting from an investigation, writing a
+  new proposal, or beginning any feature that warrants structured tracking. This
+  is a prerequisite for generate-dev-plan, generate-design- resolution, and
+  generate-test-plan. Triggers when user says "let's create a project", "start a
+  proposal", "we should work on this", "let's build this", or when transitioning
+  from an investigation to actionable work. Also use when generate-proposal
+  needs a project folder to write into.
 allowed_tools: ["Read", "Write", "Bash", "Glob", "AskUserQuestion"]
 ---
 
-You are tasked with creating a new project folder under `docs/projects/`.
+# Create Project
 
-**Arguments:** `$ARGUMENTS`
+Create a new project folder under `docs/projects/` with a scaffolded proposal
+template.
+
+## When to Use
+
+- User has a new idea they want to formalize into a proposal
+- An investigation has concluded and the next step is a proposal
+- The `generate-proposal` skill needs a project folder to write into
+- Any work that warrants structured tracking (proposal → plan → sessions)
 
 ## Workflow
 
@@ -19,8 +36,9 @@ The name should be:
 - **Descriptive** but concise (2-4 words)
 - **No date prefix** — dates are tracked in document metadata and git history
 
-Good: `oauth-upgrade`, `milkdown-editor`, `search-enhancement` Bad:
-`2026-02-09-new-feature`, `project1`, `stuff`
+Good: `oauth-upgrade`, `milkdown-editor`, `search-enhancement`
+
+Bad: `2026-02-09-new-feature`, `project1`, `stuff`
 
 ### Step 2: Verify It Doesn't Already Exist
 
@@ -66,6 +84,6 @@ Tell the user:
 
 - **Don't create plan.md or sessions/ yet** — Those come later when
   implementation begins
-- **Don't fill in proposal content** beyond template defaults — The user or
-  another command (like `/project-docs:generate-proposal`) handles that
+- **Don't fill in proposal content** beyond template defaults — The user or the
+  `generate-proposal` skill handles that
 - **Check conventions** at `docs/projects/README.md` if unsure about structure

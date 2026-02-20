@@ -29,8 +29,9 @@ claude plugins install project-docs
 
 ## Commands
 
-All commands are namespaced with `project-docs:` and invoked as
-`/project-docs:command-name`.
+Commands are explicit user actions invoked as `/project-docs:command-name`. For
+workflow skills that the agent also surfaces automatically, see the
+[Skills](#skills) section below.
 
 ### `/project-docs:project-summary`
 
@@ -122,172 +123,52 @@ recipe.
 
 ---
 
-### `/project-docs:review-docs`
+## Skills
 
-**Description:** Review and cleanup documentation status across proposals,
-plans, investigations, and reports.
+Skills are automatically surfaced by the agent when relevant, and can also be
+invoked explicitly as `/project-docs:skill-name`. They provide richer guidance
+than commands and are the primary way the plugin delivers its workflows.
 
-**Usage:**
+### Project Lifecycle Skills
 
-```
-/project-docs:review-docs
-```
+| Skill                        | Description                                                        |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `create-project`             | Create project folder with proposal scaffold in docs/projects/     |
+| `create-investigation`       | Create investigation from rough idea or voice note                 |
+| `generate-proposal`          | Create project proposal from completed investigation               |
+| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning        |
+| `generate-dev-plan`          | Create development plan from proposal in docs/projects/            |
+| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal      |
+| `finalize-branch`            | Code review, documentation, and merge workflow for completed work  |
+| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents |
+| `parallel-worktree-dev`      | Orchestrate parallel development using git worktrees with handoffs |
+| `dev-discovery`              | Pre-planning technical discovery for complex features              |
+| `update-project-docs`        | Upgrade docs structure to newer scaffold template version          |
 
-**What it does:**
+### Research & Analysis Skills
 
-- Scans documentation directories for active documents
-- Investigates implementation status by searching codebase
-- Updates document status markers
-- Archives completed/abandoned documents
-- Generates `docs/reports/YYYY-MM-DD-doc-status-report.md`
+| Skill                       | Description                                                    |
+| --------------------------- | -------------------------------------------------------------- |
+| `investigation-methodology` | Systematic investigation framework for research and root cause |
+| `evaluative-research`       | Evaluate options and make evidence-based decisions             |
+| `tech-integration-research` | Rapid online research for technology integration patterns      |
+| `gap-analysis`              | Identify what's missing from proposals or specifications       |
+| `document-validation`       | Validate documentation against codebases                       |
 
-**Use cases:**
+### Specification & Design Skills
 
-- Quarterly documentation audits
-- Pre-planning to understand what's pending
-- Housekeeping after major feature releases
-- Identifying stale or obsolete documents
+| Skill                      | Description                                    |
+| -------------------------- | ---------------------------------------------- |
+| `idea-to-spec`             | Develop an idea into a complete specification  |
+| `generate-spec`            | Generate specifications from existing code     |
+| `implementation-blueprint` | Prepare for implementation from specifications |
 
-**Status categories:**
+### Utility Skills
 
-- **Completed** - Implemented and archived
-- **Partially Completed** - Some aspects done, marked in document
-- **Not Started** - Remains in active folder
-- **Abandoned** - Archived with reasoning
-
----
-
-### `/project-docs:create-project`
-
-**Description:** Create a new project folder with a scaffolded proposal.
-
-**Usage:**
-
-```
-/project-docs:create-project [project-name]
-```
-
-**Arguments:**
-
-- `project-name` (optional) - Kebab-case name for the project folder (e.g.,
-  `search-enhancement`). If omitted, you'll be asked.
-
-**What it does:**
-
-- Creates `docs/projects/<name>/` folder
-- Scaffolds `proposal.md` from the project template
-- Links to an investigation if one is referenced
-
-**Use cases:**
-
-- Starting a new feature or significant change
-- Following up on a completed investigation
-- Creating the project home for a body of work
-
----
-
-### `/project-docs:generate-design-resolution`
-
-**Description:** Resolve design ambiguity in a proposal through interactive Q&A.
-
-**Usage:**
-
-```
-/project-docs:generate-design-resolution [project-name]
-```
-
-**Arguments:**
-
-- `project-name` - Name of the project folder in `docs/projects/` (e.g.,
-  `search-enhancement`)
-
-**What it does:**
-
-- Reads the project's proposal at `docs/projects/<name>/proposal.md`
-- Analyzes the proposal for unresolved behavioral, structural, and architectural
-  questions
-- Conducts structured Q&A with the user, organized by design resolution sections
-- Generates `docs/projects/<name>/design-resolution.md` with resolved decisions
-
-**Use cases:**
-
-- Proposal has unresolved system behavior questions
-- New entities or state models need clarity before planning
-- Architecture or cross-cutting concerns need resolution
-- Preventing speculative assumptions in development plans
-- Clarifying contracts for parallel agent execution
-
----
-
-### `/project-docs:generate-dev-plan`
-
-**Description:** Create a detailed development plan from a proposal document.
-
-**Usage:**
-
-```
-/project-docs:generate-dev-plan [project-name]
-```
-
-**Arguments:**
-
-- `project-name` - Name of the project folder in `docs/projects/` (e.g.,
-  `search-enhancement`)
-
-**What it does:**
-
-- Reads the project's proposal at `docs/projects/<name>/proposal.md`
-- Analyzes current codebase for relevant patterns
-- Identifies implementation requirements
-- Assesses complexity and risks
-- Generates `docs/projects/<name>/plan.md` with:
-  - Overview and approach
-  - Current state analysis
-  - Ordered implementation steps
-  - Technical considerations
-  - Testing strategy
-  - Open questions
-
-**Use cases:**
-
-- Converting approved proposals into actionable plans
-- Scoping feature work
-- Identifying technical blockers early
-- Creating implementation roadmaps
-
----
-
-### `/project-docs:generate-test-plan`
-
-**Description:** Generate a tiered test plan from a development plan and
-proposal.
-
-**Usage:**
-
-```
-/project-docs:generate-test-plan [project-name]
-```
-
-**Arguments:**
-
-- `project-name` - Name of the project folder in `docs/projects/` (e.g.,
-  `search-enhancement`)
-
-**What it does:**
-
-- Reads the project's plan, proposal, and design resolution (if present)
-- Identifies testable surfaces from proposal goals and plan phases
-- Applies three-tier prioritization (Smoke, Critical Path, Edge Cases)
-- Surfaces external dependencies as prerequisites
-- Generates `docs/projects/<name>/test-plan.md` with tiered verification
-  scenarios
-
-**Use cases:**
-
-- Defining verification expectations before agent implementation
-- Preparing for parallel worktree development
-- Features with UI that need visual verification
-- Closing the gap between "implementation complete" and "actually verified"
+| Skill                     | Description                                             |
+| ------------------------- | ------------------------------------------------------- |
+| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size   |
+| `mobile-test`             | Automate iOS simulator setup and app launch for testing |
 
 ---
 
@@ -334,6 +215,26 @@ docs/
    significantly
 
 ## Version History
+
+### 1.7.0 (2026-02-20)
+
+- Consolidated 9 commands into skills — skills are now the primary delivery
+  mechanism (auto-surfaced by agent + user-invocable)
+- New `finalize-branch` skill (was command) with completion options (merge, PR,
+  keep, discard) and common mistakes guidance ported from superpowers
+- New `create-project` skill (was command) with triggers for investigation →
+  proposal transitions
+- Absorbed `start-worktree` command into `parallel-worktree-dev` skill
+- Enriched `generate-dev-plan` skill with plan quality principles (bite-sized
+  TDD tasks, exact file paths, complete code) and evolved plan philosophy
+  (phases with pivotal points, "gas stations on a road trip")
+- Enriched `review-docs` skill with status report generation template
+- Improved routing descriptions for `generate-dev-plan`, `finalize-branch`,
+  `parallel-worktree-dev`, `generate-proposal`, `create-investigation` — all now
+  include "Use when" / "Triggers when" and explicit priority over generic skills
+- 5 remaining commands: init-branch, project-manifesto, project-recipe,
+  project-summary, update-deps
+- Restructured plugin README with separate Commands and Skills sections
 
 ### 1.6.1 (2026-02-20)
 

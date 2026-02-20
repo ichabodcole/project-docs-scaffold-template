@@ -1,6 +1,12 @@
 ---
 name: "generate-proposal"
-description: "Create proposal from investigation"
+description: >
+  Create a project proposal from a completed investigation. Use when an
+  investigation has concluded with a "Proposal Recommended" outcome and the user
+  wants to formalize it into a project folder with proposal.md. Transforms
+  exploratory findings into a structured commitment. Triggers when user asks to
+  "create a proposal", "write a proposal from this investigation", "turn this
+  investigation into a proposal", or wants to move from research to action.
 allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
 ---
 

@@ -1,8 +1,13 @@
 ---
 name: parallel-worktree-dev
-description:
+description: >
   Orchestrate parallel development using git worktrees with lightweight handoffs
-  to cloud-managed agents
+  to cloud-managed agents. Use this instead of generic worktree skills when
+  working with the project-docs workflow — creates worktrees with
+  WORKTREE_TASK.md handoff documents, manages env file copying, and provides a
+  structured completion flow (merge → smoke test → remove). Triggers when user
+  mentions "worktree", "parallel branches", "set up worktrees", "delegate to
+  agents", "hand off tasks", or wants to prepare work for cloud agent sessions.
 ---
 
 # Parallel Worktree Development
@@ -391,12 +396,20 @@ Track parallel work progress:
 
 When a cloud agent starts in a worktree, it should:
 
-1. **Read WORKTREE_TASK.md** - Understand mission and constraints
-2. **Read source documents** - Proposal and/or investigation
-3. **Install dependencies** - Set up the project environment
-4. **Run `/dev-discovery`** - Understand affected codebase areas
-5. **Create development plan** - In the project folder as `plan.md`
-6. **Implement** - Follow the plan it created
-7. **Test** - Run the project's test/verification commands
-8. **Commit** - With clear commit messages
-9. **Notify** - Update WORKTREE_TASK.md with completion status
+1. **Confirm you're in a worktree** — Check for `WORKTREE_TASK.md` in the
+   current directory
+2. **Read WORKTREE_TASK.md** — Understand mission and constraints
+3. **Acknowledge the mission** — Summarize what you'll be building in 1-2
+   sentences before proceeding
+4. **Read source documents** — Proposal and/or investigation linked in the task
+5. **Install dependencies** — Set up the project environment
+6. **Run `/dev-discovery`** — Understand affected codebase areas
+7. **Create development plan** — In the project folder as `plan.md`
+8. **Implement** — Follow the plan it created
+9. **Test** — Run the project's test/verification commands
+10. **Commit** — With clear commit messages
+11. **Notify** — Update WORKTREE_TASK.md with completion status
+
+**Important:** Stay focused on the scope defined in the task document. If you
+discover work that's out of scope, note it in the WORKTREE_TASK.md Notes section
+but don't pursue it.
