@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.5.1...project-docs-scaffold-template-v2.6.0) (2026-02-22)
+
+
+### Features
+
+* add install-to-current-directory option for cookiecutter template ([ea1ec1c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ea1ec1ce29b96667f68e59d87d5041e385d63b74))
+
 ## [2.5.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.5.0...project-docs-scaffold-template-v2.5.1) (2026-02-22)
 
 
