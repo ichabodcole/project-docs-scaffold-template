@@ -217,6 +217,18 @@ docs/
 
 ## Version History
 
+### 1.8.3 (2026-02-22)
+
+- Added root-level agent context step to `update-project-docs` skill — checks
+  whether `CLAUDE.md` or `AGENTS.md` references the docs structure and
+  recommends a blurb if not
+- Added copy-pasteable blurb to post-generation hook output for new installs
+- Fixed missing v2.4→v2.5 entry in migration table
+
+### 1.8.2 (2026-02-21)
+
+- Fixed incorrect skill file naming convention in `workshop-idea`
+
 ### 1.8.1 (2026-02-21)
 
 - Added v2.4→v2.5 migration guide for briefs document type

@@ -31,7 +31,17 @@ def install_to_current_directory():
     print("     /plugin marketplace add ichabodcole/project-docs-scaffold-template")
     print("     /plugin install project-docs")
     print("  2. Review and customize docs/PROJECT_MANIFESTO.md")
-    print("  3. Start documenting! 📝\n")
+    print("  3. Add this to your CLAUDE.md or AGENTS.md so AI agents")
+    print("     discover the docs structure automatically:\n")
+    print("     ─────────────────────────────────────────────────────")
+    print("     ## Documentation\n")
+    print("     This project uses structured documentation in `docs/`.")
+    print("     See [docs/README.md](./docs/README.md) for the full")
+    print("     structure overview and document type guide.\n")
+    print("     For quick onboarding on recent work, start with")
+    print("     [docs/memories/](./docs/memories/).")
+    print("     ─────────────────────────────────────────────────────\n")
+    print("  4. Start documenting! 📝\n")
 
 
 def install_to_new_folder():
@@ -45,7 +55,17 @@ def install_to_new_folder():
     print("     /plugin marketplace add ichabodcole/project-docs-scaffold-template")
     print("     /plugin install project-docs")
     print("  3. Review and customize docs/README.md if needed")
-    print("  4. Start documenting! 📝\n")
+    print("  4. Add this to your CLAUDE.md or AGENTS.md so AI agents")
+    print("     discover the docs structure automatically:\n")
+    print("     ─────────────────────────────────────────────────────")
+    print("     ## Documentation\n")
+    print("     This project uses structured documentation in `docs/`.")
+    print("     See [docs/README.md](./docs/README.md) for the full")
+    print("     structure overview and document type guide.\n")
+    print("     For quick onboarding on recent work, start with")
+    print("     [docs/memories/](./docs/memories/).")
+    print("     ─────────────────────────────────────────────────────\n")
+    print("  5. Start documenting! 📝\n")
 
 
 def main():
