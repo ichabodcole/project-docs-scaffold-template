@@ -1,5 +1,5 @@
 ---
-name: "workshop-idea"
+name: workshop-idea
 description: >
   Workshop a rough idea into a project brief through guided conversation. Use
   when the user has an unrefined concept, a spark, or a fragment they want to
