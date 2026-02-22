@@ -33,10 +33,11 @@ reflected in the other.
 - `docs/projects/README.md`
 - All files in `docs/projects/TEMPLATES/`
 - Category READMEs: `docs/architecture/README.md`, `docs/backlog/README.md`,
-  `docs/fragments/README.md`, `docs/interaction-design/README.md`,
-  `docs/investigations/README.md`, `docs/lessons-learned/README.md`,
-  `docs/memories/README.md`, `docs/playbooks/README.md`,
-  `docs/reports/README.md`, `docs/specifications/README.md`
+  `docs/briefs/README.md`, `docs/fragments/README.md`,
+  `docs/interaction-design/README.md`, `docs/investigations/README.md`,
+  `docs/lessons-learned/README.md`, `docs/memories/README.md`,
+  `docs/playbooks/README.md`, `docs/reports/README.md`,
+  `docs/specifications/README.md`
 - Category templates: all `TEMPLATE*.md` files within those directories
 
 **Structurally mirrored but content differs:**
