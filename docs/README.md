@@ -73,6 +73,16 @@ open questions without commitment to investigate. They're food for thought -
 pieces that might become investigations, projects, or lessons learned when you
 have more context.
 
+### Ideation
+
+#### `/briefs`
+
+Project briefs that capture the identity and direction of an idea before any
+implementation decisions are made. Briefs are the output of a workshop session —
+a focused conversation that develops a rough spark into something concrete
+enough to act on. A brief might spawn investigations, projects, a manifesto, or
+simply sit as a captured idea to revisit later.
+
 ### Discovery & Assessment
 
 These documents precede and follow projects. They're cross-cutting — not tied to
@@ -134,107 +144,114 @@ Not sure what to create? Use this decision flowchart:
                START: You have work to track or document
                                   ↓
                 ┌─────────────────────────────────┐
-                │  Is this a small, well-defined   │
-                │  task (bug, minor refactor,      │
-                │  papercut)?                      │
+                │  Is this a rough, unrefined      │
+                │  idea that needs shaping?        │
                 └─────────────────────────────────┘
                           ↓              ↓
                         YES              NO
                           ↓              ↓
-                      BACKLOG    Have a question or
-                                 uncertain if action
-                                 is needed?
+                       BRIEF     ┌─────────────────────────────────┐
+                   (Workshop it) │  Is this a small, well-defined   │
+                          ↓      │  task (bug, minor refactor,      │
+                    Spawns next   │  papercut)?                      │
+                    steps below   └─────────────────────────────────┘
+                                          ↓              ↓
+                                        YES              NO
+                                          ↓              ↓
+                                      BACKLOG    Have a question or
+                                                 uncertain if action
+                                                 is needed?
+                                                         ↓
+                                               ┌─────────┴─────────┐
+                                               │   YES             │
+                                               └─────────┬─────────┘
+                                                         ↓
+                                               Ready to investigate?
+                                                         ↓
+                                               ┌─────────┴─────────┐
+                                               │   YES             │  NO → FRAGMENT
+                                               └─────────┬─────────┘    (Capture for later)
+                                                         ↓
+                                                                   INVESTIGATION
+                                                         ↓
+                                               ┌─────────────────────┐
+                                               │ Outcome determines  │
+                                               │ next step:          │
+                                               └─────────────────────┘
+                                                         ↓
+                                         ┌───────────────┴───────────────┐
+                                         ↓                               ↓
+                                 [Action Needed]              [No Action / Monitor]
+                                         ↓                               ↓
+                              Create PROJECT folder            Document decision
+                              with proposal.md                  (investigation
+                                         ↓                       conclusion)
+                              ┌──────────────────────┐
+                              │ Unresolved system    │
+                              │ behavior, data, or   │
+                              │ architecture?        │
+                              └──────────────────────┘
+                                    ↓           ↓
+                                  YES           NO
+                                    ↓           │
+                         Add design-resolution  │
+                         .md to project         │
+                                    ↓           │
+                                    └─────┬─────┘
+                                          ↓
+                               Ready to implement?
                                          ↓
-                               ┌─────────┴─────────┐
-                               │   YES             │
-                               └─────────┬─────────┘
+                                     ┌───┴───┐
+                                     │  YES  │
+                                     └───┬───┘
                                          ↓
-                               Ready to investigate?
+                                Add plan.md to project
                                          ↓
-                               ┌─────────┴─────────┐
-                               │   YES             │  NO → FRAGMENT
-                               └─────────┬─────────┘    (Capture for later)
+                              ┌──────────────────────┐
+                              │ Need structured      │
+                              │ verification?        │
+                              └──────────────────────┘
+                                    ↓           ↓
+                                  YES           NO
+                                    ↓           │
+                         Add test-plan.md       │
+                         to project (optional)  │
+                                    ↓           │
+                                    └─────┬─────┘
+                                          ↓
+                                  Working on it?
                                          ↓
-                                   INVESTIGATION
+                                     ┌───┴───┐
+                                     │  YES  │
+                                     └───┬───┘
                                          ↓
-                               ┌─────────────────────┐
-                               │ Outcome determines  │
-                               │ next step:          │
-                               └─────────────────────┘
+                              Add sessions/ to project
+                              (+ artifacts/ as needed)
                                          ↓
-                         ┌───────────────┴───────────────┐
-                         ↓                               ↓
-                 [Action Needed]              [No Action / Monitor]
-                         ↓                               ↓
-              Create PROJECT folder            Document decision
-              with proposal.md                  (investigation
-                         ↓                       conclusion)
-              ┌──────────────────────┐
-              │ Unresolved system    │
-              │ behavior, data, or   │
-              │ architecture?        │
-              └──────────────────────┘
-                    ↓           ↓
-                  YES           NO
-                    ↓           │
-         Add design-resolution  │
-         .md to project         │
-                    ↓           │
-                    └─────┬─────┘
-                          ↓
-               Ready to implement?
-                         ↓
-                     ┌───┴───┐
-                     │  YES  │
-                     └───┬───┘
-                         ↓
-                Add plan.md to project
-                         ↓
-              ┌──────────────────────┐
-              │ Need structured      │
-              │ verification?        │
-              └──────────────────────┘
-                    ↓           ↓
-                  YES           NO
-                    ↓           │
-         Add test-plan.md       │
-         to project (optional)  │
-                    ↓           │
-                    └─────┬─────┘
-                          ↓
-                  Working on it?
-                         ↓
-                     ┌───┴───┐
-                     │  YES  │
-                     └───┬───┘
-                         ↓
-              Add sessions/ to project
-              (+ artifacts/ as needed)
-                         ↓
-                   Work complete?
-                         ↓
-                     ┌───┴───┐
-                     │  YES  │
-                     └───┬───┘
-                         ↓
-             ┌───────────────────────┐
-             │ Post-completion:      │
-             └───────────────────────┘
-                         ↓
-      ┌──────────────────┼──────────────────────┐
-      ↓                  ↓                      ↓
-[Deployment    [Reusable      [System docs]  [Assessment]
- steps?]        pattern]           ↓              ↓
-      ↓             ↓      ┌──────┴──────┐   REPORT
-  HANDOFF      PLAYBOOK    ↓             ↓  (triggers next
-  (in project)         ARCHITECTURE  INTERACTION  cycle)
-                       (technical)   DESIGN (UX)
+                                   Work complete?
+                                         ↓
+                                     ┌───┴───┐
+                                     │  YES  │
+                                     └───┬───┘
+                                         ↓
+                             ┌───────────────────────┐
+                             │ Post-completion:      │
+                             └───────────────────────┘
+                                         ↓
+                      ┌──────────────────┼──────────────────────┐
+                      ↓                  ↓                      ↓
+                [Deployment    [Reusable      [System docs]  [Assessment]
+                 steps?]        pattern]           ↓              ↓
+                      ↓             ↓      ┌──────┴──────┐   REPORT
+                  HANDOFF      PLAYBOOK    ↓             ↓  (triggers next
+                  (in project)         ARCHITECTURE  INTERACTION  cycle)
+                                       (technical)   DESIGN (UX)
 ```
 
 **The documentation cycle:**
 
 ```
-Report → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report
+Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report → ...
 ```
 
 Reports and investigations are the connective tissue between projects. They
@@ -242,6 +259,8 @@ trigger new work and assess completed work, but live outside any single project.
 
 **Quick Reference:**
 
+- **Brief:** "I have this idea — let me workshop it into something concrete."
+  (identity and direction, pre-project)
 - **Report:** "Here's what we found when assessing X." (retrospective,
   current-state assessment)
 - **Investigation:** "Should we even do this? Let me research..." (uncertain,
@@ -270,6 +289,7 @@ trigger new work and assess completed work, but live outside any single project.
 - **Small bug or refactor?** → Backlog item
 - **Big enough to need a proposal?** → Create a project folder
 - **Specific problem solved?** → Lesson Learned
+- **Rough idea that needs shaping?** → Brief (workshop it first)
 - **Still figuring out the approach?** → Investigation first, then project
 - **Need a portable, technology-agnostic description of the application?** →
   Specification
