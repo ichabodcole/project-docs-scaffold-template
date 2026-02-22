@@ -217,6 +217,13 @@ docs/
 
 ## Version History
 
+### 1.8.1 (2026-02-21)
+
+- Added v2.4→v2.5 migration guide for briefs document type
+- Bumped docs_version to 2.5.0
+- Updated pipeline strings across living docs (manifesto, AGENTS.md, reports
+  README) to start with `Brief →`
+
 ### 1.8.0 (2026-02-21)
 
 - New `workshop-idea` skill — two-phase conversational workshop (open

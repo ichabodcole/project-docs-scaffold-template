@@ -50,7 +50,7 @@ Reports differ from other documentation:
 Reports complete the documentation lifecycle by feeding back into it:
 
 ```
-Report → Investigation → Proposal → Plan → Implementation (Sessions) → Report
+Brief → Investigation → Proposal → Plan → Implementation (Sessions) → Report → ...
 ```
 
 **Examples:**
