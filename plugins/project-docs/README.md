@@ -133,6 +133,7 @@ than commands and are the primary way the plugin delivers its workflows.
 
 | Skill                        | Description                                                        |
 | ---------------------------- | ------------------------------------------------------------------ |
+| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation |
 | `create-project`             | Create project folder with proposal scaffold in docs/projects/     |
 | `create-investigation`       | Create investigation from rough idea or voice note                 |
 | `generate-proposal`          | Create project proposal from completed investigation               |
@@ -215,6 +216,17 @@ docs/
    significantly
 
 ## Version History
+
+### 1.8.0 (2026-02-21)
+
+- New `workshop-idea` skill — two-phase conversational workshop (open
+  exploration → targeted resolution) that develops rough ideas into project
+  briefs
+- New `docs/briefs/` document type with template, README, and archive directory
+- Briefs capture idea identity (spark, inspiration, vision, use cases,
+  boundaries) before any implementation decisions
+- Updated docs README with briefs in structure, decision flowchart, and quick
+  reference
 
 ### 1.7.1 (2026-02-20)
 
