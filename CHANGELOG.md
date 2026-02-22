@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.4.0...project-docs-scaffold-template-v2.5.0) (2026-02-22)
+
+
+### Features
+
+* add workshop-idea skill and project brief document type ([66457a0](https://github.com/ichabodcole/project-docs-scaffold-template/commit/66457a09ba3beeddb0d28839fb8131ec4d58c6fa))
+
 ## [2.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.3.1...project-docs-scaffold-template-v2.4.0) (2026-02-20)
 
 
