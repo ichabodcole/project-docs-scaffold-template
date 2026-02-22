@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.5.0...project-docs-scaffold-template-v2.5.1) (2026-02-22)
+
+
+### Bug Fixes
+
+* incorrect namign convention for skill ([7243950](https://github.com/ichabodcole/project-docs-scaffold-template/commit/7243950c5857deb37827c797ceff4c2b80606d60))
+* incorrect namign convention for skill ([74e34ba](https://github.com/ichabodcole/project-docs-scaffold-template/commit/74e34ba20ac79dc109e505ca2d0fc9931c6b3486))
+
 ## [2.5.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.4.0...project-docs-scaffold-template-v2.5.0) (2026-02-22)
 
 
