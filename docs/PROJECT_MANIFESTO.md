@@ -145,12 +145,13 @@ discovery docs that precede and follow projects, serving as connective tissue.
 **The documentation cycle is a loop:**
 
 ```
-Report → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report
+Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report → ...
 ```
 
-Reports assess current state, investigations explore questions, projects execute
-work, and post-completion reports trigger the next cycle. This loop — with AI
-agents capable of driving each stage — is the core workflow the project enables.
+Briefs capture and refine ideas, investigations explore questions, projects
+execute work, and post-completion reports trigger the next cycle. This loop —
+with AI agents capable of driving each stage — is the core workflow the project
+enables.
 
 ---
 
