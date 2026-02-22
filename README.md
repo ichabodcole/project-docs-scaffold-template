@@ -89,47 +89,70 @@ cookiecutter gh:ichabodcole/project-docs-scaffold-template
 
 You'll be prompted to provide:
 
-- **project_name** - Human-readable project name (e.g., "My Awesome Project")
-- **project_slug** - Directory/repo name (auto-generated from project_name)
-- **project_description** - Brief description of the project
-- **author_name** - Your name
-- **year** - Current year (auto-filled)
+1. **install_target** - Where to install the docs:
+   - "Current directory (existing project)" — installs `docs/` directly into
+     your current directory
+   - "New project folder" — creates a new folder with `docs/` inside it
+2. **project_name** - Human-readable project name (e.g., "My Awesome Project")
+3. **project_slug** - Directory/repo name (auto-generated from project_name,
+   only used for "New project folder" installs)
 
-### Example
+### Example: Adding to an Existing Project
+
+```bash
+$ cd my-existing-project
+$ cookiecutter gh:ichabodcole/project-docs-scaffold-template
+
+Select install_target:
+    1 - Current directory (existing project)
+    2 - New project folder
+    Choose from 1, 2 [1]: 1
+project_name [My Project]: My Existing Project
+project_slug [my-existing-project]:
+
+✅ Documentation structure installed into current directory!
+📂 Location: ./docs/
+```
+
+### Example: New Project
 
 ```bash
 $ cookiecutter gh:ichabodcole/project-docs-scaffold-template
 
+Select install_target:
+    1 - Current directory (existing project)
+    2 - New project folder
+    Choose from 1, 2 [1]: 2
 project_name [My Project]: My Awesome Project
 project_slug [my-awesome-project]:
-project_description [A brief description of the project]: A revolutionary new app
-author_name [Your Name]: Jane Doe
-year [2025]:
+
+✅ Project documentation structure created successfully!
+📂 Location: ./my-awesome-project
 ```
 
-This creates:
+### Generated Structure
 
 ```
-my-awesome-project/
-├── docs/
-│   ├── architecture/
-│   ├── specifications/
-│   ├── interaction-design/
-│   ├── playbooks/
-│   ├── lessons-learned/
-│   ├── fragments/
-│   ├── reports/
-│   ├── investigations/
-│   ├── projects/
-│   │   └── TEMPLATES/
-│   ├── backlog/
-│   │   └── archive/
-│   ├── memories/
-│   ├── README.md
-│   ├── CLAUDE.md
-│   ├── AGENTS.md
-│   └── PROJECT_MANIFESTO.md
-└── README.md
+docs/
+├── architecture/
+├── specifications/
+├── interaction-design/
+├── playbooks/
+├── lessons-learned/
+├── fragments/
+├── briefs/
+│   └── TEMPLATES/
+├── reports/
+├── investigations/
+├── projects/
+│   └── TEMPLATES/
+├── backlog/
+│   └── archive/
+├── memories/
+├── README.md
+├── CLAUDE.md
+├── AGENTS.md
+└── PROJECT_MANIFESTO.md
 ```
 
 ## Documentation Structure
@@ -186,22 +209,12 @@ After generating your project:
 
 ## Adding to Existing Projects
 
-By default, Cookiecutter will **not overwrite** existing directories. If you try
-to generate a project in a location that already exists, you'll get an error.
+Select "Current directory (existing project)" when prompted. This installs
+`docs/` directly into your current working directory without creating a parent
+folder.
 
-**Options:**
-
-1. **Generate with a different name** - Use a different `project_slug` value
-2. **Generate in a temp location and copy** - Generate the template elsewhere,
-   then manually copy only the files/folders you need into your existing project
-3. **Use `--overwrite-if-exists` flag** - Explicitly allow overwriting
-   (Cookiecutter 2.0+):
-   ```bash
-   cookiecutter gh:ichabodcole/project-docs-scaffold-template --overwrite-if-exists
-   ```
-
-**Recommended approach for existing projects:** Generate in a temporary
-location, review the generated files, then selectively copy what you need.
+If a `docs/` directory already exists, the installer will abort and leave your
+files untouched — you can then manually merge from the generated output.
 
 ## Requirements
 

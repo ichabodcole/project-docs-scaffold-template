@@ -1,4 +1,8 @@
 {
+  "install_target": [
+    "Current directory (existing project)",
+    "New project folder"
+  ],
   "project_name": "My Project",
   "project_slug": "{{ cookiecutter.project_name.lower().replace(' ', '-').replace('_', '-') }}"
 }

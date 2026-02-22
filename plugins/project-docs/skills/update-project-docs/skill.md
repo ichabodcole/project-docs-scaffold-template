@@ -99,7 +99,36 @@ For each migration file:
 After all migrations are applied, update the version comment in `docs/README.md`
 to reflect the new version.
 
-### Step 6: Verify
+### Step 6: Ensure Root-Level Agent Context
+
+Check whether the project's root-level `CLAUDE.md` or `AGENTS.md` references the
+docs structure. Agents read these files first when entering a project — if
+there's no pointer to `docs/`, agents have to discover the documentation on
+their own.
+
+```bash
+grep -l "docs/README\|docs/memories\|documentation.*docs/" CLAUDE.md AGENTS.md 2>/dev/null
+```
+
+If neither file references the docs structure, recommend adding a section like
+this to whichever file the project uses for agent context:
+
+```markdown
+## Documentation
+
+This project uses structured documentation in `docs/`. See
+[docs/README.md](./docs/README.md) for the full structure overview and document
+type guide.
+
+For quick onboarding on recent work, start with
+[docs/memories/](./docs/memories/).
+```
+
+This is a recommendation, not a required step — the user may prefer to word it
+differently or place it in a different file. Present the blurb and ask where
+they'd like it.
+
+### Step 7: Verify
 
 Run a final check that no stale references to old structure remain:
 
@@ -115,6 +144,7 @@ Run a final check that no stale references to old structure remain:
 | [migrations/v1-to-v2.md](migrations/v1-to-v2.md)         | pre-2.0 | 2.0.0 | Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports |
 | [migrations/v2.0-to-v2.3.md](migrations/v2.0-to-v2.3.md) | 2.0–2.2 | 2.3.0 | Add design resolution and handoff templates, update READMEs with new pipeline stage                   |
 | [migrations/v2.3-to-v2.4.md](migrations/v2.3-to-v2.4.md) | 2.3     | 2.4.0 | Add test plan template, external dependencies in DR template, update lifecycle across docs            |
+| [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | Add briefs document type, update pipeline lifecycle to start with Brief                               |
 
 ## Creating New Migration Guides
 
