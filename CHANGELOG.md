@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.7.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.7.0...project-docs-scaffold-template-v2.7.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* restore start-worktree command removed during 1.7.0 consolidation ([728ced9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/728ced9d4320b861cbbf250299906c3eea6cd9f5))
+* route discovery artifacts to docs/projects/&lt;project&gt;/artifacts/ ([2abc365](https://github.com/ichabodcole/project-docs-scaffold-template/commit/2abc3651d34505f84b400b1c36916df389048ce5))
+* strip non-standard frontmatter fields from dist agent files ([84b3993](https://github.com/ichabodcole/project-docs-scaffold-template/commit/84b39932683f8cddb2fe2a85e4c3a88f3314f04d))
+
+## [2.7.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.6.1...project-docs-scaffold-template-v2.7.0) (2026-02-25)
+
+
+### Features
+
+* add cross-agent skill distribution with build pipeline and vali… ([5261d04](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5261d04132b9b394a3ac1e1d78e93b2272d69c26))
+* add cross-agent skill distribution with build pipeline and validation ([b3640c6](https://github.com/ichabodcole/project-docs-scaffold-template/commit/b3640c6fcbf7eb5e3ff74a055a61b7bb59c05ce2))
+
+## [2.6.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.6.0...project-docs-scaffold-template-v2.6.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* use lowercase-dashed naming convention for all skill names ([ed6b9f6](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ed6b9f6c71fa972391fb57c21db408608f852b30))
+* use lowercase-dashed naming convention for all skill names ([be9660c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/be9660cc8831f47e5abc377ea1cf12b7e5c45104))
+
 ## [2.6.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.5.1...project-docs-scaffold-template-v2.6.0) (2026-02-22)
 
 
