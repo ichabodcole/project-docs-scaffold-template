@@ -1,0 +1,6 @@
+name: recipes
+version: 1.1.1
+description: "Reusable project recipes - executable blueprints for scaffolding and implementing specific technology stacks and patterns"
+keywords: [agent-skills, documentation, ai-coding-agent]
+author: "Cole Reed"
+license: MIT

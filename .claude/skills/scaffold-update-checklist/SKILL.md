@@ -176,6 +176,20 @@ ls plugins/project-docs/skills/ | wc -l
 ls plugins/project-docs/agents/ | grep -c '.md$'
 ```
 
+## Cross-Agent Distribution
+
+When skills, agents, or commands change, rebuild the distribution packages:
+
+```bash
+./scripts/build-skills-dist.sh
+```
+
+- [ ] Run the build script after any skill/agent/command changes
+- [ ] Verify all skills pass validation (build script runs
+      `validate-skills-dist.py` automatically)
+- [ ] Verify `dist/` output matches expectations (check summary counts)
+- [ ] Commit updated `dist/` alongside the source changes
+
 ## Final Checks
 
 - [ ] Run `npm run format:check` (or `npx prettier --write` on changed files)

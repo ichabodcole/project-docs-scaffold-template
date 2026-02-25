@@ -71,6 +71,36 @@ which provides commands and skills for managing your documentation structure:
 See [plugins/project-docs/README.md](plugins/project-docs/README.md) for
 detailed documentation on each command.
 
+## Cross-Agent Skills (OpenCode, Codex, Crush, Cursor, etc.)
+
+The skills from this project follow the [Agent Skills](https://agentskills.io)
+open standard and work with any tool that supports SKILL.md files. Pre-built
+distribution packages are available in the [`dist/`](dist/) directory.
+
+**OpenPackage (recommended):**
+
+```bash
+opkg install gh@ichabodcole/project-docs-scaffold-template/dist/project-docs
+```
+
+**Direct clone:**
+
+```bash
+git clone https://github.com/ichabodcole/project-docs-scaffold-template.git
+```
+
+Then point your tool's skills path at `dist/<plugin>/skills/`. See each plugin's
+dist README for tool-specific configuration examples.
+
+| Package                                   | Skills | Description                      |
+| ----------------------------------------- | ------ | -------------------------------- |
+| [`dist/project-docs`](dist/project-docs/) | 22     | Documentation workflow skills    |
+| [`dist/recipes`](dist/recipes/)           | 14     | Implementation recipe blueprints |
+| [`dist/operator`](dist/operator/)         | 2      | Operator document triage skills  |
+
+> **Note:** Agents and commands are Claude Code-specific. Other tools will load
+> only the skills.
+
 ## Installation
 
 First, ensure you have Cookiecutter installed:

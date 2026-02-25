@@ -4,6 +4,8 @@
   "description": "Cookiecutter template for scaffolding project documentation structure",
   "private": true,
   "scripts": {
+    "build:dist": "./scripts/build-skills-dist.sh",
+    "validate:skills": "uv run scripts/validate-skills-dist.py",
     "format": "prettier --write \"**/*.md\"",
     "format:check": "prettier --check \"**/*.md\"",
     "prepare": "husky",

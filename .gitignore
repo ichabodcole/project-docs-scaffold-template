@@ -28,7 +28,6 @@ ENV/
 
 # Cookiecutter
 *.egg-info/
-dist/
 build/
 
 # Testing output (when testing template generation)
