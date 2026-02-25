@@ -154,6 +154,23 @@ cookiecutter gh:ichabodcole/project-docs-scaffold-template
 INSTALL
 }
 
+# Strip Claude Code-specific frontmatter fields for cross-tool compatibility
+strip_agent_fields() {
+    local agent_file="$1"
+    python3 -c "
+import sys, re
+content = open(sys.argv[1]).read()
+if not content.startswith('---'):
+    sys.exit(0)
+parts = content.split('---', 2)
+if len(parts) < 3:
+    sys.exit(0)
+fm = parts[1]
+fm = re.sub(r'^(color|model|skills):.*\n', '', fm, flags=re.MULTILINE)
+open(sys.argv[1], 'w').write('---' + fm + '---' + parts[2])
+" "$agent_file"
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 header "Building cross-agent distribution packages"
@@ -213,6 +230,10 @@ for plugin_dir in "$PLUGINS_DIR"/*/; do
     # Copy agents
     if [ -d "$plugin_dir/agents" ]; then
         cp -R "$plugin_dir/agents" "$dest/agents"
+        # Strip Claude Code-specific fields for cross-tool compatibility
+        for agent_file in "$dest/agents"/*.md; do
+            [ -f "$agent_file" ] && strip_agent_fields "$agent_file"
+        done
         agent_count=$(find "$dest/agents" -name "*.md" -type f | wc -l | tr -d ' ')
         info "Agents: $agent_count (Claude Code only)"
     fi
