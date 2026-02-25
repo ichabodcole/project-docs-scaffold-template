@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.6.1...project-docs-scaffold-template-v2.7.0) (2026-02-25)
+
+
+### Features
+
+* add cross-agent skill distribution with build pipeline and vali… ([5261d04](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5261d04132b9b394a3ac1e1d78e93b2272d69c26))
+* add cross-agent skill distribution with build pipeline and validation ([b3640c6](https://github.com/ichabodcole/project-docs-scaffold-template/commit/b3640c6fcbf7eb5e3ff74a055a61b7bb59c05ce2))
+
 ## [2.6.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.6.0...project-docs-scaffold-template-v2.6.1) (2026-02-25)
 
 
