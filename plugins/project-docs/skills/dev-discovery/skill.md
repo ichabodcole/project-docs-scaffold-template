@@ -42,7 +42,7 @@ Explorers   Architecture
    └─────┬─────┘
          ↓
    Discovery Output
-   (ephemeral file)
+   (project artifact)
          ↓
    Dev Plan Generator
    (with full context)
@@ -123,22 +123,20 @@ supporting areas.
 
 Once explorers return, synthesize their findings into a discovery document.
 
-**Write to ephemeral location:**
+**Write to project artifacts:**
 
 ```
-.artifacts/<current-branch>/<feature-name>-discovery.md
+docs/projects/<project>/artifacts/<feature-name>-discovery.md
 ```
 
-Get the current branch name:
-
-```bash
-git branch --show-current
-```
+The `<project>` name comes from the proposal path (e.g.,
+`docs/projects/operator-hub-export-import/proposal.md` →
+`operator-hub-export-import`).
 
 Create the artifacts folder if needed:
 
 ```bash
-mkdir -p .artifacts/$(git branch --show-current)
+mkdir -p docs/projects/<project>/artifacts
 ```
 
 This file captures:
@@ -163,7 +161,7 @@ than _understanding the codebase_.
 
 ## Discovery Document Template
 
-Save to `.claude/discoveries/YYYY-MM-DD-<feature-name>-discovery.md`:
+Save to `docs/projects/<project>/artifacts/<feature-name>-discovery.md`:
 
 ````markdown
 # Technical Discovery: [Feature Name]
@@ -253,30 +251,28 @@ Save to `.claude/discoveries/YYYY-MM-DD-<feature-name>-discovery.md`:
 
 ```
 
-## Ephemeral Storage
+## Artifact Storage
 
-Discovery files go in `.artifacts/<branch-name>/` which is gitignored.
+Discovery files are stored alongside the project they support:
 
-**Structure:**
 ```
 
-.artifacts/ ├── feature/operator-hub-export-import/ │ ├──
-operator-hub-discovery.md │ └── context-menu-exploration.md ├──
-fix/login-redirect/ │ └── auth-flow-discovery.md └── ...
+docs/projects/<project>/artifacts/ <feature-name>-discovery.md
+context-menu-exploration.md dependency-analysis.md
 
 ```
 
 **Benefits:**
-- Scoped to the branch - easy to find relevant artifacts
-- Cleanup is natural - delete the folder when the branch is merged
-- Multiple artifacts per feature if needed
-- Doesn't pollute the committed codebase
+- Co-located with the project — proposal, plan, and research live together
+- Committed to the repo — survives branch merges and available for reference
+- Discoverable — anyone can find the research that informed the plan
+- Multiple artifacts per project if needed
 
 **Lifecycle:**
 - Created during dev-discovery
 - Used during planning and early development
-- Can be referenced throughout the feature work
-- Deleted when the branch is merged or abandoned
+- Referenced throughout the feature work
+- Archived with the project when complete
 
 ## Quality Checklist
 
@@ -309,7 +305,7 @@ Before handing off to the planner:
 
 4. Create architecture doc for context menu system
 
-5. Write discovery to `.artifacts/feature/operator-hub-export-import/discovery.md`
+5. Write discovery to `docs/projects/operator-hub-export-import/artifacts/discovery.md`
 
 6. Call dev-plan-generator with proposal + discovery file
 

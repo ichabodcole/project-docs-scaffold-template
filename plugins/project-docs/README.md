@@ -217,6 +217,12 @@ docs/
 
 ## Version History
 
+### 1.8.6 (2026-02-25)
+
+- Fixed `dev-discovery` and `parallel-worktree-dev` to route discovery artifacts
+  to `docs/projects/<project>/artifacts/` instead of non-existent
+  `.artifacts/<branch>/` directory
+
 ### 1.8.5 (2026-02-25)
 
 - Renamed `archive/` → `_archive/` across all documentation references for
