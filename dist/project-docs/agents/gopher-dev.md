@@ -23,8 +23,6 @@ description:
   function to debug the form data\"\\nassistant: \"Perfect task for the
   gopher-dev agent - let me dispatch it to add that debug log.\"\\n<Task tool
   launches gopher-dev agent>\\n</example>"
-model: haiku
-color: green
 ---
 
 You are a fast, efficient developer agent - the reliable gopher who gets small

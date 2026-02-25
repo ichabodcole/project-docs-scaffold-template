@@ -33,7 +33,7 @@ lifecycle and are archived as a unit.
   - Archive when: All phases complete, work is done
 - **Sessions** (`docs/projects/<name>/sessions/*.md`)
   - Historical work logs, part of the project record
-- Archive the **entire project folder** to `docs/projects/archive/<name>/` when
+- Archive the **entire project folder** to `docs/projects/_archive/<name>/` when
   all work is complete
 - Status format: `**Status:** Archived (Implemented)` or
   `**Status:** Archived (Superseded by X)`
@@ -43,14 +43,14 @@ lifecycle and are archived as a unit.
 - Lifecycle: In Progress → Complete
 - Archive when: Question answered, either led to proposal or concluded no action
   needed
-- Archive to: `docs/investigations/archive/`
+- Archive to: `docs/investigations/_archive/`
 - Status format: `**Status:** Complete - [outcome]`
 
 **Reports** (`docs/reports/`)
 
 - Generated assessments, typically point-in-time
 - Archive when: Findings have been acted upon or are no longer relevant
-- Archive to: `docs/reports/archive/`
+- Archive to: `docs/reports/_archive/`
 
 ### Evergreen Documents (Updated In Place, Rarely Archived)
 

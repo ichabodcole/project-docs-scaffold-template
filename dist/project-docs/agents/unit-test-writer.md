@@ -29,8 +29,6 @@ description:
   unit-test-writer agent to analyze your implementation and create appropriate
   unit tests across any affected packages.\"\\n<Task tool invocation to launch
   unit-test-writer agent>\\n</example>"
-model: sonnet
-color: purple
 ---
 
 You are an expert unit test engineer specializing in full-stack TypeScript

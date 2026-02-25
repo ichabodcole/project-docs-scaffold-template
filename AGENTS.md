@@ -21,7 +21,7 @@ The template is organized with these key directories:
   Organized into permanent reference (architecture, specifications,
   interaction-design, playbooks, lessons-learned, fragments), discovery &
   assessment (reports, investigations), and work tracking (projects, backlog,
-  archive, memories)
+  \_archive, memories)
 - `hooks/post_gen_project.py` - Python hook that runs after template generation
 - `cookiecutter.json` - Template configuration defining user prompts and
   variables

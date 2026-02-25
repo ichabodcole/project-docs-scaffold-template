@@ -45,6 +45,9 @@ which provides commands and skills for managing your documentation structure:
   analysis
 - `/project-docs:project-recipe` - Extract reusable project patterns
 - `/project-docs:update-deps` - Automated dependency management
+- `/project-docs:init-branch` - Initialize a new branch from develop
+- `/project-docs:project-manifesto` - Discover and articulate project purpose
+- `/project-docs:start-worktree` - Bootstrap an agent session in a worktree
 
 **Skills** (auto-surfaced by agent + user-invocable):
 
@@ -177,7 +180,7 @@ docs/
 ├── projects/
 │   └── TEMPLATES/
 ├── backlog/
-│   └── archive/
+│   └── _archive/
 ├── memories/
 ├── README.md
 ├── CLAUDE.md
@@ -221,7 +224,7 @@ Cross-cutting documents that precede and follow projects.
   plan, sessions, and artifacts together
 - **`/docs/backlog`** — Small, self-contained work items (bugs, minor refactors,
   papercuts) that don't warrant a full project
-- **`/docs/projects/archive`** — Completed project folders moved here when done
+- **`/docs/projects/_archive`** — Completed project folders moved here when done
 - **`/docs/memories`** — Summaries of recent work for quick onboarding at the
   start of new sessions
 

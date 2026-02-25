@@ -72,14 +72,14 @@ Proposal/Investigation exists
 
 ### What Goes Where
 
-| Artifact            | Location                       | Created By                  |
-| ------------------- | ------------------------------ | --------------------------- |
-| Project folder      | `docs/projects/<name>/`        | Main repo (before worktree) |
-| Investigation       | `docs/investigations/`         | Main repo (before worktree) |
-| WORKTREE_TASK.md    | Worktree root                  | Main repo (during setup)    |
-| Discovery artifacts | `.artifacts/<branch>/`         | Cloud agent (in worktree)   |
-| Development plan    | `docs/projects/<name>/plan.md` | Cloud agent (in worktree)   |
-| Implementation      | Various                        | Cloud agent (in worktree)   |
+| Artifact            | Location                          | Created By                  |
+| ------------------- | --------------------------------- | --------------------------- |
+| Project folder      | `docs/projects/<name>/`           | Main repo (before worktree) |
+| Investigation       | `docs/investigations/`            | Main repo (before worktree) |
+| WORKTREE_TASK.md    | Worktree root                     | Main repo (during setup)    |
+| Discovery artifacts | `docs/projects/<name>/artifacts/` | Cloud agent (in worktree)   |
+| Development plan    | `docs/projects/<name>/plan.md`    | Cloud agent (in worktree)   |
+| Implementation      | Various                           | Cloud agent (in worktree)   |
 
 ## Quick Start
 

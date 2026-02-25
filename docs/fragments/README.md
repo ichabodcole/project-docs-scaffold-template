@@ -124,7 +124,7 @@ Example: `2025-11-11-testing-infrastructure-unknowns.md`
 - **Date them** - Helps understand context when reviewing later
 - **Review periodically** - When starting new work, scan fragments for relevant
   observations
-- **Archive freely** - Move stale fragments to `fragments/archive/` when no
+- **Archive freely** - Move stale fragments to `fragments/_archive/` when no
   longer relevant
 - **Both tones are valid** - "This worries me" and "this intrigues me" are both
   worth capturing

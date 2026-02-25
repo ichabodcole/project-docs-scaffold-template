@@ -32,7 +32,7 @@ This project organizes documentation by purpose and lifecycle:
 
 - **projects/** - Co-located pipeline documents (proposal, plan, sessions, artifacts) for defined bodies of work
 - **backlog/** - Small, self-contained tasks that don't need a project folder
-- **projects/archive/** - Completed project folders
+- **projects/_archive/** - Completed project folders
 
 ### The Documentation Cycle
 

@@ -19,7 +19,7 @@ history of why and how something was built.
 - **Stable internal links** - Documents within a project reference each other
   with relative paths that never break
 - **Clean archival** - When a project is done, the entire folder moves to
-  `projects/archive/`. No scattered files to chase
+  `projects/_archive/`. No scattered files to chase
 - **Extensible** - Add whatever documents the work needs (task lists, technical
   notes, decision logs) without new conventions
 - **Natural home for artifacts** - Working research and codebase exploration
@@ -273,9 +273,9 @@ prefixes.
 
 ## Archival
 
-When a project is complete, move the entire folder to `projects/archive/`.
+When a project is complete, move the entire folder to `projects/_archive/`.
 Internal references remain valid because they're relative within the folder.
-External references to archived projects use `./archive/project-name/` paths
+External references to archived projects use `./_archive/project-name/` paths
 (from the projects directory).
 
 ## Templates

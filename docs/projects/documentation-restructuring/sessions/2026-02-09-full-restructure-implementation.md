@@ -24,7 +24,7 @@ executed the restructuring in stages:
    Created the `documentation-restructuring` project folder and moved the
    proposal and plan into it. Converted the old `MEMORIES.md` file into
    individual files under `docs/memories/`. Moved `docs/archive/` into
-   `docs/projects/archive/`.
+   `docs/projects/_archive/`.
 
 3. **docs/README.md** — Rewrote the documentation index to reflect the new
    three-category structure (permanent reference, discovery & assessment, work

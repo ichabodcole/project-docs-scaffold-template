@@ -123,6 +123,32 @@ recipe.
 
 ---
 
+### `/project-docs:start-worktree`
+
+**Description:** Bootstrap an agent session inside a prepared worktree.
+
+**Usage:**
+
+```
+/project-docs:start-worktree
+```
+
+**What it does:**
+
+- Reads `WORKTREE_TASK.md` in the current directory
+- Parses mission, source documents, and constraints
+- Kicks off the full development workflow: discovery → plan → implement → test →
+  commit
+
+**Use cases:**
+
+- Starting a cloud agent session in a worktree created by
+  `parallel-worktree-dev`
+- Resuming work in a worktree after context loss
+- Consistent entry point so agents don't need manual briefing
+
+---
+
 ## Skills
 
 Skills are automatically surfaced by the agent when relevant, and can also be
@@ -182,7 +208,7 @@ This plugin is designed for projects using the documentation structure from
 docs/
 ├── projects/          # Co-located project folders (proposal + plan + sessions)
 │   ├── TEMPLATES/     # Proposal, plan, and session templates
-│   └── archive/       # Completed project folders
+│   └── _archive/      # Completed project folders
 ├── backlog/           # Small, self-contained work items
 ├── memories/          # Quick-reference summaries of recent work
 ├── reports/           # Generated assessments and analysis
@@ -216,6 +242,23 @@ docs/
    significantly
 
 ## Version History
+
+### 1.8.7 (2026-02-25)
+
+- Restored `start-worktree` command — bootstraps agent sessions inside prepared
+  worktrees by reading WORKTREE_TASK.md and following the development workflow
+
+### 1.8.6 (2026-02-25)
+
+- Fixed `dev-discovery` and `parallel-worktree-dev` to route discovery artifacts
+  to `docs/projects/<project>/artifacts/` instead of non-existent
+  `.artifacts/<branch>/` directory
+
+### 1.8.5 (2026-02-25)
+
+- Renamed `archive/` → `_archive/` across all documentation references for
+  consistent sort-to-top behavior in file browsers
+- Added v2.5→v2.6 migration guide for archive directory rename
 
 ### 1.8.4 (2026-02-24)
 

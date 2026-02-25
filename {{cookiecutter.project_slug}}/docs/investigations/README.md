@@ -239,7 +239,7 @@ Archive an investigation when:
 
 **Don't archive** an investigation while its resulting project is still active — the investigation provides context that may be referenced during implementation.
 
-Move completed investigations to `investigations/archive/`.
+Move completed investigations to `investigations/_archive/`.
 
 ## Relationship to Other Documentation
 

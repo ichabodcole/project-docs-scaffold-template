@@ -52,7 +52,7 @@ probably belongs in a session doc or project folder instead.
 
 Remove old memories when they're no longer relevant for onboarding context. A
 good rule of thumb: keep roughly the last few weeks to a month of work. Move
-stale memories to `memories/archive/` or simply delete them — the information
+stale memories to `memories/_archive/` or simply delete them — the information
 lives on in project docs and git history.
 
 ## Tips
