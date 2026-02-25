@@ -1,5 +1,5 @@
 ---
-name: Implementation Blueprint
+name: implementation-blueprint
 description: >
   This skill should be used when the user has a specification (or set of specs)
   and wants to prepare for implementation. Activated when the user asks to
