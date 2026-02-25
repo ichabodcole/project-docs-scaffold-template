@@ -182,7 +182,7 @@ This plugin is designed for projects using the documentation structure from
 docs/
 ├── projects/          # Co-located project folders (proposal + plan + sessions)
 │   ├── TEMPLATES/     # Proposal, plan, and session templates
-│   └── archive/       # Completed project folders
+│   └── _archive/      # Completed project folders
 ├── backlog/           # Small, self-contained work items
 ├── memories/          # Quick-reference summaries of recent work
 ├── reports/           # Generated assessments and analysis
@@ -216,6 +216,12 @@ docs/
    significantly
 
 ## Version History
+
+### 1.8.5 (2026-02-25)
+
+- Renamed `archive/` → `_archive/` across all documentation references for
+  consistent sort-to-top behavior in file browsers
+- Added v2.5→v2.6 migration guide for archive directory rename
 
 ### 1.8.4 (2026-02-24)
 

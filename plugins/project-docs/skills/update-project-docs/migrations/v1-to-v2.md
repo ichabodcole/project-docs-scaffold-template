@@ -18,7 +18,7 @@ side and archive as a unit.
 | --------------------- | ------------------------------------------------------- |
 | `projects/`           | Co-located project folders (proposal + plan + sessions) |
 | `projects/TEMPLATES/` | Shared templates for proposals, plans, sessions         |
-| `projects/archive/`   | Completed project folders                               |
+| `projects/_archive/`  | Completed project folders                               |
 | `backlog/`            | Small, self-contained work items                        |
 | `memories/`           | Quick-reference summaries of recent work                |
 | `specifications/`     | Technology-agnostic application behavior descriptions   |
@@ -36,9 +36,9 @@ side and archive as a unit.
 | `proposals/TEMPLATE*.md`  | `projects/TEMPLATES/PROPOSAL.template.md`           |
 | `plans/TEMPLATE*.md`      | `projects/TEMPLATES/PLAN.template.md`               |
 | `sessions/TEMPLATE*.md`   | `projects/TEMPLATES/YYYY-MM-DD-SESSION.template.md` |
-| `proposals/archive/`      | `projects/archive/` (grouped by project)            |
-| `plans/archive/`          | `projects/archive/` (merged into project folders)   |
-| `sessions/archive/`       | `projects/archive/` (merged into project folders)   |
+| `proposals/archive/`      | `projects/_archive/` (grouped by project)           |
+| `plans/archive/`          | `projects/_archive/` (merged into project folders)  |
+| `sessions/archive/`       | `projects/_archive/` (merged into project folders)  |
 | `MEMORIES.md` (if exists) | `memories/` (individual files per entry)            |
 
 ## What's Removed
@@ -151,24 +151,24 @@ with `proposal.md`. Don't pre-create `sessions/` or `plan.md`.
 **Orphaned sessions** (no matching proposal):
 
 - **Many orphaned sessions from early development?** Group them under
-  `docs/projects/archive/early-development/sessions/` rather than creating
+  `docs/projects/_archive/early-development/sessions/` rather than creating
   individual project folders. These are historical records, not active projects.
 - **A few orphaned sessions on distinct topics?** Create individual project
   folders if the topic might become active again. Archive if purely historical.
 - **Sessions spanning different topics?** Group by theme into a few archive
-  buckets (e.g., `archive/early-ui-work/`, `archive/early-backend-work/`) rather
-  than creating one project per session.
+  buckets (e.g., `_archive/early-ui-work/`, `_archive/early-backend-work/`)
+  rather than creating one project per session.
 
 ### 5. Migrate archives
 
 **For small archives** (under ~50 files), group into project folders:
 
 ```bash
-mkdir -p docs/projects/archive/old-feature
+mkdir -p docs/projects/_archive/old-feature
 mv docs/proposals/archive/old-feature-proposal.md \
-   docs/projects/archive/old-feature/proposal.md
+   docs/projects/_archive/old-feature/proposal.md
 mv docs/plans/archive/old-feature-plan.md \
-   docs/projects/archive/old-feature/plan.md
+   docs/projects/_archive/old-feature/plan.md
 ```
 
 Don't stress about perfection for old archives — grouping what you can is
@@ -179,14 +179,14 @@ organize everything by project:
 
 ```bash
 # Create a legacy archive bucket
-mkdir -p docs/projects/archive/legacy-proposals
-mkdir -p docs/projects/archive/legacy-plans
-mkdir -p docs/projects/archive/legacy-sessions
+mkdir -p docs/projects/_archive/legacy-proposals
+mkdir -p docs/projects/_archive/legacy-plans
+mkdir -p docs/projects/_archive/legacy-sessions
 
 # Bulk move all archived files
-mv docs/proposals/archive/*.md docs/projects/archive/legacy-proposals/ 2>/dev/null
-mv docs/plans/archive/*.md docs/projects/archive/legacy-plans/ 2>/dev/null
-mv docs/sessions/archive/*.md docs/projects/archive/legacy-sessions/ 2>/dev/null
+mv docs/proposals/archive/*.md docs/projects/_archive/legacy-proposals/ 2>/dev/null
+mv docs/plans/archive/*.md docs/projects/_archive/legacy-plans/ 2>/dev/null
+mv docs/sessions/archive/*.md docs/projects/_archive/legacy-sessions/ 2>/dev/null
 ```
 
 You can reorganize legacy archives into project folders later if needed, but
@@ -337,17 +337,17 @@ rm -f docs/plans/TEMPLATE*.md
 rm -f docs/sessions/TEMPLATE*.md
 
 # Remove .gitkeep files (these block rmdir)
-git rm -f docs/proposals/archive/.gitkeep 2>/dev/null
-git rm -f docs/plans/archive/.gitkeep 2>/dev/null
-git rm -f docs/sessions/archive/.gitkeep 2>/dev/null
+git rm -f docs/proposals/_archive/.gitkeep 2>/dev/null
+git rm -f docs/plans/_archive/.gitkeep 2>/dev/null
+git rm -f docs/sessions/_archive/.gitkeep 2>/dev/null
 git rm -f docs/proposals/.gitkeep 2>/dev/null
 git rm -f docs/plans/.gitkeep 2>/dev/null
 git rm -f docs/sessions/.gitkeep 2>/dev/null
 
 # Remove empty archive directories
-rmdir docs/proposals/archive 2>/dev/null
-rmdir docs/plans/archive 2>/dev/null
-rmdir docs/sessions/archive 2>/dev/null
+rmdir docs/proposals/_archive 2>/dev/null
+rmdir docs/plans/_archive 2>/dev/null
+rmdir docs/sessions/_archive 2>/dev/null
 
 # Remove empty directories
 rmdir docs/proposals 2>/dev/null

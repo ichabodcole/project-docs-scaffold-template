@@ -177,7 +177,7 @@ docs/
 ├── projects/
 │   └── TEMPLATES/
 ├── backlog/
-│   └── archive/
+│   └── _archive/
 ├── memories/
 ├── README.md
 ├── CLAUDE.md
@@ -221,7 +221,7 @@ Cross-cutting documents that precede and follow projects.
   plan, sessions, and artifacts together
 - **`/docs/backlog`** — Small, self-contained work items (bugs, minor refactors,
   papercuts) that don't warrant a full project
-- **`/docs/projects/archive`** — Completed project folders moved here when done
+- **`/docs/projects/_archive`** — Completed project folders moved here when done
 - **`/docs/memories`** — Summaries of recent work for quick onboarding at the
   start of new sessions
 

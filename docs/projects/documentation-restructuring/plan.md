@@ -29,13 +29,13 @@ Permanent reference docs and discovery/assessment docs stay as-is.
 - `lessons-learned/` — README.md, TEMPLATE.md
 - `specifications/` — README.md, TEMPLATE-overview.md, TEMPLATE-domain.md
 - `fragments/` — README.md, TEMPLATE.md
-- `reports/` — README.md, TEMPLATE.md, archive/.gitkeep
-- `investigations/` — README.md, TEMPLATE.md, archive/.gitkeep
+- `reports/` — README.md, TEMPLATE.md, \_archive/.gitkeep
+- `investigations/` — README.md, TEMPLATE.md, \_archive/.gitkeep
 
 **Folders being removed (content moves into projects):**
 
-- `proposals/` — README.md, TEMPLATE.md, archive/.gitkeep
-- `plans/` — README.md, TEMPLATE.md, archive/.gitkeep
+- `proposals/` — README.md, TEMPLATE.md, \_archive/.gitkeep
+- `plans/` — README.md, TEMPLATE.md, \_archive/.gitkeep
 - `sessions/` — README.md, TEMPLATE.md
 
 **Root files needing updates:**
@@ -49,8 +49,8 @@ Permanent reference docs and discovery/assessment docs stay as-is.
 
 - `projects/` — README.md, TEMPLATES/ subfolder with proposal, plan, and session
   templates
-- `backlog/` — README.md, TEMPLATE.md, archive/.gitkeep
-- `archive/` — .gitkeep
+- `backlog/` — README.md, TEMPLATE.md, \_archive/.gitkeep
+- `_archive/` — .gitkeep
 - `MEMORIES.md`
 
 ### Plugin files referencing doc paths (30+ files)
@@ -120,9 +120,9 @@ This phase restructures the cookiecutter template at
     (archive when done).
   - `TEMPLATE.md` — Backlog item template with title, date added, description,
     optional acceptance criteria, optional references.
-  - `archive/.gitkeep`
+  - `_archive/.gitkeep`
 
-- Create `archive/` directory with:
+- Create `_archive/` directory with:
   - `.gitkeep`
 
 - Create `MEMORIES.md` at docs root with:
@@ -141,8 +141,8 @@ without errors.
 
 **Key changes:**
 
-- Remove `proposals/` directory (README.md, TEMPLATE.md, archive/.gitkeep)
-- Remove `plans/` directory (README.md, TEMPLATE.md, archive/.gitkeep)
+- Remove `proposals/` directory (README.md, TEMPLATE.md, \_archive/.gitkeep)
+- Remove `plans/` directory (README.md, TEMPLATE.md, \_archive/.gitkeep)
 - Remove `sessions/` directory (README.md, TEMPLATE.md)
 
 **Important:** The guidance content from these READMEs should already be
@@ -303,7 +303,7 @@ the new template output.
 
 **Steps:**
 
-1. Create `projects/`, `backlog/`, `archive/` directories in `docs/`
+1. Create `projects/`, `backlog/`, `_archive/` directories in `docs/`
 2. Create `MEMORIES.md` in `docs/`
 3. Move the restructuring proposal from `docs/proposals/` into
    `docs/projects/documentation-restructuring/proposal.md`

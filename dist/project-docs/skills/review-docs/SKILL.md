@@ -150,7 +150,7 @@ As agents complete, collect their findings:
 For approved archives:
 
 1. Update status in document
-2. Move to `archive/` subfolder
+2. Move to `_archive/` subfolder
 
 For approved updates:
 

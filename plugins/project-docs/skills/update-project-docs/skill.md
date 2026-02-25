@@ -145,6 +145,7 @@ Run a final check that no stale references to old structure remain:
 | [migrations/v2.0-to-v2.3.md](migrations/v2.0-to-v2.3.md) | 2.0–2.2 | 2.3.0 | Add design resolution and handoff templates, update READMEs with new pipeline stage                   |
 | [migrations/v2.3-to-v2.4.md](migrations/v2.3-to-v2.4.md) | 2.3     | 2.4.0 | Add test plan template, external dependencies in DR template, update lifecycle across docs            |
 | [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | Add briefs document type, update pipeline lifecycle to start with Brief                               |
+| [migrations/v2.5-to-v2.6.md](migrations/v2.5-to-v2.6.md) | 2.5     | 2.6.0 | Rename `archive/` → `_archive/` for consistent sort-to-top behavior                                   |
 
 ## Creating New Migration Guides
 

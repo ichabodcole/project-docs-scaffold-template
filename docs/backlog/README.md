@@ -15,7 +15,7 @@ the gap between "too small for a project" and "do it without any documentation."
 - **Low ceremony** - Create a short file, describe the task, do the work
 - **Discoverable** - Small tasks are tracked rather than forgotten or scattered
   across commit messages
-- **Archivable** - Completed items move to `archive/` for history without
+- **Archivable** - Completed items move to `_archive/` for history without
   cluttering the active list
 - **Clear threshold** - If it needs a proposal, it's a project. If it doesn't,
   it's a backlog item.
@@ -61,7 +61,7 @@ date and a short description.
 
 1. **Create** - Describe the task in a new file
 2. **Work** - Pick it up and complete it
-3. **Archive** - Move the completed file to `backlog/archive/`
+3. **Archive** - Move the completed file to `backlog/_archive/`
 
 Active backlog items reflect current work that needs doing. Completed items are
 archived to keep the active list focused.
@@ -73,5 +73,5 @@ archived to keep the active list focused.
   saves discovery time later.
 - **Don't overthink acceptance criteria** - Include them if the "done" state
   isn't obvious. Skip them for clear tasks.
-- **Remove when done** - Move to `archive/`, don't leave completed items in the
+- **Remove when done** - Move to `_archive/`, don't leave completed items in the
   active backlog

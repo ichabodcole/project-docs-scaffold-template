@@ -5,7 +5,7 @@ Keep it brief. A backlog item should be quick to write and quick to act on.
 Include acceptance criteria only if the "done" state isn't obvious.
 Include references if you know the relevant files - it saves discovery time.
 
-When completed, move the file to backlog/archive/.
+When completed, move the file to backlog/_archive/.
 -->
 
 # [Short Title]

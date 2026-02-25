@@ -46,8 +46,8 @@ Understanding the full story means hopping between folders and relying on
 "Related Documents" links at the bottom of each file.
 
 **Archival breaks links.** When an investigation is completed and moved to
-`investigations/archive/`, any proposal that references it via relative path now
-has a broken link. This is a recurring issue during documentation cleanup —
+`investigations/_archive/`, any proposal that references it via relative path
+now has a broken link. This is a recurring issue during documentation cleanup —
 every archival pass risks breaking references in documents that are still
 active.
 
@@ -115,7 +115,7 @@ docs/
   backlog/
     README.md
     TEMPLATE.md
-    archive/
+    _archive/
     2026-02-09-fix-date-formatting.md
     2026-02-10-rename-sync-endpoint.md
 
@@ -142,7 +142,7 @@ docs/
       artifacts/
 
   # Completed work (whole project folders)
-  archive/
+  _archive/
     operation-chaining/
     built-in-actions/
     ...
@@ -222,7 +222,7 @@ implementation branch and later a mobile implementation branch. Both are part of
 the same project folder. The project is the unit of work, not the branch.
 
 **Archival is clean.** When a project is done, the entire folder moves to
-`archive/`. No individual files to chase across multiple type-based folders. No
+`_archive/`. No individual files to chase across multiple type-based folders. No
 links break within the project because all internal references are relative
 within the folder.
 
@@ -256,7 +256,7 @@ folder. It provides a lightweight path for tracking work that would otherwise go
 undocumented or be forced through the full proposal/plan pipeline.
 
 **Structure:** The backlog follows the standard folder convention with a
-`README.md`, `TEMPLATE.md`, and `archive/` subfolder.
+`README.md`, `TEMPLATE.md`, and `_archive/` subfolder.
 
 **File naming:** Individual backlog items use date-prefixed files following the
 existing convention: `YYYY-MM-DD-short-description.md`.
@@ -265,8 +265,9 @@ existing convention: `YYYY-MM-DD-short-description.md`.
 optional acceptance criteria, and optional references. Detailed enough to act
 on, lightweight enough to create without ceremony.
 
-**Lifecycle:** When a backlog item is completed, it moves to `backlog/archive/`.
-This keeps the active backlog focused on current work while preserving history.
+**Lifecycle:** When a backlog item is completed, it moves to
+`backlog/_archive/`. This keeps the active backlog focused on current work while
+preserving history.
 
 **When to use backlog vs. project:** If the work can be described and completed
 without a proposal — it's a known fix, a small refactor, a clear task — it's a
@@ -387,10 +388,10 @@ convention.
 
 **Archival:**
 
-- Projects: Move the entire project folder from `projects/` to `archive/`.
+- Projects: Move the entire project folder from `projects/` to `_archive/`.
   Internal references remain valid. External references to archived projects use
-  `../archive/project-name/` paths (from the projects directory).
-- Backlog items: Move completed items from `backlog/` to `backlog/archive/`.
+  `../_archive/project-name/` paths (from the projects directory).
+- Backlog items: Move completed items from `backlog/` to `backlog/_archive/`.
 
 ### Migration strategy
 

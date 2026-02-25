@@ -40,7 +40,7 @@ This project organizes documentation by purpose and lifecycle:
   artifacts) for defined bodies of work. Optional stages: design resolution
   (between proposal and plan), test plan (between plan and sessions)
 - **backlog/** - Small, self-contained tasks that don't need a project folder
-- **projects/archive/** - Completed project folders
+- **projects/\_archive/** - Completed project folders
 
 ### The Documentation Cycle
 
