@@ -10,7 +10,7 @@ plugin, packaged for cross-agent installation.
 | -------- | ----- | -------------------------------- |
 | Skills   | 22    | Yes — Agent Skills open standard |
 | Agents   | 8     | Claude Code only                 |
-| Commands | 5     | Claude Code only                 |
+| Commands | 6     | Claude Code only                 |
 
 ## Installation
 

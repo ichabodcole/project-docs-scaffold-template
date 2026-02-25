@@ -45,6 +45,9 @@ which provides commands and skills for managing your documentation structure:
   analysis
 - `/project-docs:project-recipe` - Extract reusable project patterns
 - `/project-docs:update-deps` - Automated dependency management
+- `/project-docs:init-branch` - Initialize a new branch from develop
+- `/project-docs:project-manifesto` - Discover and articulate project purpose
+- `/project-docs:start-worktree` - Bootstrap an agent session in a worktree
 
 **Skills** (auto-surfaced by agent + user-invocable):
 

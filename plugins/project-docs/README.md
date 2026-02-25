@@ -123,6 +123,32 @@ recipe.
 
 ---
 
+### `/project-docs:start-worktree`
+
+**Description:** Bootstrap an agent session inside a prepared worktree.
+
+**Usage:**
+
+```
+/project-docs:start-worktree
+```
+
+**What it does:**
+
+- Reads `WORKTREE_TASK.md` in the current directory
+- Parses mission, source documents, and constraints
+- Kicks off the full development workflow: discovery → plan → implement → test →
+  commit
+
+**Use cases:**
+
+- Starting a cloud agent session in a worktree created by
+  `parallel-worktree-dev`
+- Resuming work in a worktree after context loss
+- Consistent entry point so agents don't need manual briefing
+
+---
+
 ## Skills
 
 Skills are automatically surfaced by the agent when relevant, and can also be
@@ -216,6 +242,11 @@ docs/
    significantly
 
 ## Version History
+
+### 1.8.7 (2026-02-25)
+
+- Restored `start-worktree` command — bootstraps agent sessions inside prepared
+  worktrees by reading WORKTREE_TASK.md and following the development workflow
 
 ### 1.8.6 (2026-02-25)
 
