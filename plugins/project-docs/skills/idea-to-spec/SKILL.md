@@ -1,5 +1,5 @@
 ---
-name: Idea to Spec
+name: idea-to-spec
 description: >
   This skill should be used when the user has an idea for an application and
   wants to develop it into a complete specification. Activated when the user

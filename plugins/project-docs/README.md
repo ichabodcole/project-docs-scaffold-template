@@ -217,6 +217,11 @@ docs/
 
 ## Version History
 
+### 1.8.4 (2026-02-24)
+
+- Fixed skill name conventions: `idea-to-spec`, `implementation-blueprint`, and
+  `generate-spec` were using spaces/caps instead of lowercase-dashed format
+
 ### 1.8.3 (2026-02-22)
 
 - Added root-level agent context step to `update-project-docs` skill — checks

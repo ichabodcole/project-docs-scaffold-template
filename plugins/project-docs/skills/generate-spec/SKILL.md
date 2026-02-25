@@ -1,5 +1,5 @@
 ---
-name: Generate Project Specification
+name: generate-spec
 description: >
   This skill should be used when the user asks to "generate a specification",
   "create specs from code", "reverse engineer specs", "document the app as
