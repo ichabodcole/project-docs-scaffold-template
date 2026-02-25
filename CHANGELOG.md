@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.7.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.7.0...project-docs-scaffold-template-v2.7.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* restore start-worktree command removed during 1.7.0 consolidation ([728ced9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/728ced9d4320b861cbbf250299906c3eea6cd9f5))
+* route discovery artifacts to docs/projects/&lt;project&gt;/artifacts/ ([2abc365](https://github.com/ichabodcole/project-docs-scaffold-template/commit/2abc3651d34505f84b400b1c36916df389048ce5))
+* strip non-standard frontmatter fields from dist agent files ([84b3993](https://github.com/ichabodcole/project-docs-scaffold-template/commit/84b39932683f8cddb2fe2a85e4c3a88f3314f04d))
+
 ## [2.7.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.6.1...project-docs-scaffold-template-v2.7.0) (2026-02-25)
 
 
