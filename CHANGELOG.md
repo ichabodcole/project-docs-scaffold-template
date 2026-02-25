@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.6.0...project-docs-scaffold-template-v2.6.1) (2026-02-25)
+
+
+### Bug Fixes
+
+* use lowercase-dashed naming convention for all skill names ([ed6b9f6](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ed6b9f6c71fa972391fb57c21db408608f852b30))
+* use lowercase-dashed naming convention for all skill names ([be9660c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/be9660cc8831f47e5abc377ea1cf12b7e5c45104))
+
 ## [2.6.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.5.1...project-docs-scaffold-template-v2.6.0) (2026-02-22)
 
 
