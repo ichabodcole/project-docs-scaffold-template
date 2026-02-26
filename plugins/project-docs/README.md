@@ -243,6 +243,13 @@ docs/
 
 ## Version History
 
+### 1.8.8 (2026-02-25)
+
+- Fixed `create-worktree.sh` and `copy-env-to-worktree.sh` failing with
+  `fatal: not a git repository` when run from the plugin cache — scripts now
+  resolve the git repo root from the caller's working directory instead of the
+  script's location, and `MAIN_REPO_DIR` is overridable via environment variable
+
 ### 1.8.7 (2026-02-25)
 
 - Restored `start-worktree` command — bootstraps agent sessions inside prepared

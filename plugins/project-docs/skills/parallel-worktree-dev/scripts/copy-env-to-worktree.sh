@@ -17,8 +17,8 @@
 
 set -e
 
-# Resolve main repo directory (git root from script location)
-MAIN_REPO_DIR="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+# Resolve main repo directory (from caller's working directory, overridable)
+MAIN_REPO_DIR="${MAIN_REPO_DIR:-$(git rev-parse --show-toplevel)}"
 WORKTREE_PATH="$1"
 
 # Colors for output
