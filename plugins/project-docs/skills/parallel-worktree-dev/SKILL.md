@@ -276,6 +276,10 @@ scripts/copy-env-to-worktree.sh .worktrees/feature/my-feature
 
 When a worktree's work is complete:
 
+0. **Run finalize-branch** — If the worktree agent hasn't already done so, run
+   `/project-docs:finalize-branch` in the worktree to ensure code review and
+   session documentation are captured before merging.
+
 1. **Identify the target branch** — check the "Based on" field in
    WORKTREE_TASK.md. If missing, use `git reflog show <branch> | tail -1` to see
    what the branch was created from.
@@ -416,7 +420,9 @@ When a cloud agent starts in a worktree, it should:
 10. **Test** — Run the project's test/verification commands (and test plan
     scenarios if one exists)
 11. **Commit** — With clear commit messages
-12. **Notify** — Update WORKTREE_TASK.md with completion status
+12. **Finalize** — Run `/project-docs:finalize-branch` to perform code review,
+    create a session document, and prepare the branch for merge. Do not merge or
+    remove the worktree — the orchestrator handles integration.
 
 **Important:** Stay focused on the scope defined in the task document. If you
 discover work that's out of scope, note it in the WORKTREE_TASK.md Notes section

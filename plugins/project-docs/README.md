@@ -244,6 +244,12 @@ docs/
 
 ## Version History
 
+### 1.9.1 (2026-02-27)
+
+- `parallel-worktree-dev` now explicitly instructs worktree agents to run
+  `/project-docs:finalize-branch` on completion — added to WORKTREE_TASK
+  template, cloud agent responsibilities, and orchestrator merge checklist
+
 ### 1.9.0 (2026-02-27)
 
 - New `backlog-to-projects` skill — reviews active backlog items, identifies
