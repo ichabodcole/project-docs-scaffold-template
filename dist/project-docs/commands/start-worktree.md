@@ -53,7 +53,9 @@ Follow this sequence:
 5. **Implement** — Follow the plan
 6. **Test** — Run the project's test/verification commands
 7. **Commit** — With clear commit messages
-8. **Notify** — Update WORKTREE_TASK.md with completion status
+8. **Finalize** — Run `/project-docs:finalize-branch` to perform code review,
+   create a session document, and prepare the branch for merge. Do not merge or
+   remove the worktree — the orchestrator handles integration.
 
 ## Important Constraints
 

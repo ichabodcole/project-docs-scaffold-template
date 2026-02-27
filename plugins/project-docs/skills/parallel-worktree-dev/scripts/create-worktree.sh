@@ -20,7 +20,7 @@ set -e
 WORKTREE_BASE="${WORKTREE_BASE:-.worktrees}"
 BASE_BRANCH="${BASE_BRANCH:-develop}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-MAIN_REPO_DIR="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+MAIN_REPO_DIR="${MAIN_REPO_DIR:-$(git rev-parse --show-toplevel)}"
 
 # Colors for output
 RED='\033[0;31m'

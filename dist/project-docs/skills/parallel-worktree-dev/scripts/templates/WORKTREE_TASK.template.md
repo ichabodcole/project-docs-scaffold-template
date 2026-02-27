@@ -55,6 +55,14 @@
 - [ ] Tests passing
 - [ ] Ready for merge
 
+## Completion
+
+When implementation is complete and all tests pass:
+
+1. Run `/project-docs:finalize-branch` to perform code review, create a session
+   document, and prepare the branch for merge
+2. Do NOT merge or remove the worktree — the orchestrator handles integration
+
 ## Notes
 
 [Any additional context, warnings, or tips]

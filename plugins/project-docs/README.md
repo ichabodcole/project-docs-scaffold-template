@@ -170,6 +170,7 @@ than commands and are the primary way the plugin delivers its workflows.
 | `review-docs`                | Orchestrate documentation review with parallel docs-curator agents |
 | `parallel-worktree-dev`      | Orchestrate parallel development using git worktrees with handoffs |
 | `dev-discovery`              | Pre-planning technical discovery for complex features              |
+| `backlog-to-projects`        | Review backlog items and organize them into project groupings      |
 | `update-project-docs`        | Upgrade docs structure to newer scaffold template version          |
 
 ### Research & Analysis Skills
@@ -242,6 +243,25 @@ docs/
    significantly
 
 ## Version History
+
+### 1.9.1 (2026-02-27)
+
+- `parallel-worktree-dev` now explicitly instructs worktree agents to run
+  `/project-docs:finalize-branch` on completion — added to WORKTREE_TASK
+  template, cloud agent responsibilities, and orchestrator merge checklist
+
+### 1.9.0 (2026-02-27)
+
+- New `backlog-to-projects` skill — reviews active backlog items, identifies
+  natural groupings based on shared files and conceptual cohesion, assesses
+  parallelism, and creates project folders for approved groups
+
+### 1.8.8 (2026-02-25)
+
+- Fixed `create-worktree.sh` and `copy-env-to-worktree.sh` failing with
+  `fatal: not a git repository` when run from the plugin cache — scripts now
+  resolve the git repo root from the caller's working directory instead of the
+  script's location, and `MAIN_REPO_DIR` is overridable via environment variable
 
 ### 1.8.7 (2026-02-25)
 
