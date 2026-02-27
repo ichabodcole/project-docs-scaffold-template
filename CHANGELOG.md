@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.8.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.7.1...project-docs-scaffold-template-v2.8.0) (2026-02-27)
+
+
+### Features
+
+* add backlog-to-projects skill for organizing backlog into project groupings ([6ea5e98](https://github.com/ichabodcole/project-docs-scaffold-template/commit/6ea5e98b002afd67d92e73b76f47a754d715792b))
+
+
+### Bug Fixes
+
+* instruct worktree agents to run finalize-branch on completion ([5f0e4b7](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5f0e4b7c38b894e26c816dc561960505d39be3ee))
+* resolve git repo root from caller's pwd in worktree scripts ([eafbebb](https://github.com/ichabodcole/project-docs-scaffold-template/commit/eafbebb7aa405aa7a273be57cea945de662ad5a2))
+
 ## [2.7.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.7.0...project-docs-scaffold-template-v2.7.1) (2026-02-25)
 
 
