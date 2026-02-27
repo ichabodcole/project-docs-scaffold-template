@@ -170,6 +170,7 @@ than commands and are the primary way the plugin delivers its workflows.
 | `review-docs`                | Orchestrate documentation review with parallel docs-curator agents |
 | `parallel-worktree-dev`      | Orchestrate parallel development using git worktrees with handoffs |
 | `dev-discovery`              | Pre-planning technical discovery for complex features              |
+| `backlog-to-projects`        | Review backlog items and organize them into project groupings      |
 | `update-project-docs`        | Upgrade docs structure to newer scaffold template version          |
 
 ### Research & Analysis Skills
@@ -242,6 +243,12 @@ docs/
    significantly
 
 ## Version History
+
+### 1.9.0 (2026-02-27)
+
+- New `backlog-to-projects` skill — reviews active backlog items, identifies
+  natural groupings based on shared files and conceptual cohesion, assesses
+  parallelism, and creates project folders for approved groups
 
 ### 1.8.8 (2026-02-25)
 
