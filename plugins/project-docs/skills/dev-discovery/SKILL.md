@@ -3,7 +3,13 @@ name: dev-discovery
 description:
   Pre-planning technical discovery for complex features. Orchestrates explorers
   to gather codebase context, validates architecture docs, and prepares
-  comprehensive input for the dev-plan-generator.
+  comprehensive input for the dev-plan-generator. Use when the user has a
+  proposal or feature idea that needs codebase analysis before planning — maps
+  existing patterns, validates assumptions, and surfaces constraints. Triggers
+  when user says "explore the codebase for this feature", "do technical
+  discovery", "what does the codebase look like for this", "analyze the code
+  before we plan", or wants pre-planning research documented as a discovery
+  artifact.
 ---
 
 # Development Discovery

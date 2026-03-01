@@ -2,7 +2,12 @@
 name: document-validation
 description:
   Methodology for validating documentation against codebases. Covers document
-  type lifecycles, review steps, evidence gathering, and structured output.
+  type lifecycles, review steps, evidence gathering, and structured output. Use
+  when reviewing whether documentation (proposals, plans, architecture docs)
+  accurately reflects what the code actually does. Triggers when user says
+  "validate this doc", "is this documentation accurate", "check docs against the
+  code", "audit documentation", or wants to verify that written documentation
+  hasn't drifted from the implementation.
 ---
 
 # Document Validation Methodology

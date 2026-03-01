@@ -244,6 +244,13 @@ docs/
 
 ## Version History
 
+### 1.9.2 (2026-03-01)
+
+- Standardized frontmatter descriptions for 6 skills (`dev-discovery`,
+  `document-validation`, `evaluative-research`, `gap-analysis`,
+  `investigation-methodology`, `tech-integration-research`) — added trigger
+  phrases and "Use when" guidance to improve agent routing
+
 ### 1.9.1 (2026-02-27)
 
 - `parallel-worktree-dev` now explicitly instructs worktree agents to run

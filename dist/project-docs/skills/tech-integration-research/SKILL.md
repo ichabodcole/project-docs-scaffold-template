@@ -2,7 +2,12 @@
 name: tech-integration-research
 description:
   Rapid online research methodology for discovering how technologies integrate,
-  current best practices, and configuration requirements.
+  current best practices, and configuration requirements. Use when the user
+  needs to understand how two or more technologies work together before
+  implementation. Triggers when user says "how does X integrate with Y",
+  "research this integration", "what's the best practice for connecting these",
+  "find documentation on setting up X with Y", or wants current integration
+  patterns and configuration guidance from official sources.
 ---
 
 # Technology Integration Research
