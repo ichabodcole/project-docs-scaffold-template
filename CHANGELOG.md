@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.9.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.8.0...project-docs-scaffold-template-v2.9.0) (2026-03-02)
+
+
+### Features
+
+* overhaul mobile-test skill into general-purpose maestro-testing ([575f908](https://github.com/ichabodcole/project-docs-scaffold-template/commit/575f90847e428354edf88b380d81f331ff6106cf))
+
+
+### Bug Fixes
+
+* rename lowercase skill.md files to SKILL.md across all plugins ([e670d8c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/e670d8cf6a11632c740be3c01b7f313c1772ebe3))
+
 ## [2.8.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.7.1...project-docs-scaffold-template-v2.8.0) (2026-02-27)
 
 
