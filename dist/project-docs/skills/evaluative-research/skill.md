@@ -2,7 +2,12 @@
 name: evaluative-research
 description:
   Methodology for evaluating options, comparing technologies, and making
-  evidence-based decisions between alternatives
+  evidence-based decisions between alternatives. Use when the user needs to
+  choose between competing approaches, libraries, or architectures with a
+  structured comparison. Triggers when user says "compare these options", "which
+  approach should we use", "evaluate alternatives", "help me decide between X
+  and Y", "technology comparison", or wants a structured
+  pros/cons/recommendation analysis.
 ---
 
 # Evaluative Research Methodology

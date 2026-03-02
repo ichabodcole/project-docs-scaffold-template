@@ -2,7 +2,12 @@
 name: investigation-methodology
 description:
   Systematic investigation framework for research, root cause analysis, and
-  evidence-based inquiry
+  evidence-based inquiry. Use when the user needs to investigate a technical
+  question, debug a systemic issue, or research an unfamiliar area with
+  structured evidence gathering. Triggers when user says "investigate this",
+  "research this topic", "root cause analysis", "I need to understand how X
+  works", "dig into this", or wants a structured investigation with findings and
+  recommendations.
 ---
 
 # Investigation Methodology

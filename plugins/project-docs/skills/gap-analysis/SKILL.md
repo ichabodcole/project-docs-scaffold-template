@@ -2,7 +2,11 @@
 name: gap-analysis
 description:
   Methodology for identifying what's missing from proposals, specifications, or
-  feature ideas
+  feature ideas. Use when reviewing a document to find blind spots, unstated
+  assumptions, or missing requirements before implementation begins. Triggers
+  when user says "what's missing from this proposal", "review for gaps", "find
+  holes in this spec", "what haven't we thought of", "gap analysis", or wants a
+  systematic check for completeness.
 ---
 
 # Gap Analysis
