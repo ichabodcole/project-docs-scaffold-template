@@ -193,10 +193,10 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Utility Skills
 
-| Skill                     | Description                                             |
-| ------------------------- | ------------------------------------------------------- |
-| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size   |
-| `mobile-test`             | Automate iOS simulator setup and app launch for testing |
+| Skill                     | Description                                                      |
+| ------------------------- | ---------------------------------------------------------------- |
+| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size            |
+| `maestro-testing`         | Write and run Maestro flows for mobile, WebView, and web testing |
 
 ---
 
@@ -243,6 +243,14 @@ docs/
    significantly
 
 ## Version History
+
+### 1.10.0 (2026-03-01)
+
+- Renamed `mobile-test` → `maestro-testing` and rewrote as a general-purpose
+  Maestro testing skill — covers flow file syntax, element selectors, CLI
+  commands, simulator/emulator setup, web browser testing (Chromium), debugging,
+  project structure, and includes a Maestro vs Playwright comparison for
+  choosing the right tool per surface
 
 ### 1.9.2 (2026-03-01)
 
