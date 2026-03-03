@@ -244,6 +244,15 @@ docs/
 
 ## Version History
 
+### 1.10.1 (2026-03-02)
+
+- Added migration scripts (`migrate-v2.0-to-v2.3.sh`, `migrate-v2.3-to-v2.4.sh`,
+  `migrate-v2.4-to-v2.5.sh`, `migrate-v2.5-to-v2.6.sh`) for the
+  `update-project-docs` skill — scripts automate mechanical migration steps
+  (directory creation, file copies, sed substitutions, version bumps) with
+  `--dry-run` mode and optional `--replace-*` flags; agent retains ownership of
+  flowchart edits and README prose
+
 ### 1.10.0 (2026-03-01)
 
 - Renamed `mobile-test` → `maestro-testing` and rewrote as a general-purpose
