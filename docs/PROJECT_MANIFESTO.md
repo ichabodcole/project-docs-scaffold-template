@@ -189,7 +189,7 @@ documentation structure. This self-hosting proof — using the system to improve
 the system — is more convincing than any README pitch.
 
 **Session continuity is a solved problem here that most AI-assisted projects
-struggle with.** The memories system, session journals, and WORKTREE_TASK.md
+struggle with.** The memories system, session journals, and DEV_KICKOFF.md
 handoff documents address the "agent cold start" problem in a way that's
 convention-driven rather than tool-dependent. This could be one of the project's
 most transferable innovations.

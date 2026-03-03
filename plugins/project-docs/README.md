@@ -123,28 +123,28 @@ recipe.
 
 ---
 
-### `/project-docs:start-worktree`
+### `/project-docs:start-dev-kickoff`
 
-**Description:** Bootstrap an agent session inside a prepared worktree.
+**Description:** Bootstrap a fresh session — reads DEV_KICKOFF.md and begins the
+workflow.
 
 **Usage:**
 
 ```
-/project-docs:start-worktree
+/project-docs:start-dev-kickoff
 ```
 
 **What it does:**
 
-- Reads `WORKTREE_TASK.md` in the current directory
+- Reads `DEV_KICKOFF.md` in the current directory
 - Parses mission, source documents, and constraints
 - Kicks off the full development workflow: discovery → plan → implement → test →
   commit
 
 **Use cases:**
 
-- Starting a cloud agent session in a worktree created by
-  `parallel-worktree-dev`
-- Resuming work in a worktree after context loss
+- Starting a cloud agent session in a worktree or main repo
+- Resuming work after context loss
 - Consistent entry point so agents don't need manual briefing
 
 ---
@@ -157,21 +157,21 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Project Lifecycle Skills
 
-| Skill                        | Description                                                        |
-| ---------------------------- | ------------------------------------------------------------------ |
-| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation |
-| `create-project`             | Create project folder with proposal scaffold in docs/projects/     |
-| `create-investigation`       | Create investigation from rough idea or voice note                 |
-| `generate-proposal`          | Create project proposal from completed investigation               |
-| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning        |
-| `generate-dev-plan`          | Create development plan from proposal in docs/projects/            |
-| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal      |
-| `finalize-branch`            | Code review, documentation, and merge workflow for completed work  |
-| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents |
-| `parallel-worktree-dev`      | Orchestrate parallel development using git worktrees with handoffs |
-| `dev-discovery`              | Pre-planning technical discovery for complex features              |
-| `backlog-to-projects`        | Review backlog items and organize them into project groupings      |
-| `update-project-docs`        | Upgrade docs structure to newer scaffold template version          |
+| Skill                        | Description                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                |
+| `create-project`             | Create project folder with proposal scaffold in docs/projects/                    |
+| `create-investigation`       | Create investigation from rough idea or voice note                                |
+| `generate-proposal`          | Create project proposal from completed investigation                              |
+| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                       |
+| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                           |
+| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                     |
+| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                 |
+| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                |
+| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies |
+| `dev-discovery`              | Pre-planning technical discovery for complex features                             |
+| `backlog-to-projects`        | Review backlog items and organize them into project groupings                     |
+| `update-project-docs`        | Upgrade docs structure to newer scaffold template version                         |
 
 ### Research & Analysis Skills
 
@@ -243,6 +243,11 @@ docs/
    significantly
 
 ## Version History
+
+### 1.10.2 (2026-03-03)
+
+- Added dev-kickoff skill (replaces parallel-worktree-dev). Added
+  start-dev-kickoff command (replaces start-worktree).
 
 ### 1.10.1 (2026-03-02)
 
