@@ -156,7 +156,7 @@ external dependencies" and move on.
 3. Ask if any scenarios should be added, removed, or re-tiered
 4. Apply feedback
 5. Suggest next step: implementation (either directly or via
-   `/project-docs:parallel-worktree-dev`)
+   `/project-docs:dev-kickoff`)
 
 ## Output
 

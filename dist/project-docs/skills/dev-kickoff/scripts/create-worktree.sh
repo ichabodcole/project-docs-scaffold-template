@@ -10,7 +10,7 @@
 # This script:
 #   1. Creates a git worktree from develop (or specified base branch)
 #   2. Copies all gitignored .env files from the main repo
-#   3. Creates a WORKTREE_TASK.md from a template (if provided)
+#   3. Creates a DEV_KICKOFF.md from a template (if provided)
 #   4. Provides instructions for next steps
 #
 
@@ -98,27 +98,26 @@ echo -e "${YELLOW}Step 3: Copying environment files...${NC}"
 
 "$SCRIPT_DIR/copy-env-to-worktree.sh" "$WORKTREE_PATH"
 
-# Step 4: Create WORKTREE_TASK.md from template
+# Step 4: Create DEV_KICKOFF.md from template
 echo ""
 echo -e "${YELLOW}Step 4: Creating task handoff document...${NC}"
 
-TASK_FILE="$WORKTREE_PATH/WORKTREE_TASK.md"
-TEMPLATE_FILE="$SCRIPT_DIR/templates/WORKTREE_TASK.template.md"
+TASK_FILE="$WORKTREE_PATH/DEV_KICKOFF.md"
+TEMPLATE_FILE="$(dirname "$SCRIPT_DIR")/templates/DEV_KICKOFF.template.md"
 TODAY=$(date +%Y-%m-%d)
 
 if [ ! -f "$TEMPLATE_FILE" ]; then
     echo -e "${RED}Error: Template not found at $TEMPLATE_FILE${NC}"
-    echo -e "${RED}This indicates an installation problem with the parallel-worktree-dev skill.${NC}"
+    echo -e "${RED}This indicates an installation problem with the dev-kickoff skill.${NC}"
     exit 1
 fi
 
 sed -e "s|{{BRANCH}}|$FULL_BRANCH|g" \
-    -e "s|{{BASE_BRANCH}}|$BASE_BRANCH|g" \
     -e "s|{{DATE}}|$TODAY|g" \
     "$TEMPLATE_FILE" > "$TASK_FILE"
-echo -e "${GREEN}  Created WORKTREE_TASK.md from template${NC}"
+echo -e "${GREEN}  Created DEV_KICKOFF.md from template${NC}"
 
-echo -e "${YELLOW}  Edit this file to provide task context for agent handoff${NC}"
+echo -e "${YELLOW}  Edit DEV_KICKOFF.md to fill in mission and constraints${NC}"
 
 # Step 5: Summary and next steps
 echo ""
@@ -134,7 +133,7 @@ echo ""
 echo "  1. Navigate to the worktree:"
 echo -e "     ${BLUE}cd $WORKTREE_PATH${NC}"
 echo ""
-echo "  2. Edit WORKTREE_TASK.md with task details (for agent handoff)"
+echo "  2. Edit DEV_KICKOFF.md with mission and constraints"
 echo ""
 echo "  3. Install dependencies and start development"
 echo ""

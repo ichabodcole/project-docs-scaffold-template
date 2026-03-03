@@ -90,7 +90,10 @@ Example: upgrading from v1 to v2.1 requires:
 For each migration file:
 
 1. Read the migration guide
-2. Follow its steps in order
+2. Follow its steps in order — most migrations have a companion script in
+   `migrations/scripts/` that handles mechanical steps. Run `--dry-run` first to
+   preview, then run without the flag. Only content-editing steps (flowchart
+   updates, README prose) remain for the agent.
 3. Verify the checklist at the end
 4. Move to the next migration
 
