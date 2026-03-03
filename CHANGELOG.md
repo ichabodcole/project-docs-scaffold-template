@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.9.0...project-docs-scaffold-template-v2.10.0) (2026-03-03)
+
+
+### Features
+
+* add dev-kickoff skill, replace parallel-worktree-dev (plugin 1.10.2) ([10eb19f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/10eb19f9a14a88e418c640c8b902d4b0e588e415))
+* add migration scripts for update-project-docs skill (v1.10.1) ([4fe733f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/4fe733fbaa643d7f4ecb80091f085b0f06e42466))
+
 ## [2.9.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.8.0...project-docs-scaffold-template-v2.9.0) (2026-03-02)
 
 
