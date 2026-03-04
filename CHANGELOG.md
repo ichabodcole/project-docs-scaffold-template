@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.10.0...project-docs-scaffold-template-v2.11.0) (2026-03-04)
+
+
+### Features
+
+* add openrouter-model-categories recipe skill (recipes 1.3.0) ([5ed28f7](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5ed28f7434a692f9d3e25783824935c3095edf52))
+
 ## [2.10.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.9.0...project-docs-scaffold-template-v2.10.0) (2026-03-03)
 
 
