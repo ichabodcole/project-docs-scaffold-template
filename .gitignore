@@ -40,3 +40,5 @@ tmp-template-test/
 # Local Agent Files
 **/.claude/settings.local.json
 /.cursor
+
+.operator
