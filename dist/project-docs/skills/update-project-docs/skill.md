@@ -85,32 +85,6 @@ Example: upgrading from v1 to v2.1 requires:
 1. `migrations/v1-to-v2.md`
 2. `migrations/v2.0-to-v2.1.md` (if it exists)
 
-#### Running Multiple Migrations in Sequence
-
-When upgrading across multiple versions (e.g., v1 → v2.6), be aware that the
-migration scripts for v2.0→v2.3, v2.3→v2.4, and v2.4→v2.5 each delete
-`.scaffold-tmp/` at the end of their run. If you need to run multiple of these
-scripts in sequence, back up the scaffold before starting:
-
-```bash
-# Generate the scaffold once
-cookiecutter gh:ichabodcole/project-docs-scaffold-template -o .scaffold-tmp
-
-# Back it up before running any scripts
-cp -r .scaffold-tmp /tmp/docs-scaffold-bak
-
-# Run each migration, restoring the scaffold as needed
-bash migrate-v2.0-to-v2.3.sh   # deletes .scaffold-tmp
-cp -r /tmp/docs-scaffold-bak .scaffold-tmp
-bash migrate-v2.3-to-v2.4.sh   # deletes .scaffold-tmp
-cp -r /tmp/docs-scaffold-bak .scaffold-tmp
-bash migrate-v2.4-to-v2.5.sh   # deletes .scaffold-tmp
-bash migrate-v2.5-to-v2.6.sh   # no scaffold needed — skip restoration
-```
-
-The v2.5→v2.6 script only renames archive directories and does not need the
-scaffold, so no restoration is needed before running it.
-
 ### Step 4: Execute Each Migration
 
 For each migration file:

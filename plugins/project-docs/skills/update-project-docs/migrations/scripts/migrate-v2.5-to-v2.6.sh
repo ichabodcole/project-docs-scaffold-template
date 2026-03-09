@@ -72,7 +72,7 @@ rename_archive() {
     return
   fi
   if git rev-parse --git-dir > /dev/null 2>&1; then
-    git mv "$old" "$new" 2>/dev/null || mv "$old" "$new"
+    git mv "$old" "$new"
   else
     mv "$old" "$new"
   fi
@@ -113,10 +113,18 @@ echo -e "${GREEN}╚════════════════════
 
 step "Step 1: Renaming archive/ directories to _archive/"
 
-while IFS= read -r -d '' old; do
-  new="${old/\/archive/\/_archive}"
+ARCHIVE_DIRS=(
+  "docs/backlog/archive"
+  "docs/briefs/archive"
+  "docs/investigations/archive"
+  "docs/projects/archive"
+  "docs/reports/archive"
+)
+
+for old in "${ARCHIVE_DIRS[@]}"; do
+  new="${old/archive/_archive}"
   rename_archive "$old" "$new"
-done < <(find docs -maxdepth 2 -type d -name "archive" -print0 2>/dev/null)
+done
 
 # ─── Step 2: Update path references in documentation ─────────────────────────
 

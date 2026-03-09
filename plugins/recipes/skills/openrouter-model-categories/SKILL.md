@@ -448,30 +448,18 @@ The index page lists all configured categories and lets admins create new ones.
 
 **Page responsibilities:**
 
-- Fetch and display all category configurations
+- Fetch and display all category configurations in a table
 - Show category name (as badge), model ID, description, last updated
 - "Add Category" button opens a dialog for creating new categories
 - Category name validation: lowercase, alphanumeric, hyphens only
 - Click a category row to navigate to its edit page
-- Info button on each row opens the model detail pane for that row's model (so
-  admins can inspect what's currently assigned without navigating away)
-
-**Key UX decision:** Use styled card/button rows rather than a plain data table.
-Per-row interactive styling — selection highlight, hover state, the info button
-— is much harder to implement cleanly in a table. Cards give each row
-independent layout and make state changes (selected, loading) straightforward.
-
-**Info button pattern:** Each row has a small info icon button. When clicked,
-look up the catalog model by ID and navigate to the edit page with the detail
-pane pre-opened, or show an inline detail panel. Pattern:
-`catalogModels.find(m => m.id === config.modelId)`.
 
 **Key UX decision:** Creating a category doesn't require selecting a model yet.
 The admin names the category, then navigates to the edit page to browse and
 select a model. This two-step flow keeps the creation dialog simple.
 
 **Validate:** Page loads categories. Add dialog validates names. Navigation to
-edit page works. Info button shows correct model details.
+edit page works.
 
 ### Phase 6: Admin UI - Category Edit Page
 
@@ -493,15 +481,10 @@ layout:
 │  ┌─────────────────────────────┐        │  │ - Architecture│ │
 │  │ Model Browser                │        │  │               │ │
 │  │ - Search bar                 │        │  │ [Select This  │ │
-│  │ - Search scope toggle        │        │  │  Model]       │ │
-│  │   (name/ID only vs +desc)    │        │  └──────────────┘ │
-│  │ - Sort (newest first,        │        │                    │
-│  │   name, price)               │        │   (sticky sidebar) │
-│  │ - Modality filter dropdown   │        │                    │
-│  │ - Hide filter (3-state)      │        │                    │
-│  │ - View toggle (list / card)  │        │                    │
+│  │ - Sort (name, price, recent) │        │  │  Model]       │ │
+│  │ - View toggle (list / card)  │        │  └──────────────┘ │
 │  │ - Model results              │        │                    │
-│  │   (table or card grid)       │        │                    │
+│  │   (table or card grid)       │        │   (sticky sidebar) │
 │  └─────────────────────────────┘        │                    │
 └─────────────────────────────────────────┴───────────────────┘
 ```
@@ -513,23 +496,8 @@ layout:
    parent so ModelBrowser can highlight it.
 
 2. **ModelBrowser** - Fetches all models from `/available`. Supports:
-   - Fuzzy search via Fuse.js on name and ID (threshold 0.4)
-   - **Search scope toggle:** switch between name/ID only vs. including
-     descriptions. When descriptions are included, use weighted keys
-     (`name`/`id` at weight 2, `description` at weight 1) and enable
-     `ignoreLocation: true` (see Gotchas)
-   - Sort: newest first (default — uses `created` timestamp), name A-Z/Z-A,
-     price low-to-high/high-to-low
-   - **Modality filter:** dropdown to filter by capability — All, Multimodal
-     Input, Multimodal Output, Multimodal Both. Detection:
-     `modalities.length > 1 || modalities.some(m => m !== 'text')`
-   - **Hide/Show filter (three-state):** admins can hide irrelevant models to
-     progressively narrow the list when browsing 300+ models. Hidden model IDs
-     persist in a client-side store (localStorage, sessionStorage, or a DB
-     column — whatever fits your stack). Three states:
-     - Default: hidden models filtered out, count shown ("12 hidden")
-     - Show all: hidden models visible but visually dimmed
-     - Hidden only: shows only hidden models
+   - Fuzzy search via Fuse.js (on name and ID, optionally description)
+   - Sort: recently added, name A-Z/Z-A, price low-to-high/high-to-low
    - View modes: list (data table) and card (2-column grid)
    - Results count ("Showing X of Y models")
    - Clicking a model emits `modelClick` (opens detail pane)
@@ -551,10 +519,8 @@ layout:
 7. Success message auto-hides after 3 seconds
 ```
 
-**Validate:** Search filters models. Sort works (newest first by default). View
-toggle switches. Hide/show cycle works and persists across page reloads.
-Modality filter narrows results correctly. Selecting a model saves correctly.
-Detail pane shows accurate data.
+**Validate:** Search filters models. Sort works. View toggle switches. Selecting
+a model saves correctly. Detail pane shows accurate data.
 
 ### Phase 7: Integration with AI Operations
 
@@ -711,35 +677,10 @@ any framework:
   typically the dominant cost driver. Sorting by prompt price gives the most
   useful cost comparison.
 
-- **Start with a Fuse.js threshold of 0.3, but be ready to tune it.** 0.3 is a
-  reasonable default — strict enough to avoid noise, loose enough for most name
-  searches. However, model IDs often contain slashes, version numbers, and
-  provider prefixes (e.g., `anthropic/claude-sonnet-4-20250514`), which can make
-  partial matches score lower than expected. If users report that obvious
-  matches aren't surfacing, loosen to 0.4. Too loose (0.6+) and unrelated models
-  appear. Too strict (0.1–0.2) and typo tolerance disappears entirely.
-
-- **`ignoreLocation: true` is required when searching model descriptions.**
-  Without it, Fuse.js penalizes matches that appear far from the start of the
-  string. Model descriptions are long paragraphs, so a keyword like "vision"
-  appearing mid-paragraph scores poorly and may not surface at all. This looks
-  like broken search. Set `ignoreLocation: true` whenever descriptions are
-  included in the search keys. Also use weighted keys: `name` and `id` at weight
-  2, `description` at weight 1, so name matches rank above description matches.
-
-- **Display pricing as per-million tokens.** Per-token values like `0.00000015`
-  are meaningless to admins. Multiply by 1,000,000 and display as `$0.15/M`.
-  Handle edge cases: `parseFloat(price) === 0` → "Free"; values below `$0.01/M`
-  → show 4 decimal places. A detail pane toggle between per-million and
-  per-token views lets power users see the raw values without cluttering the
-  default view.
-
-- **Three-state UI cycle: prefer explicit conditionals over array-index
-  cycling.** A single button that cycles through three states (e.g., default →
-  show-all → hidden-only → default) is more compact than a dropdown for a
-  three-option toggle. Use simple if/else rather than
-  `order[(idx + 1) % order.length]` — TypeScript strict mode returns
-  `T | undefined` from array indexing, which creates awkward type guards.
+- **Fuse.js threshold of 0.3 works well for model names.** Too strict (0.1) and
+  users miss models with slight typos. Too loose (0.6) and unrelated models
+  appear. 0.3 is a good balance. Allow toggling "include description in search"
+  for broader results when name search is too narrow.
 
 - **Make the detail pane sticky.** Users scroll through hundreds of models in
   the browser. If the detail pane scrolls away, they lose context on the model
@@ -751,18 +692,3 @@ any framework:
   shows the current model ID as a clickable link, it needs the ModelBrowser's
   model data to display details -- expose a `getModelById()` method on
   ModelBrowser for the parent to call.
-
-- **If your admin UI proxies to a separate API server, ensure data fetching is
-  client-only.** When a dev proxy is active (e.g., Nuxt's `devProxy`, Vite's
-  `proxy`), the proxy only runs client-side. If you use a data-fetching
-  abstraction that runs during SSR (server-side rendering), it will execute
-  before the proxy is available, receive a null/error result, and that empty
-  result may be cached on the client. Fix: wrap API calls in a lifecycle hook
-  that only runs in the browser (`onMounted`, `useEffect`, etc.) rather than
-  using a framework's universal data-fetching primitive.
-
-- **Set `cursor: pointer` globally on interactive elements.** UI component
-  libraries don't always apply pointer cursors to buttons and interactive
-  wrappers by default. Add a global CSS rule covering `button`, `[role=button]`,
-  `a[href]`, `select`, and `summary` to avoid a flat, non-interactive feel on
-  clickable elements.
