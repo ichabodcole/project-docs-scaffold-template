@@ -193,10 +193,11 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Utility Skills
 
-| Skill                     | Description                                                      |
-| ------------------------- | ---------------------------------------------------------------- |
-| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size            |
-| `maestro-testing`         | Write and run Maestro flows for mobile, WebView, and web testing |
+| Skill                     | Description                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size                                                |
+| `maestro-testing`         | Write and run Maestro flows for mobile, WebView, and web testing                                     |
+| `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation |
 
 ---
 
@@ -243,6 +244,13 @@ docs/
    significantly
 
 ## Version History
+
+### 1.11.0 (2026-03-09)
+
+- New `html-mockup-prototyping` skill — builds self-contained single-file HTML
+  prototypes using Tailwind CDN + Alpine.js for UI exploration before
+  implementation; includes state-switcher pattern, skeleton shimmer loading
+  states, and flow design process
 
 ### 1.10.2 (2026-03-03)
 
