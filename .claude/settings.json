@@ -1,0 +1,73 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(turbo:*)",
+      "Bash(bun:*)",
+      "Bash(git:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(./scripts/*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:npmjs.com)",
+      "WebFetch(domain:www.npmjs.com)",
+
+      "WebFetch(domain:electronjs.org)",
+      "WebFetch(domain:vuejs.org)",
+      "WebFetch(domain:vite.dev)",
+      "WebFetch(domain:vitejs.dev)",
+      "WebFetch(domain:pinia.vuejs.org)",
+      "WebFetch(domain:vueuse.org)",
+      "WebFetch(domain:shadcn-vue.com)",
+      "WebFetch(domain:www.shadcn-vue.com)",
+      "WebFetch(domain:radix-vue.com)",
+      "WebFetch(domain:www.radix-vue.com)",
+      "WebFetch(domain:tailwindcss.com)",
+      "WebFetch(domain:vitest.dev)",
+
+      "WebFetch(domain:expo.dev)",
+      "WebFetch(domain:docs.expo.dev)",
+      "WebFetch(domain:reactnative.dev)",
+      "WebFetch(domain:react.dev)",
+
+      "WebFetch(domain:bun.sh)",
+      "WebFetch(domain:elysiajs.com)",
+      "WebFetch(domain:better-auth.com)",
+      "WebFetch(domain:www.better-auth.com)",
+
+      "WebFetch(domain:orm.drizzle.team)",
+      "WebFetch(domain:docs.powersync.com)",
+      "WebFetch(domain:www.powersync.com)",
+
+      "WebFetch(domain:turbo.build)",
+      "WebFetch(domain:typescriptlang.org)",
+      "WebFetch(domain:www.typescriptlang.org)",
+
+      "mcp__operator-editor__*",
+      "mcp__operator-cloud__*",
+      "mcp__plugin_context7_context7__*",
+      "mcp__Tech-Stack-Documentation-Server__*",
+      "mcp__plugin_playwright_playwright__*"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~/*)",
+      "Bash(sudo:*)",
+      "Bash(chmod 777:*)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | bash)"
+    ]
+  }
+}

@@ -87,7 +87,7 @@ iteration through real projects, which is what this project is doing.
   implementation sessions → archival, with each stage having defined conventions
   and AI-assisted tooling
 
-- **Ships a reusable recipe library** — 16 implementation recipes extracted from
+- **Ships a reusable recipe library** — 17 implementation recipes extracted from
   real projects (authentication patterns, sync strategies, IPC architectures,
   voice-to-text pipelines) that teams can pull into their own projects as
   step-by-step guides
