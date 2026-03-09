@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.12.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.11.0...project-docs-scaffold-template-v2.12.0) (2026-03-09)
+
+
+### Features
+
+* update openrouter-model-categories recipe with UI improvements (recipes 1.3.1) ([7282890](https://github.com/ichabodcole/project-docs-scaffold-template/commit/7282890a52c5850bf4de747066f3db8403d425be))
+
+
+### Bug Fixes
+
+* improve update-project-docs migration scripts and docs ([515aeaf](https://github.com/ichabodcole/project-docs-scaffold-template/commit/515aeaf83225bb13fa807a93a2590ff96d12b0cd))
+
 ## [2.11.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.10.0...project-docs-scaffold-template-v2.11.0) (2026-03-04)
 
 
