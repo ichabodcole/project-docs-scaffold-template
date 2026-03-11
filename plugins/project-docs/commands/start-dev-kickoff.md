@@ -56,12 +56,15 @@ Execute the steps in the Workflow section of DEV_KICKOFF.md in order. Standard
 steps:
 
 1. Use the `dev-discovery` skill to understand relevant codebase areas
-2. Use the `generate-dev-plan` skill to create the plan — wait for user review
-3. Assess test plan need — use `generate-test-plan` if complex
-4. Implement according to the plan
-5. Test and verify
-6. Commit with clear messages
-7. Update the Completion Status checklist in DEV_KICKOFF.md
+2. Assess UI prototyping — if the proposal involves a complex UI (admin panel,
+   dashboard, multi-state interface), ask the user whether to create HTML mockup
+   prototypes before planning. Use `html-mockup-prototyping` if yes.
+3. Use the `generate-dev-plan` skill to create the plan — wait for user review
+4. Assess test plan need — use `generate-test-plan` if complex
+5. Implement according to the plan
+6. Test and verify
+7. Commit with clear messages
+8. Update the Completion Status checklist in DEV_KICKOFF.md
 
 **Skip any steps already done** — if a plan.md exists, skip discovery and
 planning and proceed to implementation.

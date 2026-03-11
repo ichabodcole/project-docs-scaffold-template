@@ -128,16 +128,23 @@ Ask the user:
 codebase areas and write a discovery artifact to
 `docs/projects/<name>/artifacts/`.
 
-**4b. Run generate-dev-plan** — use the `generate-dev-plan` skill to create
+**4b. Assess UI prototyping** — if the proposal describes an admin UI,
+dashboard, or complex visual interface, ask the user whether to create HTML
+mockup prototypes before planning. Prototypes help resolve layout and
+interaction questions that would otherwise be speculative in the plan. Use the
+`html-mockup-prototyping` skill if yes. Save prototypes to
+`docs/projects/<name>/artifacts/`.
+
+**4c. Run generate-dev-plan** — use the `generate-dev-plan` skill to create
 `docs/projects/<name>/plan.md`.
 
-**4c. Have user review the plan** — wait for approval before proceeding.
+**4d. Have user review the plan** — wait for approval before proceeding.
 
-**4d. Assess test plan** — if the feature is complex (multiple systems, 3+
+**4e. Assess test plan** — if the feature is complex (multiple systems, 3+
 phases, complex state transitions), ask whether to run `generate-test-plan`.
 When in doubt, ask the user.
 
-**4e. Begin implementation** — proceed with the plan.
+**4f. Begin implementation** — proceed with the plan.
 
 ## DEV_KICKOFF.md Template Reference
 
