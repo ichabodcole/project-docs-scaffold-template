@@ -203,7 +203,63 @@ Consult
 the full template structure, writing principles, and examples of good vs bad
 recipe content.
 
-### Phase 5: Verify, Publish, and Present
+### Phase 5: Create UI Reference Prototypes (When Applicable)
+
+If the recipe includes an admin UI, dashboard, or any visual interface described
+in prose, create HTML mockup prototypes as visual references. These live in a
+`references/` directory alongside the SKILL.md and give implementing agents a
+clickable target instead of interpreting prose descriptions.
+
+**When to create prototypes:**
+
+- The recipe describes an admin panel, dashboard, or management UI
+- There are list views, detail panels, forms, or multi-state workflows
+- The UI has enough complexity that prose alone is ambiguous
+
+**When to skip:**
+
+- The recipe is purely backend (API, data model, service layer)
+- The UI is trivial (a single button or toggle)
+- The recipe is technology-agnostic and the UI varies too much by framework
+
+**How to create them:**
+
+1. Use the `html-mockup-prototyping` skill — copy
+   `plugins/project-docs/skills/html-mockup-prototyping/templates/state-flow.html`
+   as the starting point
+2. Build the prototype using the recipe's data model for realistic sample data
+3. Cover the key states: default view, selected/detail, search/filter, empty
+   state, any confirmation dialogs
+4. Save to `$RECIPE_WORKSPACE/plugins/recipes/skills/<recipe-name>/references/`
+5. Add a **UI Reference** section near the top of the recipe SKILL.md pointing
+   to the prototype:
+
+   ```markdown
+   ## UI Reference
+
+   See `references/<feature>-mockup.html` for an interactive prototype of the
+   admin UI. Open in a browser to click through states.
+   ```
+
+6. Add a prototype callout in the relevant implementation phase (usually the UI
+   phase):
+
+   ```markdown
+   > **Prototype available:** See `references/<feature>-mockup.html` for a
+   > clickable reference of the admin UI described below.
+   ```
+
+7. **Show the prototype to the user** before proceeding — open it in a browser
+   and let them click through the states. Iterate on feedback before committing.
+
+**Lessons from building prototypes:**
+
+- Use `Alpine.data()` registration, never inline `x-data` with complex state
+- Use the semantic theme classes from the template — they keep markup readable
+- Keep prototypes to one user flow per file, max 6-7 states
+- Sample data should reflect the recipe's domain, not generic placeholders
+
+### Phase 6: Verify, Publish, and Present
 
 **Quality checks** - verify the recipe before publishing:
 
@@ -215,6 +271,8 @@ recipe content.
 - [ ] **Complete:** Are integration points and gotchas documented?
 - [ ] **Triggered:** Does the frontmatter description include natural trigger
       phrases?
+- [ ] **Visual:** If the recipe describes a UI, does it include an HTML
+      prototype in `references/`?
 
 **Publish the recipe** via git:
 
@@ -222,7 +280,7 @@ recipe content.
 
    ```bash
    cd "$RECIPE_WORKSPACE"
-   git add plugins/recipes/skills/<recipe-name>/SKILL.md
+   git add plugins/recipes/skills/<recipe-name>/
    git commit -m "recipe: add <recipe-name> recipe skill"
    ```
 
