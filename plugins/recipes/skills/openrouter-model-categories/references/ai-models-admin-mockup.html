@@ -4,34 +4,192 @@
     <meta charset="UTF-8" />
     <title>Mockup — AI Models Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-    ></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-    </style>
     <script>
       tailwind.config = {
         darkMode: "class",
       };
     </script>
+
+    <!--
+      ============================================================
+      THEME
+      Semantic classes built on Tailwind utilities via @apply.
+      Change the color palette here to match the target project's
+      design system; the markup below stays readable and consistent.
+
+      Default: dark theme (slate-950 base).
+      For light themes: adjust base/surface/text colors throughout.
+      ============================================================
+    -->
+    <style type="text/tailwindcss">
+      /* ---- Base ---- */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* ---- Typography ---- */
+      .page-title {
+        @apply text-2xl font-bold text-white;
+      }
+      .section-title {
+        @apply text-xs font-semibold text-slate-400 uppercase tracking-wide;
+      }
+      .label {
+        @apply text-xs text-slate-500;
+      }
+      .text-body {
+        @apply text-sm text-slate-200 leading-relaxed;
+      }
+      .text-muted {
+        @apply text-sm text-slate-400;
+      }
+      .text-faint {
+        @apply text-xs text-slate-500;
+      }
+      .text-mono {
+        @apply text-xs text-slate-600 font-mono;
+      }
+      .link {
+        @apply text-sm text-blue-400 hover:text-blue-300 transition-colors;
+      }
+
+      /* ---- Surfaces ---- */
+      .card {
+        @apply bg-slate-900 border border-slate-800 rounded-lg overflow-hidden;
+      }
+      .inset {
+        @apply bg-slate-950 border border-slate-800 rounded-md;
+      }
+      .panel-section {
+        @apply px-5 py-4 border-b border-slate-800;
+      }
+
+      /* ---- Badges ---- */
+      .badge {
+        @apply text-xs px-2 py-0.5 rounded border font-medium;
+      }
+      .badge-accent {
+        @apply badge bg-blue-500/10 text-blue-300 border-blue-500/20;
+      }
+      .badge-muted {
+        @apply badge bg-slate-700/50 text-slate-300 border-slate-600;
+      }
+      .badge-warning {
+        @apply badge bg-amber-500/20 text-amber-400 border-amber-500/30;
+      }
+
+      /* ---- Status indicators ---- */
+      .status-dot {
+        @apply w-2 h-2 rounded-full shrink-0;
+      }
+      .status-dot-open {
+        @apply status-dot bg-amber-400;
+      }
+      .status-dot-success {
+        @apply status-dot bg-emerald-400;
+      }
+
+      /* ---- Buttons ---- */
+      .btn {
+        @apply text-sm px-4 py-2 rounded-md font-medium transition-colors
+               flex items-center justify-center gap-2;
+      }
+      .btn-primary {
+        @apply btn bg-emerald-600 text-white hover:bg-emerald-500;
+      }
+      .btn-outline {
+        @apply btn border border-slate-700 text-slate-300 hover:bg-slate-800;
+      }
+      .btn-ghost {
+        @apply text-xs px-3 py-2 rounded-md border border-slate-800
+               text-slate-500 hover:text-slate-300 hover:border-slate-700
+               transition-colors flex items-center justify-center gap-2;
+      }
+      .btn-icon {
+        @apply text-slate-500 hover:text-white transition-colors;
+      }
+
+      /* ---- Form controls ---- */
+      .input {
+        @apply bg-slate-900 border border-slate-700 text-sm text-white
+               px-3 py-2 rounded-md placeholder-slate-500
+               focus:outline-none focus:border-slate-500;
+      }
+      .select {
+        @apply input cursor-pointer text-slate-300;
+      }
+      .textarea {
+        @apply w-full bg-slate-950 border border-slate-800 text-sm text-white
+               px-3 py-2 rounded-md placeholder-slate-600
+               focus:outline-none focus:border-slate-600 resize-none;
+      }
+
+      /* ---- Navigation ---- */
+      .nav-item {
+        @apply w-full flex items-center gap-3 px-3 py-2 rounded-md
+               text-sm font-medium transition-colors;
+      }
+      .nav-item-active {
+        @apply bg-slate-800 text-white;
+      }
+      .nav-item-inactive {
+        @apply text-slate-400 hover:text-white hover:bg-slate-800/50;
+      }
+
+      /* ---- Utilities ---- */
+      .filter-pill {
+        @apply inline-flex items-center gap-1 text-xs bg-slate-800
+               text-slate-300 border border-slate-700 px-2 py-0.5 rounded;
+      }
+      .skeleton {
+        background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.4s infinite;
+        border-radius: 4px;
+      }
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+    </style>
+
+    <!--
+      ============================================================
+      APP STATE
+      Register all state and methods with Alpine.data() below.
+      Use x-data="app" on the root element in the body.
+      ============================================================
+    -->
+    <script>
+      document.addEventListener("alpine:init", () => {
+        Alpine.data("app", () => ({
+          state: "default",
+          sortOpen: false,
+          modalityOpen: false,
+          visibilityFilter: "all",
+          descSearch: false,
+        }));
+      });
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
   </head>
   <body class="bg-slate-950 text-slate-200 min-h-screen">
-    <div
-      x-data="{ state: 'default', sortOpen: false, modalityOpen: false, visibilityFilter: 'all', descSearch: false }"
-    >
+    <div x-data="app">
       <!-- State switcher -->
       <div
         class="bg-amber-950/60 border-b border-amber-800/40 px-6 py-2 flex items-center gap-3 sticky top-0 z-50"
       >
-        <span
-          class="text-xs font-semibold text-amber-500 uppercase tracking-wide"
-          >Prototype state</span
-        >
+        <span class="section-title text-amber-500">Prototype state</span>
         <div class="flex gap-2 flex-wrap">
           <button
             @click="state = 'default'; sortOpen = false; modalityOpen = false"
@@ -95,45 +253,45 @@
           <nav class="space-y-1 flex-1">
             <a
               href="#"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md"
+              class="nav-item nav-item-inactive"
             >
               <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
               Dashboard
             </a>
             <a
               href="#"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md"
+              class="nav-item nav-item-inactive"
             >
               <i data-lucide="users" class="w-4 h-4"></i>
               Users
             </a>
             <a
               href="#"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md"
+              class="nav-item nav-item-inactive"
             >
               <i data-lucide="image" class="w-4 h-4"></i>
               Media
             </a>
             <a
               href="#"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md"
+              class="nav-item nav-item-inactive"
             >
               <i data-lucide="book-open" class="w-4 h-4"></i>
               Catalog
             </a>
             <a
               href="#"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-white bg-slate-800 rounded-md font-medium"
+              class="nav-item nav-item-active"
             >
               <i data-lucide="cpu" class="w-4 h-4"></i>
               AI Models
             </a>
           </nav>
           <div class="border-t border-slate-800 pt-3 mt-3">
-            <p class="text-xs text-slate-500 px-3">admin@example.com</p>
+            <p class="label px-3">admin@example.com</p>
             <a
               href="#"
-              class="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 mt-1"
+              class="flex items-center gap-2 px-3 py-2 text-muted hover:text-slate-200 mt-1"
             >
               <i data-lucide="log-out" class="w-4 h-4"></i>
               Sign Out
@@ -148,16 +306,14 @@
             <!-- Page header -->
             <div class="flex items-center justify-between mb-6">
               <h1 class="text-xl font-bold text-white">AI Models</h1>
-              <button
-                class="flex items-center gap-2 bg-slate-800 text-slate-200 text-sm px-4 py-2 rounded-md border border-slate-700 hover:bg-slate-700"
-              >
+              <button class="btn-outline">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 Add Category
               </button>
             </div>
 
             <!-- Categories table -->
-            <div class="bg-slate-900 rounded-lg border border-slate-800 mb-8">
+            <div class="card mb-8">
               <div class="px-5 py-3 border-b border-slate-800">
                 <h2 class="text-sm font-semibold text-white">Categories</h2>
               </div>
@@ -196,7 +352,7 @@
                     <td class="px-5 py-3 text-slate-300">
                       General purpose model
                     </td>
-                    <td class="px-5 py-3 text-slate-400">3/10/2026</td>
+                    <td class="px-5 py-3 text-muted">3/10/2026</td>
                     <td class="px-5 py-3">
                       <div class="flex items-center gap-2">
                         <button
@@ -205,7 +361,7 @@
                         >
                           <i data-lucide="info" class="w-4 h-4"></i>
                         </button>
-                        <button class="text-slate-500 hover:text-slate-300">
+                        <button class="btn-icon">
                           <i data-lucide="pencil" class="w-4 h-4"></i>
                         </button>
                         <button class="text-slate-500 hover:text-red-400">
@@ -227,7 +383,7 @@
                     <td class="px-5 py-3 text-slate-300">
                       Image understanding and analysis
                     </td>
-                    <td class="px-5 py-3 text-slate-400">3/10/2026</td>
+                    <td class="px-5 py-3 text-muted">3/10/2026</td>
                     <td class="px-5 py-3">
                       <div class="flex items-center gap-2">
                         <button
@@ -236,7 +392,7 @@
                         >
                           <i data-lucide="info" class="w-4 h-4"></i>
                         </button>
-                        <button class="text-slate-500 hover:text-slate-300">
+                        <button class="btn-icon">
                           <i data-lucide="pencil" class="w-4 h-4"></i>
                         </button>
                         <button class="text-slate-500 hover:text-red-400">
@@ -253,7 +409,7 @@
             <div>
               <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-white">Model Catalog</h2>
-                <span class="text-xs text-slate-400">
+                <span class="text-faint">
                   <span
                     x-show="state === 'search'"
                     >2 of 339 models</span
@@ -287,13 +443,13 @@
                   <input
                     type="text"
                     placeholder="Search models..."
-                    class="w-full pl-10 pr-9 py-2 bg-slate-900 border border-slate-700 rounded-md text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                    class="input w-full pl-10 pr-9 focus:ring-1 focus:ring-slate-500"
                     :value="state === 'search' ? 'immersive' : ''"
                     readonly
                   />
                   <button
                     x-show="state === 'search'"
-                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    class="absolute right-2.5 top-1/2 -translate-y-1/2 btn-icon"
                     title="Clear search"
                   >
                     <i data-lucide="x" class="w-4 h-4"></i>
@@ -304,7 +460,7 @@
                 <div class="relative">
                   <button
                     @click="sortOpen = !sortOpen; modalityOpen = false"
-                    class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                    class="select flex items-center gap-2"
                   >
                     Newest First
                     <i data-lucide="chevron-down" class="w-3 h-3"></i>
@@ -350,7 +506,7 @@
                 <div class="relative">
                   <button
                     @click="modalityOpen = !modalityOpen; sortOpen = false"
-                    class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                    class="select flex items-center gap-2"
                   >
                     All Modalities
                     <i data-lucide="chevron-down" class="w-3 h-3"></i>
@@ -425,9 +581,7 @@
               </div>
 
               <!-- Model table (flat structure for proper column alignment) -->
-              <div
-                class="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden"
-              >
+              <div class="card">
                 <table class="w-full text-sm table-fixed">
                   <colgroup>
                     <col style="width: 38%" />
@@ -460,12 +614,12 @@
                         <div class="text-slate-200 font-medium">
                           ByteDance Seed: Seed-2.0-Lite
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           bytedance-seed/seed-2.0-lite
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">262K</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">262K</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $0.25 &nbsp; Out: $2
                       </td>
                       <td class="px-5 py-3">
@@ -482,7 +636,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -497,12 +651,12 @@
                         <div class="text-slate-200 font-medium">
                           Qwen: Qwen3.5-9B
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           qwen/qwen3.5-9b
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">262K</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">262K</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $0.1 &nbsp; Out: $0.15
                       </td>
                       <td class="px-5 py-3">
@@ -519,7 +673,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -534,12 +688,12 @@
                         <div class="text-slate-200 font-medium">
                           OpenAI: GPT-5.4 Pro
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           openai/gpt-5.4-pro
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">1M</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">1M</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $30 &nbsp; Out: $180
                       </td>
                       <td class="px-5 py-3">
@@ -561,7 +715,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -576,12 +730,12 @@
                         <div class="text-slate-200 font-medium">
                           OpenAI: GPT-5.4
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           openai/gpt-5.4
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">1M</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">1M</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $2.5 &nbsp; Out: $15
                       </td>
                       <td class="px-5 py-3">
@@ -603,7 +757,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -618,12 +772,12 @@
                         <div class="text-slate-200 font-medium">
                           Inception: Mercury 2
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           inception/mercury-2
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">128K</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">128K</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $0.25 &nbsp; Out: $0.75
                       </td>
                       <td class="px-5 py-3">
@@ -635,7 +789,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye" class="w-4 h-4"></i>
@@ -650,12 +804,12 @@
                         <div class="text-slate-200 font-medium">
                           OpenAI: GPT-5.3 Chat
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           openai/gpt-5.3-chat
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">128K</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">128K</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $1.75 &nbsp; Out: $14
                       </td>
                       <td class="px-5 py-3">
@@ -672,7 +826,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -687,12 +841,12 @@
                         <div class="text-slate-200 font-medium">
                           Google: Gemini 3.1 Flash Lite Preview
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           google/gemini-3.1-flash-lite-preview
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">1M</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">1M</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $0.25 &nbsp; Out: $1.5
                       </td>
                       <td class="px-5 py-3">
@@ -709,7 +863,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -724,12 +878,12 @@
                         <div class="text-slate-200 font-medium">
                           ByteDance Seed: Seed-2.0-Mini
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           bytedance-seed/seed-2.0-mini
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">262K</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">262K</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $0.1 &nbsp; Out: $0.4
                       </td>
                       <td class="px-5 py-3">
@@ -746,7 +900,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -763,12 +917,12 @@
                         <div class="text-slate-200 font-medium">
                           AionLabs: Aion-2.0
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           aion-labs/aion-2.0
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">131K</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">131K</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $0.8 &nbsp; Out: $1.6
                       </td>
                       <td class="px-5 py-3">
@@ -780,7 +934,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -795,12 +949,12 @@
                         <div class="text-slate-200 font-medium">
                           MiniMax: MiniMax M2-her
                         </div>
-                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                        <div class="text-faint font-mono mt-0.5">
                           minimax/minimax-m2-her
                         </div>
                       </td>
-                      <td class="px-5 py-3 text-slate-400">66K</td>
-                      <td class="px-5 py-3 text-slate-400">
+                      <td class="px-5 py-3 text-muted">66K</td>
+                      <td class="px-5 py-3 text-muted">
                         In: $0.3 &nbsp; Out: $1.2
                       </td>
                       <td class="px-5 py-3">
@@ -812,7 +966,7 @@
                       </td>
                       <td class="px-5 py-3 text-center">
                         <button
-                          class="text-slate-500 hover:text-slate-300"
+                          class="btn-icon"
                           title="Hide model"
                         >
                           <i data-lucide="eye-off" class="w-4 h-4"></i>
@@ -829,7 +983,7 @@
                         <div class="text-slate-400 font-medium">
                           ByteDance Seed: Seed-2.0-Lite
                         </div>
-                        <div class="text-xs text-slate-600 font-mono mt-0.5">
+                        <div class="text-mono mt-0.5">
                           bytedance-seed/seed-2.0-lite
                         </div>
                       </td>
@@ -862,7 +1016,7 @@
                         <div class="text-slate-400 font-medium">
                           OpenAI: GPT-5.4 Pro
                         </div>
-                        <div class="text-xs text-slate-600 font-mono mt-0.5">
+                        <div class="text-mono mt-0.5">
                           openai/gpt-5.4-pro
                         </div>
                       </td>
@@ -899,7 +1053,7 @@
                         <div class="text-slate-400 font-medium">
                           Inception: Mercury 2
                         </div>
-                        <div class="text-xs text-slate-600 font-mono mt-0.5">
+                        <div class="text-mono mt-0.5">
                           inception/mercury-2
                         </div>
                       </td>
@@ -954,12 +1108,12 @@
                 <span class="text-xs font-mono text-slate-400"
                   >x-ai/grok-4.1-fast</span
                 >
-                <button class="text-slate-500 hover:text-slate-300">
+                <button class="btn-icon">
                   <i data-lucide="copy" class="w-3 h-3"></i>
                 </button>
               </div>
 
-              <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+              <p class="text-muted mt-3 leading-relaxed">
                 Grok 4.1 Fast is xAI's best agentic tool calling model that
                 shines in real-world use cases like customer support and deep
                 research. 2M context window. Reasoning can be enabled/disabled
@@ -967,7 +1121,7 @@
               </p>
 
               <div class="flex items-center justify-between mt-4">
-                <span class="text-xs text-slate-500 uppercase tracking-wide"
+                <span class="label uppercase tracking-wide"
                   >Context window</span
                 >
                 <span class="text-sm text-slate-200">2M tokens</span>
@@ -975,7 +1129,7 @@
 
               <div class="border-t border-slate-800 mt-4 pt-4">
                 <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs text-slate-500 uppercase tracking-wide"
+                  <span class="label uppercase tracking-wide"
                     >Pricing</span
                   >
                   <div
@@ -1000,7 +1154,7 @@
               </div>
 
               <div class="border-t border-slate-800 mt-4 pt-4">
-                <span class="text-xs text-slate-500 uppercase tracking-wide"
+                <span class="label uppercase tracking-wide"
                   >Modalities</span
                 >
                 <div class="flex items-center gap-2 mt-2 text-slate-400">
@@ -1017,7 +1171,7 @@
 
               <div class="border-t border-slate-800 mt-4 pt-4">
                 <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xs text-slate-500">Assign to:</span>
+                  <span class="label">Assign to:</span>
                   <span
                     class="bg-slate-700 text-slate-200 text-xs font-medium px-2 py-0.5 rounded"
                     >vision</span
@@ -1045,12 +1199,12 @@
                 <span class="text-xs font-mono text-slate-400"
                   >bytedance-seed/seed-2.0-lite</span
                 >
-                <button class="text-slate-500 hover:text-slate-300">
+                <button class="btn-icon">
                   <i data-lucide="copy" class="w-3 h-3"></i>
                 </button>
               </div>
 
-              <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+              <p class="text-muted mt-3 leading-relaxed">
                 Seed-2.0-Lite is a balanced model designed for high-frequency
                 enterprise workloads, optimizing for both capability and cost.
                 Its overall performance surpasses the previous-generation
@@ -1060,7 +1214,7 @@
               </p>
 
               <div class="flex items-center justify-between mt-4">
-                <span class="text-xs text-slate-500 uppercase tracking-wide"
+                <span class="label uppercase tracking-wide"
                   >Context window</span
                 >
                 <span class="text-sm text-slate-200">262K tokens</span>
@@ -1068,7 +1222,7 @@
 
               <div class="border-t border-slate-800 mt-4 pt-4">
                 <div class="flex items-center justify-between mb-3">
-                  <span class="text-xs text-slate-500 uppercase tracking-wide"
+                  <span class="label uppercase tracking-wide"
                     >Pricing</span
                   >
                   <div
@@ -1093,7 +1247,7 @@
               </div>
 
               <div class="border-t border-slate-800 mt-4 pt-4">
-                <span class="text-xs text-slate-500 uppercase tracking-wide"
+                <span class="label uppercase tracking-wide"
                   >Modalities</span
                 >
                 <div class="flex items-center gap-2 mt-2 text-slate-400">
@@ -1110,7 +1264,7 @@
 
               <div class="border-t border-slate-800 mt-4 pt-4">
                 <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xs text-slate-500">Assign to:</span>
+                  <span class="label">Assign to:</span>
                   <span
                     class="bg-slate-700 text-slate-200 text-xs font-medium px-2 py-0.5 rounded"
                     >default</span
@@ -1141,7 +1295,7 @@
               <i data-lucide="x" class="w-4 h-4"></i>
             </button>
           </div>
-          <p class="text-sm text-slate-400 mb-5">
+          <p class="text-muted mb-5">
             Choose a semantic name for this model category (e.g. vision,
             narration).
           </p>
@@ -1152,10 +1306,10 @@
             <input
               type="text"
               placeholder="e.g. vision, narration, fast"
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400"
+              class="input w-full focus:ring-1 focus:ring-slate-400"
               readonly
             />
-            <p class="text-xs text-slate-500 mt-1.5">
+            <p class="label mt-1.5">
               Lowercase letters, numbers, and hyphens only.
             </p>
           </div>
@@ -1165,18 +1319,18 @@
           >
             <div class="flex items-center justify-between">
               <div>
-                <span class="text-xs text-slate-500 uppercase tracking-wide"
+                <span class="section-title"
                   >Model</span
                 >
                 <p class="text-sm text-slate-200 font-medium mt-0.5">
                   ByteDance Seed: Seed-2.0-Lite
                 </p>
-                <p class="text-xs text-slate-500 font-mono">
+                <p class="text-faint font-mono">
                   bytedance-seed/seed-2.0-lite
                 </p>
               </div>
               <button
-                class="text-xs text-slate-500 hover:text-slate-300"
+                class="label hover:text-slate-300"
                 title="Clear model selection"
               >
                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
@@ -1184,9 +1338,7 @@
             </div>
           </div>
           <div class="flex justify-end gap-3">
-            <button
-              class="px-4 py-2 text-sm text-slate-300 bg-slate-800 border border-slate-600 rounded-md hover:bg-slate-700"
-            >
+            <button class="btn-outline">
               Cancel
             </button>
             <button
@@ -1212,7 +1364,7 @@
               <i data-lucide="x" class="w-4 h-4"></i>
             </button>
           </div>
-          <p class="text-sm text-slate-400 mb-5">
+          <p class="text-muted mb-5">
             Update the description for
             <span
               class="bg-slate-700 text-slate-200 text-xs font-medium px-2 py-0.5 rounded"
@@ -1225,15 +1377,13 @@
             >
             <textarea
               rows="3"
-              class="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-slate-400 resize-none"
+              class="input w-full resize-none focus:ring-1 focus:ring-slate-400"
               readonly
             >General purpose model</textarea
             >
           </div>
           <div class="flex justify-end gap-3">
-            <button
-              class="px-4 py-2 text-sm text-slate-300 bg-slate-800 border border-slate-600 rounded-md hover:bg-slate-700"
-            >
+            <button class="btn-outline">
               Cancel
             </button>
             <button
@@ -1246,8 +1396,21 @@
       </div>
     </div>
 
+    <!-- Initialize Lucide icons with Alpine-aware refresh -->
     <script>
       lucide.createIcons();
+      document.addEventListener("alpine:initialized", () => {
+        let pending = false;
+        const observer = new MutationObserver(() => {
+          if (pending) return;
+          pending = true;
+          requestAnimationFrame(() => {
+            lucide.createIcons();
+            pending = false;
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
     </script>
   </body>
 </html>
