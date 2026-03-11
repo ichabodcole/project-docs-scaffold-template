@@ -245,6 +245,12 @@ docs/
 
 ## Version History
 
+### 1.11.2 (2026-03-11)
+
+- Updated `html-mockup-prototyping` skill with Alpine.js + Lucide gotchas:
+  MutationObserver infinite loop fix, `$watch` cascading state issue, `x-if`
+  table row alignment. Core pattern updated with debounced icon refresh.
+
 ### 1.11.1 (2026-03-11)
 
 - Added Lucide icon library (CDN) to `html-mockup-prototyping` skill — core
