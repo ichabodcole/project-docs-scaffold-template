@@ -442,87 +442,50 @@ configured model. Cache invalidates correctly on update.
 requests. PUT creates and updates categories. Client route does not expose model
 IDs.
 
-### Phase 5: Admin UI - Category List Page
+### Phase 5: Admin UI
 
-The index page lists all configured categories and lets admins create new ones.
+The admin UI is a single page with three sections. Open the reference prototype
+at `references/ai-models-admin-mockup.html` for the full interactive layout —
+use the state switcher to see each UI state.
 
-**Page responsibilities:**
+**Page structure:**
 
-- Fetch and display all category configurations in a table
-- Show category name (as badge), model ID, description, last updated
-- "Add Category" button opens a dialog for creating new categories
-- Category name validation: lowercase, alphanumeric, hyphens only
-- Click a category row to navigate to its edit page
+- **Categories table** (top) — configured categories with name badge, model ID,
+  description, last updated, and actions (info, edit, delete)
+- **Model catalog** (bottom) — searchable, sortable list of all OpenRouter
+  models
+- **Model detail pane** (right sidebar, sticky) — shows selected model's full
+  details and "Select This Model" assignment button
 
-**Key UX decision:** Creating a category doesn't require selecting a model yet.
-The admin names the category, then navigates to the edit page to browse and
-select a model. This two-step flow keeps the creation dialog simple.
+**Key UX patterns:**
 
-**Validate:** Page loads categories. Add dialog validates names. Navigation to
-edit page works.
-
-### Phase 6: Admin UI - Category Edit Page
-
-The edit page is where the real model management happens. It uses a 70/30 split
-layout:
-
-```
-┌─────────────────────────────────────────┬───────────────────┐
-│          Left Column (70%)               │  Right Column (30%)│
-│                                          │                    │
-│  ┌─────────────────────────────┐        │  ┌──────────────┐ │
-│  │ Category Settings            │        │  │ Model Detail  │ │
-│  │ - Category name (badge)      │        │  │ Pane          │ │
-│  │ - Current model (clickable)  │        │  │               │ │
-│  │ - Description (textarea)     │        │  │ - Name / ID   │ │
-│  │ - Save Description button    │        │  │ - Description │ │
-│  └─────────────────────────────┘        │  │ - Context len │ │
-│                                          │  │ - Pricing     │ │
-│  ┌─────────────────────────────┐        │  │ - Architecture│ │
-│  │ Model Browser                │        │  │               │ │
-│  │ - Search bar                 │        │  │ [Select This  │ │
-│  │ - Sort (name, price, recent) │        │  │  Model]       │ │
-│  │ - View toggle (list / card)  │        │  └──────────────┘ │
-│  │ - Model results              │        │                    │
-│  │   (table or card grid)       │        │   (sticky sidebar) │
-│  └─────────────────────────────┘        │                    │
-└─────────────────────────────────────────┴───────────────────┘
-```
-
-**Three sub-components:**
-
-1. **CategorySettings** - Shows current state, editable description, save
-   button. Handles 404 (new category) vs existing. Emits current model ID to
-   parent so ModelBrowser can highlight it.
-
-2. **ModelBrowser** - Fetches all models from `/available`. Supports:
-   - Fuzzy search via Fuse.js (on name and ID, optionally description)
-   - Sort: recently added, name A-Z/Z-A, price low-to-high/high-to-low
-   - View modes: list (data table) and card (2-column grid)
-   - Results count ("Showing X of Y models")
-   - Clicking a model emits `modelClick` (opens detail pane)
-
-3. **ModelDetailPane** - Sticky right sidebar showing selected model's full
-   details: name, ID, description, context window, pricing breakdown,
-   architecture (input/output modalities, tokenizer). "Select This Model" button
-   saves the assignment.
+- **Info icon on categories:** Clicking the info icon on a category row
+  auto-selects that category's assigned model in the catalog below, showing its
+  details in the sidebar. This saves the admin from searching for it manually.
+- **Add Category with pre-selected model:** If the admin has a model selected in
+  the detail pane when they click "Add Category", that model is pre-filled as
+  the default assignment. If no model is selected, the system's `DEFAULT_MODEL`
+  is used. This lets admins browse first, then create a category for the model
+  they found.
+- **Model visibility:** Admins can hide models from the catalog via an eye icon
+  per row (persisted in localStorage). A three-state filter (all/visible/hidden)
+  controls which models are shown.
+- **Description search toggle:** A toggle button expands fuzzy search to include
+  model descriptions, not just names and IDs. Useful when name search is too
+  narrow.
 
 **Data flow for model selection:**
 
 ```
-1. Admin clicks model in ModelBrowser
-2. ModelBrowser emits modelClick → parent updates selectedModel
-3. ModelDetailPane shows full details
-4. Admin clicks "Select This Model"
-5. ModelDetailPane emits modelSelect → parent calls PUT /:category
-6. Parent refreshes CategorySettings to show new assignment
-7. Success message auto-hides after 3 seconds
+1. Admin clicks model in catalog → detail pane shows full info
+2. Admin clicks "Select This Model" → PUT /:category saves assignment
+3. Categories table refreshes to show new model mapping
 ```
 
-**Validate:** Search filters models. Sort works. View toggle switches. Selecting
-a model saves correctly. Detail pane shows accurate data.
+**Validate:** Search filters models. Sort works. Selecting a model saves
+correctly. Detail pane shows accurate data.
 
-### Phase 7: Integration with AI Operations
+### Phase 6: Integration with AI Operations
 
 Wire the category system into your AI execution layer. When performing an AI
 operation, resolve the category to a model ID before making the API call:
@@ -629,11 +592,11 @@ The route structure is framework-agnostic:
 
 ### Different Admin UI Frameworks
 
-The admin UI pattern (list page + edit page with browser + detail pane) works in
-any framework:
+The admin UI pattern (categories + model catalog + detail pane) works in any
+framework. The reference prototype at `references/ai-models-admin-mockup.html`
+provides the canonical layout and states — adapt to your framework:
 
-- **React:** Replace Vue components with React components. Fuse.js and TanStack
-  Table both have React adapters.
+- **React:** Fuse.js and TanStack Table both have React adapters.
 - **Svelte:** Same component structure. Use Svelte stores instead of Vue refs.
 - **Plain HTML + htmx:** Server-render the model list, use htmx for search and
   selection.
@@ -664,10 +627,8 @@ any framework:
   invalidation returns stale data.
 
 - **New categories don't exist in the database until a model is assigned.** The
-  admin creates a category name and navigates to the edit page, but nothing is
-  persisted until they select a model and click "Select This Model". The
-  CategorySettings component handles the 404 case (showing "New category" and
-  "No model selected").
+  admin creates a category name, but nothing is persisted until they assign a
+  model. Handle the new-category case gracefully (show "No model selected").
 
 - **The OpenRouter model list is public.** You can fetch it without an API key.
   But sending the key may surface models not in the public catalog. Always send
@@ -679,16 +640,9 @@ any framework:
 
 - **Fuse.js threshold of 0.3 works well for model names.** Too strict (0.1) and
   users miss models with slight typos. Too loose (0.6) and unrelated models
-  appear. 0.3 is a good balance. Allow toggling "include description in search"
-  for broader results when name search is too narrow.
+  appear. 0.3 is a good balance.
 
-- **Make the detail pane sticky.** Users scroll through hundreds of models in
-  the browser. If the detail pane scrolls away, they lose context on the model
-  they clicked. Use `position: sticky; top: 1.5rem` on the detail pane wrapper.
-
-- **Handle the "no models loaded yet" state in the detail pane.** When the page
-  first loads, no model is selected. Show a placeholder ("Click on a model to
-  view details") instead of an empty pane. Similarly, when CategorySettings
-  shows the current model ID as a clickable link, it needs the ModelBrowser's
-  model data to display details -- expose a `getModelById()` method on
-  ModelBrowser for the parent to call.
+- **See the reference prototype for UI states and layout.** The prototype at
+  `references/ai-models-admin-mockup.html` shows all key states: empty detail
+  pane, current model view, model selection, add/edit modals, search filtering,
+  and hidden model filtering. Use it as a starting point for implementation.
