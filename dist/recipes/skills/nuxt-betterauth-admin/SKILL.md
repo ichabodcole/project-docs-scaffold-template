@@ -25,6 +25,14 @@ The core challenge: BetterAuth uses HTTPOnly cookies for sessions, but the Nuxt
 app and API run on different ports. Without a specific proxy and middleware
 setup, authentication silently fails.
 
+## UI Reference
+
+See `references/admin-dashboard-mockup.html` for an interactive prototype of the
+admin dashboard and user management UI. Open in a browser to explore the
+dashboard view, users list with detail sidebar, role change flow, and ban/unban
+confirmation patterns. Use this as the visual starting point and adapt to the
+target design system.
+
 ## When to Use
 
 - Adding a web admin dashboard to an existing BetterAuth + Elysia API
@@ -444,6 +452,10 @@ definePageMeta({
 original page.
 
 ### Phase 6: Admin Layout with Role Guard
+
+> **UI reference:** The prototype in `references/admin-dashboard-mockup.html`
+> shows the target layout — sidebar nav, dashboard stats, users table with
+> detail sidebar, and action confirmation modals.
 
 **6.1 Create the admin layout**
 

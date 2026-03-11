@@ -114,6 +114,12 @@ phase works correctly.>
 <Only for technology-agnostic recipes. Guidance for different databases,
 frameworks, platforms.>
 
+## UI Reference
+
+<If the recipe includes an admin UI, dashboard, or management interface, add a
+references/ directory with interactive HTML mockup prototypes. See
+`references/<feature>-mockup.html` for the clickable prototype.>
+
 ## Gotchas & Important Notes
 
 <Hard-won lessons, non-obvious requirements, common mistakes:>
@@ -121,6 +127,20 @@ frameworks, platforms.>
 - <Gotcha with explanation>
 - <Gotcha with explanation>
 ```
+
+### Recipe Directory Structure
+
+Recipes that include UI references use this directory structure:
+
+```
+plugins/recipes/skills/<recipe-name>/
+  SKILL.md                              — The recipe
+  references/                           — Visual references (optional)
+    <feature>-mockup.html               — Interactive HTML prototype
+```
+
+The `references/` directory is optional — only include it when the recipe
+describes a visual interface that benefits from a clickable prototype.
 
 ---
 
@@ -151,10 +171,12 @@ frameworks, platforms.>
    include version numbers. If the value is in the architecture pattern, keep it
    abstract and add an "Adapting to Different Tech Stacks" section.
 
-7. **Don't include UI component code unless the recipe IS a UI pattern.** For
-   most recipes, describe the UI integration points and component
-   responsibilities in prose, but let the implementer build the actual
-   components for their framework.
+7. **Don't include UI component code in the recipe text — use prototypes
+   instead.** Describe UI integration points and component responsibilities in
+   prose within the SKILL.md. For recipes with admin UIs or dashboards, create
+   interactive HTML prototypes in `references/` using the
+   `html-mockup-prototyping` skill. This gives implementing agents a visual
+   target without polluting the recipe with framework-specific UI code.
 
 ---
 

@@ -38,71 +38,52 @@ state/behavior) + Lucide (icons). All load from CDN.
 - Production code or anything that will be committed to the app
 - Complex data-driven interactions (use the real UI for that)
 
-## Core Pattern
+## Starter Template
 
-```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Mockup — [Feature Name]</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
-    ></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-    </style>
-  </head>
-  <body class="bg-slate-50 min-h-screen">
-    <div x-data="{ state: 'idle' }">
-      <!-- State switcher (amber bar) — always present -->
-      <div
-        class="bg-amber-50 border-b border-amber-200 px-6 py-2 flex items-center gap-3"
-      >
-        <span
-          class="text-xs font-semibold text-amber-700 uppercase tracking-wide"
-          >Prototype state</span
-        >
-        <div class="flex gap-2">
-          <button
-            @click="state = 'idle'"
-            :class="state === 'idle' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-300'"
-            class="text-xs px-3 py-1 rounded border font-medium"
-          >
-            1 · Idle
-          </button>
-          <button
-            @click="state = 'loading'"
-            :class="state === 'loading' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-300'"
-            class="text-xs px-3 py-1 rounded border font-medium"
-          >
-            2 · Loading
-          </button>
-        </div>
-      </div>
+Copy `templates/state-flow.html` as your starting point. It includes:
 
-      <!-- States — shown/hidden via Alpine x-show -->
-      <div x-show="state === 'idle'">
-        <!-- idle content -->
-      </div>
+- CDN imports (Tailwind, Alpine.js, Lucide)
+- Semantic theme block (~25 CSS classes via `@apply`)
+- State switcher bar (amber prototype navigation)
+- `Alpine.data()` registration pattern
+- Lucide icon initialization with debounced MutationObserver
+- Empty content area — blank canvas, no layout opinions
 
-      <div x-show="state === 'loading'">
-        <!-- loading content with skeletons -->
-      </div>
-    </div>
+The content area is yours to fill. Sidebar nav, single column, split pane —
+whatever the prototype needs.
 
-    <!-- Initialize Lucide icons — must run after DOM is ready -->
-    <script>
-      lucide.createIcons();
-    </script>
-  </body>
-</html>
-```
+## Theme Classes
+
+The template provides semantic classes so markup stays readable. Use these
+instead of raw Tailwind utility strings:
+
+| Category   | Classes                                               |
+| ---------- | ----------------------------------------------------- |
+| Typography | `page-title`, `section-title`, `label`, `text-body`,  |
+|            | `text-muted`, `text-faint`, `text-mono`, `link`       |
+| Surfaces   | `card`, `inset`, `panel-section`                      |
+| Badges     | `badge-accent`, `badge-muted`, `badge-warning`        |
+| Status     | `status-dot-open`, `status-dot-success`               |
+| Buttons    | `btn-primary`, `btn-outline`, `btn-ghost`, `btn-icon` |
+| Forms      | `input`, `select`, `textarea`                         |
+| Navigation | `nav-item`, `nav-item-active`, `nav-item-inactive`    |
+| Utilities  | `filter-pill`, `skeleton` (loading shimmer)           |
+
+Add new semantic classes to the theme block as needed — follow the same `@apply`
+pattern. Keep raw Tailwind for one-off layout utilities (flex, padding, gap,
+etc.).
+
+## Theme Adaptation
+
+Before building, check if the target project has a theme file (CSS variables,
+Tailwind config, shadcn theme, etc.). If one exists, ask the user whether the
+prototype should reflect the app's look. If yes, adapt the template's theme
+block to approximate the app's color palette and general feel.
+
+Keep it lightweight — the goal is visual correspondence, not pixel-perfect
+reproduction. Swap the slate palette for the project's colors, adjust accent
+colors, match light/dark mode. The semantic class names stay the same; only the
+`@apply` definitions change.
 
 ## Lucide Icons
 
@@ -110,15 +91,15 @@ state/behavior) + Lucide (icons). All load from CDN.
 them for nav items, buttons, status indicators, and anywhere text alone is
 ambiguous.
 
-**Usage:** Add `<i data-lucide="icon-name" class="w-4 h-4"></i>` and call
-`lucide.createIcons()` once at the end of `<body>`. Lucide replaces each `<i>`
-tag with an inline SVG.
+**Usage:** `<i data-lucide="icon-name" class="w-4 h-4"></i>` — the template's
+MutationObserver handles initialization, including icons inside `x-show`/`x-if`
+blocks.
 
-**Sizing:** Use Tailwind width/height classes: `w-3 h-3` (12px), `w-4 h-4` (16px
-— default), `w-5 h-5` (20px), `w-6 h-6` (24px).
+**Sizing:** `w-3 h-3` (12px), `w-4 h-4` (16px — default), `w-5 h-5` (20px),
+`w-6 h-6` (24px).
 
-**Color:** Lucide icons inherit `currentColor`, so Tailwind text color classes
-work directly: `text-slate-400`, `text-blue-600`, `text-red-500`.
+**Color:** Icons inherit `currentColor` — Tailwind text color classes work
+directly.
 
 **Common icons:**
 
@@ -131,54 +112,6 @@ work directly: `text-slate-400`, `text-blue-600`, `text-red-500`.
 | UI chrome  | `bell`, `layout-dashboard`, `shield`, `eye`, `eye-off`, `loader` |
 
 Browse all icons at [lucide.dev/icons](https://lucide.dev/icons).
-
-## Alpine.js Quick Reference
-
-Alpine adds behavior via HTML attributes — no separate script blocks needed for
-state. Prefer it over vanilla JS: `x-show` is declarative and reliable, whereas
-manual `getElementById`/`classList` manipulation is prone to silent failures
-(blank sections when a lookup misses).
-
-| Attribute | Purpose                                 | Example                                        |
-| --------- | --------------------------------------- | ---------------------------------------------- |
-| `x-data`  | Declare reactive state                  | `x-data="{ open: false, state: 'idle' }"`      |
-| `x-show`  | Show/hide based on expression           | `x-show="state === 'loading'"`                 |
-| `x-if`    | Conditionally render (removes from DOM) | `x-if="hasError"`                              |
-| `@click`  | Handle click                            | `@click="state = 'success'"`                   |
-| `:class`  | Conditional classes                     | `:class="active ? 'bg-blue-500' : 'bg-white'"` |
-| `x-text`  | Set text content                        | `x-text="filename"`                            |
-| `x-model` | Two-way bind input                      | `x-model="query"`                              |
-
-## Loading States
-
-Skeleton shimmer for loading placeholders:
-
-```html
-<style>
-  .skeleton {
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s infinite;
-    border-radius: 4px;
-  }
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-  .spin {
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-</style>
-```
 
 ## Flow Design Process
 
@@ -215,6 +148,22 @@ actual behavior. The goal is to show what happens, not make it work.
   ambiguous.
 - **Skipping states** — build all states (including error/empty) early, even as
   placeholders. This is where the most valuable design decisions happen.
+- **Lucide + MutationObserver infinite loop** — calling `lucide.createIcons()`
+  inside a raw `MutationObserver` callback creates an infinite loop: icons
+  modify DOM → observer fires → icons modify DOM again. Always debounce with
+  `requestAnimationFrame` as shown in the template.
+- **`$watch` in `x-init` for state switcher setup** — using `$watch('state')` to
+  auto-configure demo states (e.g., selecting a user when switching to
+  "user-selected") causes cascading reactive updates that can freeze the page.
+  Instead, put setup logic directly in the state button's `@click` handler:
+  `@click="state = 'user-selected'; selectedUser = users[0];"`.
+- **`x-if` on table rows** — wrapping `<tr>` elements in `<template x-if>` can
+  break table column alignment because the conditional rows render in a separate
+  DOM context. Use `x-show` on `<tr>` elements instead — they stay in the same
+  table structure and columns align correctly.
+- **Inline `x-data` with complex state** — large inline `x-data` objects cause
+  Alpine.js parsing errors. Always use the `Alpine.data()` registration pattern
+  in the template's script block.
 
 ## Skill Feedback
 
