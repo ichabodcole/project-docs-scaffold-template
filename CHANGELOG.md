@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.15.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.14.0...project-docs-scaffold-template-v2.15.0) (2026-03-11)
+
+
+### Features
+
+* **project-docs:** upgrade html-mockup-prototyping skill with semantic theming + starter template (v1.12.0) ([447ef49](https://github.com/ichabodcole/project-docs-scaffold-template/commit/447ef49a320451412f3d368e17ca986c14fcb5ee))
+* **recipes:** add UI reference prototype to agent-feedback-reporting skill (v1.3.5) ([a6a01b6](https://github.com/ichabodcole/project-docs-scaffold-template/commit/a6a01b6c8fe48e11b356d3cfde772f8e48381c19))
+
 ## [2.14.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.13.0...project-docs-scaffold-template-v2.14.0) (2026-03-11)
 
 
