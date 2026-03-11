@@ -23,7 +23,7 @@ no build step, no server, no framework. Best for exploring flows and interaction
 states quickly.
 
 **Stack:** Tailwind CSS (utility styling) + Alpine.js (declarative
-state/behavior). Both load from CDN.
+state/behavior) + Lucide (icons). All load from CDN.
 
 ## When to Use
 
@@ -51,6 +51,7 @@ state/behavior). Both load from CDN.
       defer
       src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
     ></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -94,9 +95,42 @@ state/behavior). Both load from CDN.
         <!-- loading content with skeletons -->
       </div>
     </div>
+
+    <!-- Initialize Lucide icons — must run after DOM is ready -->
+    <script>
+      lucide.createIcons();
+    </script>
   </body>
 </html>
 ```
+
+## Lucide Icons
+
+[Lucide](https://lucide.dev) provides 1500+ consistent SVG icons via CDN. Use
+them for nav items, buttons, status indicators, and anywhere text alone is
+ambiguous.
+
+**Usage:** Add `<i data-lucide="icon-name" class="w-4 h-4"></i>` and call
+`lucide.createIcons()` once at the end of `<body>`. Lucide replaces each `<i>`
+tag with an inline SVG.
+
+**Sizing:** Use Tailwind width/height classes: `w-3 h-3` (12px), `w-4 h-4` (16px
+— default), `w-5 h-5` (20px), `w-6 h-6` (24px).
+
+**Color:** Lucide icons inherit `currentColor`, so Tailwind text color classes
+work directly: `text-slate-400`, `text-blue-600`, `text-red-500`.
+
+**Common icons:**
+
+| Category   | Icons                                                            |
+| ---------- | ---------------------------------------------------------------- |
+| Navigation | `menu`, `x`, `chevron-right`, `chevron-down`, `arrow-left`       |
+| Actions    | `plus`, `pencil`, `trash-2`, `download`, `upload`, `search`      |
+| Status     | `check`, `check-circle`, `alert-triangle`, `alert-circle`, `x`   |
+| Objects    | `file-text`, `folder`, `image`, `link`, `settings`, `user`       |
+| UI chrome  | `bell`, `layout-dashboard`, `shield`, `eye`, `eye-off`, `loader` |
+
+Browse all icons at [lucide.dev/icons](https://lucide.dev/icons).
 
 ## Alpine.js Quick Reference
 

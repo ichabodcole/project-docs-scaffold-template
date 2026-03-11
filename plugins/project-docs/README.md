@@ -245,6 +245,13 @@ docs/
 
 ## Version History
 
+### 1.11.1 (2026-03-11)
+
+- Added Lucide icon library (CDN) to `html-mockup-prototyping` skill — core
+  pattern now includes Lucide script tag and `createIcons()` call, plus new
+  Icons section with usage patterns, sizing/color conventions, and common icons
+  reference table
+
 ### 1.11.0 (2026-03-09)
 
 - New `html-mockup-prototyping` skill — builds self-contained single-file HTML
