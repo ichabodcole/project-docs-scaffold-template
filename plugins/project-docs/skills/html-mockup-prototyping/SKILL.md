@@ -23,7 +23,7 @@ no build step, no server, no framework. Best for exploring flows and interaction
 states quickly.
 
 **Stack:** Tailwind CSS (utility styling) + Alpine.js (declarative
-state/behavior). Both load from CDN.
+state/behavior) + Lucide (icons). All load from CDN.
 
 ## When to Use
 
@@ -51,6 +51,7 @@ state/behavior). Both load from CDN.
       defer
       src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
     ></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -94,9 +95,55 @@ state/behavior). Both load from CDN.
         <!-- loading content with skeletons -->
       </div>
     </div>
+
+    <!-- Initialize Lucide icons with Alpine-aware refresh -->
+    <script>
+      lucide.createIcons();
+      document.addEventListener("alpine:initialized", () => {
+        let pending = false;
+        const observer = new MutationObserver(() => {
+          if (pending) return;
+          pending = true;
+          requestAnimationFrame(() => {
+            lucide.createIcons();
+            pending = false;
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
   </body>
 </html>
 ```
+
+## Lucide Icons
+
+[Lucide](https://lucide.dev) provides 1500+ consistent SVG icons via CDN. Use
+them for nav items, buttons, status indicators, and anywhere text alone is
+ambiguous.
+
+**Usage:** Add `<i data-lucide="icon-name" class="w-4 h-4"></i>` and initialize
+with the Alpine-aware script at the end of `<body>` (see core pattern). The
+debounced MutationObserver ensures icons inside `x-show`/`x-if` blocks are
+rendered when Alpine toggles them visible.
+
+**Sizing:** Use Tailwind width/height classes: `w-3 h-3` (12px), `w-4 h-4` (16px
+— default), `w-5 h-5` (20px), `w-6 h-6` (24px).
+
+**Color:** Lucide icons inherit `currentColor`, so Tailwind text color classes
+work directly: `text-slate-400`, `text-blue-600`, `text-red-500`.
+
+**Common icons:**
+
+| Category   | Icons                                                            |
+| ---------- | ---------------------------------------------------------------- |
+| Navigation | `menu`, `x`, `chevron-right`, `chevron-down`, `arrow-left`       |
+| Actions    | `plus`, `pencil`, `trash-2`, `download`, `upload`, `search`      |
+| Status     | `check`, `check-circle`, `alert-triangle`, `alert-circle`, `x`   |
+| Objects    | `file-text`, `folder`, `image`, `link`, `settings`, `user`       |
+| UI chrome  | `bell`, `layout-dashboard`, `shield`, `eye`, `eye-off`, `loader` |
+
+Browse all icons at [lucide.dev/icons](https://lucide.dev/icons).
 
 ## Alpine.js Quick Reference
 
@@ -181,6 +228,19 @@ actual behavior. The goal is to show what happens, not make it work.
   ambiguous.
 - **Skipping states** — build all states (including error/empty) early, even as
   placeholders. This is where the most valuable design decisions happen.
+- **Lucide + MutationObserver infinite loop** — calling `lucide.createIcons()`
+  inside a raw `MutationObserver` callback creates an infinite loop: icons
+  modify DOM → observer fires → icons modify DOM again. Always debounce with
+  `requestAnimationFrame` as shown in the core pattern above.
+- **`$watch` in `x-init` for state switcher setup** — using `$watch('state')` to
+  auto-configure demo states (e.g., selecting a user when switching to
+  "user-selected") causes cascading reactive updates that can freeze the page.
+  Instead, put setup logic directly in the state button's `@click` handler:
+  `@click="state = 'user-selected'; selectedUser = users[0];"`.
+- **`x-if` on table rows** — wrapping `<tr>` elements in `<template x-if>` can
+  break table column alignment because the conditional rows render in a separate
+  DOM context. Use `x-show` on `<tr>` elements instead — they stay in the same
+  table structure and columns align correctly.
 
 ## Skill Feedback
 
