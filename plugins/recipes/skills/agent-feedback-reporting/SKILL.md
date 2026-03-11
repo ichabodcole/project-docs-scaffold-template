@@ -11,6 +11,13 @@ description: >
 
 # Agent Feedback Reporting Recipe
 
+## UI Reference
+
+See `references/agent-feedback-mockup.html` for an interactive prototype of the
+admin feedback list and detail panel UI. Open in a browser to click through
+states: default list, selected entry (open/addressed), search, filtered, and
+archived views.
+
 ## Purpose
 
 This recipe implements a pattern for giving AI agents a structured way to report
@@ -456,6 +463,9 @@ endpoints make intent explicit and prevent bugs.
 inbox view excludes archived, and that the archived toggle can be reversed.
 
 ### Phase 6: Admin UI
+
+> **Prototype available:** See `references/agent-feedback-mockup.html` for a
+> clickable reference of the admin UI described below.
 
 The UI has two areas: a filterable list and a detail panel.
 
