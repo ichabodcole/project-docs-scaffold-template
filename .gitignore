@@ -42,3 +42,4 @@ tmp-template-test/
 /.cursor
 
 .operator
+.playwright-mcp/
