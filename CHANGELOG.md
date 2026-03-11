@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.14.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.13.0...project-docs-scaffold-template-v2.14.0) (2026-03-11)
+
+
+### Features
+
+* **recipes:** add UI reference prototype to nuxt-betterauth-admin skill (v1.3.4) ([857046d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/857046db81aa43c30ccf10c184c79a5850f2f95f))
+* **recipes:** add UI reference prototype to openrouter-model-categories skill (v1.3.3) ([ead55ad](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ead55ad6d08f038bc5a569c8155e1161a640362c))
+
+## [2.13.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.12.0...project-docs-scaffold-template-v2.13.0) (2026-03-09)
+
+
+### Features
+
+* **project-docs:** add html-mockup-prototyping skill (v1.11.0) ([163b5ca](https://github.com/ichabodcole/project-docs-scaffold-template/commit/163b5cade8777f909cc453b939addd1b50d74ce4))
+
 ## [2.12.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.11.0...project-docs-scaffold-template-v2.12.0) (2026-03-09)
 
 
