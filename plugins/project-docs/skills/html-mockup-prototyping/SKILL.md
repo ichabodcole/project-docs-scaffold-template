@@ -161,9 +161,27 @@ actual behavior. The goal is to show what happens, not make it work.
   break table column alignment because the conditional rows render in a separate
   DOM context. Use `x-show` on `<tr>` elements instead — they stay in the same
   table structure and columns align correctly.
+- **`x-for` inside `<tbody>`** — placing `<template x-for>` inside `<tbody>`
+  causes an `importNode` TypeError. The browser HTML parser strips `<template>`
+  tags when nested inside `<tbody>`, giving Alpine a null `template.content`.
+  Fix: put the `<tbody>` _inside_ the `x-for` template — `<table>` can have
+  multiple `<tbody>` elements. See `references/tables.html` for a working demo.
+- **`Object.entries()` destructuring in `x-for`** — using
+  `[key, val] in Object.entries(obj)` causes "X is not defined" ReferenceErrors.
+  Use `Object.keys(obj)` and access values with `obj[key]` bracket notation. See
+  `references/tables.html` for a working demo.
 - **Inline `x-data` with complex state** — large inline `x-data` objects cause
   Alpine.js parsing errors. Always use the `Alpine.data()` registration pattern
   in the template's script block.
+
+## Pattern References
+
+Runnable mini-mockups demonstrating solutions to specific Alpine.js / HTML
+problems. See `references/index.md` for the full list.
+
+| Pattern                             | Reference File           |
+| ----------------------------------- | ------------------------ |
+| Tables with `x-for` / `Object.keys` | `references/tables.html` |
 
 ## Skill Feedback
 
