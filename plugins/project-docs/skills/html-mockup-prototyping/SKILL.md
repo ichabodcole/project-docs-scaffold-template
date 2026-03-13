@@ -57,17 +57,18 @@ whatever the prototype needs.
 The template provides semantic classes so markup stays readable. Use these
 instead of raw Tailwind utility strings:
 
-| Category   | Classes                                               |
-| ---------- | ----------------------------------------------------- |
-| Typography | `page-title`, `section-title`, `label`, `text-body`,  |
-|            | `text-muted`, `text-faint`, `text-mono`, `link`       |
-| Surfaces   | `card`, `inset`, `panel-section`                      |
-| Badges     | `badge-accent`, `badge-muted`, `badge-warning`        |
-| Status     | `status-dot-open`, `status-dot-success`               |
-| Buttons    | `btn-primary`, `btn-outline`, `btn-ghost`, `btn-icon` |
-| Forms      | `input`, `select`, `textarea`                         |
-| Navigation | `nav-item`, `nav-item-active`, `nav-item-inactive`    |
-| Utilities  | `filter-pill`, `skeleton` (loading shimmer)           |
+| Category   | Classes                                                       |
+| ---------- | ------------------------------------------------------------- |
+| Typography | `page-title`, `section-title`, `label`, `text-body`,          |
+|            | `text-muted`, `text-faint`, `text-mono`, `link`               |
+| Surfaces   | `card`, `inset`, `panel-section`                              |
+| Badges     | `badge-accent`, `badge-muted`, `badge-warning`                |
+| Status     | `status-dot-open`, `status-dot-success`                       |
+| Buttons    | `btn-primary`, `btn-outline`, `btn-ghost`, `btn-icon`         |
+| Forms      | `input`, `select`, `textarea`, `input-error`, `field-error`   |
+| Alerts     | `alert-error`, `alert-success`, `alert-info`, `alert-warning` |
+| Navigation | `nav-item`, `nav-item-active`, `nav-item-inactive`            |
+| Utilities  | `filter-pill`, `skeleton` (loading shimmer)                   |
 
 Add new semantic classes to the theme block as needed — follow the same `@apply`
 pattern. Keep raw Tailwind for one-off layout utilities (flex, padding, gap,
@@ -84,6 +85,12 @@ Keep it lightweight — the goal is visual correspondence, not pixel-perfect
 reproduction. Swap the slate palette for the project's colors, adjust accent
 colors, match light/dark mode. The semantic class names stay the same; only the
 `@apply` definitions change.
+
+**Light theme note:** Adapting to a light theme touches almost every class in
+the theme block — it's a near-complete rewrite of all `@apply` definitions, not
+just a palette swap. Base colors, surface colors, text colors, borders, and
+component states all need adjustment. Plan accordingly, or start from a
+light-theme variant rather than modifying the dark default.
 
 ## Lucide Icons
 
@@ -120,15 +127,52 @@ Browse all icons at [lucide.dev/icons](https://lucide.dev/icons).
 2. **Build the state switcher** — wire up all states even if some are
    placeholders; label each `N · Description`
 3. **Fill most important states** — happy path first, then edge cases
-4. **Add realistic app chrome** — sidebar nav, top header, card container even
-   if not the focus
+4. **Add realistic app chrome** — match the actual context of the page. For
+   dashboard/admin flows: sidebar nav + top header. For auth flows, settings
+   forms, and onboarding: a plain background + centered card IS the shell. The
+   goal is visual context, not always a nav bar.
 5. **Review with user** — click through states; iterate on design before
    committing to a plan
 
 ## Key Conventions
 
 **State switcher** — Always the amber bar at top. This is what makes it a flow
-mockup vs. a static screenshot.
+mockup vs. a static screenshot. For single flows (up to ~7 states), use a flat
+button list. For multi-flow mockups with closely related flows, use the
+**two-level switcher**:
+
+- Row 1: group tabs (flow names, e.g. "Sign In", "Sign Up", "Account Settings")
+- Row 2: state buttons for the active group only
+- Groups and states declared as data in `Alpine.data()` — markup stays clean
+  with `x-for` and a `get activeGroup()` computed property
+
+```html
+<!-- Row 1: group tabs -->
+<div class="px-4 pt-2 pb-0 flex items-center gap-1">
+  <template x-for="g in groups" :key="g.id">
+    <button
+      @click="selectGroup(g.id)"
+      :class="group === g.id ? 'bg-amber-700/60 text-amber-100 border-amber-600/60' : 'text-amber-400/70 border-transparent hover:text-amber-300 hover:bg-amber-800/30'"
+      class="text-xs px-3 py-1.5 rounded-t border border-b-0 font-medium transition-colors"
+      x-text="g.label"
+    ></button>
+  </template>
+</div>
+<!-- Row 2: state buttons for active group -->
+<div class="px-4 py-1.5 flex items-center gap-1.5 bg-amber-900/30">
+  <template x-for="s in activeGroup.states" :key="s.id">
+    <button
+      @click="selectState(s.id)"
+      :class="state === s.id ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-800 text-slate-300 border-slate-600'"
+      class="text-xs px-2.5 py-1 rounded border font-medium transition-colors"
+      x-text="s.label"
+    ></button>
+  </template>
+</div>
+```
+
+See `references/auth-flows-mockup.html` in the `nuxt-betterauth-admin` recipe
+skill for a working example with 22 states across 7 groups.
 
 **Realistic shell** — Wrap the mockup in app chrome. Avoids "floating widget"
 syndrome where design looks good in isolation but context is unclear.
@@ -141,8 +185,11 @@ actual behavior. The goal is to show what happens, not make it work.
 
 ## Common Mistakes
 
-- **Too many states in one file** — keep to one user flow (max 6-7 states).
-  Split into multiple files if exploring multiple flows.
+- **Too many states in one file** — for a single linear flow, keep to ~6-7
+  states so reviewers don't get lost. When covering multiple closely related
+  flows (e.g., all auth flows), use the two-level switcher to organize them in
+  one file — the real constraint is reviewability, not a hard count. Split into
+  separate files only when flows are unrelated or the file becomes unwieldy.
 - **Missing the state switcher** — without it, reviewers can only see one state.
 - **No app chrome** — floating a form on a white page makes layout decisions
   ambiguous.
@@ -161,9 +208,28 @@ actual behavior. The goal is to show what happens, not make it work.
   break table column alignment because the conditional rows render in a separate
   DOM context. Use `x-show` on `<tr>` elements instead — they stay in the same
   table structure and columns align correctly.
+- **`x-for` inside `<tbody>`** — placing `<template x-for>` inside `<tbody>`
+  causes an `importNode` TypeError. The browser HTML parser strips `<template>`
+  tags when nested inside `<tbody>`, giving Alpine a null `template.content`.
+  Fix: put the `<tbody>` _inside_ the `x-for` template — `<table>` can have
+  multiple `<tbody>` elements. See `references/tables.html` for a working demo.
+- **`Object.entries()` destructuring in `x-for`** — using
+  `[key, val] in Object.entries(obj)` causes "X is not defined" ReferenceErrors.
+  Use `Object.keys(obj)` and access values with `obj[key]` bracket notation. See
+  `references/tables.html` for a working demo.
 - **Inline `x-data` with complex state** — large inline `x-data` objects cause
   Alpine.js parsing errors. Always use the `Alpine.data()` registration pattern
   in the template's script block.
+
+## Pattern References
+
+Runnable mini-mockups demonstrating solutions to specific Alpine.js / HTML
+problems. See `references/index.md` for the full list.
+
+| Pattern                             | Reference File                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| Tables with `x-for` / `Object.keys` | `references/tables.html`                                                   |
+| Two-level group/state switcher      | `nuxt-betterauth-admin` recipe skill — `references/auth-flows-mockup.html` |
 
 ## Skill Feedback
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <title>Mockup — [Feature Name]</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
     <script>
       tailwind.config = {
         darkMode: "class",
@@ -149,14 +149,23 @@
                text-slate-300 border border-slate-700 px-2 py-0.5 rounded;
       }
       .skeleton {
-        background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+        background: linear-gradient(
+          90deg,
+          #1e293b 25%,
+          #334155 50%,
+          #1e293b 75%
+        );
         background-size: 200% 100%;
         animation: shimmer 1.4s infinite;
         border-radius: 4px;
       }
       @keyframes shimmer {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
       }
     </style>
 
@@ -173,7 +182,6 @@
           state: "default",
 
           // TODO: Add your state properties here
-
         }));
       });
     </script>
@@ -236,7 +244,6 @@
           <p class="text-muted">Replace this with your prototype content.</p>
         </div>
       </div>
-
     </div>
 
     <!-- Initialize Lucide icons with Alpine-aware refresh -->
