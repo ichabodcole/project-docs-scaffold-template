@@ -12,6 +12,8 @@
     "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d"
   },
   "devDependencies": {
+    "@slidev/cli": "^52.14.1",
+    "@slidev/theme-default": "^0.25.0",
     "husky": "^9.1.7",
     "prettier": "^3.2.5"
   },
@@ -22,5 +24,8 @@
     "scaffold"
   ],
   "author": "Cole Reed",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@slidev/theme-seriph": "^0.25.0"
+  }
 }

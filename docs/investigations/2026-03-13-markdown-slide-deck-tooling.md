@@ -1,7 +1,7 @@
 # Investigation: Markdown Slide Deck Tooling
 
 **Date Started:** 2026-03-13 **Investigator:** Claude Code\
-**Status:** Active **Outcome:** In Progress
+**Status:** Concluded **Outcome:** Proposal Recommended
 
 ---
 
@@ -86,60 +86,61 @@ the technology where writing the source file is the only real work.
 
 - **Marp wins on simplicity.** A plain markdown file with `---` separators
   renders immediately with a single `npx` command. Zero project setup. Agent
-  writes standard markdown, adds dividers. This matches the html-mockup
-  philosophy closely.
-- **Slidev wins on features.** Native Mermaid, hot-reload dev server, Vue
-  components, presenter mode, interactivity. But it requires a running dev
-  server and a project directory — more setup than a single-command render.
-- **Mermaid is the deciding variable.** If Marp's Mermaid plugin is reliable and
-  low-friction to enable, Marp is likely the right choice. If it requires
-  significant config, Slidev's zero-config Mermaid becomes compelling despite
-  the heavier setup.
+  writes standard markdown, adds dividers.
+- **Marp loses on Mermaid.** Rendering Mermaid diagrams requires the `--html`
+  flag AND replacing standard ` ```mermaid ``` ` code blocks with
+  `<pre class="mermaid">` + an inline CDN script tag. Agents would need to write
+  non-standard HTML — real friction, not just configuration.
+- **Slidev wins on features.** Native Mermaid (agents write standard code
+  blocks, nothing special), hot-reload dev server, Vue components, presenter
+  mode, and a clear interactivity path.
+- **Slidev's setup is a one-time cost.**
+  `npm install @slidev/cli @slidev/theme-default` once in the project; after
+  that `npx slidev <file>.md` is the daily command. With the package already
+  installed in `project-docs`, friction is minimal.
+- **Interactivity prototype validated.** Built `MultiChoice.vue` and
+  `FeedbackSummary.vue` components: reviewers click through decision slides,
+  select options, and hit a summary slide that aggregates all answers. A "Save
+  feedback.md" button uses the File System Access API (Chromium) or falls back
+  to a browser download — no copy-paste required.
 - **Reveal.js is not a strong fit** for agent-authored content — too much HTML
   surface area.
 
 ### Options Considered
 
-| Option    | Agent Effort | Mermaid                | Setup                 | Interactivity |
-| --------- | ------------ | ---------------------- | --------------------- | ------------- |
-| Marp      | Very low     | Plugin (needs testing) | Minimal (`npx`)       | None          |
-| Slidev    | Low–Medium   | Native (zero config)   | Moderate (dev server) | High          |
-| Reveal.js | Medium–High  | Plugin                 | Moderate              | Medium        |
+| Option    | Agent Effort | Mermaid                    | Setup                | Interactivity |
+| --------- | ------------ | -------------------------- | -------------------- | ------------- |
+| Marp      | Very low     | ❌ Non-standard workaround | Minimal (`npx`)      | None          |
+| Slidev    | Low          | ✅ Native (zero config)    | One-time npm install | High          |
+| Reveal.js | Medium–High  | Plugin                     | Moderate             | Medium        |
 
 ## Recommendation
 
-- [x] **More Research Needed** — Prototype required before deciding
+- [x] **Create Proposal** — Action is warranted
 
-**Rationale:** The core tradeoff (Marp simplicity vs. Slidev
-Mermaid/interactivity) can't be resolved by reading docs alone. Need to
-prototype both with a real project document and evaluate: how close is the
-agent's output to valid input, does Mermaid work reliably, and is the setup
-friction acceptable.
+**Rationale:** Slidev is the clear choice. Marp's Mermaid workaround requires
+agents to write non-standard HTML syntax, which defeats the goal of low-effort
+authoring. Slidev's one-time setup cost is acceptable — `@slidev/cli` is now
+installed in this project, so the daily workflow is just `npx slidev <file>.md`.
+The interactivity prototype confirmed that `MultiChoice` + `FeedbackSummary` Vue
+components provide a viable feedback loop without requiring agents to write any
+Vue code.
+
+**Decisions made during prototyping:**
+
+| Question                   | Decision                          |
+| -------------------------- | --------------------------------- |
+| Which tool?                | Slidev                            |
+| Where do slide files live? | `docs/projects/<name>/artifacts/` |
+| Commit slide source?       | Yes — commit the `.md` source     |
 
 ## Next Steps
 
-- [ ] Prototype Marp: take an existing proposal or dev plan, generate a slide
-      markdown file with `---` separators, render with `npx @marp-team/marp-cli`
-      with `--html` flag, verify Mermaid renders via plugin
-- [ ] Prototype Slidev: same source doc, generate slides, run `npx slidev`,
-      verify Mermaid renders natively, assess agent authoring complexity
-- [ ] Compare: which output looks better, which required less agent-specific
-      syntax, which setup was less friction
-- [ ] Based on prototype results, write a proposal covering: chosen technology,
-      skill definition (trigger conditions, slide structure conventions, output
-      location), and doc structure recommendation
-
-## Open Questions
-
-- [ ] Does Marp's Mermaid plugin work reliably without additional configuration?
-- [ ] Is Slidev's dev server requirement acceptable, or does it add too much
-      friction compared to Marp's single-command render?
-- [ ] Where should `.md` slide source files live in the doc structure? Options:
-      `docs/slides/`, alongside source doc, or in project `artifacts/`
-- [ ] Should a slide file be committed to the repo or treated as ephemeral
-      output (generated on demand, not checked in)?
-- [ ] Is there a path to light interactivity in Marp (e.g., via its HTML
-      output), or does interactivity require Slidev?
+- [x] Prototype Marp — confirmed Mermaid requires non-standard workaround
+- [x] Prototype Slidev — confirmed native Mermaid, interactivity works
+- [ ] Write proposal: skill definition, slide structure conventions, Vue
+      component library (`MultiChoice`, `FeedbackSummary`), npm script for
+      launching, and agent authoring guidelines
 
 ---
 

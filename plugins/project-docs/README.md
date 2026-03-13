@@ -193,11 +193,31 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Utility Skills
 
-| Skill                     | Description                                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size                                                |
-| `maestro-testing`         | Write and run Maestro flows for mobile, WebView, and web testing                                     |
-| `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation |
+| Skill                     | Description                                                                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size                                                                                               |
+| `maestro-testing`         | Write and run Maestro flows for mobile, WebView, and web testing                                                                                    |
+| `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                |
+| `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export |
+
+---
+
+## Agents
+
+Agents are autonomous subprocesses that handle complex, multi-step tasks and are
+dispatched by Claude Code automatically or on request.
+
+| Agent                 | Description                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `slide-deck-author`   | Synthesizes project documents into executive slide decks; handles structure, detail level, and component setup |
+| `investigator`        | Structured investigation: root cause analysis, technology evaluation, feasibility                              |
+| `proposal-writer`     | Creates formal proposals from investigation findings or research notes                                         |
+| `dev-plan-generator`  | Generates detailed development plans from approved proposals                                                   |
+| `test-plan-generator` | Creates tiered test plans from dev plans and proposals                                                         |
+| `docs-curator`        | Reviews individual documents for accuracy, implementation status, and archival                                 |
+| `gopher-dev`          | Quick, focused development tasks: small fixes, targeted modifications                                          |
+| `web-researcher`      | Rapid online research for integration patterns, best practices, configuration                                  |
+| `unit-test-writer`    | Writes unit tests for any part of the project                                                                  |
 
 ---
 
@@ -244,6 +264,28 @@ docs/
    significantly
 
 ## Version History
+
+### 1.15.0 (2026-03-13)
+
+- New `slide-deck-author` agent — autonomous executive slide deck synthesis;
+  owns philosophy, workflow, and detail level question; uses
+  `generate-slide-deck` skill as technical reference
+- Slimmed `generate-slide-deck` skill — removed executive deck mindset and
+  detail level prompt (now owned by agent); skill is now a pure technical
+  reference
+
+### 1.14.1 (2026-03-13)
+
+- Renamed `slide-deck` skill to `generate-slide-deck` to match action-oriented
+  naming convention
+- Added FeedbackSummary overflow note to Common Mistakes
+
+### 1.14.0 (2026-03-13)
+
+- New `generate-slide-deck` skill — generates Slidev slide decks from project
+  documents for human review; includes starter template, `MultiChoice`,
+  `TellMeMore`, and `FeedbackSummary` Vue components, Mermaid support, and
+  interactive feedback export via File System Access API
 
 ### 1.13.0 (2026-03-13)
 

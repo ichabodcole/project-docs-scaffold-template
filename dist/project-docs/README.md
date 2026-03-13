@@ -8,8 +8,8 @@ plugin, packaged for cross-agent installation.
 
 | Type     | Count | Cross-tool?                      |
 | -------- | ----- | -------------------------------- |
-| Skills   | 24    | Yes — Agent Skills open standard |
-| Agents   | 8     | Claude Code only                 |
+| Skills   | 25    | Yes — Agent Skills open standard |
+| Agents   | 9     | Claude Code only                 |
 | Commands | 6     | Claude Code only                 |
 
 ## Installation
