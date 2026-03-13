@@ -135,6 +135,20 @@ triggered contextually by the agent, make it a skill instead.
 
 ### Bumping a Plugin Version
 
+Use semver to communicate the nature of the change:
+
+- **Patch (x.x.N)** — Non-behavioral fixes only: typos, formatting, broken
+  links, copy corrections. If in doubt, it's probably a minor.
+- **Minor (x.N.0)** — Any change that alters agent or user behavior: new
+  skills/commands/agents, updated guidance, new patterns, added classes, revised
+  workflows, clarified conventions. This is the default for skill content
+  updates.
+- **Major (N.0.0)** — Breaking changes: renamed skills, removed commands,
+  restructured plugin layout that would break existing usage.
+
+Use `feat(plugin-name)` commits for minor bumps, `chore(plugin-name)` for
+patch-only changes.
+
 - [ ] Update version in `plugins/<plugin>/.claude-plugin/plugin.json`
 - [ ] Add version history entry in `plugins/<plugin>/README.md`
 - [ ] Do NOT duplicate version in `.claude-plugin/marketplace.json` —

@@ -245,6 +245,29 @@ docs/
 
 ## Version History
 
+### 1.13.0 (2026-03-13)
+
+- Updated `html-mockup-prototyping` skill: added two-level group/state switcher
+  pattern with markup snippet, softened state count rule, added `input-error`,
+  `field-error`, and alert classes to theme table, improved realistic-shell and
+  light-theme guidance, fixed Lucide CDN URL in starter template to use jsdelivr
+  consistently
+
+### 1.12.2 (2026-03-13)
+
+- Added pattern references section to `html-mockup-prototyping` skill with links
+  to `tables.html` reference
+
+### 1.12.1 (2026-03-13)
+
+- Added UI prototyping decision point to `dev-kickoff` workflow
+
+### 1.12.0 (2026-03-13)
+
+- Upgraded `html-mockup-prototyping` skill with semantic theming, starter
+  template (`templates/state-flow.html`), Alpine.data() pattern, and Lucide
+  MutationObserver
+
 ### 1.11.2 (2026-03-11)
 
 - Updated `html-mockup-prototyping` skill with Alpine.js + Lucide gotchas:
