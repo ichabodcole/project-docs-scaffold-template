@@ -1,5 +1,5 @@
 ---
-docs_version: "2.15.0" # x-release-please-version
+docs_version: "2.16.0" # x-release-please-version
 docs_template: https://github.com/ichabodcole/project-docs-scaffold-template
 ---
 

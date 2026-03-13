@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.16.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.15.0...project-docs-scaffold-template-v2.16.0) (2026-03-13)
+
+
+### Features
+
+* **project-docs:** add generate-slide-deck skill and slide-deck-author agent (v1.15.0) ([fefa720](https://github.com/ichabodcole/project-docs-scaffold-template/commit/fefa7205bb3e476c554ed10456916a2ce2d8d3a4))
+* **project-docs:** improve html-mockup-prototyping skill with two-level switcher, alert/form classes, and CDN fix (v1.13.0) ([9dff495](https://github.com/ichabodcole/project-docs-scaffold-template/commit/9dff495b1c940b424e20396faf753f420c5600a7))
+* **recipes:** add auth flows UI reference mockup to nuxt-betterauth-admin (v1.5.0) ([5b3c448](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5b3c448b6c8f389a1d1bd0a5a0449b7b304f337a))
+
 ## [2.15.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.14.0...project-docs-scaffold-template-v2.15.0) (2026-03-11)
 
 
