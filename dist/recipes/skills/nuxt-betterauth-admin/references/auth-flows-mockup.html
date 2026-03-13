@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Mockup — Auth Flows</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+      };
+    </script>
+
+    <!--
+      ============================================================
+      THEME
+      Light theme adapted from nuxt-betterauth-admin design system.
+      Colors translated from oklch: white card on off-white bg,
+      near-black primary, red destructive, green success.
+
+      The amber state-switcher bar is prototype chrome — it is NOT
+      part of the app's design; it exists only in the mockup.
+      ============================================================
+    -->
+    <style type="text/tailwindcss">
+      /* ---- Base ---- */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        @apply bg-gray-50;
+      }
+
+      /* ---- Typography ---- */
+      .page-title {
+        @apply text-2xl font-semibold text-gray-900 tracking-tight;
+      }
+      .page-subtitle {
+        @apply text-sm text-gray-500;
+      }
+      .section-title {
+        @apply text-xs font-semibold uppercase tracking-wide;
+      }
+      .label {
+        @apply text-sm font-medium text-gray-700;
+      }
+      .text-body {
+        @apply text-sm text-gray-700 leading-relaxed;
+      }
+      .text-muted {
+        @apply text-sm text-gray-500;
+      }
+      .text-faint {
+        @apply text-xs text-gray-400;
+      }
+      .link {
+        @apply text-sm text-gray-900 underline-offset-4 hover:underline;
+      }
+      .link-subtle {
+        @apply text-sm text-gray-500 underline-offset-4 hover:underline hover:text-gray-700;
+      }
+
+      /* ---- Surfaces ---- */
+      .card {
+        @apply w-full max-w-md bg-white border border-gray-200 rounded-xl shadow-sm p-8;
+      }
+      .inset {
+        @apply bg-gray-50 border border-gray-100 rounded-md;
+      }
+
+      /* ---- Alerts ---- */
+      .alert-error {
+        @apply rounded-md bg-red-50 border border-red-100 p-3 text-sm text-red-600;
+      }
+      .alert-success {
+        @apply rounded-md bg-green-50 border border-green-100 p-3 text-sm text-green-700 text-center;
+      }
+      .alert-info {
+        @apply rounded-md bg-gray-50 border border-gray-200 p-3 text-sm text-gray-600;
+      }
+
+      /* ---- Buttons ---- */
+      .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium
+               transition-colors focus:outline-none
+               disabled:opacity-50 disabled:cursor-not-allowed h-9 px-4;
+      }
+      .btn-primary {
+        @apply btn bg-gray-900 text-white hover:bg-gray-800;
+      }
+      .btn-outline {
+        @apply btn border border-gray-200 bg-white text-gray-700 hover:bg-gray-50;
+      }
+      .btn-ghost {
+        @apply btn text-gray-600 hover:bg-gray-100 hover:text-gray-900;
+      }
+      .btn-icon {
+        @apply text-gray-400 hover:text-gray-700 transition-colors;
+      }
+
+      /* ---- Form controls ---- */
+      .input {
+        @apply w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white
+               text-gray-900 placeholder-gray-400
+               focus:outline-none focus:ring-2 focus:ring-gray-900/15 focus:border-gray-400
+               disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
+      }
+      .input-error {
+        @apply border-red-400 focus:border-red-400 focus:ring-red-500/15;
+      }
+      .field-error {
+        @apply text-xs text-red-600;
+      }
+
+      /* ---- Spinner ---- */
+      .spinner {
+        @apply inline-block rounded-full border-2 border-gray-200 border-t-gray-700 animate-spin;
+      }
+    </style>
+
+    <!--
+      ============================================================
+      APP STATE
+      ============================================================
+    -->
+    <script>
+      document.addEventListener("alpine:init", () => {
+        Alpine.data("app", () => ({
+          group: "sign-in",
+          state: "sign-in",
+          resendCooldown: 0,
+          _resendTimer: null,
+
+          groups: [
+            {
+              id: "sign-in",
+              label: "Sign In",
+              states: [
+                { id: "sign-in", label: "1 · Default" },
+                { id: "sign-in-error", label: "2 · Error" },
+                { id: "sign-in-unverified", label: "3 · Unverified Email" },
+              ],
+            },
+            {
+              id: "sign-up",
+              label: "Sign Up",
+              states: [
+                { id: "sign-up", label: "4 · Default" },
+                { id: "sign-up-errors", label: "5 · Validation Errors" },
+              ],
+            },
+            {
+              id: "verify-email",
+              label: "Verify Email",
+              states: [
+                { id: "verify-inbox", label: "6 · Check Inbox" },
+                { id: "verify-loading", label: "7 · Verifying" },
+                { id: "verify-success", label: "8 · Verified" },
+                { id: "verify-expired", label: "9 · Link Expired" },
+              ],
+            },
+            {
+              id: "forgot-password",
+              label: "Forgot Password",
+              states: [
+                { id: "forgot-form", label: "10 · Form" },
+                { id: "forgot-sent", label: "11 · Email Sent" },
+              ],
+            },
+            {
+              id: "reset-password",
+              label: "Reset Password",
+              states: [
+                { id: "reset-form", label: "12 · Form" },
+                { id: "reset-success", label: "13 · Success" },
+                { id: "reset-expired", label: "14 · Link Expired" },
+              ],
+            },
+          ],
+
+          get activeGroup() {
+            return this.groups.find((g) => g.id === this.group);
+          },
+
+          selectGroup(groupId) {
+            this.group = groupId;
+            const g = this.groups.find((g) => g.id === groupId);
+            this.state = g.states[0].id;
+            if (
+              this.state === "sign-in-unverified" ||
+              this.state === "verify-inbox"
+            ) {
+              this.startResendCooldown();
+            }
+          },
+
+          selectState(stateId) {
+            this.state = stateId;
+            if (
+              stateId === "sign-in-unverified" ||
+              stateId === "verify-inbox"
+            ) {
+              this.startResendCooldown();
+            }
+          },
+
+          startResendCooldown() {
+            clearInterval(this._resendTimer);
+            this.resendCooldown = 30;
+            this._resendTimer = setInterval(() => {
+              this.resendCooldown--;
+              if (this.resendCooldown <= 0) {
+                clearInterval(this._resendTimer);
+                this.resendCooldown = 0;
+              }
+            }, 1000);
+          },
+        }));
+      });
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+  </head>
+
+  <body class="bg-gray-50 min-h-screen">
+    <div x-data="app">
+
+      <!-- ============================================================
+           STATE SWITCHER — two-level amber prototype chrome
+           Row 1: flow group tabs
+           Row 2: state buttons for active group
+           ============================================================ -->
+      <div class="sticky top-0 z-50 bg-amber-950/60 border-b border-amber-800/40">
+
+        <!-- Row 1: group tabs -->
+        <div class="px-4 pt-2 pb-0 flex items-center gap-1">
+          <span class="section-title text-amber-500 pr-2">Prototype</span>
+          <template x-for="g in groups" :key="g.id">
+            <button
+              @click="selectGroup(g.id)"
+              :class="group === g.id
+                ? 'bg-amber-700/60 text-amber-100 border-amber-600/60'
+                : 'text-amber-400/70 border-transparent hover:text-amber-300 hover:bg-amber-800/30'"
+              class="text-xs px-3 py-1.5 rounded-t border border-b-0 font-medium transition-colors"
+              x-text="g.label"
+            ></button>
+          </template>
+        </div>
+
+        <!-- Row 2: state buttons for active group -->
+        <div class="px-4 py-1.5 flex items-center gap-1.5 bg-amber-900/30">
+          <template x-for="s in activeGroup.states" :key="s.id">
+            <button
+              @click="selectState(s.id)"
+              :class="state === s.id
+                ? 'bg-amber-600 text-white border-amber-600'
+                : 'bg-slate-800 text-slate-300 border-slate-600 hover:border-slate-400 hover:text-slate-100'"
+              class="text-xs px-2.5 py-1 rounded border font-medium transition-colors"
+              x-text="s.label"
+            ></button>
+          </template>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           CONTENT — centered auth card
+           ============================================================ -->
+      <div class="min-h-screen flex items-center justify-center px-4 py-12">
+
+        <!-- ── 1 · SIGN IN: DEFAULT ── -->
+        <div class="card space-y-4" x-show="state === 'sign-in'">
+          <div class="space-y-1">
+            <h1 class="page-title">Sign in</h1>
+            <p class="page-subtitle">Enter your credentials to continue</p>
+          </div>
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="label">Email</label>
+              <input type="email" class="input" placeholder="admin@operator.local" />
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="label">Password</label>
+                <a href="#" class="link-subtle">Forgot password?</a>
+              </div>
+              <input type="password" class="input" placeholder="Enter your password" />
+            </div>
+            <button class="btn-primary w-full">Sign In</button>
+            <p class="text-center text-muted">
+              Don't have an account? <a href="#" class="link">Sign up</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 2 · SIGN IN: ERROR ── -->
+        <div class="card space-y-4" x-show="state === 'sign-in-error'">
+          <div class="space-y-1">
+            <h1 class="page-title">Sign in</h1>
+            <p class="page-subtitle">Enter your credentials to continue</p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-error">Invalid email or password. Please try again.</div>
+            <div class="space-y-1.5">
+              <label class="label">Email</label>
+              <input type="email" class="input" value="cole@example.com" />
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="label">Password</label>
+                <a href="#" class="link-subtle">Forgot password?</a>
+              </div>
+              <input type="password" class="input" value="wrongpassword" />
+            </div>
+            <button class="btn-primary w-full">Sign In</button>
+            <p class="text-center text-muted">
+              Don't have an account? <a href="#" class="link">Sign up</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 3 · SIGN IN: UNVERIFIED EMAIL ── -->
+        <div class="card space-y-4" x-show="state === 'sign-in-unverified'">
+          <div class="space-y-1">
+            <h1 class="page-title">Sign in</h1>
+            <p class="page-subtitle">Enter your credentials to continue</p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-error">
+              Your email address has not been verified. Please check your inbox
+              or resend the verification email.
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Email</label>
+              <input type="email" class="input" value="cole@example.com" />
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="label">Password</label>
+                <a href="#" class="link-subtle">Forgot password?</a>
+              </div>
+              <input type="password" class="input" value="mypassword" />
+            </div>
+            <button class="btn-primary w-full">Sign In</button>
+            <button class="btn-outline w-full" :disabled="resendCooldown > 0">
+              <i data-lucide="mail" class="w-4 h-4"></i>
+              <span x-show="resendCooldown === 0">Resend Verification Email</span>
+              <span x-show="resendCooldown > 0">
+                Resend in <span x-text="resendCooldown"></span>s
+              </span>
+            </button>
+            <p class="text-center text-muted">
+              Don't have an account? <a href="#" class="link">Sign up</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 4 · SIGN UP: DEFAULT ── -->
+        <div class="card space-y-4" x-show="state === 'sign-up'">
+          <div class="space-y-1">
+            <h1 class="page-title">Create an account</h1>
+            <p class="page-subtitle">Fill in your details to get started</p>
+          </div>
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="label">Name</label>
+              <input type="text" class="input" placeholder="Your name" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Username</label>
+              <input type="text" class="input" placeholder="your_username" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Email</label>
+              <input type="email" class="input" placeholder="you@example.com" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Password</label>
+              <input type="password" class="input" placeholder="At least 8 characters" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Confirm password</label>
+              <input type="password" class="input" placeholder="Confirm your password" />
+            </div>
+            <button class="btn-primary w-full">Create Account</button>
+            <p class="text-center text-muted">
+              Already have an account? <a href="#" class="link">Sign in</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 5 · SIGN UP: VALIDATION ERRORS ── -->
+        <div class="card space-y-4" x-show="state === 'sign-up-errors'">
+          <div class="space-y-1">
+            <h1 class="page-title">Create an account</h1>
+            <p class="page-subtitle">Fill in your details to get started</p>
+          </div>
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="label">Name</label>
+              <input type="text" class="input" placeholder="Your name" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Username</label>
+              <input type="text" class="input input-error" value="ab" />
+              <p class="field-error">Username must be at least 3 characters</p>
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Email</label>
+              <input type="email" class="input input-error" value="not-an-email" />
+              <p class="field-error">Please enter a valid email address</p>
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Password</label>
+              <input type="password" class="input input-error" value="short" />
+              <p class="field-error">Password must be at least 8 characters</p>
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Confirm password</label>
+              <input type="password" class="input input-error" value="different" />
+              <p class="field-error">Passwords do not match</p>
+            </div>
+            <button class="btn-primary w-full">Create Account</button>
+            <p class="text-center text-muted">
+              Already have an account? <a href="#" class="link">Sign in</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 6 · VERIFY EMAIL: CHECK INBOX ── -->
+        <div class="card space-y-4" x-show="state === 'verify-inbox'">
+          <div class="space-y-1">
+            <h1 class="page-title">Check your inbox</h1>
+            <p class="page-subtitle">
+              We sent a verification link to <strong>c***@example.com</strong>
+            </p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-info">
+              Click the link in the email to verify your account. The link will
+              expire in 24 hours.
+            </div>
+            <button class="btn-outline w-full" :disabled="resendCooldown > 0">
+              <i data-lucide="mail" class="w-4 h-4"></i>
+              <span x-show="resendCooldown === 0">Resend Verification Email</span>
+              <span x-show="resendCooldown > 0">
+                Resend in <span x-text="resendCooldown"></span>s
+              </span>
+            </button>
+            <p class="text-center text-muted">
+              Already verified? <a href="#" class="link">Sign in</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 7 · VERIFY EMAIL: VERIFYING ── -->
+        <div class="card space-y-4" x-show="state === 'verify-loading'">
+          <div class="space-y-1">
+            <h1 class="page-title">Verify email</h1>
+            <p class="page-subtitle">Verifying your email address...</p>
+          </div>
+          <div class="flex flex-col items-center py-6 gap-3">
+            <div class="spinner w-8 h-8 border-4"></div>
+            <p class="text-muted">Please wait</p>
+          </div>
+        </div>
+
+        <!-- ── 8 · VERIFY EMAIL: SUCCESS ── -->
+        <div class="card space-y-4" x-show="state === 'verify-success'">
+          <div class="space-y-1">
+            <h1 class="page-title">Email verified</h1>
+            <p class="page-subtitle">Your account is ready to use</p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-success">
+              <i data-lucide="check-circle" class="w-4 h-4 inline mr-1.5 align-text-bottom"></i>
+              Your email has been verified successfully.
+            </div>
+            <button class="btn-primary w-full">Continue to Sign In</button>
+          </div>
+        </div>
+
+        <!-- ── 9 · VERIFY EMAIL: LINK EXPIRED ── -->
+        <div class="card space-y-4" x-show="state === 'verify-expired'">
+          <div class="space-y-1">
+            <h1 class="page-title">Verify email</h1>
+            <p class="page-subtitle text-red-500">This verification link has expired</p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-error">
+              This verification link is invalid or has expired. Please request a
+              new one.
+            </div>
+            <button class="btn-outline w-full">Resend Verification Email</button>
+            <p class="text-center text-muted">
+              <a href="#" class="link">Back to Sign In</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 10 · FORGOT PASSWORD: FORM ── -->
+        <div class="card space-y-4" x-show="state === 'forgot-form'">
+          <div class="space-y-1">
+            <h1 class="page-title">Forgot password</h1>
+            <p class="page-subtitle">Enter your email to receive a reset link</p>
+          </div>
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="label">Email</label>
+              <input type="email" class="input" placeholder="you@example.com" />
+            </div>
+            <button class="btn-primary w-full">Send Reset Link</button>
+            <p class="text-center text-muted">
+              <a href="#" class="link">Back to Sign In</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 11 · FORGOT PASSWORD: EMAIL SENT ── -->
+        <div class="card space-y-4" x-show="state === 'forgot-sent'">
+          <div class="space-y-1">
+            <h1 class="page-title">Check your email</h1>
+            <p class="page-subtitle">We've sent you a password reset link</p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-success">
+              If an account exists for <strong>cole@example.com</strong>, you
+              will receive a password reset email shortly.
+            </div>
+            <p class="text-center text-muted">
+              Didn't receive it? Check your spam folder or
+              <a href="#" class="link">try again</a>.
+            </p>
+            <button class="btn-outline w-full">Back to Sign In</button>
+          </div>
+        </div>
+
+        <!-- ── 12 · RESET PASSWORD: FORM ── -->
+        <div class="card space-y-4" x-show="state === 'reset-form'">
+          <div class="space-y-1">
+            <h1 class="page-title">Reset password</h1>
+            <p class="page-subtitle">Enter your new password below</p>
+          </div>
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="label">New password</label>
+              <input type="password" class="input" placeholder="At least 8 characters" />
+            </div>
+            <div class="space-y-1.5">
+              <label class="label">Confirm new password</label>
+              <input type="password" class="input" placeholder="Confirm your password" />
+            </div>
+            <button class="btn-primary w-full">Reset Password</button>
+            <p class="text-center text-muted">
+              <a href="#" class="link">Back to Sign In</a>
+            </p>
+          </div>
+        </div>
+
+        <!-- ── 13 · RESET PASSWORD: SUCCESS ── -->
+        <div class="card space-y-4" x-show="state === 'reset-success'">
+          <div class="space-y-1">
+            <h1 class="page-title">Password reset</h1>
+            <p class="page-subtitle">Your password has been updated</p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-success">
+              <i data-lucide="check-circle" class="w-4 h-4 inline mr-1.5 align-text-bottom"></i>
+              Your password has been reset successfully.
+            </div>
+            <p class="text-center text-muted">
+              You can now sign in with your new password.
+            </p>
+            <button class="btn-primary w-full">Continue to Sign In</button>
+          </div>
+        </div>
+
+        <!-- ── 14 · RESET PASSWORD: LINK EXPIRED ── -->
+        <div class="card space-y-4" x-show="state === 'reset-expired'">
+          <div class="space-y-1">
+            <h1 class="page-title">Reset password</h1>
+            <p class="page-subtitle text-red-500">This reset link has expired</p>
+          </div>
+          <div class="space-y-4">
+            <div class="alert-error">
+              The password reset link is invalid or has expired. Please request
+              a new one.
+            </div>
+            <button class="btn-outline w-full">Request New Reset Link</button>
+            <p class="text-center text-muted">
+              <a href="#" class="link">Back to Sign In</a>
+            </p>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </div><!-- /x-data -->
+
+    <!-- Initialize Lucide icons with Alpine-aware refresh -->
+    <script>
+      lucide.createIcons();
+      document.addEventListener("alpine:initialized", () => {
+        let pending = false;
+        const observer = new MutationObserver(() => {
+          if (pending) return;
+          pending = true;
+          requestAnimationFrame(() => {
+            lucide.createIcons();
+            pending = false;
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
+  </body>
+</html>
