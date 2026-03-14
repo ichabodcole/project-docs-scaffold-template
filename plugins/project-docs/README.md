@@ -265,6 +265,13 @@ docs/
 
 ## Version History
 
+### 1.15.1 (2026-03-13)
+
+- Fix localStorage isolation bug in `generate-slide-deck` components —
+  `MultiChoice`, `TellMeMore`, and `FeedbackSummary` now namespace keys by a
+  slug derived from `document.title`, preventing feedback from one deck leaking
+  into another
+
 ### 1.15.0 (2026-03-13)
 
 - New `slide-deck-author` agent — autonomous executive slide deck synthesis;
