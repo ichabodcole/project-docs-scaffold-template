@@ -46,16 +46,28 @@ const { currentPage } = useNav();
 
 const tellMore = ref([]);
 
+function deckSlug() {
+  return (
+    (document.title || "deck")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "deck"
+  );
+}
+
 function loadAnswers() {
+  const slug = deckSlug();
+  const feedbackPrefix = `slidev-${slug}-feedback-`;
+  const tellMorePrefix = `slidev-${slug}-tellmore-`;
   const results = [];
   const more = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (!key) continue;
-    if (key.startsWith("slidev-feedback-") && key.endsWith("-meta")) {
+    if (key.startsWith(feedbackPrefix) && key.endsWith("-meta")) {
       try { results.push(JSON.parse(localStorage.getItem(key))); } catch {}
     }
-    if (key.startsWith("slidev-tellmore-") && key.endsWith("-meta")) {
+    if (key.startsWith(tellMorePrefix) && key.endsWith("-meta")) {
       try { more.push(JSON.parse(localStorage.getItem(key))); } catch {}
     }
   }

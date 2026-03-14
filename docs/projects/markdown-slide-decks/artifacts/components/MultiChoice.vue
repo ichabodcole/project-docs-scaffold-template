@@ -29,9 +29,20 @@ const props = defineProps({
 
 const letters = ["A", "B", "C", "D", "E"];
 const selected = ref(null);
-const storageKey = `slidev-feedback-${props.id}`;
+
+function deckSlug() {
+  return (
+    (document.title || "deck")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "deck"
+  );
+}
+
+let storageKey;
 
 onMounted(() => {
+  storageKey = `slidev-${deckSlug()}-feedback-${props.id}`;
   const saved = localStorage.getItem(storageKey);
   if (saved !== null) selected.value = parseInt(saved);
 });
@@ -39,7 +50,6 @@ onMounted(() => {
 function select(i) {
   selected.value = i;
   localStorage.setItem(storageKey, String(i));
-  // Store full answer text for FeedbackSummary
   localStorage.setItem(
     `${storageKey}-meta`,
     JSON.stringify({

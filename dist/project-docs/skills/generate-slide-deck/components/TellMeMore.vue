@@ -17,10 +17,21 @@ const props = defineProps({
   topic: { type: String, required: true },
 });
 
-const storageKey = `slidev-tellmore-${props.id}`;
 const active = ref(false);
 
+function deckSlug() {
+  return (
+    (document.title || "deck")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "deck"
+  );
+}
+
+let storageKey;
+
 onMounted(() => {
+  storageKey = `slidev-${deckSlug()}-tellmore-${props.id}`;
   active.value = localStorage.getItem(storageKey) === "1";
 });
 
