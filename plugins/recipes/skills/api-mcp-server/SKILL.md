@@ -25,6 +25,23 @@ prefiltering, how sessions cache resolved permissions, and how the two-layer
 auth model (OAuth for user identity + agent keys for permissions) works
 together.
 
+## UI Reference
+
+See `references/mcp-management-mockup.html` for an interactive prototype of the
+MCP management interface. Open in a browser — no build step required.
+
+The prototype covers 13 states across 4 tabs:
+
+- **Access Groups** — list, new group, edit group, delete confirm, folder picker
+- **Agents** — list, new agent
+- **Roles** — list, new role (with permission category checkboxes)
+- **Keys** — list, issue key (agent + group + role selection), key generated
+  (one-time display), delete confirm
+
+Use this as the visual starting point for any management UI built around this
+recipe. The folder picker pattern (hierarchical project/folder tree with
+indeterminate checkbox states) is worth reviewing before implementing that flow.
+
 ## When to Use
 
 - You have a cloud-hosted API with user data you want AI agents to access
