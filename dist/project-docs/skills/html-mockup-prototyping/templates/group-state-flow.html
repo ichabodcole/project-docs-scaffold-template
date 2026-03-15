@@ -131,6 +131,28 @@
                focus:outline-none focus:border-slate-600 resize-none;
       }
 
+      /* ---- Form validation ---- */
+      .input-error {
+        @apply border-red-500/50 focus:border-red-500/70;
+      }
+      .field-error {
+        @apply text-xs text-red-400;
+      }
+
+      /* ---- Alerts ---- */
+      .alert-error {
+        @apply rounded-md bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400;
+      }
+      .alert-success {
+        @apply rounded-md bg-emerald-500/10 border border-emerald-500/20 p-3 text-sm text-emerald-400;
+      }
+      .alert-info {
+        @apply rounded-md bg-slate-800 border border-slate-700 p-3 text-sm text-slate-300;
+      }
+      .alert-warning {
+        @apply rounded-md bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-400;
+      }
+
       /* ---- Navigation ---- */
       .nav-item {
         @apply w-full flex items-center gap-3 px-3 py-2 rounded-md
@@ -172,16 +194,73 @@
     <!--
       ============================================================
       APP STATE
-      Register all state and methods with Alpine.data() below.
-      Use x-data="app" on the root element in the body.
+      Two-level switcher: group (tab) + state (sub-state).
+
+      selectGroup(id) — switches the active tab and resets to the
+        group's first state.
+      selectState(id) — switches the sub-state within the current
+        group. Add per-state setup logic here (e.g. pre-filling a
+        selected item) instead of using $watch.
+
+      Content sections:
+        x-show="group === 'X'"       — show when tab is active
+        x-show="state === 'Y'"       — show specific sub-state
+      Modals inside a group section can't bleed into other groups.
       ============================================================
     -->
     <script>
       document.addEventListener("alpine:init", () => {
         Alpine.data("app", () => ({
-          state: "default",
+          group: "group-one",
+          state: "state-1a",
 
-          // TODO: Add your state properties here
+          groups: [
+            {
+              id: "group-one",
+              label: "Group One",
+              states: [
+                { id: "state-1a", label: "1 · Default" },
+                { id: "state-1b", label: "2 · State B" },
+              ],
+            },
+            {
+              id: "group-two",
+              label: "Group Two",
+              states: [
+                { id: "state-2a", label: "3 · Default" },
+                { id: "state-2b", label: "4 · State B" },
+                { id: "state-2c", label: "5 · State C" },
+              ],
+            },
+            {
+              id: "group-three",
+              label: "Group Three",
+              states: [
+                { id: "state-3a", label: "6 · Default" },
+                { id: "state-3b", label: "7 · State B" },
+              ],
+            },
+          ],
+
+          get activeGroup() {
+            return this.groups.find((g) => g.id === this.group);
+          },
+
+          selectGroup(groupId) {
+            this.group = groupId;
+            const g = this.groups.find((g) => g.id === groupId);
+            this.state = g.states[0].id;
+          },
+
+          selectState(stateId) {
+            this.state = stateId;
+            // TODO: Add per-state setup logic here if needed.
+            // Put it here instead of using $watch to avoid reactive cascades.
+            // Example:
+            //   if (stateId === 'state-2b') this.selectedItem = this.items[0];
+          },
+
+          // TODO: Add your state properties and sample data here
         }));
       });
     </script>
@@ -190,59 +269,97 @@
       src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
     ></script>
   </head>
+
   <body class="bg-slate-950 text-slate-200 min-h-screen">
     <div x-data="app">
-      <!-- State switcher -->
-      <div
-        class="bg-amber-950/60 border-b border-amber-800/40 px-6 py-2 flex items-center gap-3 sticky top-0 z-50"
-      >
-        <span class="section-title text-amber-500">Prototype state</span>
-        <div class="flex gap-2 flex-wrap">
-          <button
-            @click="state = 'default'"
-            :class="state === 'default' ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-800 text-slate-300 border-slate-600'"
-            class="text-xs px-3 py-1 rounded border font-medium"
-          >
-            1 · Default
-          </button>
-          <button
-            @click="state = 'state-two'"
-            :class="state === 'state-two' ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-800 text-slate-300 border-slate-600'"
-            class="text-xs px-3 py-1 rounded border font-medium"
-          >
-            2 · State Two
-          </button>
-          <button
-            @click="state = 'state-three'"
-            :class="state === 'state-three' ? 'bg-amber-600 text-white border-amber-600' : 'bg-slate-800 text-slate-300 border-slate-600'"
-            class="text-xs px-3 py-1 rounded border font-medium"
-          >
-            3 · State Three
-          </button>
+
+      <!-- ============================================================
+           STATE SWITCHER — two-level amber prototype chrome
+           Row 1: group tabs
+           Row 2: state buttons for the active group only
+           ============================================================ -->
+      <div class="sticky top-0 z-50 bg-amber-950/60 border-b border-amber-800/40">
+
+        <!-- Row 1: group tabs -->
+        <div class="px-4 pt-2 pb-0 flex items-center gap-1">
+          <span class="section-title text-amber-500 pr-2">Prototype</span>
+          <template x-for="g in groups" :key="g.id">
+            <button
+              @click="selectGroup(g.id)"
+              :class="group === g.id
+                ? 'bg-amber-700/60 text-amber-100 border-amber-600/60'
+                : 'text-amber-400/70 border-transparent hover:text-amber-300 hover:bg-amber-800/30'"
+              class="text-xs px-3 py-1.5 rounded-t border border-b-0 font-medium transition-colors"
+              x-text="g.label"
+            ></button>
+          </template>
         </div>
+
+        <!-- Row 2: state buttons for active group -->
+        <div class="px-4 py-1.5 flex items-center gap-1.5 bg-amber-900/30">
+          <template x-for="s in activeGroup.states" :key="s.id">
+            <button
+              @click="selectState(s.id)"
+              :class="state === s.id
+                ? 'bg-amber-600 text-white border-amber-600'
+                : 'bg-slate-800 text-slate-300 border-slate-600 hover:border-slate-400 hover:text-slate-100'"
+              class="text-xs px-2.5 py-1 rounded border font-medium transition-colors"
+              x-text="s.label"
+            ></button>
+          </template>
+        </div>
+
       </div>
 
       <!--
         ============================================================
         CONTENT AREA — blank canvas
-        Build your prototype layout here. The template makes no
-        layout decisions — sidebar nav, single column, split pane,
-        etc. are determined by what you're prototyping.
+        One <div x-show="group === 'X'"> per group.
+        State-specific content and modals go inside the group div.
         ============================================================
       -->
       <div class="p-8">
-        <div x-show="state === 'default'">
-          <h1 class="page-title mb-4">Default State</h1>
-          <p class="text-muted">Replace this with your prototype content.</p>
+
+        <!-- Group One -->
+        <div x-show="group === 'group-one'">
+          <div x-show="state === 'state-1a'">
+            <h1 class="page-title mb-4">Group One — Default</h1>
+            <p class="text-muted">Replace with your prototype content.</p>
+          </div>
+          <div x-show="state === 'state-1b'">
+            <h1 class="page-title mb-4">Group One — State B</h1>
+            <p class="text-muted">Replace with your prototype content.</p>
+          </div>
         </div>
-        <div x-show="state === 'state-two'">
-          <h1 class="page-title mb-4">State Two</h1>
-          <p class="text-muted">Replace this with your prototype content.</p>
+
+        <!-- Group Two -->
+        <div x-show="group === 'group-two'">
+          <div x-show="state === 'state-2a'">
+            <h1 class="page-title mb-4">Group Two — Default</h1>
+            <p class="text-muted">Replace with your prototype content.</p>
+          </div>
+          <div x-show="state === 'state-2b'">
+            <h1 class="page-title mb-4">Group Two — State B</h1>
+            <p class="text-muted">Replace with your prototype content.</p>
+          </div>
+          <div x-show="state === 'state-2c'">
+            <h1 class="page-title mb-4">Group Two — State C</h1>
+            <p class="text-muted">Replace with your prototype content.</p>
+          </div>
         </div>
-        <div x-show="state === 'state-three'">
-          <h1 class="page-title mb-4">State Three</h1>
-          <p class="text-muted">Replace this with your prototype content.</p>
+
+        <!-- Group Three -->
+        <div x-show="group === 'group-three'">
+          <div x-show="state === 'state-3a'">
+            <h1 class="page-title mb-4">Group Three — Default</h1>
+            <p class="text-muted">Replace with your prototype content.</p>
+          </div>
+          <div x-show="state === 'state-3b'">
+            <h1 class="page-title mb-4">Group Three — State B</h1>
+            <p class="text-muted">Replace with your prototype content.</p>
+          </div>
         </div>
+
       </div>
     </div>
 

@@ -248,8 +248,8 @@
 
     <!-- Initialize Lucide icons with Alpine-aware refresh -->
     <script>
-      lucide.createIcons();
       document.addEventListener("alpine:initialized", () => {
+        lucide.createIcons();
         let pending = false;
         const observer = new MutationObserver(() => {
           if (pending) return;
