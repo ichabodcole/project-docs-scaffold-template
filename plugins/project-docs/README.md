@@ -265,6 +265,25 @@ docs/
 
 ## Version History
 
+### 1.18.0 (2026-03-18)
+
+- Added `references/components.html` to `html-mockup-prototyping` skill —
+  reusable UI component patterns (toggle group, switch, search input with clear,
+  tag input, modal dialog, collapsible section, empty state) extracted from
+  existing recipe mockups for consistent reuse across prototypes
+
+### 1.17.0 (2026-03-15)
+
+- Added `group-state-flow.html` template to `html-mockup-prototyping` skill —
+  self-contained two-level group/state switcher starting point, making the skill
+  fully self-contained without external recipe references
+- Fixed Lucide initialization bug in `state-flow.html` — `lucide.createIcons()`
+  now runs inside `alpine:initialized` so icons in `x-for` rows render correctly
+  on first load
+- Updated `html-mockup-prototyping` SKILL.md: expanded Starter Templates section
+  to document both templates with when-to-use guidance; replaced external recipe
+  pointer with local `templates/group-state-flow.html` reference
+
 ### 1.16.0 (2026-03-13)
 
 - Fix localStorage isolation bug in `generate-slide-deck` components —

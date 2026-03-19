@@ -4,9 +4,10 @@ Working mini-mockup examples for common patterns. Each file is a self-contained
 runnable HTML file demonstrating the correct approach. Open in a browser to
 verify.
 
-| Pattern             | File          | Demonstrates                                                                                       |
-| ------------------- | ------------- | -------------------------------------------------------------------------------------------------- |
-| Tables with `x-for` | `tables.html` | Correct `<template x-for><tbody><tr>` nesting; `Object.keys()` vs `Object.entries()` destructuring |
+| Pattern             | File              | Demonstrates                                                                                       |
+| ------------------- | ----------------- | -------------------------------------------------------------------------------------------------- |
+| Tables with `x-for` | `tables.html`     | Correct `<template x-for><tbody><tr>` nesting; `Object.keys()` vs `Object.entries()` destructuring |
+| UI Components       | `components.html` | Toggle group, switch, search input, tag input, modal dialog, collapsible section, empty state      |
 
 ## How to Use
 

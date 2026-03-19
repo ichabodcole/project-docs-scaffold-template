@@ -38,16 +38,20 @@ state/behavior) + Lucide (icons). All load from CDN.
 - Production code or anything that will be committed to the app
 - Complex data-driven interactions (use the real UI for that)
 
-## Starter Template
+## Starter Templates
 
-Copy `templates/state-flow.html` as your starting point. It includes:
+Two templates are available in `templates/`:
 
-- CDN imports (Tailwind, Alpine.js, Lucide)
-- Semantic theme block (~25 CSS classes via `@apply`)
-- State switcher bar (amber prototype navigation)
-- `Alpine.data()` registration pattern
-- Lucide icon initialization with debounced MutationObserver
-- Empty content area — blank canvas, no layout opinions
+- **`state-flow.html`** — flat single-row switcher. Use for a single flow with
+  up to ~7 states (e.g., idle → loading → success → error).
+- **`group-state-flow.html`** — two-level group/state switcher. Use when
+  covering multiple related flows or tabs in one file (e.g., a multi-tab admin
+  UI, all auth flows, or any feature with named sections each having
+  sub-states).
+
+Both include the full theme block, CDN imports (Tailwind, Alpine.js, Lucide),
+`Alpine.data()` registration pattern, Lucide initialization with debounced
+MutationObserver, and a blank content area with placeholder states to replace.
 
 The content area is yours to fill. Sidebar nav, single column, split pane —
 whatever the prototype needs.
@@ -171,8 +175,8 @@ button list. For multi-flow mockups with closely related flows, use the
 </div>
 ```
 
-See `references/auth-flows-mockup.html` in the `nuxt-betterauth-admin` recipe
-skill for a working example with 22 states across 7 groups.
+See `templates/group-state-flow.html` for a self-contained working starting
+point with 3 placeholder groups and 7 states.
 
 **Realistic shell** — Wrap the mockup in app chrome. Avoids "floating widget"
 syndrome where design looks good in isolation but context is unclear.
@@ -217,6 +221,26 @@ actual behavior. The goal is to show what happens, not make it work.
   `[key, val] in Object.entries(obj)` causes "X is not defined" ReferenceErrors.
   Use `Object.keys(obj)` and access values with `obj[key]` bracket notation. See
   `references/tables.html` for a working demo.
+- **SVG/icon pointer events breaking `@click` handlers** — When Lucide replaces
+  an `<i>` with an `<svg>`, the SVG and its inner `<path>` elements become real
+  DOM nodes that receive pointer events. Clicking directly on the icon means the
+  event target is the `<svg>` or `<path>`, not the button. Alpine's handler can
+  fail to fire or behave unexpectedly when `.stop` or other modifiers are
+  involved. Fix: add `pointer-events-none` to any icon inside a clickable
+  element with an Alpine event handler.
+  ```html
+  <!-- ✅ correct -->
+  <button @click="doSomething()">
+    <i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i>
+  </button>
+  ```
+  This applies to buttons, list items, dropdown triggers, or any interactive
+  element where you're relying on the parent to handle the click.
+- **`overflow-hidden` clipping dropdowns and tooltips** — the `.card` class
+  includes `overflow-hidden` which clips absolutely-positioned children like
+  dropdown menus, custom selects, and tooltips. Use `!overflow-visible` on cards
+  that contain these components, or move the popover element outside the card
+  container.
 - **Inline `x-data` with complex state** — large inline `x-data` objects cause
   Alpine.js parsing errors. Always use the `Alpine.data()` registration pattern
   in the template's script block.
@@ -226,10 +250,11 @@ actual behavior. The goal is to show what happens, not make it work.
 Runnable mini-mockups demonstrating solutions to specific Alpine.js / HTML
 problems. See `references/index.md` for the full list.
 
-| Pattern                             | Reference File                                                             |
-| ----------------------------------- | -------------------------------------------------------------------------- |
-| Tables with `x-for` / `Object.keys` | `references/tables.html`                                                   |
-| Two-level group/state switcher      | `nuxt-betterauth-admin` recipe skill — `references/auth-flows-mockup.html` |
+| Pattern                                           | File                              |
+| ------------------------------------------------- | --------------------------------- |
+| Tables with `x-for` / `Object.keys`               | `references/tables.html`          |
+| Two-level group/state switcher                    | `templates/group-state-flow.html` |
+| UI components (toggle, switch, modal, tags, etc.) | `references/components.html`      |
 
 ## Skill Feedback
 
