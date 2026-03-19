@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.16.0...project-docs-scaffold-template-v2.16.1) (2026-03-14)
+
+
+### Bug Fixes
+
+* **project-docs:** scope localStorage keys by deck title slug (v1.15.1) ([ce6edfb](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ce6edfb2bebe7a2ddc93e77a98868f92762a1fb1))
+
 ## [2.16.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.15.0...project-docs-scaffold-template-v2.16.0) (2026-03-13)
 
 
