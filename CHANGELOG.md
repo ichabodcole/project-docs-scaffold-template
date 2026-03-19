@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.17.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.16.1...project-docs-scaffold-template-v2.17.0) (2026-03-19)
+
+
+### Features
+
+* **project-docs:** add component reference library to html-mockup-prototyping skill (v1.18.0) ([bec289b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/bec289be940b7af6a839190774a8fb2cdc86b145))
+* **project-docs:** add two-level group/state switcher template to html-mockup-prototyping skill (v1.17.0) ([8cf9d9b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8cf9d9bc41ecf066164b644ec1105488c6fc0178))
+* **recipes:** add MCP management UI mockup to api-mcp-server recipe (v1.6.0) ([e1c2cb0](https://github.com/ichabodcole/project-docs-scaffold-template/commit/e1c2cb026bae886a16eac734e2fe11e4d283f3d0))
+* **recipes:** add media-library recipe skill (v1.7.0) ([6f39907](https://github.com/ichabodcole/project-docs-scaffold-template/commit/6f39907c7cba877e3d241f6560d7b0fa5564fe99))
+
 ## [2.16.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.16.0...project-docs-scaffold-template-v2.16.1) (2026-03-14)
 
 
