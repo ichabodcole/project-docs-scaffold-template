@@ -265,6 +265,13 @@ docs/
 
 ## Version History
 
+### 1.18.0 (2026-03-18)
+
+- Added `references/components.html` to `html-mockup-prototyping` skill —
+  reusable UI component patterns (toggle group, switch, search input with clear,
+  tag input, modal dialog, collapsible section, empty state) extracted from
+  existing recipe mockups for consistent reuse across prototypes
+
 ### 1.17.0 (2026-03-15)
 
 - Added `group-state-flow.html` template to `html-mockup-prototyping` skill —

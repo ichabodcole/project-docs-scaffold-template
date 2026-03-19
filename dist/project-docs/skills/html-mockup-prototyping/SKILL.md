@@ -236,6 +236,11 @@ actual behavior. The goal is to show what happens, not make it work.
   ```
   This applies to buttons, list items, dropdown triggers, or any interactive
   element where you're relying on the parent to handle the click.
+- **`overflow-hidden` clipping dropdowns and tooltips** — the `.card` class
+  includes `overflow-hidden` which clips absolutely-positioned children like
+  dropdown menus, custom selects, and tooltips. Use `!overflow-visible` on cards
+  that contain these components, or move the popover element outside the card
+  container.
 - **Inline `x-data` with complex state** — large inline `x-data` objects cause
   Alpine.js parsing errors. Always use the `Alpine.data()` registration pattern
   in the template's script block.
@@ -245,10 +250,11 @@ actual behavior. The goal is to show what happens, not make it work.
 Runnable mini-mockups demonstrating solutions to specific Alpine.js / HTML
 problems. See `references/index.md` for the full list.
 
-| Pattern                             | File                              |
-| ----------------------------------- | --------------------------------- |
-| Tables with `x-for` / `Object.keys` | `references/tables.html`          |
-| Two-level group/state switcher      | `templates/group-state-flow.html` |
+| Pattern                                           | File                              |
+| ------------------------------------------------- | --------------------------------- |
+| Tables with `x-for` / `Object.keys`               | `references/tables.html`          |
+| Two-level group/state switcher                    | `templates/group-state-flow.html` |
+| UI components (toggle, switch, modal, tags, etc.) | `references/components.html`      |
 
 ## Skill Feedback
 
