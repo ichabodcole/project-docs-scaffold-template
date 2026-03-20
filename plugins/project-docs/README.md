@@ -265,6 +265,13 @@ docs/
 
 ## Version History
 
+### 1.19.0 (2026-03-19)
+
+- Added layout pattern components to `html-mockup-prototyping` component
+  reference: collapsible sidebar (expanded/collapsed with icon-only mode),
+  list/detail split pane (pinned header + scroll containment), and stepper /
+  multi-step flow (numbered dots with Back/Next navigation)
+
 ### 1.18.0 (2026-03-18)
 
 - Added `references/components.html` to `html-mockup-prototyping` skill —
