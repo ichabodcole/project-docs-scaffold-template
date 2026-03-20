@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.17.0...project-docs-scaffold-template-v2.18.0) (2026-03-20)
+
+
+### Features
+
+* **project-docs:** add layout pattern components to html-mockup-prototyping skill (v1.19.0) ([5a37add](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5a37add07d49c02a88bc1614b6cd2a5fa08244b7))
+
 ## [2.17.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.16.1...project-docs-scaffold-template-v2.17.0) (2026-03-19)
 
 
