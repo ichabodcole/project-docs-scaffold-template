@@ -1,7 +1,7 @@
 {
-  "name": "project-docs",
-  "version": "2.0.0",
-  "description": "Skills and commands for managing structured project documentation, proposals, plans, and reports",
+  "name": "toolbox",
+  "version": "1.0.0",
+  "description": "Specialist development utilities — testing, optimization, and tooling skills that aren't specific to project documentation",
   "author": {
     "name": "Cole Reed"
   },

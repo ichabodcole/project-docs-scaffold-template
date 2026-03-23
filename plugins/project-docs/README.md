@@ -195,8 +195,6 @@ than commands and are the primary way the plugin delivers its workflows.
 
 | Skill                     | Description                                                                                                                                         |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `screenshot-optimization` | Convert PNG screenshots to WebP for smaller repo size                                                                                               |
-| `maestro-testing`         | Write and run Maestro flows for mobile, WebView, and web testing                                                                                    |
 | `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                |
 | `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export |
 
@@ -264,6 +262,14 @@ docs/
    significantly
 
 ## Version History
+
+### 2.0.0 (2026-03-22)
+
+- **BREAKING:** Moved `maestro-testing` and `screenshot-optimization` skills to
+  the new `toolbox` plugin — these are general-purpose dev utilities, not
+  project-docs specific. Fully-qualified names change from
+  `project-docs:maestro-testing` → `toolbox:maestro-testing` and
+  `project-docs:screenshot-optimization` → `toolbox:screenshot-optimization`.
 
 ### 1.19.0 (2026-03-19)
 
