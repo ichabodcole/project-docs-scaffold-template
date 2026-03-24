@@ -1,4 +1,4 @@
-# project-docs — Cross-Agent Skills Package
+# agent-bridge — Cross-Agent Skills Package
 
 This package contains skills, agents, and commands from the
 [project-docs-scaffold-template](https://github.com/ichabodcole/project-docs-scaffold-template)
@@ -6,18 +6,16 @@ plugin, packaged for cross-agent installation.
 
 ## What's Included
 
-| Type     | Count | Cross-tool?                      |
-| -------- | ----- | -------------------------------- |
-| Skills   | 23    | Yes — Agent Skills open standard |
-| Agents   | 9     | Claude Code only                 |
-| Commands | 6     | Claude Code only                 |
+| Type   | Count | Cross-tool?                      |
+| ------ | ----- | -------------------------------- |
+| Skills | 1     | Yes — Agent Skills open standard |
 
 ## Installation
 
 ### OpenPackage (recommended)
 
 ```bash
-opkg install gh@ichabodcole/project-docs-scaffold-template/dist/project-docs
+opkg install gh@ichabodcole/project-docs-scaffold-template/dist/agent-bridge
 ```
 
 ### Direct Clone
@@ -32,7 +30,7 @@ Then configure your tool's skills path:
 
 ```json
 {
-  "skills_paths": ["<clone-path>/dist/project-docs/skills"]
+  "skills_paths": ["<clone-path>/dist/agent-bridge/skills"]
 }
 ```
 
@@ -41,7 +39,7 @@ Then configure your tool's skills path:
 ```json
 {
   "options": {
-    "skills_paths": ["<clone-path>/dist/project-docs/skills"]
+    "skills_paths": ["<clone-path>/dist/agent-bridge/skills"]
   }
 }
 ```
@@ -52,7 +50,7 @@ Then configure your tool's skills path:
 
 ```
 /plugin marketplace add ichabodcole/project-docs-scaffold-template
-/plugin install project-docs
+/plugin install agent-bridge
 ```
 
 ## Prerequisites
