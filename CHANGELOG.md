@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.19.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.18.0...project-docs-scaffold-template-v2.19.0) (2026-03-24)
+
+
+### Features
+
+* create agent-bridge plugin with bridge-agent skill (v1.0.0) ([d7f88bf](https://github.com/ichabodcole/project-docs-scaffold-template/commit/d7f88bf319fe35e18128bff3a297e9f8d1369521))
+* create toolbox plugin and move maestro-testing + screenshot-optimization from project-docs (v2.0.0) ([dde6289](https://github.com/ichabodcole/project-docs-scaffold-template/commit/dde6289e183d7ee824effc15647fbcf55d2d028a))
+
 ## [2.18.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.17.0...project-docs-scaffold-template-v2.18.0) (2026-03-20)
 
 
