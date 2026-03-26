@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.20.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.19.0...project-docs-scaffold-template-v2.20.0) (2026-03-26)
+
+
+### Features
+
+* **toolbox:** add html-mockup-prototyping skill to toolbox plugin (v… ([13106d7](https://github.com/ichabodcole/project-docs-scaffold-template/commit/13106d79c98b2ac074db06e271e5ee84425e1ee7))
+* **toolbox:** add html-mockup-prototyping skill to toolbox plugin (v1.1.0) ([95a5f50](https://github.com/ichabodcole/project-docs-scaffold-template/commit/95a5f5098930586a4a9c5a7a6cb5c70f5ec48add))
+
 ## [2.19.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.18.0...project-docs-scaffold-template-v2.19.0) (2026-03-24)
 
 
