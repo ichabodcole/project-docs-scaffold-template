@@ -33,6 +33,18 @@
       "source": "./plugins/recipes",
       "category": "documentation",
       "tags": ["recipes", "scaffolding", "documentation"]
+    },
+    {
+      "name": "toolbox",
+      "source": "./plugins/toolbox",
+      "category": "development",
+      "tags": ["testing", "optimization", "prototyping", "utilities"]
+    },
+    {
+      "name": "agent-bridge",
+      "source": "./plugins/agent-bridge",
+      "category": "communication",
+      "tags": ["agent-bridge", "cross-project", "knowledge-sharing"]
     }
   ]
 }
