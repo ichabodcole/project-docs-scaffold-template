@@ -93,6 +93,16 @@ reflected in the other.
 - [ ] Check if downstream skills/commands need awareness of new type (e.g.,
       `generate-dev-plan` needed to learn about `design-resolution.md`)
 
+### Creating a New Plugin
+
+- [ ] Create `plugins/<plugin>/.claude-plugin/plugin.json` with name, version
+      (1.0.0), and description
+- [ ] Create `plugins/<plugin>/skills/` directory
+- [ ] Add plugin entry to `.claude-plugin/marketplace.json` — include name,
+      source path, category, and tags
+- [ ] Update `docs/PROJECT_MANIFESTO.md` if it references plugin counts
+- [ ] Run `./scripts/build-skills-dist.sh` to verify the plugin is discovered
+
 ### Adding or Modifying a Plugin Skill
 
 Skills are the preferred delivery mechanism — they get auto-surfaced by the
