@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.20.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.20.0...project-docs-scaffold-template-v2.20.1) (2026-03-28)
+
+
+### Bug Fixes
+
+* add toolbox and agent-bridge to marketplace.json, add new plugin checklist ([ebd392b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ebd392b47c6d1d8d07ac835640c30ea3b51f6b63))
+* add toolbox and agent-bridge to marketplace.json, add new plugin… ([b6b5730](https://github.com/ichabodcole/project-docs-scaffold-template/commit/b6b5730916bd5e628cc4764d73dc9aa01394ece0))
+
 ## [2.20.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.19.0...project-docs-scaffold-template-v2.20.0) (2026-03-26)
 
 
