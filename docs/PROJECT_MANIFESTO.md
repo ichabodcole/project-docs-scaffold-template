@@ -87,10 +87,10 @@ iteration through real projects, which is what this project is doing.
   implementation sessions → archival, with each stage having defined conventions
   and AI-assisted tooling
 
-- **Ships a reusable recipe library** — 19 implementation recipes extracted from
-  real projects (authentication patterns, sync strategies, IPC architectures,
-  voice-to-text pipelines) that teams can pull into their own projects as
-  step-by-step guides
+- **Ships a reusable recipe library** — 19 implementation recipes (plus a
+  meta-recipe creator) extracted from real projects (authentication patterns,
+  sync strategies, IPC architectures, voice-to-text pipelines) that teams can
+  pull into their own projects as step-by-step guides
 
 - **Supports parallel development workflows** via git worktrees with task
   handoff documents, enabling multiple agents or developers to work on different
