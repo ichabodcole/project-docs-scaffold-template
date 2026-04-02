@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.21.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.20.1...project-docs-scaffold-template-v2.21.0) (2026-04-02)
+
+
+### Features
+
+* **recipes:** add zed-biome-husky-quality-gates recipe ([9b6160c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/9b6160c9728b4233d4e3133025e93115cf77c53c))
+* **recipes:** add zed-biome-husky-quality-gates recipe ([17e477c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/17e477c0fb6b5889a84f186354e79252e9d618e1))
+
 ## [2.20.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.20.0...project-docs-scaffold-template-v2.20.1) (2026-03-28)
 
 
