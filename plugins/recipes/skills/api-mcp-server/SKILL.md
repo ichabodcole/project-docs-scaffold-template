@@ -779,10 +779,17 @@ function unauthorizedResponse(): Response {
 
 export const mcpRoutes = new Elysia({ prefix: "/api/mcp" })
   .use(sessionMiddleware)
-  .post("", async ({ request, user }) => {
-    if (!user) return unauthorizedResponse();
-    return handleMcpRequest(request, user);
-  })
+  .post(
+    "",
+    async ({ request, user }) => {
+      if (!user) return unauthorizedResponse();
+      return handleMcpRequest(request, user);
+    },
+    // parse: "none" keeps Elysia from draining the request body before the MCP
+    // SDK reads it. Without this, authenticated POSTs return a silent
+    // `-32700 Parse error: Invalid JSON` with a 200 status.
+    { parse: "none" }
+  )
   .get("", async ({ request, user }) => {
     if (!user) return unauthorizedResponse();
     return handleMcpRequest(request, user);
@@ -1281,6 +1288,13 @@ const keyPrefix = key.substring(0, 8);
 ```
 
 ## Gotchas & Important Notes
+
+- **Elysia's body-parser drains the MCP request stream.** If authenticated POSTs
+  to `/api/mcp` return `-32700 Parse error: Invalid JSON` even though the server
+  logs a clean 200, Elysia's default `application/json` parser has already
+  consumed the request body by the time the MCP SDK's transport tries to read
+  it. Pass `{ parse: "none" }` as the third argument on the POST route so Elysia
+  skips body parsing there. GET and DELETE don't need this — they have no body.
 
 - **MCP SDK expects Node.js HTTP on older versions.** If you see
   `TypeError: req.on is not a function` or `res.writeHead is not a function`,
