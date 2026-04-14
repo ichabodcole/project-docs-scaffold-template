@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.22.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.21.0...project-docs-scaffold-template-v2.22.0) (2026-04-14)
+
+
+### Features
+
+* **project-docs:** add consolidate-long-branch skill ([65623f5](https://github.com/ichabodcole/project-docs-scaffold-template/commit/65623f53c6e6165933a773daceb209f126a40ad5))
+* **project-docs:** add report-issue skill ([61dc573](https://github.com/ichabodcole/project-docs-scaffold-template/commit/61dc5731adbbb7760862f4d8c03d2f80b169ac11))
+* **project-docs:** finalize-branch reviewer selection and dual review ([4bfc83b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/4bfc83b693ce7abe1aa7f9c799ac536c149dc6be))
+* **project-docs:** strengthen finalize-branch review and squash steps ([1742565](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1742565910a1f89d20dc04fdc897539d56ab45a7))
+
+
+### Bug Fixes
+
+* **project-docs:** finalize-branch no longer assumes develop as base ([16d48d9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/16d48d9b69819f7630f0ee865e3b8fff3a030686))
+* **recipes:** document Elysia parse:"none" requirement for MCP POST route ([7b1e3fc](https://github.com/ichabodcole/project-docs-scaffold-template/commit/7b1e3fc9a223b8c29449381fae1bc37b5dcc3e58)), closes [#103](https://github.com/ichabodcole/project-docs-scaffold-template/issues/103)
+
 ## [2.21.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.20.1...project-docs-scaffold-template-v2.21.0) (2026-04-02)
 
 
