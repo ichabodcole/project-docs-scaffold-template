@@ -193,11 +193,12 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Utility Skills
 
-| Skill                     | Description                                                                                                                                         |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                |
-| `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export |
-| `report-issue`            | File a GitHub issue against the project-docs-scaffold-template repo for bugs, docs issues, or enhancements in any shipped plugin or recipe          |
+| Skill                     | Description                                                                                                                                                                |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                                       |
+| `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export                        |
+| `report-issue`            | File a GitHub issue against the project-docs-scaffold-template repo for bugs, docs issues, or enhancements in any shipped plugin or recipe                                 |
+| `consolidate-long-branch` | Safely collapse a long-running branch's many commits into a few coherent chapter commits using cherry-pick + soft-reset with backup refs and tree-equivalence verification |
 
 ---
 
@@ -263,6 +264,15 @@ docs/
    significantly
 
 ## Version History
+
+### 2.2.0 (2026-04-13)
+
+- New `consolidate-long-branch` skill — safe, 8-phase workflow for collapsing a
+  long-running feature branch's many commits into a small number of coherent
+  chapter commits before merging. Uses cherry-pick + soft-reset onto a fresh
+  branch, gated by two independent backup refs and a byte-exact tree-equivalence
+  check. Adapted from a proven playbook (46 commits → 7 with zero conflicts).
+  Lives under Utility Skills.
 
 ### 2.1.0 (2026-04-13)
 
