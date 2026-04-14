@@ -197,6 +197,7 @@ than commands and are the primary way the plugin delivers its workflows.
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                |
 | `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export |
+| `report-issue`            | File a GitHub issue against the project-docs-scaffold-template repo for bugs, docs issues, or enhancements in any shipped plugin or recipe          |
 
 ---
 
@@ -262,6 +263,15 @@ docs/
    significantly
 
 ## Version History
+
+### 2.1.0 (2026-04-13)
+
+- New `report-issue` skill — lightweight utility for filing GitHub issues
+  against the `project-docs-scaffold-template` repo; covers bugs, docs issues,
+  and enhancements for any component shipped from the repo (project-docs,
+  recipes, toolbox, operator, agent-bridge plugins, and the scaffold template
+  itself); always confirms the draft with the user before submitting via
+  `gh issue create` or a prefilled URL fallback
 
 ### 2.0.0 (2026-03-22)
 
