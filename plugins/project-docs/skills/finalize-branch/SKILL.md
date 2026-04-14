@@ -30,12 +30,41 @@ git log develop..HEAD --oneline
 git diff --stat develop
 ```
 
-### Step 2: Code Review
+### Step 2: Independent Code Review (Mandatory)
 
-- Review all commits and check new/modified files against existing patterns
-- Use Grep/Glob to find similar implementations for comparison
-- Read files to understand established patterns before judging new code
-- Use Task tool with Explore agent for broader codebase understanding if needed
+**This step is not optional and cannot be self-performed.** Dispatch a subagent
+to perform the review — do not review the code yourself.
+
+**Why:** The agent that wrote the code is the worst possible reviewer of it.
+Tunnel vision makes self-review miss the things a fresh pair of eyes catches in
+minutes. An "I've been reviewing as I go, so this is covered" reflex is exactly
+the failure mode this step exists to prevent. If that thought appears, treat it
+as the signal to delegate, not to skip.
+
+**How:**
+
+1. Dispatch a code review subagent. Preferred, in order:
+   - `feature-dev:code-reviewer` (project convention for high-confidence
+     filtered review)
+   - `superpowers:code-reviewer`
+   - A generic `general-purpose` agent if neither is available
+2. Give the subagent the **net diff** as its scope: `git diff develop..HEAD`
+   (adjust base branch as needed). Commit count on the branch is irrelevant —
+   the reviewer reviews the final delta against the base, not the commit
+   history.
+3. Include in the subagent's prompt: what the branch is supposed to accomplish,
+   the base branch, any known constraints or conventions, and an instruction to
+   flag bugs, security issues, convention drift, and missed edge cases.
+4. Wait for the subagent's findings before proceeding.
+
+**After review:**
+
+- Surface the findings to the user — don't silently act on them.
+- Address high-confidence issues (bugs, security, clear convention violations)
+  before moving to quality checks.
+- For subjective or low-confidence suggestions, defer to the user.
+- If the reviewer produces nothing actionable, that's a valid result — say so
+  explicitly rather than pretending no review happened.
 
 ### Step 3: Run Quality Tools
 
@@ -85,12 +114,63 @@ Present recommendations to user and get confirmation before creating:
 
 Stage and commit any new docs.
 
-### Step 8: Squash Commits
+### Step 8: Choose a Squash Strategy and Execute
+
+The goal is a clean, readable merged history on `develop`. Two strategies exist
+depending on branch size and commit shape. **Propose a strategy, explain why,
+and confirm with the user before executing.**
+
+**Strategy A — Single-commit squash (default for most branches):**
+
+Use when the branch has roughly **under 20 commits** and the work is small or
+medium enough to summarize in one coherent commit message. This is the default —
+simpler, cleaner, easier to revert as one unit.
 
 ```bash
 git reset --soft develop
 git commit -m "<single descriptive commit message>"
 ```
+
+**Strategy B — Multi-commit consolidation (for large branches):**
+
+Use when the branch has **~20+ commits** and the work naturally splits into 5–10
+logical chapters (e.g., "schema + migrations", "API", "UI", "tests", "docs").
+Preserving those chapters on `develop` makes the feature's evolution readable
+months later, which matters more for big features.
+
+For this strategy, **invoke the `consolidate-long-branch` skill** — it provides
+the full safe workflow (backup refs, cherry-pick + soft-reset, tree-equivalence
+verification) so the consolidation cannot silently drop or duplicate changes. Do
+not attempt a hand-rolled multi-commit squash; the tree-equivalence check is the
+only reliable way to verify the consolidated branch matches the original tip.
+
+**How to decide:**
+
+- Commit count under ~10 → Strategy A, no question.
+- Commit count 10–20 → Strategy A unless the user explicitly wants to preserve
+  chapters.
+- Commit count 20+ → Propose Strategy B, but let the user choose.
+- Always present your recommendation with the count and reasoning, then ask:
+  _"This branch has N commits. I recommend [Strategy A/B] because [reason].
+  Proceed with that, or use the other approach?"_
+
+### Step 8.5: Verify the Squashed Result
+
+After squashing (either strategy), do a quick sanity check:
+
+1. Run `git log --oneline develop..HEAD` — confirm the commit count and subjects
+   match the chosen strategy (1 commit for A, planned count for B).
+2. Run `git diff develop..HEAD --stat` and spot-check that the files and line
+   counts match what the feature should have touched.
+3. For Strategy A: read back the squashed commit message and confirm it
+   accurately summarizes the diff — not a generic "implement feature X" line
+   that drifted from reality.
+4. For Strategy B: the `consolidate-long-branch` skill's tree-equivalence check
+   (Phase 5) is the authoritative correctness gate — confirm it ran and produced
+   zero output.
+
+This is a sanity check, not another code review. If anything looks wrong, stop
+and diagnose before offering completion options.
 
 ### Step 9: Present Completion Options
 
@@ -146,20 +226,32 @@ Delete branch and remove worktree if applicable (Options 1 and 4 only).
 
 Ask for user confirmation at these points:
 
-- After code review findings (before proceeding)
+- After independent code review findings (before proceeding)
 - Before creating additional documentation (beyond session)
-- Before squashing commits (review commit message)
+- Before squashing commits (confirm strategy A vs B and commit message)
 - Before merging to develop
 
 ## Important Constraints
 
 - **Default is local** — Only push to remote if user selects Option 2 (PR)
 - **Fast-forward only** — Never create merge commits when merging locally
-- **Squash before merge** — One clean commit per branch on develop
+- **Squash or consolidate before merge** — One clean commit per branch for
+  small/medium branches, or a small number of chapter commits for large branches
+  via the `consolidate-long-branch` skill. Never merge a messy commit diary
+  directly onto `develop`.
 - **Always create session doc** — Even for smooth work
 
 ## Common Mistakes
 
+- **Self-reviewing the code** — The single most common failure mode. If you
+  catch yourself thinking "I've been reviewing as I worked, this is fine," stop.
+  Dispatch a subagent per Step 2. Always. No exceptions.
+- **Asking the subagent to review commit-by-commit** — Give it the net diff
+  (`git diff develop..HEAD`), not the commit history. The commit log is noise;
+  the delta is the truth.
+- **Rolling your own multi-commit squash** — If Strategy B is chosen, use the
+  `consolidate-long-branch` skill. Ad-hoc interactive rebase without the
+  tree-equivalence gate is how silent content drift enters the merged history.
 - **Skipping test verification** — Never proceed to merge/PR with failing tests.
   Quality checks (step 3) are a hard gate, not a suggestion.
 - **Open-ended questions** — Don't ask "What should I do next?" Present the
