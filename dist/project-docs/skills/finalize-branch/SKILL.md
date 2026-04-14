@@ -2,12 +2,14 @@
 name: "finalize-branch"
 description: >
   Code review, documentation, and merge workflow for completed branches. Use
-  this instead of generic branch-completion skills — performs code review, runs
-  quality checks (format, lint, types, test), creates session documentation in
-  docs/projects/, writes memory docs, checks test plan results, squash-merges to
-  develop. Triggers when user says "finalize branch", "merge to develop",
-  "finish this branch", "ready to merge", "wrap up this work", or wants to
-  complete feature work with documentation and code review.
+  this instead of generic branch-completion skills — determines the base branch,
+  performs independent code review via subagent, runs quality checks (format,
+  lint, types, test), creates session documentation in docs/projects/, writes
+  memory docs, checks test plan results, and squash-merges (or consolidates, for
+  long branches) back to the base. Triggers when user says "finalize branch",
+  "merge to develop", "merge to main", "finish this branch", "ready to merge",
+  "wrap up this work", or wants to complete feature work with documentation and
+  code review.
 allowed-tools:
   - Read
   - Write
@@ -23,26 +25,110 @@ allowed-tools:
 
 Code review, documentation, and merge workflow for completed branches.
 
-**Playbook reference:** Follow the workflow in
-[docs/playbooks/branch-finalization-playbook.md](../../docs/playbooks/branch-finalization-playbook.md)
-
 ## Workflow
+
+### Step 0: Determine the Base Branch
+
+**Do not assume `develop` or `main`.** Every command in the remaining steps
+needs a base branch — the branch this feature branch was created from. Different
+projects and different branches use different bases (`develop`, `main`,
+`master`, `trunk`, `staging`, or a long-lived feature branch). Guessing wrong
+leads the scope calculation and all subsequent steps to operate on the wrong
+delta.
+
+**How to figure it out:**
+
+1. Check the upstream tracking branch if set:
+   `git rev-parse --abbrev-ref @{upstream} 2>/dev/null`
+2. Check the repo's default branch and recent merge history:
+   - `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` (often
+     `origin/main` or `origin/develop`)
+   - `git log --oneline --decorate -20` to see what's recently merged
+3. If the user has project conventions documented (CLAUDE.md, AGENTS.md, or a
+   root README), check there for a stated default branch workflow.
+4. If after those checks you're still unsure, **ask the user explicitly**:
+   _"What branch was this work based on / should it merge back into?"_ Don't
+   guess.
+
+Once established, use this base branch in every subsequent command — the
+examples below use `<base>` as a placeholder. Replace it with the actual base
+branch name (e.g., `develop`, `main`, `trunk`) for execution.
 
 ### Step 1: Understand Branch Scope
 
 Review commits, files changed, and overall accomplishment.
 
 ```bash
-git log develop..HEAD --oneline
-git diff --stat develop
+git log <base>..HEAD --oneline
+git diff --stat <base>
 ```
 
-### Step 2: Code Review
+### Step 2: Independent Code Review (Mandatory)
 
-- Review all commits and check new/modified files against existing patterns
-- Use Grep/Glob to find similar implementations for comparison
-- Read files to understand established patterns before judging new code
-- Use Task tool with Explore agent for broader codebase understanding if needed
+**This step is not optional and cannot be self-performed.** Dispatch a subagent
+to perform the review — do not review the code yourself.
+
+**Why:** The agent that wrote the code is the worst possible reviewer of it.
+Tunnel vision makes self-review miss the things a fresh pair of eyes catches in
+minutes. An "I've been reviewing as I go, so this is covered" reflex is exactly
+the failure mode this step exists to prevent. If that thought appears, treat it
+as the signal to delegate, not to skip.
+
+**How:**
+
+1. **Choose a reviewer** based on what this branch needs:
+   - **`feature-dev:code-reviewer`** — default for most branches. Uses a
+     confidence-scored filter (only reports issues it rates ≥80/100), so it
+     produces a tight, low-noise report focused on real bugs, security issues,
+     and clear convention violations. Best when there's no plan to validate
+     against, or when you mainly want to know _"is anything actually broken?"_
+   - **`superpowers:code-reviewer`** — prefer when the branch has an approved
+     `proposal.md`, `plan.md`, design resolution, or similar spec to validate
+     against. Strong at plan-alignment ("did we build what we said we'd
+     build?"), architecture, and design-pattern review. Trades some noise for
+     holistic coverage.
+   - **Dual review (both in parallel)** — for meaty branches: large diffs (~500+
+     lines), work spanning multiple subsystems, significant architectural
+     decisions, or anything high-stakes. The two reviewers flag different things
+     — one's confidence filter catches bugs the other misses, the other catches
+     architecture and plan drift. Dispatch them in parallel (one message,
+     multiple Task calls), then reconcile findings into a single merged report
+     for the user.
+   - **Fallback:** a generic `general-purpose` agent if neither plugin agent is
+     available. Note this in the session doc.
+
+2. **Scope the review to the net diff.** `git diff <base>..HEAD` is the truth —
+   commit history is noise. Tell the reviewer to review the delta, not the
+   commit log.
+
+3. **Prompt template** — include all of these in the dispatch:
+   - What the branch is supposed to accomplish (1–2 sentences).
+   - Base branch and link to any approving proposal/plan if one exists.
+   - Known constraints, conventions, or project guidelines (e.g., "follow
+     patterns in CLAUDE.md / AGENTS.md").
+   - Explicit asks: flag bugs, security issues, convention drift, missed edge
+     cases.
+   - **Tests-vs-mocks check:** "Do the tests actually test logic, or do they
+     mostly exercise mocks? Flag tests that pass without proving the code under
+     test works."
+   - **Ship verdict:** "End your report with a clear verdict — _Ready to merge:
+     Yes / No / With fixes_ — and a one-sentence reasoning."
+
+4. Wait for the subagent's findings (or both, for dual review) before
+   proceeding.
+
+**After review:**
+
+- Surface the findings to the user — don't silently act on them.
+- For dual review, present both reports side-by-side (or as a merged summary
+  noting which reviewer flagged what) rather than picking one.
+- Address high-confidence issues (bugs, security, clear convention violations)
+  before moving to quality checks.
+- For subjective or low-confidence suggestions, defer to the user.
+- If the reviewer(s) produce a "Ready to merge: No" or "With fixes" verdict,
+  treat those fixes as blocking before Step 3.
+- If the reviewer produces nothing actionable, that's a valid result — say so
+  explicitly rather than pretending no review happened.
 
 ### Step 3: Run Quality Tools
 
@@ -92,12 +178,63 @@ Present recommendations to user and get confirmation before creating:
 
 Stage and commit any new docs.
 
-### Step 8: Squash Commits
+### Step 8: Choose a Squash Strategy and Execute
+
+The goal is a clean, readable merged history on the base branch. Two strategies
+exist depending on branch size and commit shape. **Propose a strategy, explain
+why, and confirm with the user before executing.**
+
+**Strategy A — Single-commit squash (default for most branches):**
+
+Use when the branch has roughly **under 20 commits** and the work is small or
+medium enough to summarize in one coherent commit message. This is the default —
+simpler, cleaner, easier to revert as one unit.
 
 ```bash
-git reset --soft develop
+git reset --soft <base>
 git commit -m "<single descriptive commit message>"
 ```
+
+**Strategy B — Multi-commit consolidation (for large branches):**
+
+Use when the branch has **~20+ commits** and the work naturally splits into 5–10
+logical chapters (e.g., "schema + migrations", "API", "UI", "tests", "docs").
+Preserving those chapters on the base branch makes the feature's evolution
+readable months later, which matters more for big features.
+
+For this strategy, **invoke the `consolidate-long-branch` skill** — it provides
+the full safe workflow (backup refs, cherry-pick + soft-reset, tree-equivalence
+verification) so the consolidation cannot silently drop or duplicate changes. Do
+not attempt a hand-rolled multi-commit squash; the tree-equivalence check is the
+only reliable way to verify the consolidated branch matches the original tip.
+
+**How to decide:**
+
+- Commit count under ~10 → Strategy A, no question.
+- Commit count 10–20 → Strategy A unless the user explicitly wants to preserve
+  chapters.
+- Commit count 20+ → Propose Strategy B, but let the user choose.
+- Always present your recommendation with the count and reasoning, then ask:
+  _"This branch has N commits. I recommend [Strategy A/B] because [reason].
+  Proceed with that, or use the other approach?"_
+
+### Step 8.5: Verify the Squashed Result
+
+After squashing (either strategy), do a quick sanity check:
+
+1. Run `git log --oneline <base>..HEAD` — confirm the commit count and subjects
+   match the chosen strategy (1 commit for A, planned count for B).
+2. Run `git diff <base>..HEAD --stat` and spot-check that the files and line
+   counts match what the feature should have touched.
+3. For Strategy A: read back the squashed commit message and confirm it
+   accurately summarizes the diff — not a generic "implement feature X" line
+   that drifted from reality.
+4. For Strategy B: the `consolidate-long-branch` skill's tree-equivalence check
+   (Phase 5) is the authoritative correctness gate — confirm it ran and produced
+   zero output.
+
+This is a sanity check, not another code review. If anything looks wrong, stop
+and diagnose before offering completion options.
 
 ### Step 9: Present Completion Options
 
@@ -106,16 +243,16 @@ After documentation and squash are done, present these options:
 ```
 Ready to integrate. What would you like to do?
 
-1. Merge to develop (default)
+1. Merge to <base> (default)
 2. Push and create a Pull Request
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
 ```
 
-**Option 1: Merge to develop** (default workflow)
+**Option 1: Merge to `<base>`** (default workflow)
 
 ```bash
-git checkout develop
+git checkout <base>
 git merge --ff-only <branch>
 ```
 
@@ -140,7 +277,7 @@ Confirm before proceeding — list the branch name, commits that will be lost, a
 worktree path. Require explicit confirmation from the user.
 
 ```bash
-git checkout develop
+git checkout <base>
 git branch -D <branch>
 # Remove worktree if applicable
 ```
@@ -153,20 +290,32 @@ Delete branch and remove worktree if applicable (Options 1 and 4 only).
 
 Ask for user confirmation at these points:
 
-- After code review findings (before proceeding)
+- After independent code review findings (before proceeding)
 - Before creating additional documentation (beyond session)
-- Before squashing commits (review commit message)
-- Before merging to develop
+- Before squashing commits (confirm strategy A vs B and commit message)
+- Before merging to the base branch
 
 ## Important Constraints
 
 - **Default is local** — Only push to remote if user selects Option 2 (PR)
 - **Fast-forward only** — Never create merge commits when merging locally
-- **Squash before merge** — One clean commit per branch on develop
+- **Squash or consolidate before merge** — One clean commit per branch for
+  small/medium branches, or a small number of chapter commits for large branches
+  via the `consolidate-long-branch` skill. Never merge a messy commit diary
+  directly onto the base branch.
 - **Always create session doc** — Even for smooth work
 
 ## Common Mistakes
 
+- **Self-reviewing the code** — The single most common failure mode. If you
+  catch yourself thinking "I've been reviewing as I worked, this is fine," stop.
+  Dispatch a subagent per Step 2. Always. No exceptions.
+- **Asking the subagent to review commit-by-commit** — Give it the net diff
+  (`git diff <base>..HEAD`), not the commit history. The commit log is noise;
+  the delta is the truth.
+- **Rolling your own multi-commit squash** — If Strategy B is chosen, use the
+  `consolidate-long-branch` skill. Ad-hoc interactive rebase without the
+  tree-equivalence gate is how silent content drift enters the merged history.
 - **Skipping test verification** — Never proceed to merge/PR with failing tests.
   Quality checks (step 3) are a hard gate, not a suggestion.
 - **Open-ended questions** — Don't ask "What should I do next?" Present the
@@ -175,8 +324,11 @@ Ask for user confirmation at these points:
   Options 2 and 3 need the worktree preserved.
 - **No confirmation for discard** — Always list what will be lost and get
   explicit confirmation before deleting branches.
-- **Merging without verifying the result** — After merging to develop, verify
-  tests pass on the merged result before deleting the branch.
+- **Merging without verifying the result** — After merging to the base branch,
+  verify tests pass on the merged result before deleting the branch.
+- **Assuming the base branch is `develop` or `main`** — Always determine the
+  actual base in Step 0. Guessing wrong makes every subsequent diff and merge
+  operate on the wrong scope.
 
 ## Output
 
