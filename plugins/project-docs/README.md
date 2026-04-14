@@ -265,6 +265,32 @@ docs/
 
 ## Version History
 
+### 2.3.0 (2026-04-13)
+
+- `finalize-branch` skill — Step 2 now mandates independent code review via a
+  dispatched subagent (preferred: `feature-dev:code-reviewer`) scoped to the net
+  diff against the base branch, with explicit anti-patterns naming the "I've
+  been reviewing as I go" rationalization. Step 8 now presents two squash
+  strategies: single-commit squash (default for branches under ~20 commits) or
+  multi-commit chapter consolidation via the `consolidate-long-branch` skill
+  (for larger branches). Added a new Step 8.5 post-squash sanity check to verify
+  the squashed result matches intent.
+- `finalize-branch` skill — added Step 0 that has the agent determine the base
+  branch (no more `develop` assumption). All subsequent commands use a `<base>`
+  placeholder so the skill works for projects using `main`, `master`, `trunk`,
+  or any other branching strategy. Also removed a stale pointer to a playbook
+  that isn't shipped with the plugin — the skill is now fully self-contained.
+- `finalize-branch` skill — Step 2 reviewer selection now gives concrete
+  guidance on choosing between `feature-dev:code-reviewer` (low-noise,
+  confidence-filtered — default for most branches) and
+  `superpowers:code-reviewer` (plan-alignment and architecture focus — prefer
+  when a proposal/plan exists to validate against). Added a dual-review option
+  for meaty branches (large diffs, multi-subsystem work, high-stakes changes)
+  where running both reviewers in parallel and reconciling findings catches
+  different classes of issues. Dispatch prompt template now requires the
+  reviewer to run a tests-vs-mocks sanity check and end with an explicit "Ready
+  to merge: Yes / No / With fixes" verdict.
+
 ### 2.2.0 (2026-04-13)
 
 - New `consolidate-long-branch` skill — safe, 8-phase workflow for collapsing a
