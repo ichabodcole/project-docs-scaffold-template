@@ -76,26 +76,57 @@ as the signal to delegate, not to skip.
 
 **How:**
 
-1. Dispatch a code review subagent. Preferred, in order:
-   - `feature-dev:code-reviewer` (project convention for high-confidence
-     filtered review)
-   - `superpowers:code-reviewer`
-   - A generic `general-purpose` agent if neither is available
-2. Give the subagent the **net diff** as its scope: `git diff <base>..HEAD`
-   (adjust base branch as needed). Commit count on the branch is irrelevant —
-   the reviewer reviews the final delta against the base, not the commit
-   history.
-3. Include in the subagent's prompt: what the branch is supposed to accomplish,
-   the base branch, any known constraints or conventions, and an instruction to
-   flag bugs, security issues, convention drift, and missed edge cases.
-4. Wait for the subagent's findings before proceeding.
+1. **Choose a reviewer** based on what this branch needs:
+   - **`feature-dev:code-reviewer`** — default for most branches. Uses a
+     confidence-scored filter (only reports issues it rates ≥80/100), so it
+     produces a tight, low-noise report focused on real bugs, security issues,
+     and clear convention violations. Best when there's no plan to validate
+     against, or when you mainly want to know _"is anything actually broken?"_
+   - **`superpowers:code-reviewer`** — prefer when the branch has an approved
+     `proposal.md`, `plan.md`, design resolution, or similar spec to validate
+     against. Strong at plan-alignment ("did we build what we said we'd
+     build?"), architecture, and design-pattern review. Trades some noise for
+     holistic coverage.
+   - **Dual review (both in parallel)** — for meaty branches: large diffs (~500+
+     lines), work spanning multiple subsystems, significant architectural
+     decisions, or anything high-stakes. The two reviewers flag different things
+     — one's confidence filter catches bugs the other misses, the other catches
+     architecture and plan drift. Dispatch them in parallel (one message,
+     multiple Task calls), then reconcile findings into a single merged report
+     for the user.
+   - **Fallback:** a generic `general-purpose` agent if neither plugin agent is
+     available. Note this in the session doc.
+
+2. **Scope the review to the net diff.** `git diff <base>..HEAD` is the truth —
+   commit history is noise. Tell the reviewer to review the delta, not the
+   commit log.
+
+3. **Prompt template** — include all of these in the dispatch:
+   - What the branch is supposed to accomplish (1–2 sentences).
+   - Base branch and link to any approving proposal/plan if one exists.
+   - Known constraints, conventions, or project guidelines (e.g., "follow
+     patterns in CLAUDE.md / AGENTS.md").
+   - Explicit asks: flag bugs, security issues, convention drift, missed edge
+     cases.
+   - **Tests-vs-mocks check:** "Do the tests actually test logic, or do they
+     mostly exercise mocks? Flag tests that pass without proving the code under
+     test works."
+   - **Ship verdict:** "End your report with a clear verdict — _Ready to merge:
+     Yes / No / With fixes_ — and a one-sentence reasoning."
+
+4. Wait for the subagent's findings (or both, for dual review) before
+   proceeding.
 
 **After review:**
 
 - Surface the findings to the user — don't silently act on them.
+- For dual review, present both reports side-by-side (or as a merged summary
+  noting which reviewer flagged what) rather than picking one.
 - Address high-confidence issues (bugs, security, clear convention violations)
   before moving to quality checks.
 - For subjective or low-confidence suggestions, defer to the user.
+- If the reviewer(s) produce a "Ready to merge: No" or "With fixes" verdict,
+  treat those fixes as blocking before Step 3.
 - If the reviewer produces nothing actionable, that's a valid result — say so
   explicitly rather than pretending no review happened.
 

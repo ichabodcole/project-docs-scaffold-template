@@ -280,6 +280,16 @@ docs/
   placeholder so the skill works for projects using `main`, `master`, `trunk`,
   or any other branching strategy. Also removed a stale pointer to a playbook
   that isn't shipped with the plugin — the skill is now fully self-contained.
+- `finalize-branch` skill — Step 2 reviewer selection now gives concrete
+  guidance on choosing between `feature-dev:code-reviewer` (low-noise,
+  confidence-filtered — default for most branches) and
+  `superpowers:code-reviewer` (plan-alignment and architecture focus — prefer
+  when a proposal/plan exists to validate against). Added a dual-review option
+  for meaty branches (large diffs, multi-subsystem work, high-stakes changes)
+  where running both reviewers in parallel and reconciling findings catches
+  different classes of issues. Dispatch prompt template now requires the
+  reviewer to run a tests-vs-mocks sanity check and end with an explicit "Ready
+  to merge: Yes / No / With fixes" verdict.
 
 ### 2.2.0 (2026-04-13)
 
