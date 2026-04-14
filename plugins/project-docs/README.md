@@ -269,12 +269,17 @@ docs/
 
 - `finalize-branch` skill — Step 2 now mandates independent code review via a
   dispatched subagent (preferred: `feature-dev:code-reviewer`) scoped to the net
-  diff (`git diff develop..HEAD`), with explicit anti-patterns naming the "I've
+  diff against the base branch, with explicit anti-patterns naming the "I've
   been reviewing as I go" rationalization. Step 8 now presents two squash
   strategies: single-commit squash (default for branches under ~20 commits) or
   multi-commit chapter consolidation via the `consolidate-long-branch` skill
   (for larger branches). Added a new Step 8.5 post-squash sanity check to verify
   the squashed result matches intent.
+- `finalize-branch` skill — added Step 0 that has the agent determine the base
+  branch (no more `develop` assumption). All subsequent commands use a `<base>`
+  placeholder so the skill works for projects using `main`, `master`, `trunk`,
+  or any other branching strategy. Also removed a stale pointer to a playbook
+  that isn't shipped with the plugin — the skill is now fully self-contained.
 
 ### 2.2.0 (2026-04-13)
 

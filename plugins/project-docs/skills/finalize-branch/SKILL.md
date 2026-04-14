@@ -2,12 +2,14 @@
 name: "finalize-branch"
 description: >
   Code review, documentation, and merge workflow for completed branches. Use
-  this instead of generic branch-completion skills — performs code review, runs
-  quality checks (format, lint, types, test), creates session documentation in
-  docs/projects/, writes memory docs, checks test plan results, squash-merges to
-  develop. Triggers when user says "finalize branch", "merge to develop",
-  "finish this branch", "ready to merge", "wrap up this work", or wants to
-  complete feature work with documentation and code review.
+  this instead of generic branch-completion skills — determines the base branch,
+  performs independent code review via subagent, runs quality checks (format,
+  lint, types, test), creates session documentation in docs/projects/, writes
+  memory docs, checks test plan results, and squash-merges (or consolidates, for
+  long branches) back to the base. Triggers when user says "finalize branch",
+  "merge to develop", "merge to main", "finish this branch", "ready to merge",
+  "wrap up this work", or wants to complete feature work with documentation and
+  code review.
 allowed_tools:
   ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task", "AskUserQuestion"]
 ---
@@ -16,18 +18,42 @@ allowed_tools:
 
 Code review, documentation, and merge workflow for completed branches.
 
-**Playbook reference:** Follow the workflow in
-[docs/playbooks/branch-finalization-playbook.md](../../docs/playbooks/branch-finalization-playbook.md)
-
 ## Workflow
+
+### Step 0: Determine the Base Branch
+
+**Do not assume `develop` or `main`.** Every command in the remaining steps
+needs a base branch — the branch this feature branch was created from. Different
+projects and different branches use different bases (`develop`, `main`,
+`master`, `trunk`, `staging`, or a long-lived feature branch). Guessing wrong
+leads the scope calculation and all subsequent steps to operate on the wrong
+delta.
+
+**How to figure it out:**
+
+1. Check the upstream tracking branch if set:
+   `git rev-parse --abbrev-ref @{upstream} 2>/dev/null`
+2. Check the repo's default branch and recent merge history:
+   - `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` (often
+     `origin/main` or `origin/develop`)
+   - `git log --oneline --decorate -20` to see what's recently merged
+3. If the user has project conventions documented (CLAUDE.md, AGENTS.md, or a
+   root README), check there for a stated default branch workflow.
+4. If after those checks you're still unsure, **ask the user explicitly**:
+   _"What branch was this work based on / should it merge back into?"_ Don't
+   guess.
+
+Once established, use this base branch in every subsequent command — the
+examples below use `<base>` as a placeholder. Replace it with the actual base
+branch name (e.g., `develop`, `main`, `trunk`) for execution.
 
 ### Step 1: Understand Branch Scope
 
 Review commits, files changed, and overall accomplishment.
 
 ```bash
-git log develop..HEAD --oneline
-git diff --stat develop
+git log <base>..HEAD --oneline
+git diff --stat <base>
 ```
 
 ### Step 2: Independent Code Review (Mandatory)
@@ -48,7 +74,7 @@ as the signal to delegate, not to skip.
      filtered review)
    - `superpowers:code-reviewer`
    - A generic `general-purpose` agent if neither is available
-2. Give the subagent the **net diff** as its scope: `git diff develop..HEAD`
+2. Give the subagent the **net diff** as its scope: `git diff <base>..HEAD`
    (adjust base branch as needed). Commit count on the branch is irrelevant —
    the reviewer reviews the final delta against the base, not the commit
    history.
@@ -116,9 +142,9 @@ Stage and commit any new docs.
 
 ### Step 8: Choose a Squash Strategy and Execute
 
-The goal is a clean, readable merged history on `develop`. Two strategies exist
-depending on branch size and commit shape. **Propose a strategy, explain why,
-and confirm with the user before executing.**
+The goal is a clean, readable merged history on the base branch. Two strategies
+exist depending on branch size and commit shape. **Propose a strategy, explain
+why, and confirm with the user before executing.**
 
 **Strategy A — Single-commit squash (default for most branches):**
 
@@ -127,7 +153,7 @@ medium enough to summarize in one coherent commit message. This is the default �
 simpler, cleaner, easier to revert as one unit.
 
 ```bash
-git reset --soft develop
+git reset --soft <base>
 git commit -m "<single descriptive commit message>"
 ```
 
@@ -135,8 +161,8 @@ git commit -m "<single descriptive commit message>"
 
 Use when the branch has **~20+ commits** and the work naturally splits into 5–10
 logical chapters (e.g., "schema + migrations", "API", "UI", "tests", "docs").
-Preserving those chapters on `develop` makes the feature's evolution readable
-months later, which matters more for big features.
+Preserving those chapters on the base branch makes the feature's evolution
+readable months later, which matters more for big features.
 
 For this strategy, **invoke the `consolidate-long-branch` skill** — it provides
 the full safe workflow (backup refs, cherry-pick + soft-reset, tree-equivalence
@@ -158,9 +184,9 @@ only reliable way to verify the consolidated branch matches the original tip.
 
 After squashing (either strategy), do a quick sanity check:
 
-1. Run `git log --oneline develop..HEAD` — confirm the commit count and subjects
+1. Run `git log --oneline <base>..HEAD` — confirm the commit count and subjects
    match the chosen strategy (1 commit for A, planned count for B).
-2. Run `git diff develop..HEAD --stat` and spot-check that the files and line
+2. Run `git diff <base>..HEAD --stat` and spot-check that the files and line
    counts match what the feature should have touched.
 3. For Strategy A: read back the squashed commit message and confirm it
    accurately summarizes the diff — not a generic "implement feature X" line
@@ -179,16 +205,16 @@ After documentation and squash are done, present these options:
 ```
 Ready to integrate. What would you like to do?
 
-1. Merge to develop (default)
+1. Merge to <base> (default)
 2. Push and create a Pull Request
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
 ```
 
-**Option 1: Merge to develop** (default workflow)
+**Option 1: Merge to `<base>`** (default workflow)
 
 ```bash
-git checkout develop
+git checkout <base>
 git merge --ff-only <branch>
 ```
 
@@ -213,7 +239,7 @@ Confirm before proceeding — list the branch name, commits that will be lost, a
 worktree path. Require explicit confirmation from the user.
 
 ```bash
-git checkout develop
+git checkout <base>
 git branch -D <branch>
 # Remove worktree if applicable
 ```
@@ -229,7 +255,7 @@ Ask for user confirmation at these points:
 - After independent code review findings (before proceeding)
 - Before creating additional documentation (beyond session)
 - Before squashing commits (confirm strategy A vs B and commit message)
-- Before merging to develop
+- Before merging to the base branch
 
 ## Important Constraints
 
@@ -238,7 +264,7 @@ Ask for user confirmation at these points:
 - **Squash or consolidate before merge** — One clean commit per branch for
   small/medium branches, or a small number of chapter commits for large branches
   via the `consolidate-long-branch` skill. Never merge a messy commit diary
-  directly onto `develop`.
+  directly onto the base branch.
 - **Always create session doc** — Even for smooth work
 
 ## Common Mistakes
@@ -247,7 +273,7 @@ Ask for user confirmation at these points:
   catch yourself thinking "I've been reviewing as I worked, this is fine," stop.
   Dispatch a subagent per Step 2. Always. No exceptions.
 - **Asking the subagent to review commit-by-commit** — Give it the net diff
-  (`git diff develop..HEAD`), not the commit history. The commit log is noise;
+  (`git diff <base>..HEAD`), not the commit history. The commit log is noise;
   the delta is the truth.
 - **Rolling your own multi-commit squash** — If Strategy B is chosen, use the
   `consolidate-long-branch` skill. Ad-hoc interactive rebase without the
@@ -260,8 +286,11 @@ Ask for user confirmation at these points:
   Options 2 and 3 need the worktree preserved.
 - **No confirmation for discard** — Always list what will be lost and get
   explicit confirmation before deleting branches.
-- **Merging without verifying the result** — After merging to develop, verify
-  tests pass on the merged result before deleting the branch.
+- **Merging without verifying the result** — After merging to the base branch,
+  verify tests pass on the merged result before deleting the branch.
+- **Assuming the base branch is `develop` or `main`** — Always determine the
+  actual base in Step 0. Guessing wrong makes every subsequent diff and merge
+  operate on the wrong scope.
 
 ## Output
 
