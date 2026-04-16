@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.23.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.22.0...project-docs-scaffold-template-v2.23.0) (2026-04-16)
+
+
+### Features
+
+* **recipes:** document Claude Desktop DCR compatibility fix ([e2ae28b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/e2ae28b2507adb76511f8fba89efb40ed95fa9b5))
+* **recipes:** document Claude Desktop DCR compatibility fix ([610bc13](https://github.com/ichabodcole/project-docs-scaffold-template/commit/610bc132d46a03ba8f1fb38b01e288f3a7cbc7af))
+
 ## [2.22.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.21.0...project-docs-scaffold-template-v2.22.0) (2026-04-14)
 
 
