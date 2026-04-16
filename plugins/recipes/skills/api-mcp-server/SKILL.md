@@ -1157,6 +1157,106 @@ provider.
 - [ ] Unauthenticated POST to `/api/mcp` returns 401 with `WWW-Authenticate`
       header containing the resource metadata URL
 
+**5.3 Claude Desktop DCR compatibility (required if you support Desktop)**
+
+Claude Code, MCP Inspector, and most CLI clients work with the discovery
+endpoints above. Claude Desktop's "custom connector" has one additional
+requirement that is not documented upstream and fails silently if unmet: its
+Dynamic Client Registration request is a confidential-client shape, sent without
+authentication.
+
+The exact request Desktop's backend sends to `/api/auth/oauth2/register`:
+
+```json
+{
+  "redirect_uris": ["https://claude.ai/api/mcp/auth_callback"],
+  "token_endpoint_auth_method": "client_secret_post",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "scope": "openid profile email offline_access",
+  "client_name": "Claude"
+}
+```
+
+`@better-auth/oauth-provider` hardcodes a 401 for confidential DCR without a
+session (`Authentication required for confidential client registration`), with
+no config flag to relax it. Claude.ai's backend aborts silently on any non-2xx
+DCR response, so the only user-visible symptom is "Couldn't reach the MCP
+server" with an opaque `ofid_<hex>` reference.
+
+**The fix:** register a route for `POST /api/auth/oauth2/register` **before**
+the mounted OAuth handler that coerces confidential auth methods to `none`
+before forwarding:
+
+```typescript
+// src/routes/mcp/dcr-intercept.ts
+import { Elysia } from "elysia";
+import { auth } from "@features/auth";
+
+export function coerceConfidentialDcrToPublic(body: string): string {
+  if (!body) return body;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return body;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return body;
+  }
+  const obj = parsed as { token_endpoint_auth_method?: string };
+  const method = obj.token_endpoint_auth_method;
+  if (!method || method === "none") return body;
+  return JSON.stringify({ ...obj, token_endpoint_auth_method: "none" });
+}
+
+export const dcrInterceptRoute = new Elysia().post(
+  "/api/auth/oauth2/register",
+  async ({ request }) => {
+    const original = await request.text();
+    const rewritten = coerceConfidentialDcrToPublic(original);
+    // Content-Length is a forbidden request header — the runtime sets it
+    // automatically from the new body, so no manual handling is needed.
+    return auth.handler(
+      new Request(request.url, {
+        method: "POST",
+        headers: request.headers,
+        body: rewritten,
+      })
+    );
+  }
+);
+```
+
+Wire it in **before** `.mount(auth.handler)`. Elysia evaluates handlers in
+registration order when routes share the same path, so the explicit DCR route
+must be registered first to intercept before the mounted auth handler catches
+it:
+
+```typescript
+const app = new Elysia()
+  // ... cors, session middleware ...
+  .use(dcrInterceptRoute) // must come before the mounted auth handler
+  .mount(auth.handler)
+  .use(resourceMetadataRoute)
+  .use(authServerMetadataRoute)
+  .use(mcpRoutes);
+```
+
+**Why this is safe:** MCP's spec (2025-06-18 §3.3) requires PKCE, and OAuth 2.1
+recommends public + PKCE for native/desktop apps. Coercing a confidential client
+with no authenticated secret into a public PKCE client is a tightening of the
+client posture, not a loosening.
+
+**Validate:**
+
+- [ ] `curl -X POST <host>/api/auth/oauth2/register -H "content-type: application/json" -d '{"token_endpoint_auth_method":"client_secret_post","redirect_uris":["https://example.com/cb"],"grant_types":["authorization_code","refresh_token"],"response_types":["code"]}'`
+      returns **200** with `"token_endpoint_auth_method": "none"` in the
+      response
+- [ ] Claude Desktop "Add custom connector" completes the OAuth flow and tool
+      calls succeed
+- [ ] Claude Code and MCP Inspector still connect (no regression)
+
 ### Phase 6: Testing
 
 **6.1 Unit tests with InMemoryTransport**
@@ -1335,6 +1435,14 @@ const keyPrefix = key.substring(0, 8);
 - **Well-known endpoints must be at the domain root.** RFC 8615 requires
   `/.well-known/*` paths at the domain root, not under `/api`. Register them
   directly on the Elysia app, not in a prefixed route group.
+
+- **Claude Desktop silently fails without DCR coercion.** Desktop's remote
+  connector sends a confidential-client DCR
+  (`token_endpoint_auth_method: "client_secret_post"`) without authentication,
+  which BetterAuth's OAuth provider rejects with 401. Claude.ai's backend aborts
+  silently on non-2xx DCR, so the only symptom is "Couldn't reach the MCP
+  server." Claude Code and MCP Inspector aren't affected. See Phase 5.3 for the
+  intercept that rewrites the DCR body to a public PKCE client.
 
 ## External Documentation
 
