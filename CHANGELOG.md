@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.24.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.23.0...project-docs-scaffold-template-v2.24.0) (2026-04-19)
+
+
+### Features
+
+* **recipes:** add project-cli-toolkit recipe skill ([cc23f02](https://github.com/ichabodcole/project-docs-scaffold-template/commit/cc23f02dc7b92cafbea20148ab2cf038ae352035))
+* **recipes:** slim project-cli-toolkit skill as installer companion ([7c809dc](https://github.com/ichabodcole/project-docs-scaffold-template/commit/7c809dc53849bb6d39217e54470d76c7f6b6a39e))
+
 ## [2.23.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.22.0...project-docs-scaffold-template-v2.23.0) (2026-04-16)
 
 
