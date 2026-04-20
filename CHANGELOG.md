@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.25.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.24.0...project-docs-scaffold-template-v2.25.0) (2026-04-20)
+
+
+### Features
+
+* **recipes:** close Claude Desktop compat gaps in api-mcp-server ([#108](https://github.com/ichabodcole/project-docs-scaffold-template/issues/108)) ([11ea494](https://github.com/ichabodcole/project-docs-scaffold-template/commit/11ea494860bf67e6bf2fffaab654712d4dc3662b))
+
 ## [2.24.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.23.0...project-docs-scaffold-template-v2.24.0) (2026-04-19)
 
 
