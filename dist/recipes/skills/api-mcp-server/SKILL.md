@@ -1078,22 +1078,32 @@ discovery work.
 
 **5.1 Protected Resource Metadata** (RFC 9728)
 
-This tells MCP clients where to find the authorization server:
+This tells MCP clients where to find the authorization server. Register the
+document at **both** the root well-known URL and a path-scoped variant that
+mirrors the MCP resource path — Claude Code honors the
+`WWW-Authenticate: Bearer resource_metadata=<url>` hint and fetches only the URL
+from the header, but Claude Desktop ignores the hint and constructs its own URL
+by appending the resource path to `/.well-known/oauth-protected-resource`.
+Without the path-scoped variant, Desktop discovery fails silently.
 
 ```typescript
 // src/routes/mcp/resource-metadata.ts
 import { Elysia } from "elysia";
 import { env } from "@core/config";
 
-export const resourceMetadataRoute = new Elysia().get(
-  "/.well-known/oauth-protected-resource",
-  () => ({
-    resource: `${env.BETTER_AUTH_URL}/api/mcp`,
-    authorization_servers: [env.BETTER_AUTH_URL],
-    bearer_methods_supported: ["header"],
-    scopes_supported: ["openid", "profile", "email", "offline_access"],
-  })
-);
+const metadata = () => ({
+  resource: `${env.BETTER_AUTH_URL}/api/mcp`,
+  authorization_servers: [env.BETTER_AUTH_URL],
+  bearer_methods_supported: ["header"],
+  scopes_supported: ["openid", "profile", "email", "offline_access"],
+});
+
+export const resourceMetadataRoute = new Elysia()
+  // Root form — used by Claude Code via WWW-Authenticate hint.
+  .get("/.well-known/oauth-protected-resource", metadata)
+  // Path-scoped form — used by Claude Desktop, which probes
+  // /.well-known/oauth-protected-resource/<mcp-resource-path> directly.
+  .get("/.well-known/oauth-protected-resource/api/mcp", metadata);
 ```
 
 **5.2 Authorization Server Metadata** (RFC 8414)
@@ -1109,14 +1119,19 @@ import { auth } from "@features/auth";
 
 const handler = oauthProviderAuthServerMetadata(auth);
 
-export const authServerMetadataRoute = new Elysia().get(
-  "/.well-known/oauth-authorization-server",
-  async ({ request }) => handler(request)
-);
+export const authServerMetadataRoute = new Elysia()
+  .get("/.well-known/oauth-authorization-server", async ({ request }) =>
+    handler(request)
+  )
+  // Path-scoped form for Claude Desktop.
+  .get("/.well-known/oauth-authorization-server/api/mcp", async ({ request }) =>
+    handler(request)
+  );
 ```
 
-**IMPORTANT:** These well-known endpoints must be at the domain root (per RFC
-8615), not under `/api/mcp`. Register them on the app root:
+**IMPORTANT:** These well-known endpoints live at the domain root (per RFC 8615)
+**and** at a path-scoped form that mirrors the MCP resource. Both sets must be
+registered on the app root, not under `/api/mcp`:
 
 ```typescript
 // src/index.ts
@@ -1153,7 +1168,11 @@ provider.
 
 - [ ] `GET /.well-known/oauth-protected-resource` returns valid JSON with
       `authorization_servers`
+- [ ] `GET /.well-known/oauth-protected-resource/api/mcp` returns the same body
+      (path-scoped form for Claude Desktop)
 - [ ] `GET /.well-known/oauth-authorization-server` returns valid OAuth metadata
+- [ ] `GET /.well-known/oauth-authorization-server/api/mcp` returns the same
+      body (path-scoped form for Claude Desktop)
 - [ ] Unauthenticated POST to `/api/mcp` returns 401 with `WWW-Authenticate`
       header containing the resource metadata URL
 
@@ -1224,7 +1243,12 @@ export const dcrInterceptRoute = new Elysia().post(
         body: rewritten,
       })
     );
-  }
+  },
+  // parse: "none" applies to every body-consuming handler registered ahead of
+  // Elysia's JSON parser — the /mcp POST is not the only case. Without it,
+  // Elysia drains the body before `await request.text()` can read it,
+  // producing a silent `TypeError: Body already used`.
+  { parse: "none" }
 );
 ```
 
@@ -1256,6 +1280,223 @@ client posture, not a loosening.
 - [ ] Claude Desktop "Add custom connector" completes the OAuth flow and tool
       calls succeed
 - [ ] Claude Code and MCP Inspector still connect (no regression)
+
+**5.4 Bearer token resolution — JWT-first, userinfo fallback (required if you
+support Desktop)**
+
+Earlier phases assumed the session middleware resolves bearer tokens via
+BetterAuth's `/oauth2/userinfo` endpoint. That works for Claude Code (which
+requests `openid profile email`) but fails for Claude Desktop (which requests
+`profile email offline_access`) — BetterAuth hardcodes an `openid` scope
+requirement on `/oauth2/userinfo` and responds **403** otherwise.
+
+The fix is a two-strategy resolver:
+
+1. **Verify the bearer as a signed JWT** against BetterAuth's JWKS. When the
+   token request includes `resource=<mcp-url>`, the oauth-provider plugin issues
+   a signed, audience-bound JWT — the signature is the authority, so no scope
+   check is imposed. This covers MCP access tokens.
+2. **Fall back to `/oauth2/userinfo`** for opaque tokens issued to first-party
+   flows that didn't pass `resource`. No up-front sniffing — the verifier's
+   failure _is_ the routing signal.
+
+**Install the JWT library:**
+
+```bash
+bun add jose
+```
+
+**The verifier** (`src/core/http/session.ts`):
+
+```typescript
+import { env } from "@core/config";
+import {
+  createRemoteJWKSet,
+  type JWTPayload,
+  type JWTVerifyGetKey,
+  jwtVerify,
+} from "jose";
+
+// `aud` must match the Protected Resource Metadata `resource` field AND the
+// `validAudiences` entry on the BetterAuth oauthProvider plugin. The three
+// must be kept in sync — a drift produces silent aud-mismatch verify failures
+// that look like "invalid token."
+const JWT_ISSUER = () => `${env.BETTER_AUTH_URL}/api/auth`;
+const JWT_AUDIENCE = () => `${env.BETTER_AUTH_URL}/api/mcp`;
+const JWKS_URL = () => `${env.BETTER_AUTH_URL}/api/auth/jwks`;
+
+let _jwks: JWTVerifyGetKey | null = null;
+function defaultKeyResolver(): JWTVerifyGetKey {
+  // `createRemoteJWKSet` handles fetch, in-process cache, and cooldown.
+  // No custom cache layer is needed.
+  if (!_jwks) _jwks = createRemoteJWKSet(new URL(JWKS_URL()));
+  return _jwks;
+}
+
+/**
+ * Verify a bearer access token as a signed JWT from BetterAuth. Returns the
+ * payload on success, `null` on any failure (malformed, wrong iss/aud,
+ * expired, or plainly not a JWT). Silent so callers can fall back to
+ * userinfo resolution for opaque tokens.
+ *
+ * `keyResolver` is injectable so tests can supply a local JWKS with a known
+ * keypair.
+ */
+export async function verifyMcpAccessToken(
+  token: string,
+  keyResolver: JWTVerifyGetKey = defaultKeyResolver()
+): Promise<JWTPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, keyResolver, {
+      issuer: JWT_ISSUER(),
+      audience: JWT_AUDIENCE(),
+    });
+    return payload;
+  } catch {
+    return null;
+  }
+}
+```
+
+**The resolver** (`src/core/http/guards.ts`) — composed into your existing guard
+middleware as a fallback after the cookie-session path:
+
+```typescript
+import { env } from "@core/config";
+import { db } from "@core/db";
+import { auth } from "@features/auth";
+import { user as userTable } from "@features/auth/db";
+import { eq } from "drizzle-orm";
+import { verifyMcpAccessToken } from "./session";
+
+// Your user type — shape depends on your BetterAuth plugin set.
+interface AppUser {
+  id: string;
+  email: string;
+  role?: string | null;
+  banned?: boolean | null;
+  banExpires?: Date | null;
+}
+
+async function resolveSubViaUserinfo(
+  authHeader: string
+): Promise<string | null> {
+  try {
+    // Route through auth.handler for consistency with other internal calls —
+    // auth.handler dispatches by path, so the host is effectively ignored,
+    // but keeping it aligned with BETTER_AUTH_URL avoids a maintenance hazard
+    // if BetterAuth ever adds origin validation.
+    const response = await auth.handler(
+      new Request(
+        new URL("/api/auth/oauth2/userinfo", env.BETTER_AUTH_URL).toString(),
+        { headers: { authorization: authHeader } }
+      )
+    );
+    if (!response.ok) return null;
+    const userInfo = (await response.json()) as { sub?: unknown };
+    return typeof userInfo.sub === "string" && userInfo.sub
+      ? userInfo.sub
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// BetterAuth's cookie-session path rejects banned users whose ban hasn't
+// expired. The Bearer path has to enforce the same rule explicitly, or
+// time-limited bans leak into admin authorization via the OAuth route.
+function isCurrentlyBanned(
+  user: Pick<AppUser, "banned" | "banExpires">
+): boolean {
+  if (user.banned !== true) return false;
+  if (!user.banExpires) return true;
+  return user.banExpires.getTime() > Date.now();
+}
+
+/**
+ * Resolve a user from an OAuth Bearer access token. Two strategies tried
+ * in order:
+ *   1. Verify as signed JWT against JWKS — covers MCP tokens issued with
+ *      `resource=<mcp-url>`, which don't carry the `openid` scope.
+ *   2. `/oauth2/userinfo` — covers opaque tokens issued to first-party flows.
+ * Returns null if the header is missing, neither strategy resolves a sub,
+ * or the user doesn't exist / is banned.
+ */
+export async function resolveOAuthUser(
+  request: Request
+): Promise<AppUser | null> {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.slice("Bearer ".length);
+
+  try {
+    const payload = await verifyMcpAccessToken(token);
+    let sub: string | null =
+      typeof payload?.sub === "string" ? payload.sub : null;
+    if (!sub) sub = await resolveSubViaUserinfo(authHeader);
+    if (!sub) return null;
+
+    const [user] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.id, sub))
+      .limit(1);
+    if (!user) return null;
+    if (isCurrentlyBanned(user)) return null;
+    return user as AppUser;
+  } catch {
+    return null;
+  }
+}
+```
+
+**Wire into the session middleware.** Your existing guard (Elysia `derive` hook,
+Fastify pre-handler, or equivalent) should run the cookie-session check first
+and fall back to `resolveOAuthUser` for Bearer requests — returning the same
+`{ user, session }` shape either way (Bearer path has `session: null`):
+
+```typescript
+export const requireAuth = new Elysia({ name: "guard:auth" }).derive(
+  { as: "scoped" },
+  async ({ request }) => {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (session?.user) {
+      return { user: session.user as AppUser, session: session.session };
+    }
+
+    const oauthUser = await resolveOAuthUser(request);
+    if (!oauthUser) throw APIError.unauthorized("Not authenticated");
+    return { user: oauthUser, session: null };
+  }
+);
+```
+
+**Alignment contract (critical):**
+
+| Setting                             | Must equal                     |
+| ----------------------------------- | ------------------------------ |
+| JWT `aud` claim                     | `${BETTER_AUTH_URL}/api/mcp`   |
+| PRM `resource` field (Phase 5.1)    | `${BETTER_AUTH_URL}/api/mcp`   |
+| `validAudiences` on `oauthProvider` | `[${BETTER_AUTH_URL}/api/mcp]` |
+| JWT `iss` claim                     | `${BETTER_AUTH_URL}/api/auth`  |
+
+A drift in any of these produces `jwtVerify` failures that look
+indistinguishable from "bad token" — and because the resolver falls back to
+userinfo silently, the only symptom is a 401 on what should be a valid Bearer
+request.
+
+**Validate:**
+
+- [ ] MCP tokens issued with `resource=${BETTER_AUTH_URL}/api/mcp` verify
+      against JWKS and resolve to the expected `sub`
+- [ ] Opaque tokens issued to first-party flows still resolve via userinfo (no
+      regression)
+- [ ] Claude Desktop, after completing OAuth, can call tools (no 403 on the
+      first authenticated tool invocation)
+- [ ] A banned user's Bearer token returns 401, matching the cookie-session
+      behavior
+- [ ] Unit test with an injected local JWKS + known keypair verifies the full
+      resolver chain without network I/O
 
 ### Phase 6: Testing
 
@@ -1321,11 +1562,69 @@ Create `.mcp.json` in your project:
 Claude Code will discover the OAuth endpoints automatically from the 401
 response and perform the PKCE flow in a browser.
 
+**6.4 Testing with Claude Desktop**
+
+Claude Desktop's remote connector has operational constraints that don't apply
+to Claude Code:
+
+- **HTTPS required.** Desktop refuses non-HTTPS MCP URLs outright. Local testing
+  needs a tunnel (cloudflared, ngrok) or a deployed endpoint; a plain
+  `http://localhost:...` connector fails before any OAuth begins.
+- **The public host must match everywhere.** Once you pick a tunnel URL,
+  `BETTER_AUTH_URL`, the JWT `aud` claim, the oauthProvider `validAudiences`
+  entry, and the PRM `resource` field must **all** use the same host. A mismatch
+  produces aud-verify failures indistinguishable from a bad token.
+
+Quick checklist when swapping hosts:
+
+```
+export BETTER_AUTH_URL=https://<tunnel-host>
+# restart the API so createRemoteJWKSet, JWT_AUDIENCE(), and the metadata
+# helpers all re-read env on boot.
+```
+
+**6.5 Client user-agent taxonomy + diagnostic logging**
+
+Claude Desktop's connection spans three distinct user-agents hitting different
+endpoints, and failures along the way are silent. A gated request-logging hook
+is the cheapest way to make the sequence visible when something breaks:
+
+| User-Agent         | Source            | Endpoints hit                         |
+| ------------------ | ----------------- | ------------------------------------- |
+| `python-httpx/...` | claude.ai backend | `/api/auth/oauth2/register`, `/token` |
+| Browser UA         | User's browser    | `/authorize`, consent page            |
+| `Claude-User`      | Desktop app       | `/api/mcp` (actual tool calls)        |
+
+Drop-in diagnostic hook:
+
+```typescript
+// Enable only when MCP_DEBUG=1 to avoid logging normal traffic.
+if (env.MCP_DEBUG === "1") {
+  app.onRequest(({ request }) => {
+    const url = new URL(request.url);
+    if (
+      url.pathname.startsWith("/api/mcp") ||
+      url.pathname.startsWith("/api/auth/oauth2") ||
+      url.pathname.startsWith("/.well-known/")
+    ) {
+      console.log(
+        `[mcp-debug] ${request.method} ${url.pathname} ua=${request.headers.get("user-agent")}`
+      );
+    }
+  });
+}
+```
+
+With this in place, a silent "Couldn't reach the MCP server" becomes a legible
+trace: "DCR call returned 401", "userinfo returned 403", "path-scoped well-known
+404", etc.
+
 **Validate:**
 
 - [ ] Unit tests pass for all tool categories
 - [ ] curl requests return expected responses
 - [ ] Claude Code can connect, authenticate, and use tools
+- [ ] Claude Desktop can connect over HTTPS, complete OAuth, and call tools
 - [ ] Cross-user isolation verified with two separate accounts
 
 ## Integration Points
@@ -1389,11 +1688,13 @@ const keyPrefix = key.substring(0, 8);
 
 ## Gotchas & Important Notes
 
-- **Elysia's body-parser drains the MCP request stream.** If authenticated POSTs
-  to `/api/mcp` return `-32700 Parse error: Invalid JSON` even though the server
-  logs a clean 200, Elysia's default `application/json` parser has already
-  consumed the request body by the time the MCP SDK's transport tries to read
-  it. Pass `{ parse: "none" }` as the third argument on the POST route so Elysia
+- **Elysia's body-parser drains any POST body before a handler can read it.**
+  The MCP POST route is the most visible case (symptom:
+  `-32700 Parse error: Invalid JSON` despite a clean 200), but the same rule
+  applies to every body-consuming handler registered ahead of the mounted
+  BetterAuth handler — notably the DCR intercept in Phase 5.3 (symptom:
+  `TypeError: Body already used` when calling `request.text()`). Pass
+  `{ parse: "none" }` as the third argument on any such POST route so Elysia
   skips body parsing there. GET and DELETE don't need this — they have no body.
 
 - **MCP SDK expects Node.js HTTP on older versions.** If you see
@@ -1432,9 +1733,14 @@ const keyPrefix = key.substring(0, 8);
   `Bearer resource_metadata="https://..."` with the URL in double quotes. If
   this is malformed, clients can't discover your OAuth server.
 
-- **Well-known endpoints must be at the domain root.** RFC 8615 requires
-  `/.well-known/*` paths at the domain root, not under `/api`. Register them
-  directly on the Elysia app, not in a prefixed route group.
+- **Well-known endpoints live at the root AND path-scoped per resource.** RFC
+  8615 requires `/.well-known/*` at the domain root — that covers Claude Code,
+  MCP Inspector, and any client that honors the
+  `WWW-Authenticate: resource_metadata=<url>` hint. Claude Desktop ignores the
+  hint and constructs its own URL by appending the resource path
+  (`/.well-known/oauth-protected-resource/api/mcp`,
+  `/.well-known/oauth-authorization-server/api/mcp`), so register both forms.
+  Register on the app root, not in a prefixed route group.
 
 - **Claude Desktop silently fails without DCR coercion.** Desktop's remote
   connector sends a confidential-client DCR
