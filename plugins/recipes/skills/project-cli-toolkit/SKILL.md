@@ -30,13 +30,18 @@ it's shaped the way it is** and **how to extend it by hand**.
 ### "Just make me a CLI" — run the installer
 
 ```bash
-bunx create-project-cli <cli_name>
-# or: npx / pnpm create project-cli <cli_name>
+bunx github:ichabodcole/seed-project-cli <cli_name>
+# or: npx github:ichabodcole/seed-project-cli <cli_name>
 ```
 
-The installer prompts for package manager, scope labels, and whether to include
-the optional layers (API client, auth bootstrap, identity banner). After
-generation:
+> **Install path note.** The installer is not yet on npm — the
+> `bunx create-project-cli` short form is planned but does **not** work today;
+> it'll return "package not found." Always use the `github:` spec until this
+> skill is updated to say otherwise.
+
+In an interactive shell the installer prompts for package manager, scope labels,
+and whether to include the optional layers (API client, auth bootstrap, identity
+banner). After generation:
 
 ```bash
 <pm> run <cli_name>               # grouped help
@@ -46,6 +51,41 @@ generation:
 
 Done. You have a working dual-audience CLI. If you never need to go deeper, you
 can stop reading here.
+
+### Driving the installer from an agent or CI (non-interactive)
+
+The installer auto-switches to non-interactive mode when **either** `--yes` is
+passed **or** stdin is not a TTY — never pipe into a `@clack/prompts` TUI.
+Resolution per setting: explicit flag → interactive prompt (skipped in
+non-interactive mode) → default.
+
+| Flag                         | Effect                                                      |
+| ---------------------------- | ----------------------------------------------------------- |
+| `-y`, `--yes`                | Accept defaults for unasked items (non-interactive)         |
+| `--pm <bun\|pnpm\|npm>`      | Package manager                                             |
+| `--project-package-name <s>` | Host `package.json` name for root discovery                 |
+| `--api` / `--no-api`         | Include API client layer                                    |
+| `--auth` / `--no-auth`       | Include auth bootstrap (**implies `--api`** when unopposed) |
+| `--banner` / `--no-banner`   | Include ASCII identity banner                               |
+| `--api-env-path <path>`      | Path to API `.env` (default: `apps/api/.env`)               |
+| `--api-entry-path <path>`    | Path to API entry (default: `apps/api/src/index.ts`)        |
+| `--install` / `--no-install` | Install `citty` (+ `tsx`) after scaffold                    |
+| `-h`, `--help`               | Print usage and exit                                        |
+
+Recommended agent invocation:
+
+```bash
+# Fully specified — zero prompts
+bunx github:ichabodcole/seed-project-cli myproj \
+  --yes --pm bun --api --auth --no-banner --install
+
+# Minimal — defaults for everything except the API toggle
+bunx github:ichabodcole/seed-project-cli myproj --yes --api
+```
+
+**Exit-code contract** in non-interactive mode: missing `<cli-name>` exits with
+code **2** plus a usage line (not 1). Treat `exit 2` as "bad invocation, fix
+flags and retry"; reserve retry-after-diagnose for other non-zero codes.
 
 ### "I need to understand or extend one" — read on
 
