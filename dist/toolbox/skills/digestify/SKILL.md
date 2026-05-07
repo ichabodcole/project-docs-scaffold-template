@@ -1,0 +1,260 @@
+---
+name: digestify
+description:
+  Digestify is a one-shot browser review tool. The agent writes substantive
+  content (summary, recap, document review, brain-dump synthesis, or multi-agent
+  state report) with inline questions, the user reads it rendered in their
+  browser and answers in place, then submits once and the agent gets a JSON
+  response in the same turn. Two trigger modes. Explicit — the user says the
+  magic word ("digestify", "digestify this", "open a digestify", or any obvious
+  variant), and the agent fires the tool immediately. Suggested — the agent has
+  produced 150+ words of synthesis paired with concrete questions only the user
+  can answer; the agent proposes the tool ("Want me to digestify this?") and
+  fires only if the user agrees. Do NOT auto-fire on soft cues like "summarize
+  this", "what do you need to know", or "give me a recap" — those stay in chat
+  unless the user opts in. Do NOT use for single short questions, iterative
+  chat, or visual design picking.
+---
+
+# Digestify
+
+A one-shot browser review tool for situations where the agent has synthesized
+something substantive (a summary, recap, document review, or brain-dump
+processing) and needs the user to read it carefully and answer specific
+questions tied to it. The agent writes a markdown document with embedded
+`:::question` fences, runs `review.py`, and the script blocks until the user
+submits a response in the browser.
+
+## Naming
+
+The tool is **Digestify**. The user invokes it by saying the word — "digestify
+this", "open a digestify", "send me a digestify". Use the same word back: _"I'll
+digestify this and open it in your browser."_ This shared shorthand is
+intentional; it lets the user opt in unambiguously without you guessing from
+softer cues like "summarize" or "what do you think".
+
+## Two Trigger Modes
+
+### Explicit invocation (just fire)
+
+The user said the magic word. Examples:
+
+- "Digestify this and ask me what's missing."
+- "Open a digestify with these questions."
+- "Send me a digestify of where we landed."
+- "Just digestify it."
+
+Fire the tool. No clarifying questions; the user has already opted in.
+
+### Suggested invocation (ask first)
+
+You sense the situation matches a Digestify-shaped problem (see Common Patterns
+below) but the user hasn't said the word. Examples of when this applies:
+
+- You're about to write a 200+ word recap with 3 questions at the end.
+- The user pasted a long doc and asked for a summary plus your reactions.
+- You've been processing a brain-dump and have several clarifying questions you
+  don't want to drop one-by-one in chat.
+
+In these cases, **propose** Digestify; don't just open a browser:
+
+> "I have a recap and four questions for you. Want me to digestify this so you
+> can read it rendered in your browser and answer inline, or should I just paste
+> it here?"
+
+If they say yes, fire it. If they say no, deliver the content in chat as normal.
+If they don't engage with the meta-question and just want chat — drop it and
+continue in chat.
+
+**Why ask first:** the browser pop-up is a context switch. For some users, in
+some moments, that's exactly what they want. In others it's intrusive. When
+you're not sure, ask.
+
+## Common Patterns
+
+The shapes that fit Digestify. Common thread: the agent has done substantive
+synthesis the user needs to consume carefully, plus there are specific questions
+only the user can answer. A single round of response closes the loop.
+
+**Conversation recap.** A long Q&A or working session is winding down. You
+summarize what was discussed and what remains undecided. The questions are the
+open decisions you need before continuing.
+
+**Brain-dump processing.** The user gave you unstructured input — a voice
+transcript, rough notes, a wall of paragraphs. You return "here's what I
+understood" plus questions about gaps, contradictions, or fuzzy parts. The user
+reading your interpretation is the point; they catch where you went wrong and
+answer what you couldn't resolve.
+
+**Document review.** The user pointed you at a doc (proposal, spec, README,
+external article). You return a summary of what's relevant for their purposes
+plus questions about ambiguous parts.
+
+**Multi-agent handoff.** Several agents (or one agent across many turns) have
+been collaborating. The user is stepping back in. You produce a status recap
+plus the specific decisions or inputs only they can supply.
+
+If the conversation needs to continue iteratively after submit, do that in chat.
+Digestify is single-round.
+
+## How It Works
+
+1. You write markdown with `:::question` fences.
+2. You invoke `scripts/review.py` via the Bash tool, passing the markdown on
+   stdin (or `--file path.md`).
+3. The script opens the user's browser to a local URL and **blocks** until the
+   user submits.
+4. On submit, the script prints a JSON response to stdout and exits 0.
+5. You parse the JSON and continue the conversation with the answers.
+
+The Bash tool call blocks for the duration of the review. Set a long enough Bash
+timeout (default `--timeout 1800` = 30 min); shorten with `--timeout 600` if you
+expect a quicker turnaround.
+
+## Question Block Syntax
+
+<!-- prettier-ignore -->
+```
+::: question id=scope
+Should we include the migration step in this PR or split it?
+:::
+```
+
+Rules:
+
+- `id` is required, must be unique within the doc, alphanumeric / `-` / `_`.
+- The body is markdown; it renders inside the question card.
+- The body must be non-empty.
+- Pure-prose docs without any `:::question` blocks are rejected (exit 2).
+
+## Invocation
+
+**stdin (preferred for short-to-medium docs):**
+
+```bash
+cat <<'EOF' | python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py --title "Proposal Review" --timeout 1800
+# Foo proposal
+
+Some context paragraphs explaining the proposal...
+
+::: question id=scope
+Should we include the migration in this PR?
+:::
+
+More context...
+
+::: question id=naming
+Pick a name: `FooManager`, `FooService`, or `FooCoordinator`?
+:::
+EOF
+```
+
+**file (for very long docs or when you've already written one):**
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
+  --file /path/to/proposal-review.md \
+  --title "Proposal Review" \
+  --theme digestify \
+  --timeout 1800
+```
+
+Themes:
+
+- `digestify` — branded pink/purple gummy review UI. Default.
+- `cthulhu` — dark eldritch green/purple review UI with Cthulhu-style assets.
+- `classic` — restrained baseline styling for lower-flair contexts.
+
+## Response Format
+
+Stdout JSON on successful submit:
+
+```json
+{
+  "answers": {
+    "scope": "Split it — migration deserves its own review.",
+    "naming": "FooCoordinator"
+  },
+  "comments": [
+    {
+      "anchor": "the assumption that all clients support TLS 1.3",
+      "text": "this isn't true for the embedded fleet"
+    }
+  ],
+  "submitted_at": "2026-05-07T12:34:56Z"
+}
+```
+
+- `answers`: keys are question `id`s. **Missing keys mean the user left that
+  question blank** — treat as "no answer", not as an empty-string answer.
+- `comments`: array (possibly empty) of text-anchored inline comments.
+- `submitted_at`: ISO 8601 UTC timestamp.
+
+## Exit Code Contract
+
+| Code | Meaning                                      | What to do                                                                                                             |
+| ---- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 0    | Submitted                                    | Parse stdout JSON, continue conversation                                                                               |
+| 2    | Bad input                                    | stderr explains; fix the markdown and retry                                                                            |
+| 124  | Timeout                                      | Tell the user "the digestify timed out — want to try again?"                                                           |
+| 130  | User closed the tab _after typing something_ | Tell the user "I noticed you closed the tab without submitting — want me to retry, or should we continue another way?" |
+
+**Note on 130 vs. 124:** the page only fires the `/cancel` beacon if the user
+has typed into a textarea or saved a comment. Closing or refreshing a clean page
+without interacting is intentionally treated as "still thinking", not a cancel —
+those abandons hit the `--timeout` and exit `124` instead of `130`.
+
+## Flags
+
+- `--file PATH` — read markdown from file instead of stdin
+- `--title TEXT` — page/tab title (default `"Document Review"`)
+- `--timeout SECONDS` — failsafe timeout (default `1800` / 30 min)
+- `--no-open` — don't auto-open the browser; useful in headless / SSH setups
+- `--port N` — bind specific port (default: random free port)
+- `--host HOST` — bind host (default `127.0.0.1`)
+
+The script prints `{"url": "...", "port": N}` to stderr as soon as it's
+listening, before opening the browser.
+
+## Reporting Friction With This Tool
+
+If you hit anything rough _while using Digestify itself_ — confusing skill
+instructions, an unexpected exit code, the page not rendering as documented, the
+question fence syntax tripping you up, a flag that didn't behave as the docs
+claimed, or a feature you wished existed — file an issue upstream so it can be
+fixed.
+
+Use the **`project-docs:report-issue`** skill. That skill files a GitHub issue
+against the project-docs-scaffold-template repo (the source of this plugin) so
+the maintainer can triage it.
+
+**This is feedback about the _tool_, not the document.** Things in scope:
+
+- Bugs in `review.py` (wrong exit code, server didn't bind, JSON shape off).
+- Confusion about how to invoke it, how the syntax works, or what an error
+  meant.
+- The browser UI breaking, looking wrong, or behaving unexpectedly.
+- A feature that would have made your task easier (e.g., "I wanted a
+  multiple-choice question type").
+- A user who told you "this thing in Digestify isn't working / is annoying"
+  while they were using it — relay that upstream.
+
+Things **not** in scope for this channel (don't file these as Digestify issues):
+
+- The content of the markdown the user is reviewing.
+- The project / proposal / question being asked _through_ Digestify.
+- Anything about the broader task you're working on.
+
+You don't have to do this every session — only when there's something concrete
+worth surfacing. If everything went smoothly, just continue.
+
+## Common Pitfalls
+
+- **Don't fire on soft cues.** "Summarize this", "what do you need to know",
+  "rephrase that" — these stay in chat. Fire only on the magic word, or after
+  the user accepts a suggested-invocation prompt.
+- **Don't forget unique `id`s.** Duplicate IDs exit 2.
+- **Don't expect a multi-turn session.** One submit ends the session. Spawn a
+  fresh Digestify for a follow-up.
+- **Set Bash timeout high enough.** The default Bash tool timeout is short. Pass
+  a long `timeout` (in ms) on the Bash call, or shorten `--timeout` to match.

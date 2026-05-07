@@ -44,3 +44,7 @@ tmp-template-test/
 
 .operator
 .playwright-mcp/
+
+# Agent scratch dirs (Codex helper, agent-bridge, etc.)
+.agents/
+.codex/
