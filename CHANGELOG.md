@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.26.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.26.0...project-docs-scaffold-template-v2.26.1) (2026-05-07)
+
+
+### Bug Fixes
+
+* **toolbox/digestify:** render question prompts as block markdown ([b943abb](https://github.com/ichabodcole/project-docs-scaffold-template/commit/b943abbab79385a0113166c5b88e8a88a5422893))
+* **toolbox/digestify:** render question prompts as block markdown ([f6997ef](https://github.com/ichabodcole/project-docs-scaffold-template/commit/f6997efd6521b1680a84fe030f2330a223fdec97))
+
 ## [2.26.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.25.0...project-docs-scaffold-template-v2.26.0) (2026-05-07)
 
 
