@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.26.1...project-docs-scaffold-template-v3.0.0) (2026-05-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **recipes:** the recipes plugin now exposes a single 'recipes' skill that loads recipes on demand, instead of 21 individual skills (one per recipe). Skill names that previously appeared in the picker (e.g. recipes:elysia-betterauth-oauth, recipes:powersync-local-first-sync, etc.) are gone — the umbrella skill is invoked by saying 'recipe' plus context (e.g. 'use the X recipe', 'what recipes are available').
+
+### Features
+
+* **recipes:** consolidate 20 recipe skills into umbrella recipes skill ([106dbb9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/106dbb9c49e7936e218ef7a0c7ab4a80ac3fed84))
+
 ## [2.26.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.26.0...project-docs-scaffold-template-v2.26.1) (2026-05-07)
 
 
