@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.26.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.25.0...project-docs-scaffold-template-v2.26.0) (2026-05-07)
+
+
+### Features
+
+* **toolbox:** add digestify skill for one-shot browser-based doc review ([6bdf38b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/6bdf38b6a093a1ff75ddc9c088515937a5317c70))
+
 ## [2.25.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.24.0...project-docs-scaffold-template-v2.25.0) (2026-04-20)
 
 
