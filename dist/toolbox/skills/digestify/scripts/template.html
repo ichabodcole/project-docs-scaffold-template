@@ -492,9 +492,50 @@
         display: flex;
         align-items: flex-start;
         gap: 10px;
-        font-weight: 800;
         margin: 0 0 14px;
         max-width: 88%;
+      }
+      .qcard .qprompt-body {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .qcard .qprompt-body > *:first-child {
+        margin-top: 0;
+      }
+      .qcard .qprompt-body > *:last-child {
+        margin-bottom: 0;
+      }
+      .qcard .qprompt-body > p:first-child {
+        font-weight: 800;
+      }
+      .qcard .qprompt-body p {
+        margin: 0 0 10px;
+      }
+      .qcard .qprompt-body ul,
+      .qcard .qprompt-body ol {
+        margin: 6px 0 10px;
+        padding-left: 22px;
+      }
+      .qcard .qprompt-body li {
+        margin: 2px 0;
+      }
+      .qcard .qprompt-body code {
+        background: var(--code-bg);
+        color: var(--code-fg);
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 0.92em;
+      }
+      .qcard .qprompt-body pre {
+        background: var(--code-block-bg);
+        padding: 10px 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        margin: 8px 0;
+      }
+      .qcard .qprompt-body pre code {
+        background: transparent;
+        padding: 0;
       }
       .qcard .qprompt::before {
         content: var(--question-icon);
@@ -742,7 +783,6 @@
         const sanitize = (html) =>
           DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
         const renderMd = (md) => sanitize(marked.parse(md));
-        const renderInlineMd = (md) => sanitize(marked.parseInline(md));
 
         const questionsById = Object.fromEntries(
           payload.questions.map((q) => [q.id, q])
@@ -785,7 +825,17 @@
           }
           const prompt = document.createElement("div");
           prompt.className = "qprompt";
-          prompt.innerHTML = renderInlineMd(q.prompt);
+          // Render prompts as full block markdown (lists, paragraphs, code
+          // blocks all welcome). Wrap the rendered body in a single inner
+          // div so the flex container above only ever sees two flex items:
+          // the ::before icon and the body. Without that wrapper, each
+          // block element becomes its own flex item and lays out as a
+          // horizontal column. Use insertAdjacentHTML with sanitized HTML
+          // upstream from renderMd.
+          const promptBody = document.createElement("div");
+          promptBody.className = "qprompt-body";
+          promptBody.insertAdjacentHTML("afterbegin", renderMd(q.prompt));
+          prompt.appendChild(promptBody);
           const ta = document.createElement("textarea");
           ta.placeholder = "Your answer...";
           ta.addEventListener("input", () => {
