@@ -2,26 +2,26 @@
 name: create-recipe
 description: >
   Analyze a project or subsystem and extract its structure, patterns, and
-  integration glue into a reusable recipe skill. Use when the user asks to
-  "create a recipe", "extract a recipe from this project", "turn this into a
-  reusable pattern", "make a recipe skill", "capture this as a recipe", or wants
-  to package a working implementation as a repeatable blueprint for other
-  projects.
+  integration glue into a reusable recipe under the recipes plugin's umbrella
+  skill. Use when the user asks to "create a recipe", "extract a recipe from
+  this project", "turn this into a reusable pattern", "make a recipe", "capture
+  this as a recipe", or wants to package a working implementation as a
+  repeatable blueprint for other projects.
 ---
 
-# Create Recipe Skill
+# Create Recipe
 
 ## Purpose
 
 Analyze a project (or a specific subsystem within a project) and produce a
-recipe skill that captures its architecture, patterns, and implementation
-details in a form that can be executed in a different project to reproduce the
-same system.
+recipe that captures its architecture, patterns, and implementation details in a
+form that can be executed in a different project to reproduce the same system.
 
-A recipe is a markdown file with YAML frontmatter that follows the Claude Code
-skill convention. It lives in the `plugins/recipes/skills/` directory. When
-invoked, it gives Claude the instructions and context needed to implement the
-same patterns in a new codebase.
+A recipe is a plain markdown document (no skill frontmatter — the umbrella
+`recipes` skill loads recipes on demand). Recipes live under
+`plugins/recipes/skills/recipes/library/<recipe-name>/RECIPE.md`, with optional
+supporting files in a sibling `references/` directory. The umbrella skill's
+`INDEX.md` lists every recipe and is updated whenever one is added.
 
 ## Cross-Repo Workflow
 
@@ -86,9 +86,10 @@ recipes and eventually write the new one.
    Use kebab-case for the recipe name (e.g., `recipe/document-versioning`,
    `recipe/elysia-betterauth-api`).
 
-3. **Read existing recipe skills** from the clone at
-   `plugins/recipes/skills/*/SKILL.md` to understand the output format and
-   quality bar. Skim at least 2 existing recipes if available.
+3. **Read existing recipes** from the clone at
+   `plugins/recipes/skills/recipes/library/*/RECIPE.md` to understand the output
+   format and quality bar. Skim at least 2 existing recipes, plus
+   `plugins/recipes/skills/recipes/INDEX.md` to see how entries are written.
 
 After this phase, you have:
 
@@ -186,28 +187,51 @@ Organize discoveries into categories to decide what goes in the recipe:
 Use AskUserQuestion for category C items (up to 4 questions, combine related
 items).
 
-### Phase 4: Write the Recipe Skill
+### Phase 4: Write the Recipe
 
-Write the skill file into the cloned recipe workspace from Phase 0:
+Write the recipe file into the cloned recipe workspace from Phase 0:
 
 ```
-$RECIPE_WORKSPACE/plugins/recipes/skills/<recipe-name>/SKILL.md
+$RECIPE_WORKSPACE/plugins/recipes/skills/recipes/library/<recipe-name>/RECIPE.md
 ```
 
-The `<recipe-name>` directory should already match the branch name you created
-in Phase 0 (e.g., if the branch is `recipe/document-versioning`, the directory
-is `document-versioning`).
+The `<recipe-name>` directory should match the branch name you created in Phase
+0 (e.g., if the branch is `recipe/document-versioning`, the directory is
+`document-versioning`).
 
-Consult
-[references/recipe-skill-template.md](references/recipe-skill-template.md) for
-the full template structure, writing principles, and examples of good vs bad
-recipe content.
+A `RECIPE.md` is plain markdown — no YAML frontmatter, no `name:` /
+`description:` fields. The umbrella `recipes` skill is the only thing the agent
+harness sees; recipes are content the umbrella loads on demand.
+
+Consult [references/recipe-template.md](references/recipe-template.md) for the
+full template structure, writing principles, and examples of good vs bad recipe
+content.
+
+### Phase 4.5: Update the Index
+
+After writing the recipe, add it to the umbrella skill's `INDEX.md`:
+
+```
+$RECIPE_WORKSPACE/plugins/recipes/skills/recipes/INDEX.md
+```
+
+Add an entry under the most appropriate category (Authentication & API, Sync &
+Real-Time, Desktop & Mobile, Editor & Document, AI & MCP, Asset Management,
+Tooling & Build), or create a new category if nothing fits. Format:
+
+```markdown
+- **`<recipe-name>`** — <one or two sentences on what this builds>.
+```
+
+Keep the description focused on what the recipe produces, not how to trigger it.
+The umbrella skill triggers on the word "recipe" plus context; the index entry
+just helps the agent and the user pick the right recipe.
 
 ### Phase 5: Create UI Reference Prototypes (When Applicable)
 
 If the recipe includes an admin UI, dashboard, or any visual interface described
 in prose, create HTML mockup prototypes as visual references. These live in a
-`references/` directory alongside the SKILL.md and give implementing agents a
+`references/` directory alongside the RECIPE.md and give implementing agents a
 clickable target instead of interpreting prose descriptions.
 
 **When to create prototypes:**
@@ -230,8 +254,9 @@ clickable target instead of interpreting prose descriptions.
 2. Build the prototype using the recipe's data model for realistic sample data
 3. Cover the key states: default view, selected/detail, search/filter, empty
    state, any confirmation dialogs
-4. Save to `$RECIPE_WORKSPACE/plugins/recipes/skills/<recipe-name>/references/`
-5. Add a **UI Reference** section near the top of the recipe SKILL.md pointing
+4. Save to
+   `$RECIPE_WORKSPACE/plugins/recipes/skills/recipes/library/<recipe-name>/references/`
+5. Add a **UI Reference** section near the top of the recipe RECIPE.md pointing
    to the prototype:
 
    ```markdown
@@ -269,8 +294,8 @@ clickable target instead of interpreting prose descriptions.
 - [ ] **Ordered:** Are implementation phases in dependency order?
 - [ ] **Explained:** Are architectural decisions explained with rationale?
 - [ ] **Complete:** Are integration points and gotchas documented?
-- [ ] **Triggered:** Does the frontmatter description include natural trigger
-      phrases?
+- [ ] **Indexed:** Does `INDEX.md` have a clear entry for this recipe under the
+      right category?
 - [ ] **Visual:** If the recipe describes a UI, does it include an HTML
       prototype in `references/`?
 
@@ -280,8 +305,9 @@ clickable target instead of interpreting prose descriptions.
 
    ```bash
    cd "$RECIPE_WORKSPACE"
-   git add plugins/recipes/skills/<recipe-name>/
-   git commit -m "recipe: add <recipe-name> recipe skill"
+   git add plugins/recipes/skills/recipes/library/<recipe-name>/ \
+           plugins/recipes/skills/recipes/INDEX.md
+   git commit -m "recipe: add <recipe-name> recipe"
    ```
 
 2. **Push the branch:**
@@ -295,7 +321,7 @@ clickable target instead of interpreting prose descriptions.
    ```bash
    gh pr create \
      --title "Recipe: <Human-Readable Recipe Name>" \
-     --body "## New Recipe Skill
+     --body "## New Recipe
 
    **Recipe:** <recipe-name>
    **Type:** <technology-specific | technology-agnostic>
@@ -308,7 +334,7 @@ clickable target instead of interpreting prose descriptions.
    - [ ] Architecture and concepts are accurate
    - [ ] Implementation phases are in the right order
    - [ ] Gotchas and trade-offs are documented
-   - [ ] Trigger phrases in description are natural"
+   - [ ] INDEX.md entry is clear and under the right category"
    ```
 
 4. **Clean up** the temp workspace:
@@ -326,7 +352,7 @@ clickable target instead of interpreting prose descriptions.
 
 ### Reference Files
 
-- **[references/recipe-skill-template.md](references/recipe-skill-template.md)** -
-  Full skill file template, writing principles, recipe type characteristics
+- **[references/recipe-template.md](references/recipe-template.md)** - Full
+  recipe file template, writing principles, recipe type characteristics
   (technology-specific vs technology-agnostic vs hybrid), and examples of good
   vs bad recipe content
