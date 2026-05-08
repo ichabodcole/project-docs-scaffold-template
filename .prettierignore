@@ -12,3 +12,8 @@ __pycache__/
 .git/
 
 CHANGELOG.md
+
+# Agent scratch dirs
+.agents/
+.codex/
+.scratch/

@@ -111,6 +111,11 @@ The Bash tool call blocks for the duration of the review. Set a long enough Bash
 timeout (default `--timeout 1800` = 30 min); shorten with `--timeout 600` if you
 expect a quicker turnaround.
 
+`--timeout` is an **idle** timeout, not absolute. Each user interaction (typing,
+saving a comment, clicking the timer pill) resets the deadline. A user actively
+working can stay past the original window; a session abandoned mid-review still
+exits at the configured idle interval.
+
 ## Question Block Syntax
 
 <!-- prettier-ignore -->
@@ -260,12 +265,12 @@ Stdout JSON on successful submit:
 
 ## Exit Code Contract
 
-| Code | Meaning                                      | What to do                                                                                                             |
-| ---- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| 0    | Submitted                                    | Parse stdout JSON, continue conversation                                                                               |
-| 2    | Bad input                                    | stderr explains; fix the markdown and retry                                                                            |
-| 124  | Timeout                                      | Tell the user "the digestify timed out — want to try again?"                                                           |
-| 130  | User closed the tab _after typing something_ | Tell the user "I noticed you closed the tab without submitting — want me to retry, or should we continue another way?" |
+| Code | Meaning                                      | What to do                                                                                                                                                |
+| ---- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Submitted                                    | Parse stdout JSON, continue conversation                                                                                                                  |
+| 2    | Bad input                                    | stderr explains; fix the markdown and retry                                                                                                               |
+| 124  | Timeout                                      | Tell the user "the digestify timed out — want to try again? I can also restore your prior draft if you didn't lose anything." (See **Session Recovery**.) |
+| 130  | User closed the tab _after typing something_ | Tell the user "I noticed you closed the tab without submitting — want me to relaunch and restore your draft, or continue another way?"                    |
 
 **Note on 130 vs. 124:** the page only fires the `/cancel` beacon if the user
 has typed into a textarea or saved a comment. Closing or refreshing a clean page
@@ -284,9 +289,40 @@ those abandons hit the `--timeout` and exit `124` instead of `130`.
 - `--no-open` — don't auto-open the browser; useful in headless / SSH setups
 - `--port N` — bind specific port (default: random free port)
 - `--host HOST` — bind host (default `127.0.0.1`)
+- `--id SLUG` — stable session id. Auto-generated if omitted in the form
+  `digestify-<rand>-p<port>` (the trailing `-p<port>` encodes the bound port so
+  a relaunch with the same id reuses that port and the browser's prior draft
+  survives via localStorage). Pass back verbatim to recover an interrupted
+  session — see **Session Recovery** below.
 
-The script prints `{"url": "...", "port": N}` to stderr as soon as it's
-listening, before opening the browser.
+The script prints `{"url": "...", "port": N, "session_id": "..."}` to stderr as
+soon as it's listening, before opening the browser. **Capture the `session_id`**
+in the conversation context so you can offer recovery if the user later asks.
+
+## Session Recovery
+
+If a Digestify call exits **124** (idle timeout) or **130** (user closed the
+tab), and the user later says something like "wait, I had a session — can I get
+it back?", you can recover their in-progress draft:
+
+1. Look up the `session_id` you captured from the last launch's stderr JSON.
+2. Re-invoke `review.py` with the same `--id <session_id>` — everything else
+   (reference path, file, etc.) the same as before.
+3. The browser opens to a page that auto-restores the prior answers and comment
+   chips, with a "Draft restored from earlier session" banner.
+
+Mechanics, for context:
+
+- The user's draft lives in browser `localStorage`, keyed by `session_id`.
+- `localStorage` is partitioned by origin (host+port). The auto-generated id
+  embeds the bound port (`-p<port>` suffix), and the script reuses that port on
+  relaunch — same origin → same `localStorage` namespace → restore works.
+- Drafts persist for 7 days then auto-prune on next page load.
+- Restore needs the same browser, no cleared site data, and the encoded port to
+  still be bindable. Best-effort: an emergency hatch, not a guarantee.
+
+If port rebinding fails (rare — process holding the port), the relaunch errors
+clearly and you can tell the user the draft isn't recoverable this time.
 
 ## Reporting Friction With This Tool
 

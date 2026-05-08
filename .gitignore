@@ -48,3 +48,4 @@ tmp-template-test/
 # Agent scratch dirs (Codex helper, agent-bridge, etc.)
 .agents/
 .codex/
+.scratch/

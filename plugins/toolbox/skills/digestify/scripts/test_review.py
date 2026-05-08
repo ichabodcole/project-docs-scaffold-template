@@ -97,6 +97,39 @@ class BuildPayloadTests(unittest.TestCase):
         payload = review.build_payload(md)
         json.dumps(payload)  # must not raise
 
+    def test_payload_includes_session_id_and_timeout(self):
+        md = "::: question id=q1\nQ?\n:::"
+        payload = review.build_payload(
+            md, session_id="my-slug", timeout_seconds=900
+        )
+        self.assertEqual(payload["session_id"], "my-slug")
+        self.assertEqual(payload["timeout_seconds"], 900)
+
+
+class ParsePortFromSessionIdTests(unittest.TestCase):
+    def test_extracts_trailing_port_marker(self):
+        self.assertEqual(
+            review.parse_port_from_session_id("digestify-abc123-p61432"), 61432
+        )
+
+    def test_returns_none_when_no_port_marker(self):
+        self.assertIsNone(review.parse_port_from_session_id("digestify-abc123"))
+
+    def test_returns_none_for_empty_id(self):
+        self.assertIsNone(review.parse_port_from_session_id(""))
+
+    def test_rejects_out_of_range_port(self):
+        # Port must fit in valid TCP range; 99999 is too big.
+        self.assertIsNone(
+            review.parse_port_from_session_id("digestify-abc-p99999")
+        )
+
+    def test_only_matches_trailing_marker(self):
+        # `-p<digits>` mid-string shouldn't be picked up — only suffix.
+        self.assertIsNone(
+            review.parse_port_from_session_id("digestify-p1234-suffix")
+        )
+
 
 import io
 from http.server import BaseHTTPRequestHandler
@@ -299,7 +332,46 @@ class ServeBlockingTests(unittest.TestCase):
         self.assertEqual(result["code"], 124)
         self.assertIsNone(result["data"])
 
+    def test_heartbeat_extends_deadline(self):
+        """A heartbeat received before the idle timeout pushes the deadline
+        forward — the server is still alive past the original cutoff."""
+        port, t, result = self._start(timeout=0.4, poll_interval=0.02)
+        # Sleep to ~0.3s, send heartbeat (should extend by 0.4s more).
+        time.sleep(0.3)
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/heartbeat", data=b"", method="POST",
+        )
+        urllib.request.urlopen(req).read()
+        # Sleep past the original 0.4s deadline; if heartbeat worked, server
+        # is still running. Submit to force a clean exit and verify code 0.
+        time.sleep(0.25)  # total elapsed ~0.55s, well past original 0.4s
+        body = b'{"answers":{},"comments":[]}'
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/submit", data=body, method="POST",
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req).read()
+        t.join(timeout=2)
+        self.assertEqual(
+            result["code"], 0,
+            "server should still have been alive after heartbeat extended deadline",
+        )
 
+    def test_heartbeat_does_not_prevent_eventual_idle_timeout(self):
+        """Without further heartbeats, the deadline still fires."""
+        port, t, result = self._start(timeout=0.3, poll_interval=0.02)
+        # One heartbeat, then go silent — server should time out one cycle later.
+        time.sleep(0.1)
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}/heartbeat", data=b"", method="POST",
+        )
+        urllib.request.urlopen(req).read()
+        # No further activity — server should now exit ~0.3s after the heartbeat.
+        t.join(timeout=2)
+        self.assertEqual(result["code"], 124)
+
+
+import time
 import subprocess
 import os
 
