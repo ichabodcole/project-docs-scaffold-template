@@ -12,10 +12,21 @@ Exit codes:
   124 timeout
   130 user closed tab without submitting
 """
+import argparse
+import json as _json
+import mimetypes
 import re
+import socket
+import sys
+import threading
+import time
+import webbrowser
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
+from urllib.parse import unquote, urlparse
 
 
 @dataclass
@@ -68,17 +79,12 @@ def parse_questions(markdown: str) -> Tuple[str, List[Question]]:
     return transformed, questions
 
 
-import json as _json
-import mimetypes
-import threading
-from http.server import BaseHTTPRequestHandler
-from urllib.parse import unquote, urlparse
-
-
 def build_payload(
     markdown: str,
     title: str = "Document Review",
     theme: str = "digestify",
+    session_id: str = "",
+    timeout_seconds: float = 1800.0,
 ) -> dict:
     """Parse questions out of the markdown and return the page payload dict."""
     transformed, questions = parse_questions(markdown)
@@ -87,7 +93,29 @@ def build_payload(
         "theme": theme,
         "markdown": transformed,
         "questions": [{"id": q.id, "prompt": q.prompt} for q in questions],
+        "session_id": session_id,
+        "timeout_seconds": timeout_seconds,
     }
+
+
+_PORT_SUFFIX_RE = re.compile(r"-p(?P<port>\d{2,5})$")
+
+
+def parse_port_from_session_id(session_id: str) -> Optional[int]:
+    """Extract trailing ``-p<port>`` from an auto-generated session id.
+
+    The session id displayed to the user encodes the bound port so that
+    a relaunched session can ask the OS for the same port. If the port is
+    available, the new server has the same origin (host+port) as the prior
+    one, and the browser's localStorage draft is in scope for restore.
+    """
+    if not session_id:
+        return None
+    m = _PORT_SUFFIX_RE.search(session_id)
+    if not m:
+        return None
+    port = int(m.group("port"))
+    return port if 1 <= port <= 65535 else None
 
 
 def make_handler(
@@ -158,19 +186,23 @@ def make_handler(
             elif self.path == "/cancel":
                 result["status"] = "cancelled"
                 self._send(200, b'{"ok":true}')
+            elif self.path == "/heartbeat":
+                # Sliding-window keepalive: reset the idle deadline whenever
+                # the user is actively working. Body is ignored.
+                now = time.monotonic()
+                result["heartbeat_at"] = now
+                # Log to stderr so the agent (or a curious operator) can
+                # confirm activity is reaching the server, not just the UI.
+                print(
+                    _json.dumps({"event": "heartbeat", "at": round(now, 2)}),
+                    file=sys.stderr,
+                    flush=True,
+                )
+                self._send(200, b'{"ok":true}')
             else:
                 self._send(404, b'{"error":"not found"}')
 
     return Handler
-
-
-import time
-from http.server import HTTPServer
-from typing import Callable
-import argparse
-import sys
-import webbrowser
-from datetime import datetime, timezone
 
 
 def serve_blocking(
@@ -189,9 +221,27 @@ def serve_blocking(
     cancel, 124 on timeout. response_data is the parsed POST body on submit,
     else None.
     """
-    result: dict = {}
+    result: dict = {"heartbeat_at": time.monotonic()}
     handler_cls = make_handler(payload, template, result, assets_dir=assets_dir)
-    httpd = HTTPServer((host, port), handler_cls)
+    try:
+        httpd = HTTPServer((host, port), handler_cls)
+    except OSError as exc:
+        # Most commonly hit on relaunch when the probe-bind released the
+        # port and another process grabbed it before HTTPServer could bind.
+        # Surface a clean structured error rather than a raw traceback.
+        print(
+            _json.dumps(
+                {
+                    "event": "bind_error",
+                    "host": host,
+                    "port": port,
+                    "error": str(exc),
+                }
+            ),
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2, None
     bound_port = httpd.server_address[1]
     if on_ready:
         on_ready(bound_port)
@@ -199,16 +249,19 @@ def serve_blocking(
     server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     server_thread.start()
 
-    deadline = time.monotonic() + timeout
     try:
-        while time.monotonic() < deadline:
+        while True:
             status = result.get("status")
             if status == "submitted":
                 return 0, result.get("data")
             if status == "cancelled":
                 return 130, None
+            # Idle deadline slides forward each time /heartbeat is hit. The
+            # configured timeout is "max idle before we give up," not a hard
+            # total session cap.
+            if time.monotonic() - result["heartbeat_at"] >= timeout:
+                return 124, None
             time.sleep(poll_interval)
-        return 124, None
     finally:
         httpd.shutdown()
         httpd.server_close()
@@ -305,7 +358,51 @@ def main(argv, stdin, stdout, stderr, open_browser=webbrowser.open) -> int:
     parser.add_argument("--port", type=int, default=0,
                         help="bind port (default: random free)")
     parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument(
+        "--id",
+        dest="session_id",
+        default=None,
+        help=(
+            "stable id for this session — surfaced in the UI so the user can "
+            "copy and pass it back to the agent if they need to recover an "
+            "interrupted draft. Auto-generated with the bound port encoded "
+            "(`-p<port>` suffix) so a relaunch reuses the same port and the "
+            "browser's localStorage is in scope. Omit to auto-generate."
+        ),
+    )
     args = parser.parse_args(argv)
+
+    # If the agent passed an --id with `-p<port>` baked in (the auto-gen
+    # format), prefer that port so the relaunched origin matches the prior
+    # one and localStorage-based draft recovery is in scope. An explicit
+    # --port still wins.
+    if args.port == 0 and args.session_id:
+        embedded = parse_port_from_session_id(args.session_id)
+        if embedded is not None:
+            args.port = embedded
+
+    # Probe-bind to discover the bound port BEFORE generating the session id
+    # so we can encode it. Tiny race window between close() and HTTPServer
+    # rebind — if HTTPServer's bind loses, serve_blocking returns code 2
+    # with a structured error message rather than crashing.
+    probe = socket.socket()
+    # Match HTTPServer's default SO_REUSEADDR so the probe can bind a port
+    # that's still in TIME_WAIT from a recent session (a common case during
+    # rapid relaunch for restore — exactly when this matters most).
+    probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        probe.bind((args.host, args.port))
+        bound_port = probe.getsockname()[1]
+    finally:
+        probe.close()
+    args.port = bound_port
+
+    if not args.session_id:
+        import secrets
+
+        args.session_id = (
+            "digestify-" + secrets.token_hex(4) + f"-p{bound_port}"
+        )
 
     try:
         markdown = _read_input(args, stdin)
@@ -320,7 +417,13 @@ def main(argv, stdin, stdout, stderr, open_browser=webbrowser.open) -> int:
         return 2
 
     try:
-        payload = build_payload(markdown, title=args.title, theme=args.theme)
+        payload = build_payload(
+            markdown,
+            title=args.title,
+            theme=args.theme,
+            session_id=args.session_id,
+            timeout_seconds=args.timeout,
+        )
     except ValueError as exc:
         print(f"error: {exc}", file=stderr)
         return 2
@@ -331,7 +434,13 @@ def main(argv, stdin, stdout, stderr, open_browser=webbrowser.open) -> int:
 
     def _on_ready(port: int):
         url = f"http://{args.host}:{port}"
-        print(_json.dumps({"url": url, "port": port}), file=stderr, flush=True)
+        print(
+            _json.dumps(
+                {"url": url, "port": port, "session_id": args.session_id}
+            ),
+            file=stderr,
+            flush=True,
+        )
         if not args.no_open:
             try:
                 open_browser(url)

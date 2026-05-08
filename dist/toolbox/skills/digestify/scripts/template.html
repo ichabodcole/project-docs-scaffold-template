@@ -381,6 +381,103 @@
         opacity: 0.72;
         transform: none;
       }
+      .session-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+        margin-right: 14px;
+        flex: 0 0 auto;
+      }
+      #timer-display {
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        font-size: 13px;
+        color: var(--text-muted);
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--surface-soft);
+        border: 1px solid var(--border-subtle);
+        min-width: 56px;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        transition:
+          background 0.12s ease,
+          color 0.12s ease;
+      }
+      #timer-display::before {
+        content: "↻";
+        display: inline-block;
+        font-size: 13px;
+        font-weight: 700;
+        opacity: 0.55;
+        transition: transform 0.4s ease;
+      }
+      #timer-display:hover {
+        background: var(--surface);
+        color: var(--brand-ink);
+      }
+      #timer-display:hover::before {
+        opacity: 1;
+      }
+      #timer-display[data-just-reset="1"]::before {
+        transform: rotate(360deg);
+      }
+      #timer-display[data-state="warn"] {
+        color: #b15a00;
+        border-color: #f0c97c;
+        background: #fff4dc;
+      }
+      #timer-display[data-state="expired"] {
+        color: #fff;
+        background: #c0392b;
+        border-color: #c0392b;
+      }
+      header #session-id {
+        font: inherit;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: none;
+        letter-spacing: 0;
+        background: var(--surface-soft);
+        color: var(--text-muted);
+        border: 1px solid var(--border-subtle);
+        padding: 6px 10px;
+        border-radius: 999px;
+        cursor: pointer;
+        transform: none;
+        box-shadow: none;
+      }
+      header #session-id:hover {
+        color: var(--brand-ink);
+        background: var(--surface);
+        transform: none;
+        filter: none;
+      }
+      header #session-id[data-copied="1"] {
+        color: var(--brand-strong);
+        border-color: var(--brand-primary);
+      }
+      #restored-banner {
+        position: absolute;
+        left: 50%;
+        top: calc(100% + 8px);
+        transform: translateX(-50%);
+        background: var(--brand-strong);
+        color: #fff;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        box-shadow: var(--elevation-soft);
+        z-index: 5;
+      }
       main {
         position: relative;
         max-width: 860px;
@@ -608,16 +705,44 @@
         display: inline-block;
         background: var(--comment-bg);
         border: 1px solid var(--comment-border);
-        padding: 6px 10px;
-        border-radius: 999px;
+        padding: 8px 12px;
+        border-radius: 10px;
         margin: 8px 0;
         font-size: 13px;
+        max-width: 100%;
         box-shadow: 0 8px 18px
           color-mix(in srgb, var(--brand-primary) 14%, transparent);
       }
       .comment-chip .anchor {
         color: var(--text-muted);
         font-style: italic;
+      }
+      .comment-chip .body {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .comment-chip .actions {
+        display: flex;
+        gap: 4px;
+        margin-top: 6px;
+      }
+      .comment-chip .actions button {
+        border: 0;
+        background: transparent;
+        color: var(--brand-ink);
+        font: inherit;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        opacity: 0.55;
+      }
+      .comment-chip .actions button:hover {
+        opacity: 1;
+        background: color-mix(in srgb, var(--brand-ink) 8%, transparent);
       }
       .floating-comment-btn {
         position: absolute;
@@ -637,8 +762,14 @@
       }
       .floating-comment-btn::before {
         content: "";
+        flex: 0 0 7px;
         width: 7px;
         height: 7px;
+        /* Two box-shadow copies render dots 10px and 20px to the right of
+           this element. Flex only reserves the 7px width, so without
+           margin-right the rendered dots overlap the "Comment" text. The
+           extra 20px reserves visual space for the trailing dots. */
+        margin-right: 20px;
         border-radius: 999px;
         background: var(--brand-primary);
         box-shadow:
@@ -743,7 +874,23 @@
         <img class="brand-mark" alt="Digestify" />
         <h1 id="page-title"></h1>
       </div>
+      <div class="session-meta">
+        <div
+          id="timer-display"
+          title="Time remaining before idle timeout — resets on activity, or click to reset manually"
+          role="button"
+          tabindex="0"
+        >
+          --:--
+        </div>
+        <button
+          id="session-id"
+          type="button"
+          title="Click to copy session ID — give this to the agent if you need to recover an interrupted session"
+        ></button>
+      </div>
       <button id="submit-btn" type="button">Submit</button>
+      <div id="restored-banner" hidden>Draft restored from earlier session</div>
     </header>
     <img class="ambient-mascot" alt="" aria-hidden="true" />
     <main id="doc"></main>
@@ -813,12 +960,186 @@
           payload.questions.map((q) => [q.id, q])
         );
         const answers = {};
-        const comments = []; // {anchor, text}
+        const comments = []; // {id, anchor, text} — id is stripped at submit
+        let commentSeq = 0;
         let submitted = false;
         // Set true once the user has typed an answer or saved a comment.
         // beforeunload only fires /cancel if dirty — refreshing a clean page
         // shouldn't kill the session.
         let dirty = false;
+
+        // ─── Session id, timer, heartbeat, localStorage ─────────────────
+        const sessionId = payload.session_id || "digestify-anon";
+        // Use whatever the server is configured for, no clamping — if the
+        // agent passes a short timeout (e.g. for testing), the displayed
+        // countdown should match the server's actual deadline so the user
+        // isn't surprised when the session dies before the timer reads zero.
+        const timeoutSeconds = payload.timeout_seconds || 1800;
+        const lsKey = "digestify:" + sessionId;
+        const LS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+        // Prune stale entries (>7 days) so the user's localStorage doesn't
+        // accumulate forever across many digestify sessions.
+        try {
+          for (const k of Object.keys(localStorage)) {
+            if (!k.startsWith("digestify:")) continue;
+            try {
+              const v = JSON.parse(localStorage.getItem(k) || "{}");
+              if (!v.savedAt || Date.now() - v.savedAt > LS_TTL_MS) {
+                localStorage.removeItem(k);
+              }
+            } catch {
+              localStorage.removeItem(k);
+            }
+          }
+        } catch {
+          // localStorage may be disabled (private browsing, quota, etc) —
+          // recovery is best-effort, the rest of the page still works.
+        }
+
+        // Recovery is keyed by session id, which encodes the prior bound
+        // port (`-p<port>` suffix). Same id passed on relaunch → script
+        // reuses that port → same origin → same localStorage namespace.
+        let restoredSnapshot = null;
+        try {
+          const raw = localStorage.getItem(lsKey);
+          if (raw) {
+            const snap = JSON.parse(raw);
+            if (
+              snap &&
+              snap.savedAt &&
+              Date.now() - snap.savedAt <= LS_TTL_MS
+            ) {
+              restoredSnapshot = snap;
+            }
+          }
+        } catch {}
+
+        if (restoredSnapshot) {
+          // Only restore answers whose question id still exists in the
+          // current payload. If the agent rewrote the markdown between
+          // recovery attempts, stale ids would otherwise leak into the
+          // submit payload and confuse the agent on the receiving end.
+          for (const [k, v] of Object.entries(restoredSnapshot.answers || {})) {
+            if (questionsById[k]) answers[k] = v;
+          }
+          for (const c of restoredSnapshot.comments || []) {
+            if (c && c.anchor && c.text) {
+              comments.push({
+                id: "c" + ++commentSeq,
+                anchor: c.anchor,
+                text: c.text,
+              });
+            }
+          }
+        }
+
+        const sessionIdBtn = document.getElementById("session-id");
+        sessionIdBtn.textContent = sessionId;
+        sessionIdBtn.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(sessionId);
+          } catch {}
+          sessionIdBtn.dataset.copied = "1";
+          sessionIdBtn.textContent = "Copied!";
+          setTimeout(() => {
+            sessionIdBtn.textContent = sessionId;
+            delete sessionIdBtn.dataset.copied;
+          }, 1200);
+        });
+
+        if (restoredSnapshot) {
+          const banner = document.getElementById("restored-banner");
+          banner.hidden = false;
+          setTimeout(() => (banner.hidden = true), 4000);
+        }
+
+        let deadlineAt = Date.now() + timeoutSeconds * 1000;
+        let lastHeartbeatAt = 0;
+        let expired = false;
+
+        function persistDraft() {
+          try {
+            localStorage.setItem(
+              lsKey,
+              JSON.stringify({
+                answers,
+                comments: comments.map(({ id, ...rest }) => rest),
+                savedAt: Date.now(),
+              })
+            );
+          } catch {} // quota / disabled storage — best-effort
+        }
+
+        function markActivity() {
+          // Once the client-side timer has declared the session expired,
+          // stop firing heartbeats — otherwise background typing in a
+          // doomed tab can race with the server's own deadline and either
+          // prolong a session the user thinks is dead, or post heartbeats
+          // to a server that's already exited.
+          if (submitted || expired) return;
+          dirty = true;
+          deadlineAt = Date.now() + timeoutSeconds * 1000;
+          persistDraft();
+          const now = Date.now();
+          if (now - lastHeartbeatAt >= 5000) {
+            lastHeartbeatAt = now;
+            fetch("/heartbeat", { method: "POST" }).catch(() => {});
+          }
+        }
+
+        const timerEl = document.getElementById("timer-display");
+        function fmtRemaining(ms) {
+          if (ms <= 0) return "0:00";
+          const total = Math.floor(ms / 1000);
+          const m = Math.floor(total / 60);
+          const s = total % 60;
+          return m + ":" + s.toString().padStart(2, "0");
+        }
+        function tickTimer() {
+          if (submitted) return;
+          const remaining = deadlineAt - Date.now();
+          if (remaining <= 0) {
+            timerEl.textContent = "expired";
+            timerEl.dataset.state = "expired";
+            expired = true;
+            return;
+          }
+          timerEl.textContent = fmtRemaining(remaining);
+          if (remaining < 60_000) timerEl.dataset.state = "warn";
+          else delete timerEl.dataset.state;
+        }
+        tickTimer();
+        setInterval(tickTimer, 1000);
+
+        // Manual extend: clicking the timer pill always resets the deadline
+        // and forces a heartbeat (bypassing the 5s rate limit so the server
+        // gets the bump even if a typing-driven heartbeat just fired).
+        function extendDeadline() {
+          if (submitted || expired) return;
+          deadlineAt = Date.now() + timeoutSeconds * 1000;
+          lastHeartbeatAt = Date.now();
+          fetch("/heartbeat", { method: "POST" }).catch(() => {
+            // Server is unreachable — likely already exited. Don't keep
+            // the user staring at a fresh-looking countdown for a session
+            // that's already dead.
+            timerEl.textContent = "expired";
+            timerEl.dataset.state = "expired";
+            expired = true;
+          });
+          tickTimer();
+          // Brief spin animation as feedback that the click did something.
+          timerEl.dataset.justReset = "1";
+          setTimeout(() => delete timerEl.dataset.justReset, 450);
+        }
+        timerEl.addEventListener("click", extendDeadline);
+        timerEl.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            extendDeadline();
+          }
+        });
+        // ─────────────────────────────────────────────────────────────────
 
         // Render markdown, then replace QBLOCK comments with question cards.
         const docEl = document.getElementById("doc");
@@ -863,15 +1184,42 @@
           prompt.appendChild(promptBody);
           const ta = document.createElement("textarea");
           ta.placeholder = "Your answer...";
+          if (answers[id]) ta.value = answers[id];
           ta.addEventListener("input", () => {
-            dirty = true;
             if (ta.value.trim()) answers[id] = ta.value;
             else delete answers[id];
+            markActivity();
           });
           card.appendChild(prompt);
           card.appendChild(ta);
           node.parentNode.replaceChild(card, node);
         });
+
+        // Restore comment chips from a recovered session. Anchor each chip
+        // to the first block whose text contains the stored anchor — works
+        // for relaunches with the same source markdown. If the anchor can't
+        // be located, the chip lands at the bottom of the doc as an orphan.
+        if (restoredSnapshot && comments.length) {
+          for (const comment of comments) {
+            const needle = comment.anchor.slice(0, 60);
+            const blocks = docEl.querySelectorAll(
+              "p, li, blockquote, pre, h1, h2, h3, h4, h5, h6"
+            );
+            let target = null;
+            for (const b of blocks) {
+              if (b.textContent.includes(needle)) {
+                target = b;
+                break;
+              }
+            }
+            const chip = renderChip(comment);
+            if (target) {
+              target.parentNode.insertBefore(chip, target.nextSibling);
+            } else {
+              docEl.appendChild(chip);
+            }
+          }
+        }
 
         // Floating comment button on text selection.
         let floatingBtn = null;
@@ -909,30 +1257,25 @@
           return el.closest("p,li,blockquote,pre,h1,h2,h3,h4,h5,h6") || docEl;
         }
 
-        function openCommentBox(anchorText, range) {
-          if (floatingBtn) {
-            floatingBtn.remove();
-            floatingBtn = null;
-          }
-          const para = nearestBlock(range.endContainer);
+        function buildEditor({ initialText, anchorText, onSave, onCancel }) {
           const box = document.createElement("div");
           box.className = "inline-comment";
 
           const label = document.createElement("div");
           label.style.cssText =
             "font-size:13px;color:var(--text-muted);margin-bottom:6px";
-          const labelLead = document.createTextNode("on: ");
+          label.appendChild(document.createTextNode("on: "));
           const labelQuote = document.createElement("i");
           labelQuote.textContent =
             '"' +
             anchorText.slice(0, 80) +
             (anchorText.length > 80 ? "…" : "") +
             '"';
-          label.appendChild(labelLead);
           label.appendChild(labelQuote);
 
           const ta = document.createElement("textarea");
           ta.placeholder = "Comment...";
+          ta.value = initialText || "";
 
           const row = document.createElement("div");
           row.className = "row";
@@ -947,33 +1290,102 @@
           box.appendChild(ta);
           box.appendChild(row);
 
-          ta.focus();
-          saveBtn.addEventListener("click", () => {
-            const text = ta.value.trim();
-            if (text) {
-              comments.push({ anchor: anchorText, text });
-              dirty = true;
-              const chip = document.createElement("div");
-              chip.className = "comment-chip";
-              const anchorSpan = document.createElement("span");
-              anchorSpan.className = "anchor";
-              anchorSpan.textContent =
-                '"' +
-                anchorText.slice(0, 60) +
-                (anchorText.length > 60 ? "…" : "") +
-                '"';
-              const sep = document.createTextNode(": ");
-              const textSpan = document.createElement("span");
-              textSpan.textContent = text;
-              chip.appendChild(anchorSpan);
-              chip.appendChild(sep);
-              chip.appendChild(textSpan);
-              para.parentNode.insertBefore(chip, para.nextSibling);
-            }
-            box.remove();
+          saveBtn.addEventListener("click", () => onSave(ta.value.trim(), box));
+          cancelBtn.addEventListener("click", () => onCancel(box));
+          return { box, textarea: ta };
+        }
+
+        function renderChip(comment) {
+          const chip = document.createElement("div");
+          chip.className = "comment-chip";
+          chip.dataset.commentId = comment.id;
+
+          const anchorSpan = document.createElement("span");
+          anchorSpan.className = "anchor";
+          anchorSpan.textContent =
+            '"' +
+            comment.anchor.slice(0, 60) +
+            (comment.anchor.length > 60 ? "…" : "") +
+            '"';
+          const sep = document.createTextNode(": ");
+          const textSpan = document.createElement("span");
+          textSpan.className = "body";
+          textSpan.textContent = comment.text;
+
+          const actions = document.createElement("div");
+          actions.className = "actions";
+          const editBtn = document.createElement("button");
+          editBtn.type = "button";
+          editBtn.textContent = "Edit";
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.textContent = "Delete";
+          actions.appendChild(editBtn);
+          actions.appendChild(delBtn);
+
+          chip.appendChild(anchorSpan);
+          chip.appendChild(sep);
+          chip.appendChild(textSpan);
+          chip.appendChild(actions);
+
+          editBtn.addEventListener("click", () => {
+            const { box, textarea } = buildEditor({
+              initialText: comment.text,
+              anchorText: comment.anchor,
+              onSave: (text, editorBox) => {
+                if (text) {
+                  comment.text = text;
+                  editorBox.replaceWith(renderChip(comment));
+                  markActivity();
+                } else {
+                  // Empty save in edit mode = no-op; restore original chip.
+                  // Use Delete if you want to remove the comment.
+                  editorBox.replaceWith(chip);
+                }
+              },
+              onCancel: (editorBox) => editorBox.replaceWith(chip),
+            });
+            chip.replaceWith(box);
+            textarea.focus();
           });
-          cancelBtn.addEventListener("click", () => box.remove());
+
+          delBtn.addEventListener("click", () => {
+            const idx = comments.findIndex((c) => c.id === comment.id);
+            if (idx >= 0) comments.splice(idx, 1);
+            chip.remove();
+            markActivity();
+          });
+
+          return chip;
+        }
+
+        function openCommentBox(anchorText, range) {
+          if (floatingBtn) {
+            floatingBtn.remove();
+            floatingBtn = null;
+          }
+          const para = nearestBlock(range.endContainer);
+          const { box, textarea } = buildEditor({
+            initialText: "",
+            anchorText,
+            onSave: (text, editorBox) => {
+              if (text) {
+                const comment = {
+                  id: "c" + ++commentSeq,
+                  anchor: anchorText,
+                  text,
+                };
+                comments.push(comment);
+                editorBox.replaceWith(renderChip(comment));
+                markActivity();
+              } else {
+                editorBox.remove();
+              }
+            },
+            onCancel: (editorBox) => editorBox.remove(),
+          });
           para.parentNode.insertBefore(box, para.nextSibling);
+          textarea.focus();
         }
 
         function showSentScreen() {
@@ -1027,10 +1439,16 @@
               const res = await fetch("/submit", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ answers, comments }),
+                body: JSON.stringify({
+                  answers,
+                  comments: comments.map(({ id, ...rest }) => rest),
+                }),
               });
               if (!res.ok) throw new Error("submit failed");
               submitted = true;
+              try {
+                localStorage.removeItem(lsKey);
+              } catch {}
               showSentScreen();
             } catch (err) {
               btn.disabled = false;
