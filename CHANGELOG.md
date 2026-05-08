@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.0.0...project-docs-scaffold-template-v3.1.0) (2026-05-08)
+
+
+### Features
+
+* **toolbox/digestify:** --reference flag for path-pointed input ([a554b7f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/a554b7fe9b85811c92bfad99e760a97a5d4703df))
+* **toolbox/digestify:** --reference flag for path-pointed input ([173c2d2](https://github.com/ichabodcole/project-docs-scaffold-template/commit/173c2d296d3ee22a75e688b36f8f1270686e806f))
+
 ## [3.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v2.26.1...project-docs-scaffold-template-v3.0.0) (2026-05-07)
 
 
