@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.1.0...project-docs-scaffold-template-v3.2.0) (2026-05-08)
+
+
+### Features
+
+* **toolbox/digestify:** visible idle timer + session recovery ([39858b5](https://github.com/ichabodcole/project-docs-scaffold-template/commit/39858b57405680cb94c1944b89e269272af48c3c))
+* **toolbox/digestify:** visible idle timer + session recovery ([bd1bfc8](https://github.com/ichabodcole/project-docs-scaffold-template/commit/bd1bfc8cd2f893f48189bdc829d55fb9175e485f))
+
 ## [3.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.0.0...project-docs-scaffold-template-v3.1.0) (2026-05-08)
 
 
