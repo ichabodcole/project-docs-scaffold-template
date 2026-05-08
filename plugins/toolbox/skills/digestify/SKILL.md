@@ -125,11 +125,43 @@ Rules:
 - `id` is required, must be unique within the doc, alphanumeric / `-` / `_`.
 - The body is markdown; it renders inside the question card.
 - The body must be non-empty.
-- Pure-prose docs without any `:::question` blocks are rejected (exit 2).
+- Zero `:::question` blocks is **valid** — the page becomes a read-only /
+  comment-only review (rendered markdown + Submit button + inline-comment flow,
+  no question cards). The agent gets back `{"answers": {}, "comments": [...]}`
+  on submit.
 
 ## Invocation
 
-**stdin (preferred for short-to-medium docs):**
+Two file-pointing flags exist; the distinction is **intent**, not function:
+
+- `--reference PATH` — **the doc the user wants to read.** Existing material the
+  user already has, not authored by you. Renders with a small filename caption
+  (`> Reference: filename.md`) so the user knows what they're reading.
+- `--file PATH` — **your authored content, in a file instead of stdin.**
+  Functionally equivalent to piping content on stdin, more convenient for very
+  long agent-authored docs.
+
+When `--reference` is combined with stdin or `--file`, the reference body lands
+first, then a labeled boundary marker (a double-line rule with "END OF
+`<filename>`" centered on it), then your content. The boundary only appears when
+both reference and agent content are present — reference-only mode shows just
+the caption, no boundary.
+
+**Tip on combining `--reference` with agent content:** Bash heredoc + pipeline
+constructs (`cat <<EOF | review.py ... EOF`) can trip the harness's command
+parser and surface an extra approval gate. Cleaner pattern: write your
+agent-authored content to a project-local file (e.g.
+`.agents/digestify-questions.md` — `.agents/` is gitignored in this repo) and
+pass it as `--file`, in a separate Bash call from any test runs.
+
+| Use case                                  | Pattern                                |
+| ----------------------------------------- | -------------------------------------- |
+| Agent writes everything (doc + questions) | stdin or `--file`                      |
+| Pure reading of an existing doc           | `--reference path` only                |
+| Existing doc + agent's added questions    | `--reference path` + stdin (preferred) |
+| Existing doc + lots of agent content      | `--reference path` + `--file` (rare)   |
+
+**stdin — agent writes everything:**
 
 ```bash
 cat <<'EOF' | python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py --title "Proposal Review" --timeout 1800
@@ -149,7 +181,7 @@ Pick a name: `FooManager`, `FooService`, or `FooCoordinator`?
 EOF
 ```
 
-**file (for very long docs or when you've already written one):**
+**`--file` — agent already wrote the doc to a file:**
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
@@ -158,6 +190,42 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
   --theme digestify \
   --timeout 1800
 ```
+
+**`--reference` — point at an existing doc on disk (token-efficient):**
+
+Use this when the user has an existing markdown doc (proposal, README, spec,
+brain-dump notes) they want to read in the browser, with or without your added
+questions. The reference file is read directly by `review.py` — its content
+**never passes through your context**, which matters for long docs.
+
+Reference-only (pure reading + comments, no questions):
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
+  --reference /path/to/long-proposal.md \
+  --title "Read this proposal"
+```
+
+Reference + your questions (combine the doc with your added prompts):
+
+```bash
+cat <<'EOF' | python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
+  --reference /path/to/long-proposal.md \
+  --title "Proposal review"
+## My Questions
+
+::: question id=concerns
+Any concerns about Section 3?
+:::
+
+::: question id=missing
+Anything missing you'd want before approving?
+:::
+EOF
+```
+
+When `--reference` is combined with stdin or `--file`, the reference body lands
+first and your added content appends below.
 
 Themes:
 
@@ -206,8 +274,12 @@ those abandons hit the `--timeout` and exit `124` instead of `130`.
 
 ## Flags
 
-- `--file PATH` — read markdown from file instead of stdin
+- `--file PATH` — read agent-authored markdown from this file instead of stdin
+- `--reference PATH` — point at an existing doc on disk; its content never
+  passes through your context. Combines with stdin/`--file` (reference body
+  first, agent content appended).
 - `--title TEXT` — page/tab title (default `"Document Review"`)
+- `--theme NAME` — visual theme: `digestify` (default), `cthulhu`, `classic`
 - `--timeout SECONDS` — failsafe timeout (default `1800` / 30 min)
 - `--no-open` — don't auto-open the browser; useful in headless / SSH setups
 - `--port N` — bind specific port (default: random free port)
