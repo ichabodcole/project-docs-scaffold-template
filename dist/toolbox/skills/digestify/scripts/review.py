@@ -35,8 +35,10 @@ def parse_questions(markdown: str) -> Tuple[str, List[Question]]:
     """Extract :::question fences. Returns (transformed_md, questions).
 
     Each fence in the source is replaced with `<div data-qblock="<id>"></div>`,
-    a placeholder that survives DOMPurify sanitization in the browser. Raises
-    ValueError if there are zero blocks, missing/empty ids, or duplicates.
+    a placeholder that survives DOMPurify sanitization in the browser. Zero
+    question blocks is valid — the page renders as a read-only / comment-only
+    review. Raises ValueError on missing/empty ids, duplicate ids, or empty
+    bodies.
     """
     questions: List[Question] = []
     seen_ids = set()
@@ -63,10 +65,6 @@ def parse_questions(markdown: str) -> Tuple[str, List[Question]]:
         return f'\n\n<div data-qblock="{qid}"></div>\n\n'
 
     transformed = _QBLOCK_RE.sub(_replace, markdown)
-    if not questions:
-        raise ValueError(
-            "no question blocks found; expected at least one '::: question id=<name>' fence"
-        )
     return transformed, questions
 
 
@@ -217,21 +215,82 @@ def serve_blocking(
 
 
 def _read_input(args, stdin) -> str:
-    """Read markdown from stdin (if piped) else --file. Empty → empty string."""
+    """Assemble markdown from --reference (if any) + stdin or --file.
+
+    The --reference body lands first; agent-authored content from stdin or
+    --file appends below with a blank-line separator. Either side may be
+    empty. Returns "" if all sources are empty.
+
+    Stdin is only read when it actually has data or EOF ready within a
+    short window — agent-harness background contexts can leave stdin
+    open-but-empty, and a naive `.read()` would hang forever.
+    """
+    import select
+
+    import html as _html_lib
+
+    reference_content = ""
+    ref_label = ""
+    if args.reference:
+        reference_content = Path(args.reference).read_text(encoding="utf-8")
+        ref_label = Path(args.reference).name
+
+    agent_content = ""
     if not stdin.isatty():
-        text = stdin.read()
-        if text:
-            return text
-    if args.file:
-        return Path(args.file).read_text(encoding="utf-8")
-    return ""
+        try:
+            ready, _, _ = select.select([stdin], [], [], 0.1)
+            if ready:
+                agent_content = stdin.read()
+        except (ValueError, OSError):
+            # stdin doesn't support select (rare on some platforms); skip.
+            pass
+
+    if not agent_content and args.file:
+        agent_content = Path(args.file).read_text(encoding="utf-8")
+
+    parts: List[str] = []
+    if reference_content.strip():
+        # Caption the reference content with its filename so the user can
+        # tell at a glance which prose came from the doc they pointed at
+        # vs. content the agent added below. Use the basename only — full
+        # paths leak local filesystem layout into the rendered page.
+        parts.append(f"> Reference: `{ref_label}`\n\n{reference_content.rstrip()}")
+    if agent_content.strip():
+        # When combined with reference content, separate with a styled
+        # boundary marker rather than a plain '---'. Reference docs
+        # commonly contain markdown HRs of their own; another `---` would
+        # be visually indistinguishable from the doc's existing
+        # separators. The marker carries the (HTML-escaped) reference
+        # filename so the template can render "end of <filename>" as
+        # the label without enabling attribute-injection.
+        if parts:
+            label_attr = _html_lib.escape(ref_label, quote=True)
+            parts.append(
+                f'<div data-refboundary="{label_attr}"></div>\n\n'
+                + agent_content.rstrip()
+            )
+        else:
+            parts.append(agent_content.rstrip())
+
+    return "\n\n".join(parts)
 
 
 def main(argv, stdin, stdout, stderr, open_browser=webbrowser.open) -> int:
     parser = argparse.ArgumentParser(
         description="One-shot browser-based markdown review with inline Q&A.",
     )
-    parser.add_argument("--file", help="read markdown from this file instead of stdin")
+    parser.add_argument(
+        "--file",
+        help="read agent-authored markdown from this file instead of stdin",
+    )
+    parser.add_argument(
+        "--reference",
+        help=(
+            "read a reference doc from this path; combines with stdin/--file "
+            "(reference body first, agent content appended). Use this to point "
+            "at a doc on disk so its content doesn't pass through the agent."
+        ),
+    )
     parser.add_argument("--title", default="Document Review")
     parser.add_argument(
         "--theme",
@@ -248,9 +307,16 @@ def main(argv, stdin, stdout, stderr, open_browser=webbrowser.open) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     args = parser.parse_args(argv)
 
-    markdown = _read_input(args, stdin)
+    try:
+        markdown = _read_input(args, stdin)
+    except FileNotFoundError as exc:
+        print(f"error: file not found: {exc.filename}", file=stderr)
+        return 2
     if not markdown.strip():
-        print("error: no markdown provided on stdin or via --file", file=stderr)
+        print(
+            "error: no markdown provided on stdin, --file, or --reference",
+            file=stderr,
+        )
         return 2
 
     try:

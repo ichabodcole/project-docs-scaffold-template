@@ -462,6 +462,31 @@
         box-shadow: var(--elevation-card);
         overflow: hidden;
       }
+      /* Reference-vs-agent boundary: distinct from any markdown HR the
+         reference doc itself might contain. Styled as a labeled double
+         line so it's unambiguously a section break, not just another
+         paragraph divider. */
+      [data-refboundary] {
+        position: relative;
+        margin: 44px 0 28px;
+        height: 0;
+        border-top: 3px double var(--brand-secondary);
+      }
+      [data-refboundary]::before {
+        content: "end of " attr(data-refboundary);
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--page-bg);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 0 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
       .qcard::before {
         content: "";
         position: absolute;

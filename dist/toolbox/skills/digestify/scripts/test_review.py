@@ -32,10 +32,13 @@ class ParseQuestionsTests(unittest.TestCase):
         _, questions = review.parse_questions(md)
         self.assertEqual(questions[0].prompt, "Pick: `Foo`, `Bar`, or `Baz`?")
 
-    def test_no_questions_raises(self):
-        with self.assertRaises(ValueError) as cm:
-            review.parse_questions("Just prose, no questions.")
-        self.assertIn("no question blocks", str(cm.exception).lower())
+    def test_no_questions_returns_empty_list(self):
+        # Zero question blocks is valid — page becomes a read-only review.
+        transformed, questions = review.parse_questions(
+            "Just prose, no questions."
+        )
+        self.assertEqual(questions, [])
+        self.assertEqual(transformed, "Just prose, no questions.")
 
     def test_duplicate_id_raises(self):
         md = "::: question id=x\nA?\n:::\n\n::: question id=x\nB?\n:::"
@@ -336,10 +339,24 @@ def _wait_for_port(stderr_buffer):
 
 
 class MainTests(unittest.TestCase):
-    def test_no_questions_exits_2(self):
-        result = _run("Just prose, no questions.")
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("no question blocks", result.stderr.lower())
+    def test_no_questions_submits_with_empty_answers(self):
+        # Prose-only input is valid — server starts, user can submit (or
+        # leave comments), agent gets back empty answers.
+        proc = subprocess.Popen(
+            ["python3", str(SCRIPT), "--no-open", "--timeout", "5"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True,
+        )
+        proc.stdin.write("Just prose, no questions.\n")
+        proc.stdin.close()
+        port = _wait_for_port(proc.stderr)
+        _post_submit(port, {"answers": {}, "comments": []})
+        out = proc.stdout.read()
+        proc.wait(timeout=5)
+        self.assertEqual(proc.returncode, 0)
+        payload = json.loads(out)
+        self.assertEqual(payload["answers"], {})
+        self.assertEqual(payload["comments"], [])
 
     def test_no_input_exits_2(self):
         result = _run("")
@@ -386,6 +403,115 @@ class MainTests(unittest.TestCase):
             self.assertEqual(json.loads(out)["answers"], {"q1": "ok"})
         finally:
             os.unlink(path)
+
+    def test_reference_only(self):
+        # A reference doc with no agent content; user reads + submits.
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
+            f.write("# Reference doc\n\nJust prose, no questions.\n")
+            ref_path = f.name
+        try:
+            proc = subprocess.Popen(
+                ["python3", str(SCRIPT), "--no-open", "--reference", ref_path, "--timeout", "5"],
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True,
+            )
+            port = _wait_for_port(proc.stderr)
+            _post_submit(port, {"answers": {}, "comments": []})
+            out, _ = proc.communicate(timeout=5)
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(json.loads(out)["answers"], {})
+        finally:
+            os.unlink(ref_path)
+
+    def test_reference_plus_stdin_questions(self):
+        # Reference doc + agent's added questions on stdin. Reference body
+        # comes first, agent's stdin chunk appends below.
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
+            f.write("# Reference doc\n\nSome content.\n")
+            ref_path = f.name
+        try:
+            proc = subprocess.Popen(
+                ["python3", str(SCRIPT), "--no-open", "--reference", ref_path, "--timeout", "5"],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True,
+            )
+            proc.stdin.write("::: question id=q1\nReactions?\n:::\n")
+            proc.stdin.close()
+            port = _wait_for_port(proc.stderr)
+            _post_submit(port, {"answers": {"q1": "looks good"}, "comments": []})
+            out = proc.stdout.read()
+            proc.wait(timeout=5)
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(json.loads(out)["answers"], {"q1": "looks good"})
+        finally:
+            os.unlink(ref_path)
+
+    def test_reference_plus_file_questions(self):
+        # Reference doc + agent's added questions from a separate --file.
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
+            f.write("# Reference doc\n\nSome content.\n")
+            ref_path = f.name
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
+            f.write("::: question id=q1\nReactions?\n:::\n")
+            agent_path = f.name
+        try:
+            proc = subprocess.Popen(
+                [
+                    "python3", str(SCRIPT), "--no-open",
+                    "--reference", ref_path,
+                    "--file", agent_path,
+                    "--timeout", "5",
+                ],
+                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True,
+            )
+            port = _wait_for_port(proc.stderr)
+            _post_submit(port, {"answers": {"q1": "yep"}, "comments": []})
+            out, _ = proc.communicate(timeout=5)
+            self.assertEqual(proc.returncode, 0)
+            self.assertEqual(json.loads(out)["answers"], {"q1": "yep"})
+        finally:
+            os.unlink(ref_path)
+            os.unlink(agent_path)
+
+    def test_missing_reference_path_exits_2(self):
+        result = _run("", "--reference", "/tmp/does-not-exist-digestify-test.md")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("file not found", result.stderr.lower())
+
+    def test_reference_filename_with_quote_is_html_escaped(self):
+        # A reference filename containing `"` could otherwise break out of
+        # the data-refboundary attribute. Verify _read_input HTML-escapes
+        # the attribute value before it lands in the markdown.
+        import tempfile, os, types
+
+        tmpdir = tempfile.mkdtemp()
+        ref_path = os.path.join(tmpdir, 'has"quote.md')
+        try:
+            with open(ref_path, "w") as f:
+                f.write("# Ref body\n")
+            args = types.SimpleNamespace(
+                reference=ref_path, file=None,
+            )
+            # Use a real OS pipe so _read_input's select.select() works.
+            r, w = os.pipe()
+            os.write(w, b"::: question id=q1\nQ?\n:::\n")
+            os.close(w)
+            stdin = os.fdopen(r, "r")
+            try:
+                md = review._read_input(args, stdin)
+            finally:
+                stdin.close()
+            # Expect HTML-escaped attribute value, never a raw `"` inside
+            # the data-refboundary attribute that would break out.
+            self.assertIn('data-refboundary="has&quot;quote.md"', md)
+            self.assertNotIn('data-refboundary="has"quote.md"', md)
+        finally:
+            os.unlink(ref_path)
+            os.rmdir(tmpdir)
 
 
 if __name__ == "__main__":
