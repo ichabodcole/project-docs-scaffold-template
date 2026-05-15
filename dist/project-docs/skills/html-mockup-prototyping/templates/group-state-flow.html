@@ -272,14 +272,14 @@
 
   <body class="bg-slate-950 text-slate-200 min-h-screen">
     <div x-data="app">
-
       <!-- ============================================================
            STATE SWITCHER — two-level amber prototype chrome
            Row 1: group tabs
            Row 2: state buttons for the active group only
            ============================================================ -->
-      <div class="sticky top-0 z-50 bg-amber-950/60 border-b border-amber-800/40">
-
+      <div
+        class="sticky top-0 z-50 bg-amber-950/60 border-b border-amber-800/40"
+      >
         <!-- Row 1: group tabs -->
         <div class="px-4 pt-2 pb-0 flex items-center gap-1">
           <span class="section-title text-amber-500 pr-2">Prototype</span>
@@ -308,7 +308,6 @@
             ></button>
           </template>
         </div>
-
       </div>
 
       <!--
@@ -319,7 +318,6 @@
         ============================================================
       -->
       <div class="p-8">
-
         <!-- Group One -->
         <div x-show="group === 'group-one'">
           <div x-show="state === 'state-1a'">
@@ -359,7 +357,6 @@
             <p class="text-muted">Replace with your prototype content.</p>
           </div>
         </div>
-
       </div>
     </div>
 
