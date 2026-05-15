@@ -195,6 +195,7 @@ than commands and are the primary way the plugin delivers its workflows.
 
 | Skill                     | Description                                                                                                                                                                |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ground-in-project`       | Lightweight ephemeral session priming — reads anchor docs, recent commits, and active projects to give a short in-chat orientation; no artifacts written                   |
 | `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                                       |
 | `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export                        |
 | `report-issue`            | File a GitHub issue against the project-docs-scaffold-template repo for bugs, docs issues, or enhancements in any shipped plugin or recipe                                 |
@@ -264,6 +265,17 @@ docs/
    significantly
 
 ## Version History
+
+### 2.4.0 (2026-05-15)
+
+- New `ground-in-project` skill — lightweight, ephemeral session-priming pass
+  for already-developed projects. Reads anchor docs (`PROJECT-SUMMARY`,
+  `PROJECT_MANIFESTO`, `README`, `AGENTS/CLAUDE`), scans the last 30 days of
+  commit messages, and peeks at active projects and investigations, then
+  delivers a short in-chat orientation (~150–250 words). Writes no files and
+  reads no code. Complements the heavier `/project-docs:project-summary` command
+  — flags a missing or stale (>30 days) summary as an opt-in nudge, never
+  auto-triggers it. Lives under Utility Skills.
 
 ### 2.3.0 (2026-04-13)
 
