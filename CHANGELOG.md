@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.2.0...project-docs-scaffold-template-v3.3.0) (2026-05-15)
+
+
+### Features
+
+* **project-docs:** add ground-in-project skill for lightweight session priming ([06b3966](https://github.com/ichabodcole/project-docs-scaffold-template/commit/06b3966618dd0f5c50c69c850bff63ada52dbbad))
+* **project-docs:** smart refresh mode for /project-summary ([95a05ed](https://github.com/ichabodcole/project-docs-scaffold-template/commit/95a05ed4f75ff5ed45889ab41496d4dfad7ecde0))
+
 ## [3.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.1.0...project-docs-scaffold-template-v3.2.0) (2026-05-08)
 
 
