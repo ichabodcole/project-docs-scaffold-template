@@ -35,23 +35,35 @@ workflow skills that the agent also surfaces automatically, see the
 
 ### `/project-docs:project-summary`
 
-**Description:** Generate a comprehensive project summary and current state
-analysis.
+**Description:** Generate or refresh a project summary with smart mode selection
+— full rebuild for first runs and major shifts, incremental refresh for keeping
+a recent summary current.
 
 **Usage:**
 
 ```
-/project-docs:project-summary
+/project-docs:project-summary               # auto-decide refresh vs rebuild
+/project-docs:project-summary --refresh     # force refresh
+/project-docs:project-summary --full        # force full rebuild
 ```
 
 **What it does:**
 
-- Analyzes your codebase structure, dependencies, and recent activity
-- Reviews existing documentation across all categories
+- **Decides mode automatically** based on change volume since the existing
+  summary: commits, files touched, and structural shifts (new top-level dirs,
+  major dep changes, new architecture/specifications/projects). Thresholds:
+  under 40 commits AND under 60 files touched AND no structural shifts →
+  refresh; otherwise full rebuild.
+- **Refresh mode** — re-reads the existing summary, patches only sections
+  affected by recent changes, always rebuilds Recent Activity and Current
+  Direction, writes a slim delta report
+- **Full rebuild mode** — re-discovers the project from scratch, dispatches
+  parallel explorer subagents (architecture, specifications, projects, code
+  structure) for bounded scans, writes a comprehensive discovery report
 - Generates two documents:
-  - `docs/PROJECT-SUMMARY.md` - Polished overview for onboarding
-  - `docs/reports/YYYY-MM-DD-project-summary-report.md` - Detailed discovery
-    process
+  - `docs/PROJECT-SUMMARY.md` — polished overview for onboarding
+  - `docs/reports/YYYY-MM-DD-project-summary-{report,refresh-report}.md` —
+    discovery notes (full rebuild) or delta notes (refresh)
 
 **Use cases:**
 
@@ -195,6 +207,7 @@ than commands and are the primary way the plugin delivers its workflows.
 
 | Skill                     | Description                                                                                                                                                                |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ground-in-project`       | Lightweight ephemeral session priming — reads anchor docs, recent commits, and active projects to give a short in-chat orientation; no artifacts written                   |
 | `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                                       |
 | `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export                        |
 | `report-issue`            | File a GitHub issue against the project-docs-scaffold-template repo for bugs, docs issues, or enhancements in any shipped plugin or recipe                                 |
@@ -264,6 +277,33 @@ docs/
    significantly
 
 ## Version History
+
+### 2.5.0 (2026-05-15)
+
+- `/project-docs:project-summary` command — smart mode selection. Auto-decides
+  between a cheap incremental **refresh** (patch only sections affected by
+  recent changes; trust the rest verbatim) and a full **rebuild** based on
+  commit count, files touched, and structural shifts (new top-level dirs,
+  framework/runtime dep changes, new architecture or specification docs, new
+  active projects/investigations). Thresholds: under 40 commits AND under 60
+  files touched AND no structural shifts → refresh. Explicit overrides via
+  `--refresh` and `--full` flags. Refresh mode always rebuilds the time-bounded
+  "Recent Activity" section and re-examines `docs/projects/` and
+  `docs/investigations/` for status changes; produces a slim delta report
+  instead of the full discovery report. New "Methodology: Sub-Explorer Dispatch"
+  section recommends parallel explorer subagents per docs category for bounded
+  scans during full rebuilds.
+
+### 2.4.0 (2026-05-15)
+
+- New `ground-in-project` skill — lightweight, ephemeral session-priming pass
+  for already-developed projects. Reads anchor docs (`PROJECT-SUMMARY`,
+  `PROJECT_MANIFESTO`, `README`, `AGENTS/CLAUDE`), scans the last 30 days of
+  commit messages, and peeks at active projects and investigations, then
+  delivers a short in-chat orientation (~150–250 words). Writes no files and
+  reads no code. Complements the heavier `/project-docs:project-summary` command
+  — flags a missing or stale (>30 days) summary as an opt-in nudge, never
+  auto-triggers it. Lives under Utility Skills.
 
 ### 2.3.0 (2026-04-13)
 
