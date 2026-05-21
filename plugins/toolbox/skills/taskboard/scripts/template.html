@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>__TITLE__</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        background: #0e1014; color: #e8eaed;
+        margin: 0; padding: 1.5rem 2rem;
+        line-height: 1.5;
+      }
+      header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+      h1 { font-size: 1.5rem; margin: 0; font-weight: 600; }
+      .meta { color: #8b95a3; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+      .status-dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.4rem; vertical-align: middle; background: #6c757d; transition: background 0.15s; }
+      .status-dot.connected { background: #4ade80; }
+      .status-dot.closed { background: #ef4444; }
+      .columns {
+        display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;
+        max-width: 1200px;
+      }
+      .column {
+        background: #14171f; border: 1px solid #232936; border-radius: 8px;
+        padding: 0.75rem 0.85rem 1rem;
+        min-height: 8rem;
+      }
+      .column-head {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 0.75rem;
+      }
+      .column-head h2 {
+        margin: 0; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase;
+        color: #8b95a3; font-weight: 600;
+      }
+      .count {
+        background: #1f2734; border-radius: 999px;
+        padding: 0.1rem 0.5rem; font-size: 0.7rem;
+        color: #c9d1d9; font-variant-numeric: tabular-nums;
+      }
+      .task-list { display: flex; flex-direction: column; gap: 0.5rem; }
+      .task {
+        background: #1a1f2a; border: 1px solid #262e3e; border-radius: 6px;
+        padding: 0.55rem 0.7rem; cursor: text;
+        transition: border-color 0.1s, background 0.1s;
+      }
+      .task:hover { border-color: #3a4a66; }
+      .task .title {
+        font-size: 0.92rem; word-break: break-word;
+        outline: none;
+        min-height: 1.2em;
+      }
+      .task .title[contenteditable="true"] { background: #232b3b; border-radius: 3px; padding: 0.1rem 0.3rem; margin: -0.1rem -0.3rem; }
+      .task .title:empty::before {
+        content: "(empty — type a title)"; color: #5a6478; font-style: italic;
+      }
+      .task .notes {
+        font-size: 0.78rem; color: #8b95a3; margin-top: 0.25rem; white-space: pre-wrap;
+      }
+      .task-actions {
+        display: flex; gap: 0.3rem; margin-top: 0.5rem; flex-wrap: wrap; align-items: center;
+      }
+      .pill {
+        font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px;
+        cursor: pointer; border: 1px solid #232936; background: #14171f; color: #c9d1d9;
+        user-select: none;
+      }
+      .pill:hover { border-color: #3a4a66; }
+      .pill.active.todo { background: #1f2734; border-color: #4a5b78; color: #c9d1d9; }
+      .pill.active.doing { background: #3b2d12; border-color: #b97e1d; color: #fdc676; }
+      .pill.active.done { background: #15301f; border-color: #4ade80; color: #86efac; }
+      .delete {
+        font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px;
+        cursor: pointer; border: none; background: transparent; color: #6b7180;
+        margin-left: auto;
+      }
+      .delete:hover { color: #fca5a5; }
+      .add-row { display: flex; gap: 0.4rem; margin-top: 0.75rem; }
+      .add-row input {
+        flex: 1; background: #0e1014; color: #e8eaed;
+        border: 1px solid #232936; border-radius: 5px;
+        padding: 0.35rem 0.55rem; font-size: 0.85rem; font-family: inherit;
+      }
+      .add-row input:focus { border-color: #4a5b78; outline: none; }
+      .add-row button {
+        background: #1f2734; color: #c9d1d9; border: 1px solid #2e3a4d;
+        border-radius: 5px; padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.85rem;
+      }
+      .add-row button:hover { border-color: #4a5b78; }
+      .footer {
+        display: flex; gap: 0.5rem; margin-top: 1.5rem; align-items: center; max-width: 1200px;
+      }
+      .footer .spacer { flex: 1; }
+      .footer button {
+        border: 1px solid #2e3a4d; border-radius: 6px;
+        padding: 0.5rem 1.1rem; font-size: 0.9rem; cursor: pointer;
+        background: #1f2734; color: #e8eaed;
+      }
+      .footer button.primary { background: #2563eb; border-color: #2563eb; }
+      .footer button.primary:hover { background: #1d4ed8; }
+      .footer button.danger { background: transparent; color: #fca5a5; border-color: #6b2a2a; }
+      .footer button.danger:hover { background: #2a1414; }
+      .toasts { position: fixed; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: 0.4rem; z-index: 100; }
+      .toast {
+        background: #14171f; border: 1px solid #2e3a4d; border-radius: 6px;
+        padding: 0.55rem 0.85rem; font-size: 0.85rem; max-width: 22rem;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        animation: fadein 0.15s ease-out;
+      }
+      @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+      .ended { opacity: 0.6; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="title">__TITLE__</h1>
+      <div class="meta">
+        <span><span id="status-dot" class="status-dot"></span><span id="status-text">connecting…</span></span>
+        &nbsp;·&nbsp;
+        <code>__SESSION_ID__</code>
+      </div>
+    </header>
+
+    <div class="columns">
+      <section class="column" data-status="todo">
+        <div class="column-head"><h2>To do</h2><span class="count" id="count-todo">0</span></div>
+        <div class="task-list" id="list-todo"></div>
+        <div class="add-row">
+          <input type="text" id="add-todo-input" placeholder="Add a task…" />
+          <button data-add-status="todo">Add</button>
+        </div>
+      </section>
+      <section class="column" data-status="doing">
+        <div class="column-head"><h2>Doing</h2><span class="count" id="count-doing">0</span></div>
+        <div class="task-list" id="list-doing"></div>
+        <div class="add-row">
+          <input type="text" id="add-doing-input" placeholder="Add a task…" />
+          <button data-add-status="doing">Add</button>
+        </div>
+      </section>
+      <section class="column" data-status="done">
+        <div class="column-head"><h2>Done</h2><span class="count" id="count-done">0</span></div>
+        <div class="task-list" id="list-done"></div>
+        <div class="add-row">
+          <input type="text" id="add-done-input" placeholder="Add a task…" />
+          <button data-add-status="done">Add</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <div class="spacer"></div>
+      <button id="cancel-btn" class="danger">Close without submitting</button>
+      <button id="submit-btn" class="primary">Submit</button>
+    </div>
+
+    <div class="toasts" id="toasts"></div>
+
+    <script>
+      (function () {
+        const wsUrl = "__WS_URL__";
+        const titleEl = document.getElementById("title");
+        const statusDot = document.getElementById("status-dot");
+        const statusText = document.getElementById("status-text");
+        const toastsEl = document.getElementById("toasts");
+
+        // Local mirror of the board state. Server is the source of truth;
+        // we re-render the relevant columns on every message.
+        const state = { title: "", tasks: [] };
+        let socket = null;
+        let closedByServer = false;
+        const STATUSES = ["todo", "doing", "done"];
+
+        function setStatus(s) {
+          statusDot.className = "status-dot " + s;
+          statusText.textContent =
+            s === "connected" ? "connected" :
+            s === "closed" ? "closed" : "connecting…";
+        }
+
+        function send(msg) {
+          if (!socket || socket.readyState !== WebSocket.OPEN) return;
+          socket.send(JSON.stringify(msg));
+        }
+
+        function toast(text) {
+          const t = document.createElement("div");
+          t.className = "toast";
+          t.textContent = text;
+          toastsEl.appendChild(t);
+          setTimeout(() => t.remove(), 5000);
+        }
+
+        function randId() {
+          const buf = new Uint8Array(6);
+          crypto.getRandomValues(buf);
+          return "u-" + Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
+        }
+
+        function clearChildren(el) {
+          while (el.firstChild) el.removeChild(el.firstChild);
+        }
+
+        function render() {
+          for (const status of STATUSES) {
+            const list = document.getElementById("list-" + status);
+            clearChildren(list);
+            const tasks = state.tasks.filter((t) => t.status === status);
+            document.getElementById("count-" + status).textContent = String(tasks.length);
+            for (const task of tasks) {
+              list.appendChild(renderTask(task));
+            }
+          }
+        }
+
+        function renderTask(task) {
+          const el = document.createElement("div");
+          el.className = "task";
+          el.setAttribute("data-task-id", task.id);
+
+          const title = document.createElement("div");
+          title.className = "title";
+          title.textContent = task.title;
+          title.setAttribute("contenteditable", "true");
+          title.spellcheck = false;
+          title.addEventListener("blur", () => {
+            const next = title.textContent.trim();
+            if (next !== task.title) {
+              send({ type: "task.edit", id: task.id, title: next });
+            }
+          });
+          title.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); title.blur(); }
+            if (e.key === "Escape") { title.textContent = task.title; title.blur(); }
+          });
+          el.appendChild(title);
+
+          if (task.notes) {
+            const notes = document.createElement("div");
+            notes.className = "notes";
+            notes.textContent = task.notes;
+            el.appendChild(notes);
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "task-actions";
+          for (const status of STATUSES) {
+            const pill = document.createElement("span");
+            pill.className = "pill" + (task.status === status ? " active " + status : "");
+            pill.textContent = status;
+            pill.addEventListener("click", () => {
+              if (task.status === status) return;
+              send({ type: "task.toggle", id: task.id, status });
+            });
+            actions.appendChild(pill);
+          }
+          const del = document.createElement("button");
+          del.className = "delete";
+          del.textContent = "delete";
+          del.addEventListener("click", () => {
+            send({ type: "task.remove", id: task.id });
+          });
+          actions.appendChild(del);
+          el.appendChild(actions);
+
+          return el;
+        }
+
+        // ── Incoming WS messages ──────────────────────────────────────
+        function applyInit(msg) {
+          state.title = msg.title || "";
+          state.tasks = Array.isArray(msg.tasks) ? msg.tasks.slice() : [];
+          if (state.title) {
+            titleEl.textContent = state.title;
+            document.title = state.title;
+          }
+          render();
+        }
+        function applyAdd(msg) {
+          if (state.tasks.some((t) => t.id === msg.task.id)) return;
+          state.tasks.push(msg.task);
+          render();
+        }
+        function applyUpdate(msg) {
+          const idx = state.tasks.findIndex((t) => t.id === msg.id);
+          if (idx === -1) return;
+          state.tasks[idx] = Object.assign({}, state.tasks[idx], msg.patch);
+          render();
+        }
+        function applyRemove(msg) {
+          const idx = state.tasks.findIndex((t) => t.id === msg.id);
+          if (idx === -1) return;
+          state.tasks.splice(idx, 1);
+          render();
+        }
+
+        function connect() {
+          setStatus("connecting");
+          socket = new WebSocket(wsUrl);
+          socket.onopen = () => setStatus("connected");
+          socket.onclose = () => {
+            setStatus("closed");
+            if (!closedByServer) setTimeout(connect, 1000);
+          };
+          socket.onerror = () => { /* surfaces via close */ };
+          socket.onmessage = (ev) => {
+            let msg;
+            try { msg = JSON.parse(ev.data); }
+            catch { return; }
+            if (msg.type === "init") applyInit(msg);
+            else if (msg.type === "task.add") applyAdd(msg);
+            else if (msg.type === "task.update") applyUpdate(msg);
+            else if (msg.type === "task.remove") applyRemove(msg);
+            else if (msg.type === "message") {
+              toast(msg.text);
+              if (msg.text && msg.text.startsWith("session ended:")) {
+                closedByServer = true;
+                document.body.classList.add("ended");
+              }
+            }
+          };
+        }
+
+        // ── Add-task inputs ───────────────────────────────────────────
+        for (const status of STATUSES) {
+          const input = document.getElementById("add-" + status + "-input");
+          const btn = document.querySelector(`[data-add-status="${status}"]`);
+          function submitAdd() {
+            const title = input.value.trim();
+            if (!title) return;
+            const task = { id: randId(), title, status };
+            send({ type: "task.add", task });
+            input.value = "";
+            input.focus();
+          }
+          btn.addEventListener("click", submitAdd);
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") { e.preventDefault(); submitAdd(); }
+          });
+        }
+
+        document.getElementById("submit-btn").addEventListener("click", () => {
+          send({ type: "submit" });
+        });
+        document.getElementById("cancel-btn").addEventListener("click", () => {
+          if (confirm("Close without submitting? The agent won't receive the current board state.")) {
+            send({ type: "cancel" });
+          }
+        });
+
+        connect();
+      })();
+    </script>
+  </body>
+</html>
