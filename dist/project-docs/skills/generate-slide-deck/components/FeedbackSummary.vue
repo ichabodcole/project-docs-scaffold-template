@@ -65,14 +65,10 @@ function loadAnswers() {
     const key = localStorage.key(i);
     if (!key) continue;
     if (key.startsWith(feedbackPrefix) && key.endsWith("-meta")) {
-      try {
-        results.push(JSON.parse(localStorage.getItem(key)));
-      } catch {}
+      try { results.push(JSON.parse(localStorage.getItem(key))); } catch {}
     }
     if (key.startsWith(tellMorePrefix) && key.endsWith("-meta")) {
-      try {
-        more.push(JSON.parse(localStorage.getItem(key)));
-      } catch {}
+      try { more.push(JSON.parse(localStorage.getItem(key))); } catch {}
     }
   }
   answers.value = results;
@@ -118,9 +114,7 @@ async function saveFile() {
     try {
       const handle = await window.showSaveFilePicker({
         suggestedName: filename,
-        types: [
-          { description: "Markdown", accept: { "text/markdown": [".md"] } },
-        ],
+        types: [{ description: "Markdown", accept: { "text/markdown": [".md"] } }],
       });
       const writable = await handle.createWritable();
       await writable.write(content);

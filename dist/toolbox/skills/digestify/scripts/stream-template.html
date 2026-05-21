@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>__TITLE__</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: #0e1014; color: #e8eaed;
+        max-width: 760px; margin: 2rem auto; padding: 0 1.25rem;
+        line-height: 1.5;
+      }
+      header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+      h1 { font-size: 1.4rem; margin: 0; }
+      .meta { color: #8b95a3; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+      .status { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; margin-right: 0.4rem; vertical-align: middle; background: #6c757d; }
+      .status.connected { background: #4ade80; }
+      .status.closed { background: #ef4444; }
+      section { margin-top: 1.5rem; }
+      section h2 { font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8b95a3; margin: 0 0 0.5rem; }
+      pre.state {
+        background: #161a22; border: 1px solid #232936; border-radius: 6px;
+        padding: 0.75rem 1rem; overflow-x: auto; font-size: 0.85rem;
+        max-height: 14rem;
+      }
+      textarea {
+        width: 100%; min-height: 6rem; background: #161a22; color: #e8eaed;
+        border: 1px solid #232936; border-radius: 6px; padding: 0.6rem 0.8rem;
+        font-family: inherit; font-size: 0.9rem; box-sizing: border-box;
+      }
+      .row { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+      button {
+        background: #1f2734; color: #e8eaed; border: 1px solid #2e3a4d;
+        border-radius: 6px; padding: 0.45rem 0.9rem; cursor: pointer;
+        font-size: 0.85rem;
+      }
+      button:hover { border-color: #4a5b78; }
+      button.primary { background: #2563eb; border-color: #2563eb; }
+      button.primary:hover { background: #1d4ed8; }
+      button.danger { background: #3f1d1d; border-color: #6b2a2a; color: #fca5a5; }
+      .log {
+        background: #161a22; border: 1px solid #232936; border-radius: 6px;
+        padding: 0.5rem 0.75rem; font-size: 0.8rem; max-height: 14rem;
+        overflow-y: auto; font-variant-numeric: tabular-nums;
+      }
+      .log .entry { padding: 0.15rem 0; color: #c9d1d9; }
+      .log .entry .t { color: #8b95a3; margin-right: 0.5rem; }
+      .log .entry.in .t { color: #7dd3fc; }
+      .log .entry.out .t { color: #fdba74; }
+      .log .entry.sys .t { color: #a78bfa; }
+      .toasts { position: fixed; right: 1rem; bottom: 1rem; display: flex; flex-direction: column; gap: 0.4rem; }
+      .toast {
+        background: #161a22; border: 1px solid #2e3a4d; border-radius: 6px;
+        padding: 0.5rem 0.8rem; font-size: 0.85rem; max-width: 22rem;
+        animation: fadein 0.15s ease-out;
+      }
+      @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="title">__TITLE__</h1>
+      <div class="meta">
+        <span><span id="status-dot" class="status"></span><span id="status-text">connecting…</span></span>
+        &nbsp;·&nbsp;
+        <code>__SESSION_ID__</code>
+      </div>
+    </header>
+
+    <section>
+      <h2>State (from agent)</h2>
+      <pre class="state" id="state-view">{}</pre>
+    </section>
+
+    <section>
+      <h2>Send event to agent</h2>
+      <textarea id="event-input" placeholder='Type anything — sent as {"type":"event","payload":{"text":"…"}}'></textarea>
+      <div class="row">
+        <button id="send-event">Send event</button>
+        <button id="send-submit" class="primary">Submit (ends session)</button>
+        <button id="send-cancel" class="danger">Cancel</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Message log</h2>
+      <div class="log" id="log"></div>
+    </section>
+
+    <div class="toasts" id="toasts"></div>
+
+    <script>
+      (function () {
+        const wsUrl = "__WS_URL__";
+        const titleEl = document.getElementById("title");
+        const stateView = document.getElementById("state-view");
+        const statusDot = document.getElementById("status-dot");
+        const statusText = document.getElementById("status-text");
+        const logEl = document.getElementById("log");
+        const toastsEl = document.getElementById("toasts");
+        const eventInput = document.getElementById("event-input");
+
+        let socket = null;
+        let closedByServer = false;
+
+        function logLine(direction, text) {
+          const entry = document.createElement("div");
+          entry.className = "entry " + direction;
+          const ts = new Date().toISOString().slice(11, 19);
+          const tag = direction === "in" ? "←" : direction === "out" ? "→" : "·";
+          const tspan = document.createElement("span");
+          tspan.className = "t";
+          tspan.textContent = ts + " " + tag;
+          const body = document.createElement("span");
+          body.textContent = text;
+          entry.appendChild(tspan);
+          entry.appendChild(body);
+          logEl.appendChild(entry);
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function toast(text) {
+          const t = document.createElement("div");
+          t.className = "toast";
+          t.textContent = text;
+          toastsEl.appendChild(t);
+          setTimeout(() => t.remove(), 5000);
+        }
+
+        function setStatus(s) {
+          statusDot.className = "status " + s;
+          statusText.textContent =
+            s === "connected" ? "connected" :
+            s === "closed" ? "closed" : "connecting…";
+        }
+
+        function send(msg) {
+          if (!socket || socket.readyState !== WebSocket.OPEN) return;
+          socket.send(JSON.stringify(msg));
+          logLine("out", msg.type + (msg.payload ? " " + JSON.stringify(msg.payload) : ""));
+        }
+
+        function applyInit(msg) {
+          if (typeof msg.title === "string") {
+            titleEl.textContent = msg.title;
+            document.title = msg.title;
+          }
+          stateView.textContent = JSON.stringify(msg.state ?? {}, null, 2);
+        }
+
+        function applyPatch(msg) {
+          let current;
+          try { current = JSON.parse(stateView.textContent || "{}"); }
+          catch { current = {}; }
+          const merged = Object.assign({}, current, msg.state ?? {});
+          stateView.textContent = JSON.stringify(merged, null, 2);
+        }
+
+        function connect() {
+          setStatus("connecting");
+          socket = new WebSocket(wsUrl);
+          socket.onopen = () => { setStatus("connected"); logLine("sys", "ws open"); };
+          socket.onclose = () => {
+            setStatus("closed");
+            logLine("sys", "ws closed");
+            if (!closedByServer) {
+              setTimeout(connect, 1000);
+            }
+          };
+          socket.onerror = () => logLine("sys", "ws error");
+          socket.onmessage = (ev) => {
+            let msg;
+            try { msg = JSON.parse(ev.data); }
+            catch { logLine("sys", "bad json: " + ev.data); return; }
+            logLine("in", msg.type + (msg.text ? " " + JSON.stringify(msg.text) : ""));
+            if (msg.type === "init") applyInit(msg);
+            else if (msg.type === "patch") applyPatch(msg);
+            else if (msg.type === "message") {
+              toast(msg.text);
+              if (msg.text && msg.text.startsWith("session ended:")) closedByServer = true;
+            }
+          };
+        }
+
+        document.getElementById("send-event").addEventListener("click", () => {
+          const text = eventInput.value;
+          send({ type: "event", payload: { text } });
+          eventInput.value = "";
+        });
+        document.getElementById("send-submit").addEventListener("click", () => {
+          const text = eventInput.value;
+          send({ type: "submit", payload: { text } });
+        });
+        document.getElementById("send-cancel").addEventListener("click", () => {
+          send({ type: "cancel" });
+        });
+
+        connect();
+      })();
+    </script>
+  </body>
+</html>

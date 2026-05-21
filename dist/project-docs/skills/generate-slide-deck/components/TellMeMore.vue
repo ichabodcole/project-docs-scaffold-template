@@ -5,9 +5,7 @@
     :title="active ? 'Click to remove' : 'Click to flag for follow-up'"
   >
     <span class="icon">{{ active ? "✓" : "+" }}</span>
-    <span class="text"
-      >{{ active ? "Flagged: " : "Tell me more: " }}<em>{{ topic }}</em></span
-    >
+    <span class="text">{{ active ? "Flagged: " : "Tell me more: " }}<em>{{ topic }}</em></span>
   </span>
 </template>
 
