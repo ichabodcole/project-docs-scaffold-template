@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// taskboard — agent-driven task board the user can interact with.
+// tuskboard — agent-driven task board the user can interact with.
 //
 // Built on the agent-surface-bun recipe's duplex pattern:
 //   - Agent ↔ server via JSON-lines on stdio
@@ -20,11 +20,18 @@
 //   {"type":"connected"}                              // browser opened WS
 //   {"type":"disconnected"}                           // browser closed WS
 //   {"type":"task.toggle",    "id":"...", "status":"todo|doing|done"}
+//   {"type":"task.move",      "id":"...", "status":"...", "index": N}
 //   {"type":"task.edit",      "id":"...", "title":"..."}
 //   {"type":"task.add",       "task": Task}           // user added
 //   {"type":"task.remove",    "id":"..."}             // user deleted
 //   {"type":"submit",         "tasks": Task[]}        // final state on submit
 //   {"type":"closed",         "reason":"submit|cancel|timeout|stdin_eof|close"}
+//
+// task.toggle vs task.move: toggle is the click-a-pill UX — status changes,
+// task is appended to the destination column. move is the drag UX — status
+// AND explicit position in the destination column. Agents that only care
+// about column membership can ignore .move and rely on the canonical order
+// in the final submit.
 //
 // Protocol — server ↔ browser (WebSocket): same task.* events flow
 // in both directions; the server is a proxy that mutates the state
@@ -36,6 +43,8 @@
 import { parseArgs } from "node:util";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
+import { writeFileSync, unlinkSync } from "node:fs";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 
@@ -61,6 +70,7 @@ type ServerToAgentMsg =
   | { type: "connected" }
   | { type: "disconnected" }
   | { type: "task.toggle"; id: string; status: TaskStatus }
+  | { type: "task.move"; id: string; status: TaskStatus; index: number }
   | { type: "task.edit"; id: string; title: string }
   | { type: "task.add"; task: Task }
   | { type: "task.remove"; id: string }
@@ -69,6 +79,7 @@ type ServerToAgentMsg =
 
 type BrowserMsg =
   | { type: "task.toggle"; id: string; status: TaskStatus }
+  | { type: "task.move"; id: string; status: TaskStatus; index: number }
   | { type: "task.edit"; id: string; title: string }
   | { type: "task.add"; task: Task }
   | { type: "task.remove"; id: string }
@@ -109,6 +120,27 @@ function openBrowser(url: string): void {
   catch { /* best-effort */ }
 }
 
+const MIME_BY_EXT: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+};
+function guessMime(name: string): string {
+  const dot = name.lastIndexOf(".");
+  const ext = dot >= 0 ? name.slice(dot).toLowerCase() : "";
+  return MIME_BY_EXT[ext] || "application/octet-stream";
+}
+
 function emitToAgent(msg: ServerToAgentMsg): void {
   try {
     process.stdout.write(JSON.stringify(msg) + "\n");
@@ -132,13 +164,13 @@ async function* readJsonLines(): AsyncGenerator<AgentMsg | null> {
         buffer = buffer.slice(nl + 1);
         if (!line) continue;
         try { yield JSON.parse(line) as AgentMsg; }
-        catch (e: any) { process.stderr.write(`taskboard: bad json on stdin: ${e.message}\n`); }
+        catch (e: any) { process.stderr.write(`tuskboard: bad json on stdin: ${e.message}\n`); }
       }
       if (done) {
         buffer = buffer.trim();
         if (buffer) {
           try { yield JSON.parse(buffer) as AgentMsg; }
-          catch (e: any) { process.stderr.write(`taskboard: bad json on stdin (final): ${e.message}\n`); }
+          catch (e: any) { process.stderr.write(`tuskboard: bad json on stdin (final): ${e.message}\n`); }
         }
         yield null;
         return;
@@ -177,6 +209,30 @@ function applyTaskRemove(state: BoardState, id: string): boolean {
   return true;
 }
 
+// Move a task to (status, index) — where `index` is its position among the
+// tasks of that status. Returns the canonical absolute index in state.tasks
+// after the move, or -1 if the task wasn't found. Status validation is the
+// caller's job (we already screen in the WS handler).
+function applyTaskMove(state: BoardState, id: string, status: TaskStatus, index: number): number {
+  const fromIdx = state.tasks.findIndex((t) => t.id === id);
+  if (fromIdx === -1) return -1;
+  const [task] = state.tasks.splice(fromIdx, 1);
+  task.status = status;
+  // Translate the column-local index into an absolute index in state.tasks:
+  // walk through state.tasks and count tasks of the target status until we
+  // hit `index` slots. If `index` exceeds the column count, append.
+  const clamped = Math.max(0, Math.floor(index));
+  let seen = 0;
+  let insertAt = state.tasks.length;
+  for (let i = 0; i < state.tasks.length; i++) {
+    if (state.tasks[i].status !== status) continue;
+    if (seen === clamped) { insertAt = i; break; }
+    seen++;
+  }
+  state.tasks.splice(insertAt, 0, task);
+  return insertAt;
+}
+
 async function main(argv: string[]): Promise<number> {
   let parsed;
   try {
@@ -208,6 +264,7 @@ async function main(argv: string[]): Promise<number> {
   }
 
   const template = await Bun.file(join(SCRIPT_DIR, "template.html")).text();
+  const assetsDir = join(SCRIPT_DIR, "..", "assets");
 
   const state: BoardState = { title: v.title as string, tasks: [] };
   const sockets = new Set<any>();
@@ -247,6 +304,17 @@ async function main(argv: string[]): Promise<number> {
           if (upgraded) return undefined;
           return new Response("upgrade required", { status: 426 });
         }
+        if (req.method === "GET" && path.startsWith("/assets/")) {
+          const assetName = decodeURIComponent(path.slice("/assets/".length));
+          // Path-traversal guard: reject any ".." segment or absolute path.
+          if (assetName.includes("..") || assetName.startsWith("/")) {
+            return new Response('{"error":"not found"}', { status: 404, headers: { "Content-Type": "application/json" } });
+          }
+          const f = Bun.file(join(assetsDir, assetName));
+          return f.exists().then((exists) => exists
+            ? new Response(f, { headers: { "Content-Type": guessMime(assetName) } })
+            : new Response('{"error":"not found"}', { status: 404, headers: { "Content-Type": "application/json" } }));
+        }
         return new Response('{"error":"not found"}', { status: 404, headers: { "Content-Type": "application/json" } });
       },
       websocket: {
@@ -261,7 +329,7 @@ async function main(argv: string[]): Promise<number> {
           let msg: BrowserMsg;
           try { msg = JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw)); }
           catch (e: any) {
-            process.stderr.write(`taskboard: bad json from browser: ${e.message}\n`);
+            process.stderr.write(`tuskboard: bad json from browser: ${e.message}\n`);
             return;
           }
           if (msg.type === "task.toggle") {
@@ -270,15 +338,38 @@ async function main(argv: string[]): Promise<number> {
               broadcast({ type: "task.update", id: msg.id, patch: { status: msg.status } });
               emitToAgent({ type: "task.toggle", id: msg.id, status: msg.status });
             }
+          } else if (msg.type === "task.move") {
+            if (!VALID_STATUS.includes(msg.status)) return;
+            if (applyTaskMove(state, msg.id, msg.status, msg.index) !== -1) {
+              // Broadcast the full ordered list — simpler than diffing for
+              // browsers, and it covers the source-column shift correctly.
+              broadcast({ type: "init", title: state.title, tasks: state.tasks });
+              emitToAgent({ type: "task.move", id: msg.id, status: msg.status, index: msg.index });
+            }
           } else if (msg.type === "task.edit") {
+            // Validate: title must be a non-empty string after trim. A
+            // malformed edit (title:null, title:"") would otherwise corrupt
+            // the canonical task shape that gets re-broadcast and stored —
+            // empty titles in particular surface to the agent on submit as
+            // tasks with no readable label.
+            if (typeof msg.title !== "string" || msg.title.trim() === "")
+              return;
             if (applyTaskUpdate(state, msg.id, { title: msg.title })) {
               broadcast({ type: "task.update", id: msg.id, patch: { title: msg.title } });
               emitToAgent({ type: "task.edit", id: msg.id, title: msg.title });
             }
           } else if (msg.type === "task.add") {
-            if (applyTaskAdd(state, msg.task)) {
-              broadcast({ type: "task.add", task: msg.task });
-              emitToAgent({ type: "task.add", task: msg.task });
+            // Shape-validate the task before applying. Required: string id,
+            // string title, valid status. notes is optional but if present
+            // must be a string.
+            const t = msg.task as any;
+            if (!t || typeof t !== "object") return;
+            if (typeof t.id !== "string" || typeof t.title !== "string") return;
+            if (!VALID_STATUS.includes(t.status)) return;
+            if (t.notes !== undefined && typeof t.notes !== "string") return;
+            if (applyTaskAdd(state, t)) {
+              broadcast({ type: "task.add", task: t });
+              emitToAgent({ type: "task.add", task: t });
             }
           } else if (msg.type === "task.remove") {
             if (applyTaskRemove(state, msg.id)) {
@@ -286,9 +377,21 @@ async function main(argv: string[]): Promise<number> {
               emitToAgent({ type: "task.remove", id: msg.id });
             }
           } else if (msg.type === "submit") {
+            // Broadcast to all WS clients (browsers + joiners) so every
+            // connected party gets the same authoritative final state.
+            // Joiners receive it wrapped as {type:"event", payload:{...}}
+            // by their join.ts; the spawning browser ignores it because
+            // it's already navigated to its sent-screen.
+            broadcast({ type: "submit", tasks: state.tasks });
             emitToAgent({ type: "submit", tasks: state.tasks });
             resolveDone({ code: 0, reason: "submit" });
           } else if (msg.type === "cancel") {
+            // Broadcast cancel to all WS clients so joiners get the same
+            // structured session-ending signal that submit provides. Without
+            // this, joiners only see the trailing "session ended" toast
+            // and a disconnect — no way to distinguish cancel from any
+            // other server teardown reason.
+            broadcast({ type: "cancel" });
             resolveDone({ code: 130, reason: "cancel" });
           }
         },
@@ -306,15 +409,52 @@ async function main(argv: string[]): Promise<number> {
   }
 
   const boundPort = server.port;
-  if (!sessionId) sessionId = `taskboard-${randHex(4)}-p${boundPort}`;
+  if (!sessionId) sessionId = `tuskboard-${randHex(4)}-p${boundPort}`;
   const wsUrl = `ws://${host}:${boundPort}/ws`;
+  // Two contexts for substitutions:
+  //   - HTML/text contexts (the visible <h1>, <title>, <code>): use htmlEscape.
+  //   - JS string context (the wsUrl literal inside <script>): use
+  //     JSON.stringify, which produces a properly-quoted JS string literal.
+  //     The template uses bare placeholders (no surrounding quotes) for the
+  //     JS-context substitutions so JSON.stringify provides them.
   pageHtml = template
     .replace(/__TITLE__/g, htmlEscape(state.title))
-    .replace(/__WS_URL__/g, htmlEscape(wsUrl))
-    .replace(/__SESSION_ID__/g, htmlEscape(sessionId));
+    .replace(/__SESSION_ID__/g, htmlEscape(sessionId))
+    .replace(/__WS_URL__/g, JSON.stringify(wsUrl));
 
   const url = `http://${host}:${boundPort}`;
   emitToAgent({ type: "ready", url, port: boundPort, session_id: sessionId });
+
+  // Discovery: write session info to predictable temp files so joining
+  // agents can find this board without copy-paste. Two files:
+  //   - tuskboard-<session_id>.json  (specific lookup by --id)
+  //   - tuskboard-latest.json        (always overwritten by most recent
+  //                                   host; default target for joiners)
+  const sessionFile = join(tmpdir(), `tuskboard-${sessionId}.json`);
+  const latestFile = join(tmpdir(), `tuskboard-latest.json`);
+  const sessionInfo = JSON.stringify({ url, port: boundPort, session_id: sessionId, title: state.title });
+  try {
+    writeFileSync(sessionFile, sessionInfo);
+    writeFileSync(latestFile, sessionInfo);
+  } catch (e: any) {
+    // Discovery files are nice-to-have, not load-bearing. Log to stderr
+    // and continue — the session id printed to stdout still lets the
+    // user paste a URL into a joining agent manually.
+    process.stderr.write(`tuskboard: could not write discovery file: ${e?.message ?? e}\n`);
+  }
+  // Best-effort cleanup on exit. Won't fire on SIGKILL, but stale files
+  // produce a clean "session not running" error when a joiner connects.
+  // The `latest` pointer is only removed if it still names us — otherwise
+  // a newer host has taken over the slot and we leave its pointer alone.
+  const cleanupDiscovery = async () => {
+    try { unlinkSync(sessionFile); } catch {}
+    try {
+      const cur = await Bun.file(latestFile).text();
+      const parsed = JSON.parse(cur);
+      if (parsed.session_id === sessionId) unlinkSync(latestFile);
+    } catch { /* file gone or unreadable — fine */ }
+  };
+
   if (!v["no-open"]) openBrowser(url);
 
   (async () => {
@@ -352,11 +492,19 @@ async function main(argv: string[]): Promise<number> {
   clearInterval(idleTimer);
   emitToAgent({ type: "closed", reason });
   broadcast({ type: "message", text: `session ended: ${reason}` });
+  // Grace period: server.stop(true) aggressively aborts in-flight
+  // connections, which can drop a broadcast that was queued microseconds
+  // earlier (the submit/cancel broadcasts in the WS message handlers
+  // immediately precede this teardown). Pause briefly so the OS-level
+  // socket buffers flush before we tear down. 150ms is enough on a
+  // local connection; small enough that "session ended" feels responsive.
+  await new Promise((r) => setTimeout(r, 150));
   for (const ws of sockets) { try { ws.close(); } catch {} }
   await Promise.race([
     server.stop(true),
     new Promise((r) => setTimeout(r, 200)),
   ]);
+  await cleanupDiscovery();
   return code;
 }
 
@@ -365,5 +513,5 @@ if (import.meta.main) {
   process.exit(exitCode);
 }
 
-export { main, applyTaskAdd, applyTaskUpdate, applyTaskRemove, parsePortFromSessionId, htmlEscape };
+export { main, applyTaskAdd, applyTaskUpdate, applyTaskRemove, applyTaskMove, parsePortFromSessionId, htmlEscape };
 export type { Task, TaskStatus, BoardState };

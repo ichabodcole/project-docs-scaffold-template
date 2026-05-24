@@ -6,7 +6,7 @@ Build a small browser-based UI that an AI agent can drive — a "surface" the
 agent opens for the user, exchanges messages with, and tears down when the
 interaction is over. Examples: a doc-review page with embedded questions
 (`digestify`), a task board the agent posts work into and the user drags around
-(`taskboard`), a side-by-side comparison view, a configurator, a live editor.
+(`tuskboard`), a side-by-side comparison view, a configurator, a live editor.
 
 The common shape is:
 
@@ -25,7 +25,9 @@ Two reference implementations live in this repo and exercise the patterns end to
 end:
 
 - **`plugins/toolbox/skills/digestify/scripts/review.ts`** — one-shot.
-- **`plugins/toolbox/skills/digestify/scripts/stream.ts`** — duplex / streaming.
+- **`plugins/toolbox/skills/tuskboard/scripts/server.ts`** + `join.ts` — duplex
+  / streaming, with drag-and-drop, multi-agent participation, and full branding
+  ("Tusk Board"). The canonical example of the duplex shape.
 
 Read those when you want to see the full pattern; this recipe walks through what
 they share and why.
@@ -114,7 +116,7 @@ Exit codes:
 | 124  | Idle timeout                                  |
 | 130  | User cancelled (closed tab after interacting) |
 
-### Duplex / streaming variant (`stream.ts` shape)
+### Duplex / streaming variant (tuskboard `server.ts` shape)
 
 ```
 agent ──stdin (JSON-lines: init|patch|message|close)──► surface
@@ -134,8 +136,9 @@ Exit codes mirror the one-shot variant.
 
 ## Build a New Surface — Step by Step
 
-1. **Copy `review.ts` or `stream.ts`** depending on whether you want one-shot or
-   duplex. Drop it into your skill folder as `scripts/<name>.ts`.
+1. **Copy `review.ts` (one-shot) or tuskboard's `server.ts` (duplex)** depending
+   on which shape you want, plus duplex. Drop it into your skill folder as
+   `scripts/<name>.ts`.
 2. **Edit the protocol types.** For one-shot, decide what shape the agent passes
    in (markdown? config object?) and what the submit response looks like. For
    duplex, decide the `init`/`patch`/`event` shapes for your domain. Keep them
@@ -274,11 +277,11 @@ The browser still parses it as valid JSON.
   full one-shot implementation. Markdown with `:::question` fences, themed UI,
   inline comments, session recovery via `localStorage`. Read this first for a
   complete one-shot reference.
-- **`plugins/toolbox/skills/digestify/scripts/stream.ts`** + minimal
-  `stream-template.html` — duplex scaffold. The template here is intentionally
-  minimal so you can see the protocol clearly. A real surface (e.g. a task
-  board) replaces the template with its own UI but keeps the same client-side WS
-  message handler.
+- **`plugins/toolbox/skills/tuskboard/scripts/`** — the duplex reference.
+  `server.ts` is the host (stdio ↔ WS proxy with state snapshot); `join.ts` is
+  the joining-agent client (symmetric stdio bridge over WS); `template.html` is
+  a real branded UI ("Tusk Board") with drag-and-drop. This is the example to
+  study and copy when building a new duplex surface.
 - **`plugins/toolbox/skills/digestify/scripts/review.test.ts`** — `bun test`
   patterns: pure-function tests, subprocess integration tests, helpers like
   `spawnAndWaitForReady` and `postSubmit`. Copy these as a starting point.

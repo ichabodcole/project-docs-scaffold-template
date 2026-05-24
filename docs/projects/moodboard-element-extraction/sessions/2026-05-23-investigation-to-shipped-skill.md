@@ -134,23 +134,23 @@ alpha_policy in HTML). All addressed before merge.
 **Scaffold:**
 
 - `docs/PROJECT_MANIFESTO.md` toolbox skill list updated to include both magpie
-  and taskboard (the latter was already missing).
+  and tuskboard (the latter was already missing).
 
 ## Follow-Ups
 
 Filed implicitly via review and proposal:
 
 - **No automated tests for magpie.** Consistent with the other toolbox skills
-  (digestify, taskboard) but worth a small `test_safe_filename.py`
+  (digestify, tuskboard) but worth a small `test_safe_filename.py`
   - `test_parse_bboxes.py` to lock down the edge cases the reviewer flagged.
     Maybe 30 min of work.
-- **Pre-existing YAML frontmatter validation error on taskboard SKILL.md.**
+- **Pre-existing YAML frontmatter validation error on tuskboard SKILL.md.**
   Surface by the dist build script. A `:` inside the description's quoted string
   is interpreted as a mapping key. Cleanup commit, not in scope here.
 - **Drag-and-drop browser surface (v2 Magpie).** Cole's suggested follow-up: a
   Bun-based duplex page where the user drops a moodboard, sees discovered bboxes
   overlaid, and can adjust / delete / draw custom ones before triggering
-  extract. Architectural sibling of Taskboard. Worth its own project branch.
+  extract. Architectural sibling of Tuskboard. Worth its own project branch.
 - **Proposal.md is now out of date.** It was written when marker-mode was the
   proposed v1; the actual shipped skill is Gemini-direct. Worth updating or
   marking superseded.
@@ -162,4 +162,4 @@ Filed implicitly via review and proposal:
 Branch: `feat/moodboard-element-extraction`, 13 commits, ready to merge to
 develop after a single-commit squash. Code review verdict: Ready to merge, with
 fixes (all addressed). Format check clean, skill validation clean (except the
-pre-existing taskboard issue).
+pre-existing tuskboard issue).

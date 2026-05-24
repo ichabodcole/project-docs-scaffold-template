@@ -87,7 +87,7 @@ iteration through real projects, which is what this project is doing.
     implementation recipes (authentication, sync, IPC, voice-to-text, quality
     gates, …) plus a `create-recipe` skill for extracting new ones.
   - **toolbox** — specialist utilities not specific to documentation: digestify
-    (one-shot browser review), taskboard (duplex agent ↔ user task surface),
+    (one-shot browser review), tuskboard (duplex agent ↔ user task surface),
     magpie (extract individual visual assets from moodboards via Gemini),
     html-mockup-prototyping, maestro-testing, screenshot-optimization.
   - **operator** — Operator Editor integration with `operator-setup` and
