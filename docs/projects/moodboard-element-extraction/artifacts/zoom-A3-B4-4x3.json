@@ -1,0 +1,19 @@
+{
+  "source": "tuskboard-brand-id_v02.jpg",
+  "parent_range": "A3:B4",
+  "parent_bbox": [
+    0,
+    384,
+    402,
+    768
+  ],
+  "zoomed_size": [
+    1400,
+    1337
+  ],
+  "scale": 3.482587064676617,
+  "sub_cols": 4,
+  "sub_rows": 3,
+  "sub_cell_w_src": 100.5,
+  "sub_cell_h_src": 128.0
+}
