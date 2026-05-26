@@ -1,6 +1,6 @@
 # Project Manifesto
 
-**Last Updated:** 2026-02-13
+**Last Updated:** 2026-05-21
 
 ---
 
@@ -76,28 +76,44 @@ iteration through real projects, which is what this project is doing.
   pre-organized folders with READMEs, templates, and conventions for
   architecture docs, specifications, investigations, projects, backlog, and more
 
-- **Provides a Claude Code plugin ecosystem** with 6 commands, 26 skills, and 9
-  specialized agents that automate documentation workflows: starting
-  investigations, resolving design ambiguity, converting proposals to plans,
-  generating test plans, generating project summaries, reviewing documentation
-  health, finalizing branches with session journals
+- **Provides a five-plugin Claude Code ecosystem** built around the scaffold:
+  - **project-docs** — the core workflow plugin: 6 commands, 26 skills, 9 agents
+    covering the full pipeline (workshop-idea, create-investigation,
+    create-project, generate-proposal, generate-design-resolution,
+    generate-dev-plan, generate-test-plan, finalize-branch, review-docs,
+    project-summary, project-manifesto, ground-in-project, idea-to-spec,
+    generate-spec, implementation-blueprint, consolidate-long-branch, …).
+  - **recipes** — an umbrella `recipes:recipes` skill that indexes and loads 20
+    implementation recipes (authentication, sync, IPC, voice-to-text, quality
+    gates, …) plus a `create-recipe` skill for extracting new ones.
+  - **toolbox** — specialist utilities not specific to documentation: digestify
+    (one-shot browser review), tuskboard (duplex agent ↔ user task surface),
+    grapevine (multi-agent walkie-talkie over named channels, cross-runtime),
+    magpie (extract individual visual assets from moodboards via Gemini),
+    html-mockup-prototyping, maestro-testing, screenshot-optimization.
+  - **operator** — Operator Editor integration with `operator-setup` and
+    `operator-triage`.
+  - **agent-bridge** — a `bridge-agent` skill for cross-project knowledge
+    sharing and agent-to-agent communication via the agent-bridge MCP server.
 
 - **Manages the full documentation pipeline** from idea through completion:
-  investigation → proposal → [design resolution] → plan → [test plan] →
+  brief → investigation → proposal → [design resolution] → plan → [test plan] →
   implementation sessions → archival, with each stage having defined conventions
-  and AI-assisted tooling
+  and AI-assisted tooling.
 
-- **Ships a reusable recipe library** — 20 implementation recipes (plus a
-  meta-recipe creator) extracted from real projects (authentication patterns,
-  sync strategies, IPC architectures, voice-to-text pipelines) that teams can
-  pull into their own projects as step-by-step guides
+- **Ships skills as portable, cross-agent bundles.** Every plugin builds into a
+  `dist/<plugin>/openpackage.yml` distribution that conforms to the
+  [Agent Skills](https://agentskills.io) open standard, so the same skills work
+  outside Claude Code (OpenCode, Codex, Crush, Cursor, …).
 
-- **Supports parallel development workflows** via git worktrees with task
-  handoff documents, enabling multiple agents or developers to work on different
-  features simultaneously with clear context boundaries
+- **Supports parallel development workflows** via git worktrees with
+  `DEV_KICKOFF.md` handoff documents, enabling multiple agents or developers to
+  work on different features simultaneously with clear context boundaries.
 
 - **Maintains session continuity** through memories — short summaries of recent
-  work that eliminate the cold-start problem when a new AI session begins
+  work that eliminate the cold-start problem when a new AI session begins — and
+  through `ground-in-project`, a lightweight orientation alternative to a full
+  project-summary refresh.
 
 ## What It Doesn't Do
 
@@ -117,8 +133,13 @@ iteration through real projects, which is what this project is doing.
 
 - **Not opinionated about your tech stack.** The scaffold is
   technology-agnostic. Specifications are explicitly written without framework
-  references. The recipes plugin _is_ technology-specific (Electron, Elysia,
-  Expo), but the core documentation structure works for any stack.
+  references. The `recipes` and `toolbox` plugins _are_ technology-specific
+  (Electron, Elysia, Expo, PowerSync, BetterAuth, …), but the core documentation
+  structure and the `project-docs` plugin work for any stack.
+
+- **Not locked to Claude Code.** Skills ship through the open Agent Skills
+  standard and are tested across multiple agent runtimes. If a feature can't be
+  expressed as a portable skill, it doesn't belong here.
 
 - **Not a rigid process.** The pipeline (investigation → proposal →
   [design-resolution] → plan → [test-plan] → sessions) is a convention, not a
@@ -194,27 +215,57 @@ handoff documents address the "agent cold start" problem in a way that's
 convention-driven rather than tool-dependent. This could be one of the project's
 most transferable innovations.
 
-**The "what belongs here" question is still open — intentionally.** Skills and
-recipes currently live in this project even though some aren't tightly coupled
-to project documentation (e.g., technology-specific recipes, general development
-skills). The decision to keep everything together for now is pragmatic: it's
-easier to iterate when things are co-located, and the natural boundaries only
-become clear through use. The eventual split into "project-docs core" vs.
-"personal development skills" vs. "technology recipes" will happen when the
-seams become obvious.
+**The "what belongs here" question has partly resolved through use.** The
+February manifesto noted that the boundaries between project-docs core, personal
+development skills, and technology recipes were still being discovered. Since
+then, the seams have started to show: the **toolbox** plugin emerged as the home
+for specialist utilities (digestify, mockup prototyping, screenshot
+optimization, maestro testing), and the **recipes** plugin underwent a 2.0
+breaking consolidation — 20 individual recipe skills became a single umbrella
+`recipes:recipes` skill with a `library/` folder. That consolidation is itself
+evidence of a principle in action: when a surface gets crowded, collapse it
+behind an index rather than fan it out.
+
+**Cross-agent portability is now a load-bearing constraint, not an aspiration.**
+The cross-agent-skill-portability investigation from 2026-02-25 has materialized
+as a checked-in `dist/<plugin>/` build pipeline producing `openpackage.yml`
+bundles. Every change to a plugin skill must also update the mirrored `dist/`
+artifact — this is enforced by convention and visible in churn patterns. The
+decision to keep `dist/` in version control (rather than build on publish) is a
+deliberate trade-off favoring diffability and offline consumption over repo
+size.
+
+**Two-tier project tracking has emerged as a real pattern.** Some
+`docs/projects/<name>/` folders contain a full `proposal.md` + `plan.md` +
+`sessions/`. Others contain only `sessions/` — they're lightweight trails for
+shipped work that didn't need the full ceremony. This isn't documented as a
+formal convention yet, but it's consistent across the
+digestify-session-recovery, html-mockup-component-updates, toolbox-plugin, and
+agent-bridge-plugin folders. The system's "lightweight where possible, formal
+when valuable" principle is being lived, not just stated.
+
+**Digestify is a quiet experiment in the agent-human interface.** The new
+toolbox/digestify skill — a one-shot browser tool where the agent writes a
+synthesis with inline questions and the user answers in place before submitting
+— doesn't fit cleanly into the documentation pipeline, but it keeps appearing in
+active work. It hints at a next frontier: not "how do agents and humans
+collaborate on documents" but "how do they collaborate on _decisions_ embedded
+in documents." Worth watching whether this pattern generalizes.
 
 **Questions worth considering:**
 
 - What would a "1.0 for others" look like? Which parts are mature enough to
-  recommend, and which need more iteration? The documentation structure seems
-  closest to being shareable.
-- When does the recipes plugin become its own project? The recipes reflect
-  specific technology choices (TypeScript, Bun, Electron, Expo) that aren't
-  inherently tied to the documentation system.
-- The operator plugin (triage integration) feels like the beginning of solving
-  the "capture" side of the workflow. Could it grow to complement the "organize
-  and act" side that project-docs provides?
-- Is there value in documenting the _evolution_ of practices explicitly — not
-  just the current state, but the journey from v1 to v2, what worked and what
-  didn't? That story might be the most useful thing for other developers
-  navigating similar questions.
+  recommend, and which need more iteration? The documentation structure + the
+  `project-docs` plugin's pipeline skills are clearly the closest to being
+  shareable; toolbox and agent-bridge are still in formation.
+- Should the two-tier project tracking pattern (full-proposal vs. session-only)
+  be made explicit in a playbook or README? It would help contributors
+  understand when _not_ to write a proposal.
+- The agent-bridge plugin opens a new dimension — cross-project, multi-agent
+  conversations. Where does that fit relative to the existing single-project
+  pipeline? Is it a complement, or does it eventually reshape the pipeline
+  itself?
+- Now that there are five plugins, is there a story to tell about how they fit
+  together — a meta-architecture doc covering the scaffold↔plugins↔`dist/`
+  pipeline? It's the most non-obvious part of the system and currently lives
+  only as tribal knowledge in `AGENTS.md`.

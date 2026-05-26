@@ -22,7 +22,7 @@ A one-shot browser review tool for situations where the agent has synthesized
 something substantive (a summary, recap, document review, or brain-dump
 processing) and needs the user to read it carefully and answer specific
 questions tied to it. The agent writes a markdown document with embedded
-`:::question` fences, runs `review.py`, and the script blocks until the user
+`:::question` fences, runs `review.ts`, and the script blocks until the user
 submits a response in the browser.
 
 ## Naming
@@ -97,11 +97,18 @@ plus the specific decisions or inputs only they can supply.
 If the conversation needs to continue iteratively after submit, do that in chat.
 Digestify is single-round.
 
+## Prerequisite
+
+`review.ts` runs under [Bun](https://bun.sh) — assume the user has `bun` on
+their PATH (it's the runtime this skill commits to). If `bun` is missing, the
+Bash call fails fast with `command not found: bun`; surface that to the user and
+stop. Don't try to install Bun for them.
+
 ## How It Works
 
 1. You write markdown with `:::question` fences.
-2. You invoke `scripts/review.py` via the Bash tool, passing the markdown on
-   stdin (or `--file path.md`).
+2. You invoke `scripts/review.ts` via the Bash tool (`bun run …`), passing the
+   markdown on stdin (or `--file path.md`).
 3. The script opens the user's browser to a local URL and **blocks** until the
    user submits.
 4. On submit, the script prints a JSON response to stdout and exits 0.
@@ -153,7 +160,7 @@ both reference and agent content are present — reference-only mode shows just
 the caption, no boundary.
 
 **Tip on combining `--reference` with agent content:** Bash heredoc + pipeline
-constructs (`cat <<EOF | review.py ... EOF`) can trip the harness's command
+constructs (`cat <<EOF | review.ts ... EOF`) can trip the harness's command
 parser and surface an extra approval gate. Cleaner pattern: write your
 agent-authored content to a project-local file (e.g.
 `.agents/digestify-questions.md` — `.agents/` is gitignored in this repo) and
@@ -169,7 +176,7 @@ pass it as `--file`, in a separate Bash call from any test runs.
 **stdin — agent writes everything:**
 
 ```bash
-cat <<'EOF' | python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py --title "Proposal Review" --timeout 1800
+cat <<'EOF' | bun run ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.ts --title "Proposal Review" --timeout 1800
 # Foo proposal
 
 Some context paragraphs explaining the proposal...
@@ -189,7 +196,7 @@ EOF
 **`--file` — agent already wrote the doc to a file:**
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
+bun run ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.ts \
   --file /path/to/proposal-review.md \
   --title "Proposal Review" \
   --theme digestify \
@@ -200,13 +207,13 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
 
 Use this when the user has an existing markdown doc (proposal, README, spec,
 brain-dump notes) they want to read in the browser, with or without your added
-questions. The reference file is read directly by `review.py` — its content
+questions. The reference file is read directly by `review.ts` — its content
 **never passes through your context**, which matters for long docs.
 
 Reference-only (pure reading + comments, no questions):
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
+bun run ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.ts \
   --reference /path/to/long-proposal.md \
   --title "Read this proposal"
 ```
@@ -214,7 +221,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
 Reference + your questions (combine the doc with your added prompts):
 
 ```bash
-cat <<'EOF' | python3 ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.py \
+cat <<'EOF' | bun run ${CLAUDE_PLUGIN_ROOT}/skills/digestify/scripts/review.ts \
   --reference /path/to/long-proposal.md \
   --title "Proposal review"
 ## My Questions
@@ -306,7 +313,7 @@ tab), and the user later says something like "wait, I had a session — can I ge
 it back?", you can recover their in-progress draft:
 
 1. Look up the `session_id` you captured from the last launch's stderr JSON.
-2. Re-invoke `review.py` with the same `--id <session_id>` — everything else
+2. Re-invoke `review.ts` with the same `--id <session_id>` — everything else
    (reference path, file, etc.) the same as before.
 3. The browser opens to a page that auto-restores the prior answers and comment
    chips, with a "Draft restored from earlier session" banner.
@@ -338,7 +345,7 @@ the maintainer can triage it.
 
 **This is feedback about the _tool_, not the document.** Things in scope:
 
-- Bugs in `review.py` (wrong exit code, server didn't bind, JSON shape off).
+- Bugs in `review.ts` (wrong exit code, server didn't bind, JSON shape off).
 - Confusion about how to invoke it, how the syntax works, or what an error
   meant.
 - The browser UI breaking, looking wrong, or behaving unexpectedly.

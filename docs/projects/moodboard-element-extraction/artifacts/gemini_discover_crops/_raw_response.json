@@ -1,0 +1,256 @@
+{
+  "model": "google/gemini-3.5-flash",
+  "prompt": "Identify every distinct extractable visual element in this image. \"Distinct extractable\" means: a single visually-coherent asset a designer would want to pull out as its own file \u2014 a logo, an icon, a sticker, a color swatch row, a piece of cover art, a UI screenshot. Do NOT include background or texture.\n\nFor each element, return a bounding box using Google's normalized coordinate system (image is [0, 1000] on both axes, 0,0 top-left) in the documented order: [y_min, x_min, y_max, x_max].\n\nReturn ONLY a JSON array, no prose, in this exact shape:\n[\n  {\"name\": \"<short_snake_case_name>\", \"type\": \"<one of: wordmark, tagline, icon, illustration, sticker, palette, typography, screenshot, other>\", \"box_2d\": [y_min, x_min, y_max, x_max]}\n]\n\nUse distinctive snake_case names; if there are multiple of the same kind, differentiate them (e.g. icon_mammoth, icon_gear, sticker_coffee, sticker_skateboard).\n",
+  "response": {
+    "id": "gen-1779593810-CkL96LIYhsGglAAKMW6d",
+    "object": "chat.completion",
+    "created": 1779593810,
+    "model": "google/gemini-3.5-flash-20260519",
+    "provider": "Google",
+    "system_fingerprint": null,
+    "service_tier": "default",
+    "choices": [
+      {
+        "index": 0,
+        "logprobs": null,
+        "finish_reason": "stop",
+        "native_finish_reason": "STOP",
+        "message": {
+          "role": "assistant",
+          "content": "```json\n[\n  {\"name\": \"wordmark_tuskboard\", \"type\": \"wordmark\", \"box_2d\": [58, 43, 284, 498]},\n  {\"name\": \"tagline_tasks_made_mammoth_easy\", \"type\": \"tagline\", \"box_2d\": [297, 141, 341, 442]},\n  {\"name\": \"screenshot_dashboard\", \"type\": \"screenshot\", \"box_2d\": [78, 609, 443, 957]},\n  {\"name\": \"palette_colors\", \"type\": \"palette\", \"box_2d\": [443, 41, 553, 295]},\n  {\"name\": \"typography_tuskboard_sans\", \"type\": \"typography\", \"box_2d\": [395, 332, 553, 547]},\n  {\"name\": \"illustration_mammoth_backpack\", \"type\": \"illustration\", \"box_2d\": [553, 369, 912, 593]},\n  {\"name\": \"icon_mammoth\", \"type\": \"icon\", \"box_2d\": [676, 43, 789, 101]},\n  {\"name\": \"icon_gear\", \"type\": \"icon\", \"box_2d\": [676, 121, 789, 181]},\n  {\"name\": \"icon_calendar\", \"type\": \"icon\", \"box_2d\": [678, 202, 785, 257]},\n  {\"name\": \"icon_clipboard\", \"type\": \"icon\", \"box_2d\": [676, 282, 789, 331]},\n  {\"name\": \"icon_layout\", \"type\": \"icon\", \"box_2d\": [831, 43, 921, 101]},\n  {\"name\": \"icon_users\", \"type\": \"icon\", \"box_2d\": [831, 121, 919, 181]},\n  {\"name\": \"icon_flag\", \"type\": \"icon\", \"box_2d\": [821, 203, 932, 256]},\n  {\"name\": \"icon_shield\", \"type\": \"icon\", \"box_2d\": [821, 280, 932, 333]},\n  {\"name\": \"sticker_coffee\", \"type\": \"sticker\", \"box_2d\": [531, 624, 721, 724]},\n  {\"name\": \"sticker_skateboard\", \"type\": \"sticker\", \"box_2d\": [531, 737, 721, 848]},\n  {\"name\": \"sticker_magnifying_glass\", \"type\": \"sticker\", \"box_2d\": [531, 861, 721, 963]},\n  {\"name\": \"sticker_meditating\", \"type\": \"sticker\", \"box_2d\": [737, 665, 932, 769]},\n  {\"name\": \"sticker_campfire\", \"type\": \"sticker\", \"box_2d\": [737, 808, 940, 964]}\n]\n```",
+          "refusal": null,
+          "reasoning": "**Identifying Visual Elements**\n\nMy focus has been on pinpointing distinct visual components like logos, icons, and UI screenshots, assigning them normalized coordinates for precise location tracking. This systematic approach is key to the next stages of analysis.\n\n**Locating Specific Elements**\n\nI've now identified and cataloged key visual elements, assigning precise normalized coordinates to each, including the wordmark, tagline, UI screenshot, color palette, typography block, central illustration, and a set of distinct icons. This detailed mapping is crucial.\n\n**Cataloging Sticker Variations**\n\nI'm now detailing specific sticker instances, noting their bounding box coordinates. These diverse visual elements, like the mammoth in various poses, are being systematically recorded for future reference.\n\n",
+          "reasoning_details": [
+            {
+              "type": "reasoning.text",
+              "text": "**Identifying Visual Elements**\n\nMy focus has been on pinpointing distinct visual components like logos, icons, and UI screenshots, assigning them normalized coordinates for precise location tracking. This systematic approach is key to the next stages of analysis.\n\n**Locating Specific Elements**\n\nI've now identified and cataloged key visual elements, assigning precise normalized coordinates to each, including the wordmark, tagline, UI screenshot, color palette, typography block, central illustration, and a set of distinct icons. This detailed mapping is crucial.\n\n**Cataloging Sticker Variations**\n\nI'm now detailing specific sticker instances, noting their bounding box coordinates. These diverse visual elements, like the mammoth in various poses, are being systematically recorded for future reference.\n\n",
+              "format": "google-gemini-v1",
+              "index": 0
+            },
+            {
+              "type": "reasoning.encrypted",
+              "data": "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",
+              "format": "google-gemini-v1",
+              "index": 1
+            }
+          ]
+        }
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 1332,
+      "completion_tokens": 2253,
+      "total_tokens": 3585,
+      "cost": 0.02205225,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.022275,
+        "upstream_inference_prompt_cost": 0.001998,
+        "upstream_inference_completions_cost": 0.020277
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 1428,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    }
+  },
+  "parsed": [
+    {
+      "name": "wordmark_tuskboard",
+      "type": "wordmark",
+      "box_2d": [
+        58,
+        43,
+        284,
+        498
+      ]
+    },
+    {
+      "name": "tagline_tasks_made_mammoth_easy",
+      "type": "tagline",
+      "box_2d": [
+        297,
+        141,
+        341,
+        442
+      ]
+    },
+    {
+      "name": "screenshot_dashboard",
+      "type": "screenshot",
+      "box_2d": [
+        78,
+        609,
+        443,
+        957
+      ]
+    },
+    {
+      "name": "palette_colors",
+      "type": "palette",
+      "box_2d": [
+        443,
+        41,
+        553,
+        295
+      ]
+    },
+    {
+      "name": "typography_tuskboard_sans",
+      "type": "typography",
+      "box_2d": [
+        395,
+        332,
+        553,
+        547
+      ]
+    },
+    {
+      "name": "illustration_mammoth_backpack",
+      "type": "illustration",
+      "box_2d": [
+        553,
+        369,
+        912,
+        593
+      ]
+    },
+    {
+      "name": "icon_mammoth",
+      "type": "icon",
+      "box_2d": [
+        676,
+        43,
+        789,
+        101
+      ]
+    },
+    {
+      "name": "icon_gear",
+      "type": "icon",
+      "box_2d": [
+        676,
+        121,
+        789,
+        181
+      ]
+    },
+    {
+      "name": "icon_calendar",
+      "type": "icon",
+      "box_2d": [
+        678,
+        202,
+        785,
+        257
+      ]
+    },
+    {
+      "name": "icon_clipboard",
+      "type": "icon",
+      "box_2d": [
+        676,
+        282,
+        789,
+        331
+      ]
+    },
+    {
+      "name": "icon_layout",
+      "type": "icon",
+      "box_2d": [
+        831,
+        43,
+        921,
+        101
+      ]
+    },
+    {
+      "name": "icon_users",
+      "type": "icon",
+      "box_2d": [
+        831,
+        121,
+        919,
+        181
+      ]
+    },
+    {
+      "name": "icon_flag",
+      "type": "icon",
+      "box_2d": [
+        821,
+        203,
+        932,
+        256
+      ]
+    },
+    {
+      "name": "icon_shield",
+      "type": "icon",
+      "box_2d": [
+        821,
+        280,
+        932,
+        333
+      ]
+    },
+    {
+      "name": "sticker_coffee",
+      "type": "sticker",
+      "box_2d": [
+        531,
+        624,
+        721,
+        724
+      ]
+    },
+    {
+      "name": "sticker_skateboard",
+      "type": "sticker",
+      "box_2d": [
+        531,
+        737,
+        721,
+        848
+      ]
+    },
+    {
+      "name": "sticker_magnifying_glass",
+      "type": "sticker",
+      "box_2d": [
+        531,
+        861,
+        721,
+        963
+      ]
+    },
+    {
+      "name": "sticker_meditating",
+      "type": "sticker",
+      "box_2d": [
+        737,
+        665,
+        932,
+        769
+      ]
+    },
+    {
+      "name": "sticker_campfire",
+      "type": "sticker",
+      "box_2d": [
+        737,
+        808,
+        940,
+        964
+      ]
+    }
+  ]
+}
