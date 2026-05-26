@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.3.0...project-docs-scaffold-template-v4.0.0) (2026-05-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolbox:** The skill identifier is `tuskboard`, not the earlier working name `taskboard`. The original `plugins/toolbox/skills/taskboard/` folder has been removed; agents and bundles referencing `toolbox:taskboard` need to update to `toolbox:tuskboard`. Plugin toolbox bumps to 2.0.0 to surface the rename in semver.
+* **toolbox/digestify:** digestify now requires Bun on PATH. Python 3 is no longer used by this skill.
+
+### Features
+
+* **recipes:** add agent-surface-bun recipe ([3a4704e](https://github.com/ichabodcole/project-docs-scaffold-template/commit/3a4704e208045b9ff65e8e9f05bf3b8e16edadb4))
+* **toolbox/digestify:** add Bun port of review.py as sibling ([8c54c1a](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8c54c1aa249345c9f07b79fe8290cb8249fdb989))
+* **toolbox/digestify:** add stream.ts — bidirectional agent↔browser surface ([c44c6d9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c44c6d98317d07ef9b1964f43fdf4fb8cd7210af))
+* **toolbox/digestify:** replace Python with Bun as canonical runtime ([e519d4b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/e519d4b5afc8083e3843497183cbeabf3ed157d8))
+* **toolbox:** add grapevine skill — multi-agent walkie-talkie over named channels ([0ad67c2](https://github.com/ichabodcole/project-docs-scaffold-template/commit/0ad67c2d90911e6ec6d47b41d347af8a4b870300))
+* **toolbox:** add magpie skill for moodboard element extraction ([9a85985](https://github.com/ichabodcole/project-docs-scaffold-template/commit/9a85985b01f17cf76e38a98b09a11457293c2a3c))
+* **toolbox:** add taskboard skill — duplex agent ↔ user task surface ([5dbaaf8](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5dbaaf89326ab6a0760e082d3d212c9110b15b27))
+* **toolbox:** add tuskboard skill — duplex agent↔user task board ([919b08d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/919b08d3bd59153b82f78d8293b227b44a64f4e4))
+
 ## [3.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.2.0...project-docs-scaffold-template-v3.3.0) (2026-05-15)
 
 
