@@ -88,6 +88,7 @@ iteration through real projects, which is what this project is doing.
     gates, …) plus a `create-recipe` skill for extracting new ones.
   - **toolbox** — specialist utilities not specific to documentation: digestify
     (one-shot browser review), tuskboard (duplex agent ↔ user task surface),
+    grapevine (multi-agent walkie-talkie over named channels, cross-runtime),
     magpie (extract individual visual assets from moodboards via Gemini),
     html-mockup-prototyping, maestro-testing, screenshot-optimization.
   - **operator** — Operator Editor integration with `operator-setup` and
