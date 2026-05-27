@@ -312,6 +312,75 @@ correction land cleanly in V1.7 and whether scope has room.
 
 ---
 
+### Standalone `grapevine` CLI for humans (companion-app pattern)
+
+**Status:** Idea **Originated:** 2026-05-27 (post-V1.6.x retrospective on how
+the toolbox suite presents to humans vs. agents)
+
+**Idea:** Ship a standalone `grapevine` CLI installable on PATH — `npm i -g` or
+`brew install`, ergonomics TBD — that wraps the same daemon and channel data the
+skill uses. Same underlying primitives, different surface ergonomics tuned for a
+human at a terminal.
+
+**Motivation:**
+
+- Today, every CLI invocation requires the user to know
+  `bun ${CLAUDE_PLUGIN_ROOT}/skills/grapevine/scripts/cli.ts <verb>`. That works
+  for agents (the skill provides the path) but is awkward for a human at a
+  terminal who wants to run `grapevine doctor` or `grapevine list` between
+  sessions.
+- Operator/admin verbs (`doctor`, `version`, `upgrade`, `stop`, `info`) are
+  exactly the cases where a human wants quick PATH-installed access without
+  context-switching through a Claude Code session.
+- The watch HTML is the visual human surface. A CLI on PATH would be the text
+  human surface. Different ergonomic needs, same data plane.
+- Companion-app model parallels what we already do implicitly: the skill is the
+  agent surface, watch HTML is one human surface, a CLI on PATH would be the
+  second.
+
+**Sketch:**
+
+- Distribute via a separate package (probably npm — `grapevine-cli` or similar).
+  User runs `npm i -g grapevine-cli` (or `brew install grapevine`).
+- Single binary / single entrypoint: `grapevine <verb>` rather than
+  `bun .../cli.ts <verb>`.
+- Wraps the same daemon and same `~/.grapevine/` data dir. Drop-in alongside the
+  skill — both surfaces hit the same daemon.
+- Initial verb set: focus on operator/admin (`doctor`, `version`, `info`,
+  `list`, `who`, `stop`, `watch`, maybe `upgrade`). Agent-style verbs (`tail`
+  wrapped with Monitor, `wait` in loops, `pull` per turn) can live there too but
+  the value-add is smaller — agents are fine with the current shape.
+- Versioning: the standalone CLI ships its own version, but should be built from
+  the same source as the in-skill `cli.ts`. Avoid drift.
+
+**Open questions:**
+
+- **Implementation source-of-truth.** Same cli.ts published as a package with a
+  thin wrapper? Or maintain in parallel? Probably the former — the in-skill
+  `cli.ts` becomes the library; the standalone CLI is a thin
+  `#!/usr/bin/env bun cli.ts ...` wrapper.
+- **Bun runtime requirement.** A `brew install grapevine` user shouldn't have to
+  install Bun separately. Bundle Bun, or ship a Bun-runtime binary, or accept
+  the runtime prerequisite. Standard problem for Bun CLIs.
+- **Daemon lifecycle.** Today the daemon auto-spawns from any verb that needs
+  it. Should the standalone CLI's daemon-spawn use the plugin's daemon.ts (if
+  installed) or its own bundled copy? Could cause cache-pinning issues like we
+  just lived through.
+- **Verb parity.** Should every plugin verb have a CLI equivalent, or just the
+  operator-relevant ones? Probably the latter, with a documented escape hatch
+  ("for agent-shaped use, see the plugin").
+
+**Likely timing:** post V1.7 of the skill, possibly tied to the
+toolbox-migration spinout (a standalone CLI ships more naturally from the
+dedicated repo than from a marketplace plugin). See
+[toolbox-migration proposal](../toolbox-migration/proposal.md).
+
+**Pairs with:** the same pattern may apply to tuskboard, digestify, magpie —
+operator-style verbs (open/close/list/inspect) benefit from a human-CLI surface.
+Worth thinking about as a suite-wide pattern, not a one-off for grapevine.
+
+---
+
 ## Possible future families (not yet items)
 
 Things that have been alluded to in conversation but aren't ideas yet, captured
