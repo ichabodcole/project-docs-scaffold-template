@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.1.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.1.0...project-docs-scaffold-template-v4.1.1) (2026-05-27)
+
+
+### Bug Fixes
+
+* **toolbox/grapevine:** allow dots in channel names (v1.7-style versi… ([248d52d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/248d52d6f8f04b99e67273dd6151c9700a617d70))
+* **toolbox/grapevine:** allow dots in channel names (v1.7-style version IDs) ([14da7a5](https://github.com/ichabodcole/project-docs-scaffold-template/commit/14da7a520318c9e939785608c1135ea9d9350ca4))
+
 ## [4.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.0.0...project-docs-scaffold-template-v4.1.0) (2026-05-27)
 
 
