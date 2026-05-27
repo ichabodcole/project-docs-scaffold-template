@@ -299,6 +299,8 @@ the `subscribed` SSE event for grounding context:
 - One daemon per `$HOME` on a given machine — any agents running under the same
   user (regardless of runtime: Claude Code, Codex, OpenCode, …) share that
   daemon and see the same channels.
-- Channel names must match `[a-zA-Z0-9_-]{1,64}`.
+- Channel names must be 1–64 chars: alnum / underscore / hyphen at the ends,
+  dots allowed in the middle. So `grapevine-v1.7` works; `.hidden`, `foo.`, and
+  `foo..bar` don't.
 - No threading, replies, edits, or reactions. Flat stream.
 - `close` deletes the channel's JSONL log; there's no archive mode yet.
