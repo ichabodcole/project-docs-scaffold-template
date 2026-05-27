@@ -43,6 +43,28 @@ import { fileURLToPath } from "node:url";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const WATCH_HTML_PATH = join(SCRIPT_DIR, "watch.html");
 
+// Read our plugin version from the same plugin.json the CLI reads. Daemon
+// advertises this on GET / so CLI clients can detect cache-pinning mismatches
+// (e.g. a V1.5 daemon serving a V1.6 CLI, where daemon-side features like
+// `recipients` are silently absent). Best-effort — version is null if read fails.
+function readPluginVersion(): string | null {
+  try {
+    const pluginJsonPath = join(
+      SCRIPT_DIR,
+      "..",
+      "..",
+      "..",
+      ".claude-plugin",
+      "plugin.json"
+    );
+    const raw = readFileSync(pluginJsonPath, "utf-8");
+    return JSON.parse(raw).version ?? null;
+  } catch {
+    return null;
+  }
+}
+const PLUGIN_VERSION = readPluginVersion();
+
 const DATA_DIR = process.env.GRAPEVINE_HOME ?? join(homedir(), ".grapevine");
 const CHANNELS_DIR = join(DATA_DIR, "channels");
 const PORT_FILE = join(DATA_DIR, "daemon.port");
@@ -268,6 +290,7 @@ async function handle(req: Request): Promise<Response> {
       started_at: STARTED_AT,
       channels: channels.size,
       data_dir: DATA_DIR,
+      version: PLUGIN_VERSION,
     });
   }
 
@@ -454,15 +477,29 @@ async function handle(req: Request): Promise<Response> {
         messages: Message[];
         timed_out: boolean;
       }>((resolve) => {
+        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
         const waiter: PendingWait = {
           since,
           resolve: (msgs) => {
-            clearTimeout(t);
+            if (timeoutHandle !== null) clearTimeout(timeoutHandle);
             resolve({ messages: msgs, timed_out: false });
           },
         };
         ch.waits.add(waiter);
-        const t = setTimeout(() => {
+        // Defense-in-depth recheck. JS event-loop semantics make the
+        // register-after-broadcast race nearly impossible in practice, but
+        // some runtimes (notably Bun pre-1.3.10) have shown long-poll hangs
+        // where the awaited Promise neither resolves via drain nor via
+        // setTimeout. Re-reading the backlog after registering closes the
+        // theoretical race AND gives us a fallback if append sees no
+        // waiters during its drain pass for whatever reason.
+        const missed = readBacklog(name, since);
+        if (missed.length > 0) {
+          ch.waits.delete(waiter);
+          resolve({ messages: missed, timed_out: false });
+          return;
+        }
+        timeoutHandle = setTimeout(() => {
           ch.waits.delete(waiter);
           resolve({ messages: [], timed_out: true });
         }, timeoutS * 1000);
