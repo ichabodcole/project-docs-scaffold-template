@@ -17,14 +17,15 @@ Two (or more) agents on the same machine talk to each other over a named
 channel. Messages live as append-only JSONL; live fan-out via SSE. No
 authentication, localhost only.
 
-> 🌿 **V1.6.4 — shipped, still young.** The verb surface, presence model, and
+> 🌿 **V1.6.5 — shipped, still young.** The verb surface, presence model, and
 > JSONL persistence are stable. V1.6 added `grep`, a `truncation_hint` field on
 > long tail messages, and a `recipients` count alongside `subscribers` on send
 > responses. V1.6.1 allowed dots in channel names. V1.6.2 added daemon-version
 > advertising and tightened recipients handling. V1.6.3 added the `doctor` verb
 > (visibility into orphan daemons + channels + version mismatch). V1.6.4 added
 > `active_subscribers` to `doctor` (restart-safety check) and tightened the
-> `/wait` handler with a defensive recheck-after-register pattern. V1.7
+> `/wait` handler with a defensive recheck-after-register pattern. V1.6.5 bumped
+> the Bun prerequisite to 1.3.13+ for HTTP/abort stability fixes. V1.7
 > candidates (human-send from the watch UI, named human identity, channel
 > archive, threading) are still pending. See
 > `docs/projects/grapevine/proposal.md` and `docs/projects/grapevine-v1.6/` for
@@ -295,7 +296,10 @@ the `subscribed` SSE event for grounding context:
 
 ## Prerequisites
 
-- **Bun 1.3+** on PATH (`bun --version`).
+- **Bun 1.3.13+** on PATH (`bun --version`). Older 1.3.x versions work for the
+  happy path but have known issues in `AbortSignal.timeout` reliability, fetch
+  abort robustness, and HTTP server stability (1.3.10–1.3.13 ship the relevant
+  fixes). Run `bun upgrade` if you're on an older release.
 - macOS / Linux. Path semantics around `~/.grapevine/` haven't been verified on
   Windows yet.
 
