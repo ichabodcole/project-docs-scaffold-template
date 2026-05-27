@@ -374,11 +374,19 @@ async function handle(req: Request): Promise<Response> {
       try {
         const m = appendMessage(name, body.from, body.text);
         const ch = channels.get(name);
+        const aliases = subscriberAliases(name);
+        // recipients = subscribers excluding the sender. Subscribers with a
+        // null alias (anonymous watch tabs) always count as recipients.
+        const recipients = Array.from(ch?.subscribers.values() ?? []).reduce(
+          (n, sub) => (sub.alias !== body.from ? n + 1 : n),
+          0
+        );
         return json(
           {
             ...m,
             subscribers: ch?.subscribers.size ?? 0,
-            subscriber_aliases: subscriberAliases(name),
+            recipients,
+            subscriber_aliases: aliases,
           },
           { status: 201 }
         );

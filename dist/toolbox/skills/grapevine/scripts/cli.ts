@@ -27,6 +27,16 @@ const DAEMON_SCRIPT = join(SCRIPT_DIR, "daemon.ts");
 // GRAPEVINE_FROM sets the default --from / --as alias so agents don't have
 // to repeat their identity on every verb. Per-verb flags still override.
 const DEFAULT_ALIAS = process.env.GRAPEVINE_FROM ?? undefined;
+// Truncation-hint threshold. Messages longer than this get a `truncation_hint`
+// field on the tail JSON so consumers (e.g. Monitor) know the notification
+// preview is incomplete and they should `pull` for the full body. Empirical
+// data from real sessions puts the Monitor notification cap around 500–800
+// chars; we default to 800 so typical agent-to-agent status messages don't
+// trigger noise. Overridable via env var for tuning without a release.
+const TRUNCATION_HINT_THRESHOLD = parseInt(
+  process.env.GRAPEVINE_TRUNCATION_HINT_THRESHOLD ?? "800",
+  10
+);
 
 function die(msg: string, code = 2): never {
   process.stderr.write(`grapevine: ${msg}\n`);
@@ -166,8 +176,10 @@ async function cmdSend(
     id: data.id,
     channel: data.channel,
     subscribers: data.subscribers ?? 0,
+    recipients: data.recipients ?? 0,
   };
   if (data.subscribers === 0) out.warning = "channel has no subscribers";
+  else if (data.recipients === 0) out.warning = "only you are subscribed";
   if (opts.verbose) out.subscriber_aliases = data.subscriber_aliases ?? [];
   printJson(out);
 }
@@ -331,6 +343,15 @@ async function cmdTail(
           // ourselves. The sender already got the receipt as the POST
           // response, so re-emitting it on tail is pure noise.
           if (myAlias && payload.from === myAlias) continue;
+          // Mark messages whose body exceeds the notification cap so
+          // consumers know the preview is incomplete and a pull is needed
+          // for the full text.
+          if (
+            typeof payload.text === "string" &&
+            payload.text.length > TRUNCATION_HINT_THRESHOLD
+          ) {
+            payload.truncation_hint = `+${payload.text.length} chars — pull to read`;
+          }
           process.stdout.write(JSON.stringify(payload) + "\n");
         } catch (e: any) {
           process.stderr.write(`# bad sse data: ${e.message}\n`);
@@ -341,6 +362,51 @@ async function cmdTail(
     // are lost across reconnects.
     if (!stopped) await new Promise((r) => setTimeout(r, 200));
   }
+}
+
+async function cmdGrep(
+  name: string,
+  pattern: string,
+  opts: { literal?: boolean; from?: string }
+) {
+  if (!name || !pattern)
+    die(
+      "usage: grapevine grep <channel> <pattern> [--literal|-F] [--from <alias>]"
+    );
+  const logPath = join(DATA_DIR, "channels", `${name}.jsonl`);
+  if (!existsSync(logPath)) {
+    printJson({ ok: true, messages: [] });
+    return;
+  }
+  let matcher: (text: string) => boolean;
+  if (opts.literal) {
+    const needle = pattern.toLowerCase();
+    matcher = (text) => text.toLowerCase().includes(needle);
+  } else {
+    let re: RegExp;
+    try {
+      re = new RegExp(pattern, "i");
+    } catch (e: any) {
+      die(`invalid regex: ${e.message}`);
+    }
+    matcher = (text) => re.test(text);
+  }
+  const raw = readFileSync(logPath, "utf-8");
+  const messages: unknown[] = [];
+  for (const line of raw.split("\n")) {
+    if (!line) continue;
+    let msg: any;
+    try {
+      msg = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (typeof msg.text !== "string") continue;
+    if (opts.from && msg.from !== opts.from) continue;
+    if (!matcher(msg.text)) continue;
+    messages.push(msg);
+  }
+  printJson({ ok: true, messages });
 }
 
 async function cmdClose(name: string) {
@@ -404,7 +470,13 @@ async function cmdInfo() {
   printJson({ ok: true, daemon: true, ...data });
 }
 
-const BOOLEAN_FLAGS = new Set(["quiet", "from-start", "verbose", "stdin"]);
+const BOOLEAN_FLAGS = new Set([
+  "quiet",
+  "from-start",
+  "verbose",
+  "stdin",
+  "literal",
+]);
 
 function parseFlags(argv: string[]): {
   positional: string[];
@@ -498,6 +570,13 @@ async function main(argv: string[]): Promise<number> {
         as: (flags.as as string | undefined) ?? DEFAULT_ALIAS,
       });
       return 0;
+    case "grep": {
+      await cmdGrep(positional[0], positional.slice(1).join(" "), {
+        literal: !!flags.literal,
+        from: flags.from as string | undefined,
+      });
+      return 0;
+    }
     case "close":
       await cmdClose(positional[0]);
       return 0;
@@ -523,6 +602,7 @@ Usage:
   grapevine tail <name> [--as <alias>] [--since <id>] [--from-start]
   grapevine pull <name> [--since <id>]
   grapevine wait <name> [--since <id>] [--timeout <s>]
+  grapevine grep <name> <pattern> [--literal] [--from <alias>]
   grapevine topic <name> [<text>]   # no text → read current; with text → update
   grapevine who <name>
   grapevine watch [<name>]          # open browser tab; live chat-bubble view

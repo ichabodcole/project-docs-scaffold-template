@@ -381,6 +381,162 @@ describe("grapevine cli", () => {
     expect(msg.text).toBe(`text with <brackets> & "quotes" & \`backticks\``);
   });
 
+  test("tail emits truncation hint for long messages", async () => {
+    await bunRun(["open", "test_trunc"]);
+    const t = spawnTail("test_trunc", ["--as", "observer"]);
+    await sleep(400);
+    const longBody = "x".repeat(1500);
+    await bunRun(["send", "test_trunc", "--from", "talker", longBody]);
+    await sleep(400);
+    const line = t.output().split("\n").filter(Boolean)[0];
+    expect(line).toBeDefined();
+    const payload = JSON.parse(line);
+    expect(payload.text.length).toBe(1500);
+    expect(payload.truncation_hint).toBeDefined();
+    expect(payload.truncation_hint).toContain("1500 chars");
+    expect(payload.truncation_hint).toContain("pull to read");
+    t.proc.kill("SIGTERM");
+  });
+
+  test("tail does not emit truncation hint for short messages", async () => {
+    await bunRun(["open", "test_short"]);
+    const t = spawnTail("test_short", ["--as", "observer"]);
+    await sleep(400);
+    await bunRun(["send", "test_short", "--from", "talker", "tiny"]);
+    await sleep(400);
+    const line = t.output().split("\n").filter(Boolean)[0];
+    expect(line).toBeDefined();
+    const payload = JSON.parse(line);
+    expect(payload.truncation_hint).toBeUndefined();
+    t.proc.kill("SIGTERM");
+  });
+
+  test("tail respects GRAPEVINE_TRUNCATION_HINT_THRESHOLD env override", async () => {
+    await bunRun(["open", "test_thresh"]);
+    const buf: Buffer[] = [];
+    const proc = spawn(
+      process.execPath,
+      [CLI, "tail", "test_thresh", "--as", "observer"],
+      {
+        env: {
+          ...process.env,
+          GRAPEVINE_HOME: HOME,
+          GRAPEVINE_TRUNCATION_HINT_THRESHOLD: "50",
+        },
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    proc.stdout.on("data", (b) => buf.push(b));
+    await sleep(400);
+    // 100 chars > 50-char override → should get hint.
+    await bunRun(["send", "test_thresh", "--from", "talker", "y".repeat(100)]);
+    await sleep(400);
+    const line = Buffer.concat(buf).toString("utf-8").split("\n").filter(Boolean)[0];
+    expect(line).toBeDefined();
+    const payload = JSON.parse(line);
+    expect(payload.truncation_hint).toBeDefined();
+    expect(payload.truncation_hint).toContain("100 chars");
+    proc.kill("SIGTERM");
+  });
+
+  test("grep returns regex-matched messages (case-insensitive default)", async () => {
+    await bunRun(["open", "test_grep"]);
+    await bunRun(["send", "test_grep", "--from", "a", "Apple pie"]);
+    await bunRun(["send", "test_grep", "--from", "b", "banana bread"]);
+    await bunRun(["send", "test_grep", "--from", "a", "APPLE crisp"]);
+    const r = await bunRun(["grep", "test_grep", "apple"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.ok).toBe(true);
+    expect(data.messages.length).toBe(2);
+    expect(data.messages[0].text).toBe("Apple pie");
+    expect(data.messages[1].text).toBe("APPLE crisp");
+  });
+
+  test("grep --literal does substring match", async () => {
+    await bunRun(["open", "test_grep_lit"]);
+    await bunRun(["send", "test_grep_lit", "--from", "a", "a.b match"]);
+    await bunRun(["send", "test_grep_lit", "--from", "a", "axb skip"]);
+    const r = await bunRun(["grep", "test_grep_lit", "a.b", "--literal"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.messages.length).toBe(1);
+    expect(data.messages[0].text).toBe("a.b match");
+  });
+
+  test("grep --from filters by sender", async () => {
+    await bunRun(["open", "test_grep_from"]);
+    await bunRun(["send", "test_grep_from", "--from", "alice", "hello world"]);
+    await bunRun(["send", "test_grep_from", "--from", "bob", "hello there"]);
+    const r = await bunRun([
+      "grep",
+      "test_grep_from",
+      "hello",
+      "--from",
+      "alice",
+    ]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.messages.length).toBe(1);
+    expect(data.messages[0].from).toBe("alice");
+  });
+
+  test("grep on a missing channel returns empty messages", async () => {
+    const r = await bunRun(["grep", "no_such_channel_xyz", "anything"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.ok).toBe(true);
+    expect(data.messages).toEqual([]);
+  });
+
+  test("grep with invalid regex errors gracefully", async () => {
+    await bunRun(["open", "test_grep_bad"]);
+    await bunRun(["send", "test_grep_bad", "--from", "a", "hi"]);
+    const r = await bunRun(["grep", "test_grep_bad", "[invalid"]);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain("invalid regex");
+  });
+
+  test("send response includes both subscribers and recipients", async () => {
+    await bunRun(["open", "test_recipients"]);
+    const a = spawnTail("test_recipients", ["--as", "alice"]);
+    const b = spawnTail("test_recipients", ["--as", "bob"]);
+    await sleep(400);
+    const r = await bunRun([
+      "send",
+      "test_recipients",
+      "--from",
+      "alice",
+      "hello",
+    ]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    // alice + bob subscribed; alice sends → recipients excludes alice.
+    expect(data.subscribers).toBe(2);
+    expect(data.recipients).toBe(1);
+    a.proc.kill("SIGTERM");
+    b.proc.kill("SIGTERM");
+  });
+
+  test("send warns when sender is the only subscriber", async () => {
+    await bunRun(["open", "test_lonely"]);
+    const a = spawnTail("test_lonely", ["--as", "solo"]);
+    await sleep(400);
+    const r = await bunRun([
+      "send",
+      "test_lonely",
+      "--from",
+      "solo",
+      "hi self",
+    ]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.subscribers).toBe(1);
+    expect(data.recipients).toBe(0);
+    expect(data.warning).toBe("only you are subscribed");
+    a.proc.kill("SIGTERM");
+  });
+
   test("send --verbose includes subscriber aliases", async () => {
     await bunRun(["open", "test_verbose"]);
     const a = spawnTail("test_verbose", ["--as", "alice"]);
