@@ -84,8 +84,13 @@ function ensureDirs() {
 }
 
 function channelPath(name: string): string {
-  // Defensive: only allow [a-zA-Z0-9_-]; reject anything else.
-  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(name)) {
+  // Defensive: allow [a-zA-Z0-9_.-] in the middle, alphanumeric/underscore/
+  // hyphen at the ends. Reject leading/trailing dots (hidden files,
+  // trailing-dot oddities) and consecutive dots (path traversal — `..`,
+  // `foo..bar`). Internal dots are allowed so version-numbered channel
+  // names like `grapevine-v1.7` work naturally.
+  const VALID = /^[a-zA-Z0-9_-]([a-zA-Z0-9_.-]{0,62}[a-zA-Z0-9_-])?$/;
+  if (!VALID.test(name) || name.includes("..")) {
     throw new Error(`invalid channel name: ${JSON.stringify(name)}`);
   }
   return join(CHANNELS_DIR, `${name}.jsonl`);
@@ -324,7 +329,13 @@ async function handle(req: Request): Promise<Response> {
     }
   }
 
-  const chMatch = path.match(/^\/channels\/([a-zA-Z0-9_-]{1,64})(\/.*)?$/);
+  // Route-level channel name pattern. Mirrors channelPath()'s rules:
+  // alnum/underscore/hyphen at the ends, optional dot in the middle.
+  // channelPath() does the canonical validation (incl. no-`..`) on
+  // anything that gets through here.
+  const chMatch = path.match(
+    /^\/channels\/([a-zA-Z0-9_-](?:[a-zA-Z0-9_.-]{0,62}[a-zA-Z0-9_-])?)(\/.*)?$/
+  );
   if (chMatch) {
     const name = chMatch[1];
     const sub = chMatch[2] ?? "";

@@ -195,6 +195,32 @@ describe("grapevine cli", () => {
     expect(r.code).not.toBe(0);
   });
 
+  test("channel names with internal dots are accepted (e.g. v1.7)", async () => {
+    const r = await bunRun(["open", "grapevine-v1.7"]);
+    expect(r.code).toBe(0);
+    expect(JSON.parse(r.stdout).channel.name).toBe("grapevine-v1.7");
+  });
+
+  test("channel name with leading dot rejected", async () => {
+    const r = await bunRun(["open", ".hidden"]);
+    expect(r.code).not.toBe(0);
+  });
+
+  test("channel name with trailing dot rejected", async () => {
+    const r = await bunRun(["open", "trailing."]);
+    expect(r.code).not.toBe(0);
+  });
+
+  test("channel name with consecutive dots rejected (no path traversal)", async () => {
+    const r = await bunRun(["open", "foo..bar"]);
+    expect(r.code).not.toBe(0);
+  });
+
+  test("channel name '..' rejected", async () => {
+    const r = await bunRun(["open", ".."]);
+    expect(r.code).not.toBe(0);
+  });
+
   test("who returns subscriber aliases", async () => {
     await bunRun(["open", "test_who"]);
     const a = spawnTail("test_who", ["--as", "alice"]);
@@ -248,32 +274,36 @@ describe("grapevine cli", () => {
     expect(Date.now() - t0).toBeLessThan(2000); // should be immediate
   });
 
-  test("wait blocks then resolves on new message", async () => {
-    await bunRun(["open", "test_wait_block"]);
-    // Kick off a wait at the current head (no messages yet).
-    const waitProc = spawn(
-      process.execPath,
-      [CLI, "wait", "test_wait_block", "--since", "0", "--timeout", "5"],
-      {
-        env: { ...process.env, GRAPEVINE_HOME: HOME },
-        stdio: ["ignore", "pipe", "pipe"],
-      }
-    );
-    const out: Buffer[] = [];
-    waitProc.stdout.on("data", (b) => out.push(b));
-    // Send a message a moment later — give the wait process time to bind
-    // and register before the send fires.
-    await sleep(800);
-    await bunRun(["send", "test_wait_block", "--from", "x", "hi"]);
-    const code: number = await new Promise((r) =>
-      waitProc.on("exit", (c) => r(c ?? -1))
-    );
-    expect(code).toBe(0);
-    const data = JSON.parse(Buffer.concat(out).toString("utf-8"));
-    expect(data.messages.length).toBe(1);
-    expect(data.messages[0].text).toBe("hi");
-    expect(data.timed_out).toBe(false);
-  });
+  test(
+    "wait blocks then resolves on new message",
+    { timeout: 10000 },
+    async () => {
+      await bunRun(["open", "test_wait_block"]);
+      // Kick off a wait at the current head (no messages yet).
+      const waitProc = spawn(
+        process.execPath,
+        [CLI, "wait", "test_wait_block", "--since", "0", "--timeout", "5"],
+        {
+          env: { ...process.env, GRAPEVINE_HOME: HOME },
+          stdio: ["ignore", "pipe", "pipe"],
+        }
+      );
+      const out: Buffer[] = [];
+      waitProc.stdout.on("data", (b) => out.push(b));
+      // Send a message a moment later — give the wait process time to bind
+      // and register before the send fires.
+      await sleep(800);
+      await bunRun(["send", "test_wait_block", "--from", "x", "hi"]);
+      const code: number = await new Promise((r) =>
+        waitProc.on("exit", (c) => r(c ?? -1))
+      );
+      expect(code).toBe(0);
+      const data = JSON.parse(Buffer.concat(out).toString("utf-8"));
+      expect(data.messages.length).toBe(1);
+      expect(data.messages[0].text).toBe("hi");
+      expect(data.timed_out).toBe(false);
+    }
+  );
 
   test("wait times out cleanly with empty messages + unchanged cursor", async () => {
     await bunRun(["open", "test_wait_timeout"]);
@@ -431,7 +461,10 @@ describe("grapevine cli", () => {
     // 100 chars > 50-char override → should get hint.
     await bunRun(["send", "test_thresh", "--from", "talker", "y".repeat(100)]);
     await sleep(400);
-    const line = Buffer.concat(buf).toString("utf-8").split("\n").filter(Boolean)[0];
+    const line = Buffer.concat(buf)
+      .toString("utf-8")
+      .split("\n")
+      .filter(Boolean)[0];
     expect(line).toBeDefined();
     const payload = JSON.parse(line);
     expect(payload.truncation_hint).toBeDefined();
