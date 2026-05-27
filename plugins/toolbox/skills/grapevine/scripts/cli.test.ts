@@ -12,6 +12,11 @@ import { spawn } from "node:child_process";
 const HOME = mkdtempSync(join(tmpdir(), "grapevine-test-"));
 const CLI = join(import.meta.dir, "cli.ts");
 
+// Track every long-lived child process we spawn (tails, the wait helper,
+// etc.) so afterAll can SIGTERM them even if `bunRun(["stop"])` fails or
+// is skipped. Prevents zombie daemons/tails from accumulating across runs.
+const TRACKED_PROCS = new Set<ReturnType<typeof spawn>>();
+
 function bunRun(
   args: string[]
 ): Promise<{ code: number; stdout: string; stderr: string }> {
@@ -44,6 +49,8 @@ function spawnTail(
     stdio: ["ignore", "pipe", "pipe"],
   });
   proc.stdout.on("data", (b) => buf.push(b));
+  TRACKED_PROCS.add(proc);
+  proc.on("exit", () => TRACKED_PROCS.delete(proc));
   return { proc, output: () => Buffer.concat(buf).toString("utf-8") };
 }
 
@@ -52,8 +59,35 @@ async function sleep(ms: number) {
 }
 
 afterAll(async () => {
+  // SIGTERM any tracked child processes first (tails etc.) so they can't
+  // race-spawn a new daemon during teardown — same race that produced
+  // today's zombie sweep.
+  for (const proc of TRACKED_PROCS) {
+    try {
+      proc.kill("SIGTERM");
+    } catch {}
+  }
+  TRACKED_PROCS.clear();
+  await sleep(150);
+  // Then ask the daemon to stop politely.
   await bunRun(["stop"]);
   await sleep(100);
+  // Belt-and-suspenders: if the port file still points at a live process,
+  // kill it directly. Catches the case where `stop` didn't reach the daemon.
+  try {
+    const pidPath = join(HOME, "daemon.pid");
+    if (existsSync(pidPath)) {
+      const pid = parseInt(
+        require("node:fs").readFileSync(pidPath, "utf-8").trim(),
+        10
+      );
+      if (pid) {
+        try {
+          process.kill(pid, "SIGKILL");
+        } catch {}
+      }
+    }
+  } catch {}
   rmSync(HOME, { recursive: true, force: true });
 });
 
@@ -528,6 +562,17 @@ describe("grapevine cli", () => {
     const r = await bunRun(["grep", "test_grep_bad", "[invalid"]);
     expect(r.code).not.toBe(0);
     expect(r.stderr).toContain("invalid regex");
+  });
+
+  test("info response includes plugin version", async () => {
+    // Trigger daemon spawn, then check info.
+    await bunRun(["open", "test_version"]);
+    const r = await bunRun(["info"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.daemon).toBe(true);
+    expect(typeof data.version).toBe("string");
+    expect(data.version).toMatch(/^\d+\.\d+\.\d+/);
   });
 
   test("send response includes both subscribers and recipients", async () => {

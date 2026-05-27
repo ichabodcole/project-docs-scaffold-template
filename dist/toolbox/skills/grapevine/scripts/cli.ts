@@ -24,6 +24,60 @@ const PORT_FILE = join(DATA_DIR, "daemon.port");
 const PID_FILE = join(DATA_DIR, "daemon.pid");
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const DAEMON_SCRIPT = join(SCRIPT_DIR, "daemon.ts");
+
+// Our plugin version (from plugin.json). Used to detect cache-pinning
+// mismatches when we talk to a daemon spawned from a different cached
+// path. Best-effort; null if read fails.
+function readPluginVersion(): string | null {
+  try {
+    const pluginJsonPath = join(
+      SCRIPT_DIR,
+      "..",
+      "..",
+      "..",
+      ".claude-plugin",
+      "plugin.json"
+    );
+    const raw = readFileSync(pluginJsonPath, "utf-8");
+    return JSON.parse(raw).version ?? null;
+  } catch {
+    return null;
+  }
+}
+const PLUGIN_VERSION = readPluginVersion();
+
+// One-shot version-mismatch check. The daemon may be from a different
+// cached plugin path than this CLI (existing tail processes' auto-reconnect
+// can race a `stop` and respawn the old daemon). Warn once per invocation
+// so the user has a signal instead of silently degraded behavior.
+let _versionCheckDone = false;
+async function maybeWarnOnVersionMismatch(port: number) {
+  if (_versionCheckDone) return;
+  _versionCheckDone = true;
+  if (!PLUGIN_VERSION) return; // can't compare if we don't know our own version
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/`, {
+      signal: AbortSignal.timeout(500),
+    });
+    if (!res.ok) return;
+    const data: any = await res.json();
+    const daemonVersion = data?.version ?? null;
+    if (daemonVersion === null) {
+      process.stderr.write(
+        `# grapevine: daemon is older than this CLI (no version reported). ` +
+          `CLI is v${PLUGIN_VERSION}. Some features may silently degrade. ` +
+          `Restart the daemon (drop tails, then \`stop\`, then any verb) to upgrade.\n`
+      );
+    } else if (daemonVersion !== PLUGIN_VERSION) {
+      process.stderr.write(
+        `# grapevine: daemon version (v${daemonVersion}) differs from CLI version (v${PLUGIN_VERSION}). ` +
+          `Some features may silently degrade. Restart the daemon to align.\n`
+      );
+    }
+  } catch {
+    // best-effort
+  }
+}
 // GRAPEVINE_FROM sets the default --from / --as alias so agents don't have
 // to repeat their identity on every verb. Per-verb flags still override.
 const DEFAULT_ALIAS = process.env.GRAPEVINE_FROM ?? undefined;
@@ -52,7 +106,11 @@ async function readDaemonPort(): Promise<number | null> {
     const res = await fetch(`http://127.0.0.1:${port}/`, {
       signal: AbortSignal.timeout(500),
     });
-    if (res.ok) return port;
+    if (res.ok) {
+      // Fire-and-forget mismatch check (won't block the verb).
+      maybeWarnOnVersionMismatch(port);
+      return port;
+    }
   } catch {}
   // Stale — clean up.
   try {
@@ -176,8 +234,12 @@ async function cmdSend(
     id: data.id,
     channel: data.channel,
     subscribers: data.subscribers ?? 0,
-    recipients: data.recipients ?? 0,
   };
+  // Only surface recipients if the daemon actually computed it. Defaulting
+  // to 0 was indistinguishable from "really 0" and hid silent V1.5-daemon
+  // degradation during cross-version sessions; missing-means-missing is the
+  // honest signal.
+  if (data.recipients !== undefined) out.recipients = data.recipients;
   if (data.subscribers === 0) out.warning = "channel has no subscribers";
   else if (data.recipients === 0) out.warning = "only you are subscribed";
   if (opts.verbose) out.subscriber_aliases = data.subscriber_aliases ?? [];

@@ -132,9 +132,13 @@ V1.6.2 once we have soak data.
    calls `bunRun(["stop"])` which is best-effort. If a test crashes mid-flight,
    the daemon survives. Today we found 5 zombie daemons + 5 zombie tails from
    earlier test runs. Track child PIDs explicitly, SIGTERM them on teardown.
-4. **Daemon kills prior daemons of its own script path on startup.** Defensive —
-   scan for processes running the same `daemon.ts` path that aren't itself,
-   SIGTERM them before binding. Belt-and-suspenders for #3.
+4. **~~Daemon kills prior daemons of its own script path on startup~~ —
+   DEFERRED.** Implemented and reverted during V1.6.2 development. Scoping
+   problem: matching by script path alone cross-kills legitimate daemons from
+   other HOMEs (e.g. parallel test runs). Proper scoping (by HOME / data_dir)
+   requires the daemon to know other daemons' HOMEs, which it doesn't today.
+   Test PID tracking (#3) handles the common case of test-run zombies. Revisit
+   only if real-world zombie incidents recur.
 
 **Why this is the right bundle:** all four are tiny, all four are pure defensive
 improvements (no new user-facing surface), and all four address the same class
