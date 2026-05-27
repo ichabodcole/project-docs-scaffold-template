@@ -477,15 +477,29 @@ async function handle(req: Request): Promise<Response> {
         messages: Message[];
         timed_out: boolean;
       }>((resolve) => {
+        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
         const waiter: PendingWait = {
           since,
           resolve: (msgs) => {
-            clearTimeout(t);
+            if (timeoutHandle !== null) clearTimeout(timeoutHandle);
             resolve({ messages: msgs, timed_out: false });
           },
         };
         ch.waits.add(waiter);
-        const t = setTimeout(() => {
+        // Defense-in-depth recheck. JS event-loop semantics make the
+        // register-after-broadcast race nearly impossible in practice, but
+        // some runtimes (notably Bun pre-1.3.10) have shown long-poll hangs
+        // where the awaited Promise neither resolves via drain nor via
+        // setTimeout. Re-reading the backlog after registering closes the
+        // theoretical race AND gives us a fallback if append sees no
+        // waiters during its drain pass for whatever reason.
+        const missed = readBacklog(name, since);
+        if (missed.length > 0) {
+          ch.waits.delete(waiter);
+          resolve({ messages: missed, timed_out: false });
+          return;
+        }
+        timeoutHandle = setTimeout(() => {
           ch.waits.delete(waiter);
           resolve({ messages: [], timed_out: true });
         }, timeoutS * 1000);

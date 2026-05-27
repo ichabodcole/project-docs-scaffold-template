@@ -529,12 +529,32 @@ async function cmdDoctor() {
   // is the operator's call, with stock unix tools.
   const port = await readDaemonPort();
   let authoritative: Record<string, unknown> | null = null;
+  // Per-channel subscriber summary — answers "is it safe to restart the
+  // daemon right now?" without needing to also run `list` and read the
+  // output. Empty if no daemon is running.
+  let totalSubscribers = 0;
+  const busyChannels: Array<{ name: string; subscribers: number }> = [];
   if (port) {
     try {
       const { data } = await api(port, "GET", "/");
       authoritative = { port, ...data };
     } catch {
       // daemon went away between port check and api call
+    }
+    try {
+      const { data: chData } = await api<{ channels: Array<any> }>(
+        port,
+        "GET",
+        "/channels"
+      );
+      for (const ch of chData?.channels ?? []) {
+        if (typeof ch.subscribers === "number" && ch.subscribers > 0) {
+          totalSubscribers += ch.subscribers;
+          busyChannels.push({ name: ch.name, subscribers: ch.subscribers });
+        }
+      }
+    } catch {
+      // best-effort
     }
   }
 
@@ -611,12 +631,24 @@ async function cmdDoctor() {
       "Authoritative daemon predates version reporting (pre-V1.6.2). Restart to align."
     );
   }
+  if (totalSubscribers > 0) {
+    hints.push(
+      `${totalSubscribers} active subscriber(s) across ${busyChannels.length} channel(s). ` +
+        "Daemon restart would force them to auto-reconnect (works, but disruptive) — coordinate first."
+    );
+  } else if (authoritative) {
+    hints.push("No active subscribers — daemon restart is non-disruptive.");
+  }
 
   printJson({
     ok: true,
     home: DATA_DIR,
     cli_version: PLUGIN_VERSION,
     authoritative,
+    active_subscribers: {
+      total: totalSubscribers,
+      busy_channels: busyChannels,
+    },
     other_daemons_on_machine: otherDaemons,
     channels_on_disk: channelsOnDisk,
     hints,

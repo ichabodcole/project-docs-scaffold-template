@@ -214,6 +214,75 @@ When skills, agents, or commands change, rebuild the distribution packages:
 - [ ] Verify `dist/` output matches expectations (check summary counts)
 - [ ] Commit updated `dist/` alongside the source changes
 
+## Smoke Test (for plugins with runnable components)
+
+Automated tests cover behavior in isolation, but they run against an isolated
+tmpdir HOME and don't exercise the real plugin paths, environment defaults, or
+interactions with any existing live state. For plugins that ship runnable code
+(CLI scripts, daemons, servers — e.g. grapevine, tuskboard, digestify, magpie),
+run a quick manual smoke test from the local dev tree before merging the
+release.
+
+**Recipe:**
+
+1. Run the new version's CLI directly from the dev-tree path:
+
+   ```bash
+   bun plugins/<plugin>/skills/<skill>/scripts/cli.ts <safe-readonly-verb>
+   ```
+
+   Prefer read-only verbs first (`info`, `list`, `doctor`, etc.) to confirm the
+   CLI launches, resolves its plugin.json, and surfaces sensible output.
+
+2. Exercise the new behavior end-to-end with a non-destructive verb:
+
+   ```bash
+   bun plugins/<plugin>/skills/<skill>/scripts/cli.ts <new-verb-or-flag>
+   ```
+
+3. If the plugin has a daemon/server, verify the new behavior _without replacing
+   the running daemon_ when possible. For grapevine specifically: `ensureDaemon`
+   finds a running daemon via the port file and reuses it, so dev-tree CLI verbs
+   against an existing live daemon are non-clobbering.
+
+**Before running anything that could disrupt:** check for active subscribers /
+users. For grapevine, `bun .../cli.ts doctor` reports an `active_subscribers`
+summary — if `total > 0`, real agents are connected and a daemon restart would
+force them to auto-reconnect (works, but disruptive). For other plugins with
+similar concerns, expose an equivalent health/status verb and check it first.
+
+**Watch out for:**
+
+- **Daemon clobbering.** If you run `stop` then a verb, the next daemon spawn
+  comes from the dev-tree path. This works but couples cache-spawned CLIs to a
+  process that disappears when you `git checkout` away. Avoid unless you intend
+  the dev-tree daemon to take over for the duration — and only when `doctor`
+  confirms no active subscribers (or you've coordinated with whoever is
+  connected).
+- **Environment differences.** Tests use tmpdir HOMEs; real smoke tests hit the
+  user's actual data directory (e.g. `~/.grapevine`). Make sure the verb you're
+  testing is read-only or operates on a throwaway target (e.g. a `_smoke`
+  channel you create and close).
+- **Side effects on running agents.** If other agents have live tails or
+  sessions against the running daemon, prefer verbs that don't disturb them
+  (read-only verbs, or sending to a new throwaway channel).
+
+**Checklist:**
+
+- [ ] Identify whether the plugin has runnable scripts (CLI, daemon, server). If
+      not, skip this section.
+- [ ] **Check for active subscribers / users first** (e.g. grapevine `doctor` →
+      `active_subscribers.total`). If anyone is connected, coordinate before
+      running disruptive verbs.
+- [ ] Run at least one read-only verb from the dev-tree CLI; verify exit code 0
+      and sensible output.
+- [ ] Exercise any new verb/flag added in this release with a non-destructive
+      invocation.
+- [ ] Confirm any new daemon-side behavior shows up correctly (e.g.
+      version-mismatch warning, new response fields, new endpoints).
+- [ ] If applicable, run `lsof -p <pid>` or `ps` to confirm no zombie processes
+      were left behind by the smoke test.
+
 ## Final Checks
 
 - [ ] Run `npm run format:check` (or `npx prettier --write` on changed files)

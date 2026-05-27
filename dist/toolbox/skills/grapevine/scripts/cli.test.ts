@@ -308,36 +308,38 @@ describe("grapevine cli", () => {
     expect(Date.now() - t0).toBeLessThan(2000); // should be immediate
   });
 
-  test(
-    "wait blocks then resolves on new message",
-    { timeout: 10000 },
-    async () => {
-      await bunRun(["open", "test_wait_block"]);
-      // Kick off a wait at the current head (no messages yet).
-      const waitProc = spawn(
-        process.execPath,
-        [CLI, "wait", "test_wait_block", "--since", "0", "--timeout", "5"],
-        {
-          env: { ...process.env, GRAPEVINE_HOME: HOME },
-          stdio: ["ignore", "pipe", "pipe"],
-        }
-      );
-      const out: Buffer[] = [];
-      waitProc.stdout.on("data", (b) => out.push(b));
-      // Send a message a moment later — give the wait process time to bind
-      // and register before the send fires.
-      await sleep(800);
-      await bunRun(["send", "test_wait_block", "--from", "x", "hi"]);
-      const code: number = await new Promise((r) =>
-        waitProc.on("exit", (c) => r(c ?? -1))
-      );
-      expect(code).toBe(0);
-      const data = JSON.parse(Buffer.concat(out).toString("utf-8"));
-      expect(data.messages.length).toBe(1);
-      expect(data.messages[0].text).toBe("hi");
-      expect(data.timed_out).toBe(false);
-    }
-  );
+  test("wait blocks then resolves on new message", async () => {
+    await bunRun(["open", "test_wait_block"]);
+    // Kick off a wait at the current head (no messages yet).
+    const waitProc = spawn(
+      process.execPath,
+      [CLI, "wait", "test_wait_block", "--since", "0", "--timeout", "5"],
+      {
+        env: { ...process.env, GRAPEVINE_HOME: HOME },
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    const out: Buffer[] = [];
+    waitProc.stdout.on("data", (b) => out.push(b));
+    // Attach the exit listener IMMEDIATELY after spawn. If the wait process
+    // happens to exit fast (drain landed quickly), attaching the listener
+    // later (after the `await sleep` + send below) would miss the exit
+    // event entirely — Node's child_process exit is one-shot, not buffered.
+    // That race made this test flake intermittently with no actual hang.
+    const exitPromise: Promise<number> = new Promise((r) =>
+      waitProc.on("exit", (c) => r(c ?? -1))
+    );
+    // Send a message a moment later — give the wait process time to bind
+    // and register before the send fires.
+    await sleep(800);
+    await bunRun(["send", "test_wait_block", "--from", "x", "hi"]);
+    const code = await exitPromise;
+    expect(code).toBe(0);
+    const data = JSON.parse(Buffer.concat(out).toString("utf-8"));
+    expect(data.messages.length).toBe(1);
+    expect(data.messages[0].text).toBe("hi");
+    expect(data.timed_out).toBe(false);
+  });
 
   test("wait times out cleanly with empty messages + unchanged cursor", async () => {
     await bunRun(["open", "test_wait_timeout"]);
@@ -412,11 +414,14 @@ describe("grapevine cli", () => {
         stdio: ["ignore", "pipe", "pipe"],
       }
     );
+    // Attach exit listener immediately so a fast exit doesn't race past us
+    // (same pattern as the "wait blocks then resolves" test fix).
+    const exitPromise = new Promise((res) => waitProc.on("exit", res));
     await sleep(400); // let wait register
     const r = await bunRun(["who", "test_wait_presence"]);
     expect(JSON.parse(r.stdout).subscribers).toContain("polly");
     // Wait for the wait to time out.
-    await new Promise((res) => waitProc.on("exit", res));
+    await exitPromise;
     // After it exits, polly should be gone.
     const r2 = await bunRun(["who", "test_wait_presence"]);
     expect(JSON.parse(r2.stdout).subscribers).not.toContain("polly");
@@ -581,6 +586,33 @@ describe("grapevine cli", () => {
     expect(Array.isArray(data.channels_on_disk)).toBe(true);
     expect(data.channels_on_disk).toContain("test_doctor_ch");
     expect(Array.isArray(data.hints)).toBe(true);
+    expect(data.active_subscribers).toBeDefined();
+    expect(typeof data.active_subscribers.total).toBe("number");
+    expect(Array.isArray(data.active_subscribers.busy_channels)).toBe(true);
+    // test_doctor_ch shouldn't appear as busy since no tail was opened on it.
+    const ownEntry = data.active_subscribers.busy_channels.find(
+      (c: any) => c.name === "test_doctor_ch"
+    );
+    expect(ownEntry).toBeUndefined();
+  });
+
+  test("doctor surfaces active subscribers when present", async () => {
+    await bunRun(["open", "test_doctor_busy"]);
+    const t = spawnTail("test_doctor_busy", ["--as", "watcher"]);
+    await sleep(400);
+    const r = await bunRun(["doctor"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.active_subscribers.total).toBeGreaterThan(0);
+    const busy = data.active_subscribers.busy_channels.find(
+      (c: any) => c.name === "test_doctor_busy"
+    );
+    expect(busy).toBeDefined();
+    expect(busy.subscribers).toBeGreaterThan(0);
+    expect(
+      data.hints.some((h: string) => h.includes("active subscriber"))
+    ).toBe(true);
+    t.proc.kill("SIGTERM");
   });
 
   test("info response includes plugin version", async () => {
