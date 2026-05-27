@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.1.1...project-docs-scaffold-template-v4.2.0) (2026-05-27)
+
+
+### Features
+
+* **toolbox/grapevine:** V1.6.3 — `doctor` verb for daemon/zombie visibility ([1a8c5f5](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1a8c5f56b0de81238af4c01038c9e17cf247bfb6))
+* **toolbox/grapevine:** V1.6.4 — wait-test fix + doctor.active_subscribers + smoke-test checklist ([b5b5971](https://github.com/ichabodcole/project-docs-scaffold-template/commit/b5b5971851c750b314207c1e1302d3d47cba3674))
+
+
+### Bug Fixes
+
+* **toolbox/grapevine:** V1.6.2 operator polish — version advertising + recipients hygiene ([c639ec9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c639ec926ac2b19a97c31943daa89768c1dd7016))
+
 ## [4.1.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.1.0...project-docs-scaffold-template-v4.1.1) (2026-05-27)
 
 
