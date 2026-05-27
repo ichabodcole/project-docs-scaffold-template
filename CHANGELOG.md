@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.0.0...project-docs-scaffold-template-v4.1.0) (2026-05-27)
+
+
+### Features
+
+* **toolbox/grapevine:** V1.6 — grep verb, recipients count, truncati… ([3d63a8c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/3d63a8c9b40fab6b0be2b6f6a885a7cbbd1c4bac))
+* **toolbox/grapevine:** V1.6 — grep verb, recipients count, truncation hint ([543ff9e](https://github.com/ichabodcole/project-docs-scaffold-template/commit/543ff9eaf66b6ddc05ca9ce0387b67319b609626))
+
 ## [4.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v3.3.0...project-docs-scaffold-template-v4.0.0) (2026-05-26)
 
 
