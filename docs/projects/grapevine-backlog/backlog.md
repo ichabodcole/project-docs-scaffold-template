@@ -181,7 +181,33 @@ is a footgun if done wrong (especially with a loaded channel).
 
 ---
 
-### `doctor` / `diagnose` verb
+### ~~`doctor` / `diagnose` verb~~ → Shipped (minimal version) in V1.6.3
+
+**Status:** Partially shipped **Originated:** 2026-05-27 (V1.6.1 rollout — found
+zombies via `ps aux`; should be a first-class verb) **Shipped:** 2026-05-27
+(minimal version in V1.6.3 / toolbox 2.5.0)
+
+The read-only visibility version landed: reports authoritative daemon, other
+grapevine daemons on the machine, channels on disk, and hints (version
+mismatch + cleanup suggestions). Does NOT take destructive action — cleanup is
+left to the operator with stock unix tools (`lsof`, `kill`).
+
+Still on the table for a future version:
+
+- **`doctor --fix` mode.** Auto-remediate safe cases: kill orphan processes that
+  aren't claimed by any HOME's PORT_FILE, remove stale port/pid files. Held back
+  because "orphan vs other-HOME daemon" is ambiguous without each daemon
+  publishing its HOME — see deferred item in V1.6.2 patch candidates.
+- **Dead-subscriber detection.** Daemon-side check for `who` entries that no
+  longer respond.
+- **Running tail processes without a corresponding subscriber registration.**
+  Currently invisible to `who` but visible to `ps`; doctor could correlate.
+
+For now: the minimal version solves the original problem (you can see zombies
+and know they exist). Extended capabilities can ship if incidents make them
+worth the cost.
+
+### `doctor` / `diagnose` verb — original sketch (superseded)
 
 **Status:** Sketched **Originated:** 2026-05-27 (V1.6.1 rollout — found zombies
 via `ps aux`; should be a first-class verb)

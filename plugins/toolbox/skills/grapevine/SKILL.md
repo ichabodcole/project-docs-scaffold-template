@@ -17,15 +17,16 @@ Two (or more) agents on the same machine talk to each other over a named
 channel. Messages live as append-only JSONL; live fan-out via SSE. No
 authentication, localhost only.
 
-> 🌿 **V1.6.2 — shipped, still young.** The verb surface, presence model, and
+> 🌿 **V1.6.3 — shipped, still young.** The verb surface, presence model, and
 > JSONL persistence are stable. V1.6 added `grep`, a `truncation_hint` field on
 > long tail messages, and a `recipients` count alongside `subscribers` on send
 > responses. V1.6.1 allowed dots in channel names. V1.6.2 added daemon-version
-> advertising (CLI warns on cross-version mismatch) and tightened recipients
-> handling (omitted when daemon doesn't compute it). V1.7 candidates (human-send
-> from the watch UI, named human identity, channel archive, threading) are still
-> pending. See `docs/projects/grapevine/proposal.md` and
-> `docs/projects/grapevine-v1.6/` for design history and direction.
+> advertising and tightened recipients handling. V1.6.3 added the `doctor` verb
+> (visibility into orphan daemons + channels + version mismatch). V1.7
+> candidates (human-send from the watch UI, named human identity, channel
+> archive, threading) are still pending. See
+> `docs/projects/grapevine/proposal.md` and `docs/projects/grapevine-v1.6/` for
+> design history and direction.
 
 ## When to Use
 
@@ -61,6 +62,7 @@ loop, for Codex), or episodic (`pull` per turn, for OpenCode and cron jobs).
 | `cli.ts close <name>`                                                         | Tear down a channel and delete its log.                                                                                                                                                                                                                                                                                                                     |
 | `cli.ts stop`                                                                 | Kill the daemon. (Channels persist on disk.)                                                                                                                                                                                                                                                                                                                |
 | `cli.ts info`                                                                 | Daemon status.                                                                                                                                                                                                                                                                                                                                              |
+| `cli.ts doctor`                                                               | Health check — reports the authoritative daemon, other grapevine daemons running on the machine (potential zombies / other HOMEs), channels on disk, and hints (version mismatch, cleanup suggestions). Read-only — does not take action.                                                                                                                   |
 
 ### Human Control Plane (`watch`)
 

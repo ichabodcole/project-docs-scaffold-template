@@ -13,7 +13,7 @@
 // `tail` writes each incoming message as one JSONL line on stdout. Pipe
 // or wrap with Monitor.
 
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { spawn } from "node:child_process";
@@ -522,6 +522,107 @@ async function cmdWatch(name: string | undefined) {
   printJson({ ok: true, channel, url });
 }
 
+async function cmdDoctor() {
+  // Read-only diagnostic. Reports the authoritative daemon (if any), other
+  // grapevine daemon processes visible on the machine, channel files on
+  // disk, and surfaces hints. Does NOT take destructive action — cleanup
+  // is the operator's call, with stock unix tools.
+  const port = await readDaemonPort();
+  let authoritative: Record<string, unknown> | null = null;
+  if (port) {
+    try {
+      const { data } = await api(port, "GET", "/");
+      authoritative = { port, ...data };
+    } catch {
+      // daemon went away between port check and api call
+    }
+  }
+
+  // Scan ps for other daemon processes. Filter to those running daemon.ts
+  // under a grapevine path. Excludes our authoritative daemon (so the
+  // "other_daemons" set is genuinely other).
+  const otherDaemons: Array<{ pid: number; command: string }> = [];
+  try {
+    const proc = spawn("ps", ["-eo", "pid,command"], {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    const chunks: Buffer[] = [];
+    proc.stdout!.on("data", (b) => chunks.push(b as Buffer));
+    await new Promise<void>((resolve) => proc.on("exit", () => resolve()));
+    const out = Buffer.concat(chunks).toString("utf-8");
+    for (const line of out.split("\n")) {
+      if (!line.includes("daemon.ts")) continue;
+      if (!line.toLowerCase().includes("grapevine")) continue;
+      const m = line.match(/^\s*(\d+)\s+(.*)$/);
+      if (!m) continue;
+      const pid = parseInt(m[1], 10);
+      if (!pid) continue;
+      if (authoritative && pid === authoritative.pid) continue;
+      otherDaemons.push({ pid, command: m[2].trim() });
+    }
+  } catch {
+    // ps unavailable; carry on with empty list
+  }
+
+  // Channels on disk under this HOME.
+  const channelsOnDisk: string[] = [];
+  try {
+    const channelsDir = join(DATA_DIR, "channels");
+    if (existsSync(channelsDir)) {
+      for (const f of readdirSync(channelsDir)) {
+        if (f.endsWith(".jsonl"))
+          channelsOnDisk.push(f.replace(/\.jsonl$/, ""));
+      }
+    }
+  } catch {}
+
+  // Hints — surface the most actionable signals.
+  const hints: string[] = [];
+  if (!authoritative) {
+    hints.push(
+      "No authoritative daemon running for this HOME. Run any verb (e.g. `cli.ts list`) to spawn one."
+    );
+  }
+  if (otherDaemons.length > 0) {
+    hints.push(
+      `Found ${otherDaemons.length} other grapevine daemon process(es) on this machine. ` +
+        "They may be zombies from past runs OR daemons serving other HOMEs (different GRAPEVINE_HOME)."
+    );
+    hints.push(
+      "To inspect a specific one: `lsof -p <pid>` (shows its listening port). To clean up: `kill <pid>` (or `kill -9` if needed)."
+    );
+  }
+  if (
+    authoritative &&
+    PLUGIN_VERSION &&
+    typeof authoritative.version === "string" &&
+    authoritative.version !== PLUGIN_VERSION
+  ) {
+    hints.push(
+      `Authoritative daemon version (${authoritative.version}) differs from this CLI's version (${PLUGIN_VERSION}). ` +
+        "Restart the daemon to align — drop active tails, then `stop`, then any verb."
+    );
+  }
+  if (
+    authoritative &&
+    (authoritative.version === null || authoritative.version === undefined)
+  ) {
+    hints.push(
+      "Authoritative daemon predates version reporting (pre-V1.6.2). Restart to align."
+    );
+  }
+
+  printJson({
+    ok: true,
+    home: DATA_DIR,
+    cli_version: PLUGIN_VERSION,
+    authoritative,
+    other_daemons_on_machine: otherDaemons,
+    channels_on_disk: channelsOnDisk,
+    hints,
+  });
+}
+
 async function cmdInfo() {
   const port = await readDaemonPort();
   if (!port) {
@@ -651,6 +752,9 @@ async function main(argv: string[]): Promise<number> {
     case "info":
       await cmdInfo();
       return 0;
+    case "doctor":
+      await cmdDoctor();
+      return 0;
     case undefined:
     case "help":
     case "--help":
@@ -671,6 +775,7 @@ Usage:
   grapevine close <name>
   grapevine stop
   grapevine info
+  grapevine doctor                  # health check — daemon, zombies, channels
 
 Env:
   GRAPEVINE_FROM   Default alias for --from (send) and --as (tail).

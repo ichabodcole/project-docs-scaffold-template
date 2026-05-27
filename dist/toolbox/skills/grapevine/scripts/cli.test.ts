@@ -564,6 +564,25 @@ describe("grapevine cli", () => {
     expect(r.stderr).toContain("invalid regex");
   });
 
+  test("doctor reports authoritative daemon, channels, and hints", async () => {
+    // Send a message so the channel JSONL actually lands on disk
+    // (open without --topic is in-memory only until first append).
+    await bunRun(["open", "test_doctor_ch"]);
+    await bunRun(["send", "test_doctor_ch", "--from", "x", "hello"]);
+    const r = await bunRun(["doctor"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.ok).toBe(true);
+    expect(data.home).toBe(HOME);
+    expect(typeof data.cli_version).toBe("string");
+    expect(data.authoritative).toBeDefined();
+    expect(data.authoritative.version).toBeDefined();
+    expect(Array.isArray(data.other_daemons_on_machine)).toBe(true);
+    expect(Array.isArray(data.channels_on_disk)).toBe(true);
+    expect(data.channels_on_disk).toContain("test_doctor_ch");
+    expect(Array.isArray(data.hints)).toBe(true);
+  });
+
   test("info response includes plugin version", async () => {
     // Trigger daemon spawn, then check info.
     await bunRun(["open", "test_version"]);
