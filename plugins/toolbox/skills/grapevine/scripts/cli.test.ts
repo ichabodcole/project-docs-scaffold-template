@@ -787,4 +787,51 @@ describe("grapevine cli", () => {
     named.proc.kill("SIGTERM");
     anon.proc.kill("SIGTERM");
   });
+
+  test("who --all returns subscribers across all channels in one call", async () => {
+    await bunRun(["open", "wa_one"]);
+    await bunRun(["open", "wa_two"]);
+    const a = spawnTail("wa_one", ["--as", "alice"]);
+    const b = spawnTail("wa_two", ["--as", "bob"]);
+    const a2 = spawnTail("wa_two", ["--as", "alice"]);
+    await sleep(600);
+    const r = await bunRun(["who", "--all"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(Array.isArray(data.channels)).toBe(true);
+    const one = data.channels.find((c: any) => c.name === "wa_one");
+    const two = data.channels.find((c: any) => c.name === "wa_two");
+    expect(one.subscribers).toEqual(["alice"]);
+    expect(two.subscribers.sort()).toEqual(["alice", "bob"]);
+    expect(two.connections).toBe(2);
+    a.proc.kill("SIGTERM");
+    b.proc.kill("SIGTERM");
+    a2.proc.kill("SIGTERM");
+  });
+
+  test("doctor reports named/anonymous breakdown and flags count-vs-names divergence", async () => {
+    await bunRun(["open", "doc_div"]);
+    const named = spawnTail("doc_div", ["--as", "alice"]);
+    const anon = spawnTail("doc_div"); // null alias, like a watch tab
+    await sleep(600);
+    const r = await bunRun(["doctor"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    const entry = data.active_subscribers.busy_channels.find(
+      (c: any) => c.name === "doc_div"
+    );
+    expect(entry).toBeDefined();
+    expect(entry.connections).toBe(2);
+    expect(entry.named).toBe(1);
+    expect(entry.anonymous).toBe(1);
+    // Divergence (connections > named) is surfaced as a hint so the anonymous
+    // watcher reads as a watcher, not a ghost.
+    expect(
+      data.hints.some(
+        (h: string) => h.includes("doc_div") && /anonymous|named/i.test(h)
+      )
+    ).toBe(true);
+    named.proc.kill("SIGTERM");
+    anon.proc.kill("SIGTERM");
+  });
 });

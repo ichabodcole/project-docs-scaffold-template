@@ -318,6 +318,26 @@ async function handle(req: Request): Promise<Response> {
     return json({ channels: listChannels() });
   }
 
+  // Cross-channel presence aggregation — one shot of names × channel for the
+  // `who --all` view and `doctor`'s cross-check. Only channels with at least
+  // one live connection appear (presence only exists for loaded channels).
+  if (path === "/presence" && method === "GET") {
+    const out = [];
+    for (const ch of channels.values()) {
+      const subs = Array.from(ch.subscribers.values());
+      if (subs.length === 0) continue;
+      out.push({
+        name: ch.name,
+        subscribers: subscriberAliases(ch.name),
+        connections: subs.length,
+        named: subs.filter((s) => s.alias).length,
+        anonymous: subs.filter((s) => !s.alias).length,
+      });
+    }
+    out.sort((a, b) => a.name.localeCompare(b.name));
+    return json({ channels: out });
+  }
+
   if (path === "/channels" && method === "POST") {
     const body = await readJsonBody(req);
     if (!body || typeof body.name !== "string") {

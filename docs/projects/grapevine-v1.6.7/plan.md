@@ -152,13 +152,16 @@ restart-safety number trustworthy.
 
 **Validation:**
 
-- [ ] `who --all` lists every channel with its agents in a single call; manual
-      check against several open channels.
-- [ ] With a deliberately-induced ghost (kill a tail before Phase-1 reaping, or
-      a still-connected watch tab), `doctor` flags the divergence instead of
-      silently inflating `active_subscribers`.
-- [ ] Constraint honored: if `who --all` would need real new bookkeeping rather
-      than a thin aggregation, stop and bump it to V1.7 (per proposal).
+- [x] `who --all` lists every channel with its agents in a single call (test:
+      `"who --all returns subscribers across all channels in one call"`).
+- [x] A still-connected anonymous watch tab makes `doctor` flag the divergence
+      (`connections` > `named`) instead of silently inflating the total (test:
+      `"doctor reports named/anonymous breakdown and flags count-vs-names divergence"`).
+- [x] Constraint honored: `who --all` is a thin aggregation over a new read-only
+      `GET /presence` endpoint (in-memory map of loaded channels) — no new
+      bookkeeping, so it stayed in V1.6.7.
+
+**Status:** DONE. Full suite 49/49.
 
 **Dependencies:** Phase 1 (the presence fields + endpoint shape).
 

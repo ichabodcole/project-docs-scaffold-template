@@ -354,6 +354,19 @@ async function cmdWho(name: string) {
   printJson({ ok: true, ...data });
 }
 
+async function cmdWhoAll() {
+  // Cross-channel roster — names × channel in one call, so you don't fan out
+  // N `who` calls + a manual join to answer "who is on which vine?".
+  const port = await readDaemonPort();
+  if (!port) {
+    printJson({ ok: true, daemon: false, channels: [] });
+    return;
+  }
+  const { status, data } = await api(port, "GET", "/presence");
+  if (status >= 400) die(data?.error ?? `HTTP ${status}`);
+  printJson({ ok: true, ...data });
+}
+
 async function cmdTail(
   name: string,
   opts: { since?: number; fromStart?: boolean; as?: string }
@@ -576,7 +589,13 @@ async function cmdDoctor() {
   // daemon right now?" without needing to also run `list` and read the
   // output. Empty if no daemon is running.
   let totalSubscribers = 0;
-  const busyChannels: Array<{ name: string; subscribers: number }> = [];
+  const busyChannels: Array<{
+    name: string;
+    subscribers: number;
+    connections: number;
+    named: number;
+    anonymous: number;
+  }> = [];
   if (port) {
     try {
       const { data } = await api(port, "GET", "/");
@@ -585,16 +604,23 @@ async function cmdDoctor() {
       // daemon went away between port check and api call
     }
     try {
-      const { data: chData } = await api<{ channels: Array<any> }>(
+      // /presence gives the honest per-channel breakdown (connections vs named
+      // vs anonymous) — so the restart-safety total isn't a mystery and an
+      // anonymous watch tab reads as a watcher, not a ghost.
+      const { data: presData } = await api<{ channels: Array<any> }>(
         port,
         "GET",
-        "/channels"
+        "/presence"
       );
-      for (const ch of chData?.channels ?? []) {
-        if (typeof ch.subscribers === "number" && ch.subscribers > 0) {
-          totalSubscribers += ch.subscribers;
-          busyChannels.push({ name: ch.name, subscribers: ch.subscribers });
-        }
+      for (const ch of presData?.channels ?? []) {
+        totalSubscribers += ch.connections;
+        busyChannels.push({
+          name: ch.name,
+          subscribers: ch.connections, // back-compat: previously the raw count
+          connections: ch.connections,
+          named: ch.named,
+          anonymous: ch.anonymous,
+        });
       }
     } catch {
       // best-effort
@@ -682,6 +708,16 @@ async function cmdDoctor() {
   } else if (authoritative) {
     hints.push("No active subscribers — daemon restart is non-disruptive.");
   }
+  // Explain any channel where the connection count exceeds named agents — an
+  // anonymous watch tab inflates `count`/`connections` but isn't a ghost.
+  for (const ch of busyChannels) {
+    if (ch.anonymous > 0) {
+      hints.push(
+        `${ch.name}: ${ch.connections} connection(s), ${ch.named} named agent(s) + ` +
+          `${ch.anonymous} anonymous (e.g. a watch tab). The count over the name list is expected, not a ghost.`
+      );
+    }
+  }
 
   printJson({
     ok: true,
@@ -715,6 +751,7 @@ const BOOLEAN_FLAGS = new Set([
   "stdin",
   "literal",
   "text",
+  "all",
 ]);
 
 function parseFlags(argv: string[]): {
@@ -807,7 +844,8 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
     case "who":
-      await cmdWho(positional[0]);
+      if (flags.all) await cmdWhoAll();
+      else await cmdWho(positional[0]);
       return 0;
     case "tail":
       await cmdTail(positional[0], {
