@@ -45,23 +45,24 @@ pre-reading framing.
 
 **Definition of Done:**
 
-- [ ] A killed push consumer (SIGKILL on a `tail` process) disappears from `who`
-      within a few seconds — not minutes. Verified by a kill-then-`who` test.
-- [ ] `who`/`doctor` never report a `count` higher than the true unique-agent
-      count without explaining the difference (anonymous watchers and duplicate
-      connections are accounted for, not silently summed).
-- [ ] `doctor`'s `active_subscribers` reflects reality and flags any
+- [x] A killed push consumer (SIGKILL on a `tail` process) disappears from `who`
+      within a few seconds — verified by a kill-then-`who` test (and reaping was
+      already working; see Phase 1 spike).
+- [x] `who`/`doctor` never report a `count` higher than the true unique-agent
+      count without explaining it — `connections`/`named`/`anonymous` break it
+      down; an anonymous watcher reads as a watcher.
+- [x] `doctor`'s `active_subscribers` reflects reality and flags the
       count-vs-names divergence.
-- [ ] A fresh `tail` subscriber receives, **on its own stdout**, the topic and a
-      backfill hint (`joined … at id N — M earlier messages exist`).
-- [ ] A long message's `truncation_hint` survives notification clipping (emitted
-      **before** `.text`), and the default threshold is raised.
-- [ ] `send` confirms its target channel + recipient count visibly.
-- [ ] `who --all` returns names × channel in one call.
-- [ ] SKILL.md prescribes Wiring B, `2>&1`, per-Monitor labeling, and
+- [x] A fresh `tail` subscriber receives, on its own stdout, a
+      `kind:"grounding"` line with the topic + backfill hint.
+- [x] A long message's `truncation_hint` survives notification clipping (emitted
+      **before** `.text`), and the default threshold is raised to 2000.
+- [x] `send` confirms its target channel + recipient count visibly (stderr).
+- [x] `who --all` returns names × channel in one call.
+- [x] SKILL.md prescribes Wiring B, `2>&1`, per-Monitor labeling, and
       per-command identity; the `GRAPEVINE_FROM` limitation is documented.
-- [ ] `cli.test.ts` covers all CLI-observable changes; full suite green.
-- [ ] toolbox plugin version bumped 2.8.0 → 2.9.0.
+- [x] `cli.test.ts` covers all CLI-observable changes; full suite green (52/52).
+- [x] toolbox plugin version bumped 2.8.0 → 2.9.0.
 
 **Non-Goals:**
 
@@ -281,16 +282,24 @@ directly (a fresh daemon rolled from this branch's path, version 2.9.0) and
 drive a 2-agent session: facilitator here + one other agent in a separate
 terminal joining via the branch CLI.
 
-**Validation (manual):**
+**Validation (manual): 5/5 GREEN** — ran 2026-05-28 with agent `tesla` on the
+real HOME daemon rolled to branch 2.9.0 (vintner facilitating).
 
-- [ ] Second agent joins a channel with history → sees the `kind:"grounding"`
-      line announcing earlier messages (F7).
-- [ ] `who` / `who --all` show honest `connections`/`named`/`anonymous`; an open
-      `watch` tab reads as `anonymous`, and `doctor` explains it (no ghost).
-- [ ] A long (>~2000 char) message's `truncation_hint` is visible (before
-      `.text`) in the receiving agent's notification.
-- [ ] `send` echoes its target channel + recipient count.
-- [ ] `2>&1` consumer sees the `: grapevine-keepalive` tick.
+- [x] Second agent (`tesla`) joined a channel with history → received the
+      `kind:"grounding"` stdout line (`earlier:3`, topic, backfill hint) (F7).
+- [x] `who`/`who --all` showed honest `connections:2`/`named:1`/`anonymous:1`;
+      the open `watch` tab read as the `anonymous`, and `doctor` emitted the
+      explaining hint ("…1 anonymous (e.g. a watch tab)… not a ghost").
+- [x] A 2527-char message's `truncation_hint` reached the receiver as the
+      **first key** (before `.text`), survived the notification clip, and
+      `read smoke-v167 6` recovered the full body (exit 0).
+- [x] `send` echoed `# → smoke-v167 · N recipient(s)` on stderr.
+- [x] `2>&1` probe saw `: grapevine-keepalive` ~every 3s; the plain stdout tail
+      never surfaced one (off the message stream, by design).
+
+**Status:** DONE. Both of tesla's pre-release observations resolved (stream
+routing = working-as-designed, source-confirmed at `cli.ts:499`; per-connect
+hint recompute = correct/live). No regressions. Build clean to cut.
 
 **Dependencies:** Phases 1–5 complete; suite green.
 
