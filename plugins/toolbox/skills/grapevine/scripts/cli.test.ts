@@ -450,31 +450,45 @@ describe("grapevine cli", () => {
     expect(msg.text).toBe(`text with <brackets> & "quotes" & \`backticks\``);
   });
 
-  test("tail emits truncation hint for long messages", async () => {
+  test("tail emits truncation hint before text for long messages", async () => {
     await bunRun(["open", "test_trunc"]);
     const t = spawnTail("test_trunc", ["--as", "observer"]);
     await sleep(400);
-    const longBody = "x".repeat(1500);
+    const longBody = "x".repeat(2500); // > the raised ~2000 default threshold
     await bunRun(["send", "test_trunc", "--from", "talker", longBody]);
     await sleep(400);
-    const line = t.output().split("\n").filter(Boolean)[0];
+    const line = t
+      .output()
+      .split("\n")
+      .filter(Boolean)
+      .find((l) => l.includes('"text"'));
     expect(line).toBeDefined();
     const payload = JSON.parse(line);
-    expect(payload.text.length).toBe(1500);
+    expect(payload.text.length).toBe(2500);
     expect(payload.truncation_hint).toBeDefined();
-    expect(payload.truncation_hint).toContain("1500 chars");
+    expect(payload.truncation_hint).toContain("2500 chars");
     // Hint carries the exact recovery command: `read <channel> <id>`.
     expect(payload.truncation_hint).toContain(`read test_trunc ${payload.id}`);
+    // F17: the hint must serialize BEFORE .text so a notification clip (which
+    // lands inside .text) can't bury it.
+    expect(line.indexOf("truncation_hint")).toBeGreaterThanOrEqual(0);
+    expect(line.indexOf("truncation_hint")).toBeLessThan(line.indexOf('"text"'));
     t.proc.kill("SIGTERM");
   });
 
-  test("tail does not emit truncation hint for short messages", async () => {
+  test("tail does not emit truncation hint below the raised threshold", async () => {
     await bunRun(["open", "test_short"]);
     const t = spawnTail("test_short", ["--as", "observer"]);
     await sleep(400);
-    await bunRun(["send", "test_short", "--from", "talker", "tiny"]);
+    // 1000 chars: above the OLD 800 default, below the NEW ~2000 default — so a
+    // raised threshold means no hint. Proves the default was actually raised.
+    await bunRun(["send", "test_short", "--from", "talker", "z".repeat(1000)]);
     await sleep(400);
-    const line = t.output().split("\n").filter(Boolean)[0];
+    const line = t
+      .output()
+      .split("\n")
+      .filter(Boolean)
+      .find((l) => l.includes('"text"'));
     expect(line).toBeDefined();
     const payload = JSON.parse(line);
     expect(payload.truncation_hint).toBeUndefined();
@@ -833,5 +847,60 @@ describe("grapevine cli", () => {
     ).toBe(true);
     named.proc.kill("SIGTERM");
     anon.proc.kill("SIGTERM");
+  });
+
+  test("tail emits a grounding line on stdout when joining a channel with history", async () => {
+    await bunRun(["open", "ground_hist"]);
+    await bunRun(["send", "ground_hist", "--from", "a", "old one"]);
+    await bunRun(["send", "ground_hist", "--from", "a", "old two"]);
+    // Default (HEAD) join: the newcomer sees nothing of the 2 prior messages,
+    // so a grounding line should announce that earlier history exists (F7).
+    const t = spawnTail("ground_hist", ["--as", "newcomer"]);
+    await sleep(500);
+    const grounding = t
+      .output()
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => JSON.parse(l))
+      .find((m) => m.kind === "grounding");
+    expect(grounding).toBeDefined();
+    expect(grounding.channel).toBe("ground_hist");
+    expect(grounding.earlier).toBe(2);
+    t.proc.kill("SIGTERM");
+  });
+
+  test("tail emits a keepalive sentinel on stderr while idle", async () => {
+    await bunRun(["open", "test_keepalive"]);
+    const errBuf: Buffer[] = [];
+    const proc = spawn(
+      process.execPath,
+      [CLI, "tail", "test_keepalive", "--as", "k"],
+      {
+        env: { ...process.env, GRAPEVINE_HOME: HOME },
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    proc.stderr.on("data", (b) => errBuf.push(b));
+    TRACKED_PROCS.add(proc);
+    proc.on("exit", () => TRACKED_PROCS.delete(proc));
+    await sleep(4000); // longer than one 3s daemon heartbeat
+    proc.kill("SIGTERM");
+    const err = Buffer.concat(errBuf).toString("utf-8");
+    expect(err).toContain("grapevine-keepalive");
+  }, 10000);
+
+  test("send echoes its target channel + recipient count to stderr", async () => {
+    await bunRun(["open", "test_echo"]);
+    const a = spawnTail("test_echo", ["--as", "listener"]);
+    await sleep(400);
+    const r = await bunRun(["send", "test_echo", "--from", "sender", "hi"]);
+    expect(r.code).toBe(0);
+    // stdout stays pure JSON (back-compat).
+    const data = JSON.parse(r.stdout);
+    expect(data.channel).toBe("test_echo");
+    // stderr carries the human-visible target confirmation (misroute detection).
+    expect(r.stderr).toContain("test_echo");
+    expect(r.stderr).toMatch(/→|recipient/);
+    a.proc.kill("SIGTERM");
   });
 });

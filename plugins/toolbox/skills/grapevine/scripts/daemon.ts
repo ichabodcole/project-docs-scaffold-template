@@ -597,7 +597,7 @@ async function handle(req: Request): Promise<Response> {
           // grounding context before any messages arrive.
           controller.enqueue(
             enc.encode(
-              `event: subscribed\ndata: ${JSON.stringify({ channel: name, since, as: alias, topic: ch.topic })}\n\n`
+              `event: subscribed\ndata: ${JSON.stringify({ channel: name, since, as: alias, topic: ch.topic, latest_id: ch.next_id - 1 })}\n\n`
             )
           );
           // Replay backlog before live tail begins.

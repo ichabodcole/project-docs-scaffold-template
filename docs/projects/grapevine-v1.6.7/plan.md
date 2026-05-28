@@ -197,18 +197,20 @@ receives truncation hints.
 
 **Validation:**
 
-- [ ] Test: a `tail` with `--since` below the latest id emits a
-      `kind:"grounding"` stdout line reporting the correct `earlier` count and
-      topic.
-- [ ] Test: a message > threshold serializes with `truncation_hint` as the first
-      key (assert on key order / substring position before `"text"`).
-- [ ] Test: threshold default is ~2000 (short roundtable-style status messages
-      no longer trip it; multi-paragraph ones do).
-- [ ] Manual: `2>&1` consumer sees periodic `: grapevine-keepalive`; a clean
-      `tail` (stdout only) sees none.
+- [x] Grounding: a HEAD join to a channel with history emits a
+      `kind:"grounding"` stdout line with the correct `earlier` count (test:
+      `"tail emits a grounding line on stdout when joining a channel with history"`).
+      Gated to history-or-topic and first-subscribe-only (no reconnect spam).
+- [x] Truncation re-order: `truncation_hint` serializes before `"text"` (test
+      asserts substring position).
+- [x] Threshold raised to 2000: a 1000-char message no longer trips the hint
+      (test: `"tail does not emit truncation hint below the raised threshold"`).
+- [x] Keepalive: `2>&1` consumer sees `: grapevine-keepalive` while idle (test:
+      `"tail emits a keepalive sentinel on stderr while idle"`).
 
-**Dependencies:** Phase 1 only if the grounding line reuses the
-`subscribed`-event `latest_id` addition (small, can be done alongside P1).
+**Status:** DONE. Daemon `subscribed` event gained `latest_id`; suite 52/52.
+
+**Dependencies:** Phase 1 (reused the `subscribed`-event `latest_id` addition).
 
 ---
 
@@ -225,8 +227,9 @@ receives truncation hints.
 
 **Validation:**
 
-- [ ] Test: `send` to a channel emits the `# → <channel> · N recipient(s)`
-      stderr line; stdout JSON shape unchanged (back-compat).
+- [x] `send` emits a `# → <channel> · N recipient(s)` stderr line (fires even
+      under `--quiet`); stdout JSON unchanged (test:
+      `"send echoes its target channel + recipient count to stderr"`). **DONE.**
 
 **Dependencies:** none.
 
@@ -259,6 +262,32 @@ receives truncation hints.
 - [ ] `info`/`doctor` report version `2.9.0` after a daemon roll.
 
 **Dependencies:** Phases 1–4 (docs describe shipped behavior).
+
+---
+
+### Phase 6: Pre-release live smoke test (gate before merge/release)
+
+**Goal:** Confirm the V1.6.7 behavior holds with a real second agent on the
+**unreleased branch** daemon/CLI before cutting the release — not just the
+automated suite.
+
+**Key Changes:** none (verification only). Run the branch's `cli.ts`/`daemon.ts`
+directly (a fresh daemon rolled from this branch's path, version 2.9.0) and
+drive a 2-agent session: facilitator here + one other agent in a separate
+terminal joining via the branch CLI.
+
+**Validation (manual):**
+
+- [ ] Second agent joins a channel with history → sees the `kind:"grounding"`
+      line announcing earlier messages (F7).
+- [ ] `who` / `who --all` show honest `connections`/`named`/`anonymous`; an open
+      `watch` tab reads as `anonymous`, and `doctor` explains it (no ghost).
+- [ ] A long (>~2000 char) message's `truncation_hint` is visible (before
+      `.text`) in the receiving agent's notification.
+- [ ] `send` echoes its target channel + recipient count.
+- [ ] `2>&1` consumer sees the `: grapevine-keepalive` tick.
+
+**Dependencies:** Phases 1–5 complete; suite green.
 
 ## Key Risks & Mitigations
 
