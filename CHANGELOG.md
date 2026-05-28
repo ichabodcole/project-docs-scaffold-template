@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.3.0...project-docs-scaffold-template-v4.4.0) (2026-05-28)
+
+
+### Features
+
+* **toolbox/grapevine:** honest presence counts; correct V1.6.7 liveness framing ([1ebbfe4](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1ebbfe4ada815819e550fc2812705273daa6118e))
+* **toolbox/grapevine:** tail grounding line, keepalive sentinel, truncation fix, send echo ([91a191b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/91a191b96090bda7becb7a4dcea7ffe8d473bd24))
+* **toolbox/grapevine:** who --all + doctor count-vs-names cross-check ([6f113f7](https://github.com/ichabodcole/project-docs-scaffold-template/commit/6f113f791735457e5d747801e9e05c6f8ba9d9fe))
+
 ## [4.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.2.0...project-docs-scaffold-template-v4.3.0) (2026-05-28)
 
 
