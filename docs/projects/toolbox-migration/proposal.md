@@ -207,6 +207,61 @@ decision is made, a plan picks up from here.
 
 ---
 
+## Design language consideration — companion-app pattern (surfaces)
+
+_Captured here because it's likely to shape what the spun-out suite becomes, not
+just where it lives._
+
+A pattern is emerging across the toolbox suite: each tool tends to have
+**multiple surfaces serving different audiences with overlapping but distinct
+ergonomic needs**:
+
+- **Agent surface** — the skill + its scripts. Tuned for agents invoking via
+  paths the skill provides. Always present, always the primary mechanism.
+- **Human visual surface** — the watch HTML (grapevine), the drag-and-drop board
+  (tuskboard), the inline-answers document (digestify). Tuned for a human at a
+  browser tab.
+- **Human CLI surface** — a standalone `grapevine` / `tuskboard` / `digestify`
+  CLI installable on PATH. Doesn't exist yet. Would be tuned for a human at a
+  terminal who wants to check state, run admin verbs, or invoke the tool outside
+  a Claude Code session.
+
+The three surfaces share data and primitives but have different ergonomic
+constraints:
+
+- Agent surface: verbose paths OK, JSON output expected, predictable flag
+  parsing required.
+- Visual surface: rich rendering, distinct affordances per kind, minimal text.
+- CLI surface: terse commands (`grapevine doctor`, not
+  `bun ${LONG_PATH}/cli.ts doctor`), human-readable output by default with
+  `--json` for piping.
+
+The overlap is where it gets interesting. Operator-style verbs (`doctor`,
+`version`, `info`, `stop`, `list`) are useful to ALL three audiences and should
+feel native to each. Agent-style verbs (`tail` wrapped with Monitor, `wait` in
+loops) are mostly agent-only — a CLI version exists but is rarely the right tool
+for a human.
+
+**Implication for the migration:** the new repo's design should make room for
+the multi-surface model from day one. Specifically:
+
+- The skill stays the primary distribution mechanism, but
+- The same source-of-truth scripts should be repackageable as standalone CLIs
+  (`npm i -g grapevine-cli`, etc.), and
+- The visual surfaces (watch HTML for grapevine, the board for tuskboard) should
+  also be invocable from the standalone CLI (`grapevine watch` opens the browser
+  tab, same as `cli.ts watch`).
+
+This isn't a blocker for the spinout — the current shape works. But the spinout
+is a good moment to commit to the multi-surface model as the design language of
+the suite, rather than treating the in-skill CLI as the only surface.
+
+Concrete first-step:
+[Standalone grapevine CLI for humans in the grapevine-backlog](../grapevine-backlog/backlog.md).
+Likely lands after V1.7 + the spinout.
+
+---
+
 ## Signal Log
 
 A running log of moments where the current arrangement felt cramped or mis-fit.
@@ -218,3 +273,13 @@ Add entries as they happen — each is evidence for the migration decision.
   purpose is scaffolding _other_ projects' doc structure. Project-docs has
   become both the methodology AND a user of the methodology, which works but
   feels nested. First articulation of the migration signal by Cole.
+
+- **2026-05-27 (later same day) — Companion-CLI signal.** Talking through the
+  V1.6.5 rollover, Cole articulated a pattern: every toolbox tool has an agent
+  surface (skill + scripts) and a human surface (watch HTML / board / etc.), but
+  the operator-style verbs really want a third surface — a standalone CLI
+  installable on PATH. Captured as
+  [design language consideration above](#design-language-consideration--companion-app-pattern-surfaces).
+  Reinforces the spinout case: a dedicated repo can commit to the multi-surface
+  model from day one in a way that a marketplace-plugin in this repo can't
+  easily.

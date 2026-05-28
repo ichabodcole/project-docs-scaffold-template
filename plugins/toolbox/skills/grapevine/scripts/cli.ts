@@ -6,6 +6,7 @@
 //   bun cli.ts list
 //   bun cli.ts send <name> --from <alias> <text...>
 //   bun cli.ts tail <name> [--since <id>] [--from-start]
+//   bun cli.ts read <name> <id> [--text]
 //   bun cli.ts close <name>
 //   bun cli.ts stop
 //   bun cli.ts info
@@ -81,6 +82,21 @@ async function maybeWarnOnVersionMismatch(port: number) {
 // GRAPEVINE_FROM sets the default --from / --as alias so agents don't have
 // to repeat their identity on every verb. Per-verb flags still override.
 const DEFAULT_ALIAS = process.env.GRAPEVINE_FROM ?? undefined;
+
+// Identity flags are interchangeable across verbs. `send` historically took
+// `--from` while `tail`/`wait` took `--as` — same concept (who am I), and the
+// asymmetry trips you mid-flow. Accept either everywhere identity is meant,
+// falling back to GRAPEVINE_FROM. (grep's `--from` is a different thing — an
+// author *filter*, not identity — so it doesn't use this.)
+function resolveAlias(
+  flags: Record<string, string | boolean>
+): string | undefined {
+  return (
+    (flags.from as string | undefined) ??
+    (flags.as as string | undefined) ??
+    DEFAULT_ALIAS
+  );
+}
 // Truncation-hint threshold. Messages longer than this get a `truncation_hint`
 // field on the tail JSON so consumers (e.g. Monitor) know the notification
 // preview is incomplete and they should `pull` for the full body. Empirical
@@ -261,6 +277,33 @@ async function cmdPull(name: string, since: number) {
   printJson({ ok: true, messages: msgs, cursor });
 }
 
+async function cmdRead(name: string, id: number, opts: { text?: boolean }) {
+  if (!name || !Number.isFinite(id))
+    die("usage: grapevine read <channel> <id> [--text]");
+  const port = await ensureDaemon();
+  await api(port, "POST", "/channels", { name });
+  // Built on the existing range fetch — `since=id-1` returns id and beyond;
+  // we pick the exact id. No daemon API change. This is the targeted
+  // "give me message N in full" verb that recovers a clipped tail preview
+  // without the pull-range + jq dance.
+  const { status, data } = await api(
+    port,
+    "GET",
+    `/channels/${name}/messages?since=${id - 1}`
+  );
+  if (status >= 400) die(data?.error ?? `HTTP ${status}`);
+  const msg = (data.messages ?? []).find((m: any) => m.id === id);
+  if (!msg) die(`message ${id} not found in ${name}`, 1);
+  if (opts.text) {
+    // Prose mode: header + body, no JSON envelope, so a human (or an agent
+    // recovering a truncated notification) can read it directly.
+    const ts = new Date(msg.ts).toISOString();
+    process.stdout.write(`[${msg.id}] ${msg.from} · ${ts}\n${msg.text}\n`);
+    return;
+  }
+  printJson({ ok: true, message: msg });
+}
+
 async function cmdWait(
   name: string,
   since: number,
@@ -412,7 +455,7 @@ async function cmdTail(
             typeof payload.text === "string" &&
             payload.text.length > TRUNCATION_HINT_THRESHOLD
           ) {
-            payload.truncation_hint = `+${payload.text.length} chars — pull to read`;
+            payload.truncation_hint = `+${payload.text.length} chars — full: read ${name} ${payload.id}`;
           }
           process.stdout.write(JSON.stringify(payload) + "\n");
         } catch (e: any) {
@@ -671,6 +714,7 @@ const BOOLEAN_FLAGS = new Set([
   "verbose",
   "stdin",
   "literal",
+  "text",
 ]);
 
 function parseFlags(argv: string[]): {
@@ -709,14 +753,14 @@ async function main(argv: string[]): Promise<number> {
     case "open":
       await cmdOpen(positional[0], {
         topic: flags.topic as string | undefined,
-        from: (flags.from as string | undefined) ?? DEFAULT_ALIAS,
+        from: resolveAlias(flags),
       });
       return 0;
     case "topic":
       await cmdTopic(
         positional[0],
         positional.length > 1 ? positional.slice(1).join(" ") : undefined,
-        (flags.from as string | undefined) ?? DEFAULT_ALIAS
+        resolveAlias(flags)
       );
       return 0;
     case "list":
@@ -724,7 +768,7 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     case "send": {
       const name = positional[0];
-      const from = (flags.from as string | undefined) ?? DEFAULT_ALIAS;
+      const from = resolveAlias(flags);
       let text: string;
       if (flags.stdin) {
         // Bypass shell quoting entirely — read raw bytes from stdin.
@@ -736,7 +780,9 @@ async function main(argv: string[]): Promise<number> {
         text = positional.slice(1).join(" ");
       }
       if (!from)
-        die("send: --from <alias> required (or set GRAPEVINE_FROM env var)");
+        die(
+          "send: identity required — pass --from/--as <alias> or set GRAPEVINE_FROM env var"
+        );
       await cmdSend(name, from, text, {
         quiet: !!flags.quiet,
         verbose: !!flags.verbose,
@@ -748,10 +794,15 @@ async function main(argv: string[]): Promise<number> {
       await cmdPull(positional[0], since);
       return 0;
     }
+    case "read": {
+      const id = positional[1] ? parseInt(positional[1], 10) : NaN;
+      await cmdRead(positional[0], id, { text: !!flags.text });
+      return 0;
+    }
     case "wait": {
       const since = flags.since ? parseInt(flags.since as string, 10) : 0;
       const timeout = flags.timeout ? parseFloat(flags.timeout as string) : 30;
-      const alias = (flags.as as string | undefined) ?? DEFAULT_ALIAS;
+      const alias = resolveAlias(flags);
       await cmdWait(positional[0], since, timeout, alias);
       return 0;
     }
@@ -762,7 +813,7 @@ async function main(argv: string[]): Promise<number> {
       await cmdTail(positional[0], {
         since: flags.since ? parseInt(flags.since as string, 10) : undefined,
         fromStart: !!flags["from-start"],
-        as: (flags.as as string | undefined) ?? DEFAULT_ALIAS,
+        as: resolveAlias(flags),
       });
       return 0;
     case "grep": {
@@ -796,9 +847,10 @@ async function main(argv: string[]): Promise<number> {
 Usage:
   grapevine open <name> [--topic <text>]
   grapevine list
-  grapevine send <name> [--from <alias>] [--quiet] [--verbose] [--stdin] <text...>
-  grapevine tail <name> [--as <alias>] [--since <id>] [--from-start]
+  grapevine send <name> [--from/--as <alias>] [--quiet] [--verbose] [--stdin] <text...>
+  grapevine tail <name> [--as/--from <alias>] [--since <id>] [--from-start]
   grapevine pull <name> [--since <id>]
+  grapevine read <name> <id> [--text]   # one full message by id (--text = prose)
   grapevine wait <name> [--since <id>] [--timeout <s>]
   grapevine grep <name> <pattern> [--literal] [--from <alias>]
   grapevine topic <name> [<text>]   # no text → read current; with text → update
@@ -810,7 +862,7 @@ Usage:
   grapevine doctor                  # health check — daemon, zombies, channels
 
 Env:
-  GRAPEVINE_FROM   Default alias for --from (send) and --as (tail).
+  GRAPEVINE_FROM   Default identity alias (--from/--as are interchangeable).
   GRAPEVINE_HOME   Data dir (default ~/.grapevine).
 `);
       return 0;

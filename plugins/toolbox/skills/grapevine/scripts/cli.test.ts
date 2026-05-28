@@ -463,7 +463,8 @@ describe("grapevine cli", () => {
     expect(payload.text.length).toBe(1500);
     expect(payload.truncation_hint).toBeDefined();
     expect(payload.truncation_hint).toContain("1500 chars");
-    expect(payload.truncation_hint).toContain("pull to read");
+    // Hint carries the exact recovery command: `read <channel> <id>`.
+    expect(payload.truncation_hint).toContain(`read test_trunc ${payload.id}`);
     t.proc.kill("SIGTERM");
   });
 
@@ -683,5 +684,63 @@ describe("grapevine cli", () => {
     expect(data.subscriber_aliases).toEqual(["alice"]);
     expect(data.subscribers).toBe(1);
     a.proc.kill("SIGTERM");
+  });
+
+  test("read returns one full message by id", async () => {
+    await bunRun(["open", "test_read"]);
+    await bunRun(["send", "test_read", "--from", "a", "first"]);
+    await bunRun(["send", "test_read", "--from", "b", "second"]);
+    await bunRun(["send", "test_read", "--from", "c", "third"]);
+    const r = await bunRun(["read", "test_read", "2"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.ok).toBe(true);
+    expect(data.message.id).toBe(2);
+    expect(data.message.from).toBe("b");
+    expect(data.message.text).toBe("second");
+  });
+
+  test("read --text prints prose without JSON envelope", async () => {
+    await bunRun(["open", "test_read_text"]);
+    await bunRun(["send", "test_read_text", "--from", "narrator", "the body"]);
+    const r = await bunRun(["read", "test_read_text", "1", "--text"]);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("[1] narrator");
+    expect(r.stdout).toContain("the body");
+    expect(r.stdout.trimStart().startsWith("{")).toBe(false);
+  });
+
+  test("read errors on a missing id", async () => {
+    await bunRun(["open", "test_read_missing"]);
+    await bunRun(["send", "test_read_missing", "--from", "x", "only one"]);
+    const r = await bunRun(["read", "test_read_missing", "999"]);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain("not found");
+  });
+
+  test("send accepts --as as an identity alias (interchangeable with --from)", async () => {
+    await bunRun(["open", "test_as_send"]);
+    const r = await bunRun(["send", "test_as_send", "--as", "viaAs", "hi"]);
+    expect(r.code).toBe(0);
+    const pulled = await bunRun(["pull", "test_as_send", "--since", "0"]);
+    expect(JSON.parse(pulled.stdout).messages[0].from).toBe("viaAs");
+  });
+
+  test("tail accepts --from as an identity alias (self-echo suppressed)", async () => {
+    await bunRun(["open", "test_from_tail"]);
+    // Subscribe with --from instead of --as; our own sends should be dropped.
+    const t = spawnTail("test_from_tail", ["--from", "self"]);
+    await sleep(400);
+    await bunRun(["send", "test_from_tail", "--from", "self", "echo me"]);
+    await bunRun(["send", "test_from_tail", "--from", "other", "keep me"]);
+    await sleep(400);
+    const lines = t
+      .output()
+      .trim()
+      .split("\n")
+      .filter((l) => l);
+    expect(lines.length).toBe(1);
+    expect(JSON.parse(lines[0]).from).toBe("other");
+    t.proc.kill("SIGTERM");
   });
 });
