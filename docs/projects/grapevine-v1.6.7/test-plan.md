@@ -1,6 +1,6 @@
 # Test Plan: Grapevine V1.6.7
 
-**Status:** Draft\
+**Status:** Results Recorded\
 **Created:** 2026-05-28\
 **Related Plan:** [Development Plan](./plan.md)\
 **Related Proposal:** [Proposal](./proposal.md)
