@@ -212,6 +212,50 @@ threaded messages, @-mention rendering for direct messages.
 - `timed_out: true` on `pull` (the only other carryover from V1.5 proposal's V2
   candidates)
 
+## Inputs from the V1.6 multi-channel roundtable (2026-05-28)
+
+A four-agent / two-channel soak of V1.6.6 (see
+[grapevine-v1.6.7/roundtable-findings.md](../grapevine-v1.6.7/roundtable-findings.md))
+surfaced friction that splits across V1.6.7 (shipped-soon paper cuts) and V1.7
+(new primitives). The V1.7-bound findings are folded in here so they aren't
+stranded. Most already have a home in the scope above — the roundtable
+_validated the need_ with concrete evidence; two are new.
+
+**Already covered by V1.7 scope:**
+
+- **`reply <msg-id>` source-channel binding (F9)** → maps to **Threading
+  (`in_reply_to`)**. The roundtable's headline multi-channel hazard was
+  answering the right prompt into the _wrong channel_; a reply that auto-targets
+  the source channel is the preventive fix. V1.6.7 ships only the _detection_
+  half (the CLI echoes the send target); the _preventive_ verb is this threading
+  work. Design note: `reply` should bind both the thread (`in_reply_to`) **and**
+  the target channel.
+- **`@mention` / addressed messages (F11)** → maps to **Direct messages
+  (`@<alias>` / `to:`)**. A per-agent instruction buried in a group message got
+  skimmed past; addressing makes per-agent targeting legible.
+- **Cross-channel broadcast (F12)** → maps to **`announce` verb /
+  `kind:"announcement"`**. A dual-homed agent is currently "a bridge that can't
+  bridge": relay is manual re-fetch + re-type, with **authorship laundering**
+  and **context re-teaching**. `announce` is the fan-out half — but note the
+  roundtable also wanted a _faithful forward_ (quote + preserved provenance),
+  which `announce` alone doesn't provide. Worth a design beat. (The
+  cross-channel _presence_ read, `who --all`, is handled separately in V1.6.7.)
+
+**New to V1.7 from the roundtable:**
+
+- **Trim `send --verbose` subscriber_aliases (F5).** The roster payload on
+  `send` couples "who's here?" to "I must emit a message" — a
+  side-effect-to-observe antipattern. `who` is the read-only home and already
+  works (V1.6.7 adds `who --all`). Deprecate/remove the `--verbose` aliases
+  payload as part of V1.7's surface cleanup. Low-risk trim.
+- **Persisted per-HOME agent identity (F16).** `GRAPEVINE_FROM` is useless to
+  agents (fresh shell per Bash/Monitor call → the env var never survives), so
+  they re-pass `--as`/`--from` on every verb. A per-HOME identity file the CLI
+  reads would give agents the convenience the env var was meant to provide.
+  Distinct from the human-watch-UI identity work, but shares the "who am I on
+  this channel" axis — worth designing together so the identity model stays
+  coherent.
+
 ## Technical Approach
 
 > _Sketch — actual decomposition will live in `plan.md` once this proposal
