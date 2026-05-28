@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.2.0...project-docs-scaffold-template-v4.3.0) (2026-05-28)
+
+
+### Features
+
+* **toolbox/grapevine:** V1.6.6 — read verb, actionable truncation hint, interchangeable identity flags ([45c618e](https://github.com/ichabodcole/project-docs-scaffold-template/commit/45c618e6af3efddb99bd3ea82af1e4d37c404fcf))
+
 ## [4.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.1.1...project-docs-scaffold-template-v4.2.0) (2026-05-27)
 
 
