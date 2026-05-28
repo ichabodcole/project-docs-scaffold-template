@@ -257,9 +257,14 @@ receives truncation hints.
 
 **Validation:**
 
-- [ ] `bun test` green for the full `cli.test.ts` suite.
-- [ ] SKILL.md banner + verbs table reflect V1.6.7; prettier clean.
-- [ ] `info`/`doctor` report version `2.9.0` after a daemon roll.
+- [x] `bun test` green for the full `cli.test.ts` suite.
+- [x] SKILL.md banner + verbs table + presence model + consume-mode (Wiring B,
+      `2>&1`, labeling) + `GRAPEVINE_FROM` caveat + watch-tab correction
+      updated; banner bumped to V1.6.7; prettier clean.
+- [x] `plugin.json` 2.8.0 → 2.9.0 (the test harness spawns a 2.9.0 daemon; a
+      live `info`/`doctor` 2.9.0 check is part of the Phase 6 smoke test).
+
+**Status:** DONE.
 
 **Dependencies:** Phases 1–4 (docs describe shipped behavior).
 
