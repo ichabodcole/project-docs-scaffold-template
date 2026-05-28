@@ -17,25 +17,29 @@ sharpenings. All work is in `plugins/toolbox/skills/grapevine/scripts/`
 proposal was written before close code-reading and slightly mis-framed two
 items:
 
-1. **A heartbeat already exists.** `daemon.ts:586-596` writes an SSE comment
-   (`: hb <ts>`) to every subscriber every 3s, inside a `try/catch` whose
-   `catch` calls `cleanup()` to unregister dead subscribers. The reason ghosts
-   still persisted for minutes in the roundtable is that **`controller.enqueue`
-   into a dead Bun SSE stream does not reliably throw** — so the heartbeat's
-   `catch` never fires, and the de-facto reaper becomes Bun's `idleTimeout: 255`
-   (`daemon.ts:669`, ~4 minutes). So the flagship task is not "add a heartbeat"
-   but "**make disconnect detection actually fire promptly.**"
-2. **`count` already diverges from names by construction.** The `/subscribers`
-   handler returns `count: ch.subscribers.size` (raw connections,
-   `daemon.ts:520`) while the `subscribers` array comes from
-   `subscriberAliases()`, which **skips null-alias connections**
-   (`daemon.ts:246`). An anonymous `watch` tab connects to `/tail` with no `as=`
-   param and registers as a null-alias subscriber (`daemon.ts:575-576`) — so it
-   inflates `count` but not the name list. This is a count-inflation source
-   **independent of the reaping bug**, and it contradicts SKILL.md's claim that
-   watching is presence-free. Both must be handled for F1/F15.
+1. **Reaping already works — disproven by a TDD spike (2026-05-28).** A
+   heartbeat already exists (`daemon.ts:586-596`, 3s, `: hb <ts>` with a
+   `catch`→`cleanup()`). The original hypothesis was that `controller.enqueue`
+   into a dead Bun stream doesn't throw, leaving `idleTimeout: 255` as the only
+   reaper. **The spike proved otherwise:** a SIGKILL'd consumer is reaped from
+   `who` within ~6s on the unmodified daemon (test:
+   `"a hard-killed tail is reaped from who within a few seconds"`). So there is
+   **no reaping fix to make** for the common case; `idleTimeout` stays 255 and
+   the narrow half-open/hung-socket case is the deferred T3-02 scenario. The
+   roundtable's persistent `count:5`/4-names "ghost" was almost certainly the
+   anonymous `watch` tab (see #2), not an un-reaped tail.
+2. **`count` diverges from names by construction — this was the real bug.** The
+   `/subscribers` handler returned `count: ch.subscribers.size` (raw
+   connections) while the `subscribers` array came from `subscriberAliases()`,
+   which **skips null-alias connections** (`daemon.ts:246`). An anonymous
+   `watch` tab connects to `/tail` with no `as=` param and registers as a
+   null-alias subscriber (`daemon.ts:575-576`), inflating `count` but not the
+   name list. **Fixed:** `/subscribers` now returns
+   `connections`/`named`/`anonymous` (`named + anonymous === connections`), so
+   the divergence is always explainable.
 
-The plan reflects the real code, not the proposal's pre-reading framing.
+The plan reflects the real code and the spike's findings, not the proposal's
+pre-reading framing.
 
 ## Outcome & Success Criteria
 
@@ -89,47 +93,38 @@ Current → target, by file:
 
 ## Phases
 
-### Phase 1: Daemon connection-liveness & reaping (flagship)
+### Phase 1: Honest presence counts (DONE) — reaping verified, not rewritten
 
-**Goal:** A dead/half-open SSE connection is reaped within seconds, so
-`who`/`list`/`doctor` stop carrying ghosts. Make count semantics honest.
+**Goal:** `count` over the name list is always explainable; confirm (don't
+rewrite) that dead connections are reaped promptly.
 
-**Key Changes:**
+**Spike outcome (2026-05-28):** Reaping was the presumed flagship bug; the spike
+disproved it. A SIGKILL'd consumer reaps within ~6s on the unmodified daemon, so
+the `/tail` handler, the 3s heartbeat, and `idleTimeout: 255` are left
+unchanged. The real, test-confirmed bug was count semantics.
 
-- `daemon.ts` `/tail` handler (`:548-613`): make disconnect detection reliable.
-  The current reaper depends on `controller.enqueue` throwing (`:590-596`),
-  which is unreliable under Bun. Candidate mechanisms to spike (pick by test
-  evidence, not a priori):
-  1. Wire the request's abort signal — `handle(req)` has `req`; pass it into the
-     stream scope and `req.signal.addEventListener("abort", cleanup)` so a
-     client disconnect reaps immediately.
-  2. Lower `idleTimeout` (`:669`) from 255 to a smaller value (e.g. 30–45s) now
-     that the 3s heartbeat keeps legit-idle connections alive — so even a
-     missed-abort half-open socket reaps on a tight-ish timer instead of ~4 min.
-  3. Check `controller.desiredSize === null` (errored stream) in the heartbeat
-     and `cleanup()` on that signal as well as on throw. Likely the robust
-     answer is (1) + (2) together: abort for clean closes, a tightened
-     idleTimeout as the backstop for abrupt ones.
-- Count semantics: decide and implement how `/subscribers` reports presence so
-  `count` is explainable. Recommended: keep `subscribers` (sorted unique-ish
-  alias list) and add explicit fields — `connections` (raw `size`), `named`
-  (distinct non-null aliases), `anonymous` (null-alias count, e.g. watch tabs).
-  `count` stays = `connections` for back-compat but is no longer the only
-  number. (This is the data `doctor` and `who --all` consume in Phase 2.)
-- Decide the watch-tab question: either (a) accept anonymous watchers in
-  `connections`/`anonymous` and document it, or (b) have the watch SSE connect
-  with a sentinel that the daemon excludes from presence. Recommended: (a) —
-  honest accounting beats a special case; update SKILL.md's "watching is
-  presence-free" claim to match.
+**Key Changes (implemented):**
+
+- `daemon.ts` `/subscribers` handler: added `connections` (raw `size`), `named`
+  (alias-bearing connections), `anonymous` (null-alias, e.g. watch tabs), with
+  `named + anonymous === connections`. `count` stays `=== connections` for
+  back-compat. `cmdWho` passes the new fields through unchanged
+  (`printJson({ ok: true, ...data })`). This is the data `doctor` and
+  `who --all` consume in Phase 2.
+- Watch-tab question resolved (a): anonymous watchers are honestly accounted in
+  `anonymous`/`connections`, not special-cased out. SKILL.md's "watching is
+  presence-free" claim gets corrected in Phase 5.
+- **Not done (by decision):** no `idleTimeout` change, no abort-signal rewrite —
+  reaping works for the common case; the half-open/hung-socket reap is the
+  deferred T3-02 scenario.
 
 **Validation:**
 
-- [ ] New test (or manual harness against a `GRAPEVINE_HOME` temp dir): start a
-      `tail` subprocess with `--as ghosttest`, confirm `who` shows it, `kill -9`
-      the subprocess, then assert `who` drops `ghosttest` within ≤ ~5s.
-- [ ] `/subscribers` returns the new explicit fields; an anonymous connection
-      shows up in `anonymous`/`connections` but not `named`.
-- [ ] Existing `who`/`list`/`send` tests still pass (back-compat of `count`).
+- [x] `"a hard-killed tail is reaped from who within a few seconds"` — passes
+      against the unmodified daemon (regression guard that reaping works).
+- [x] `"who distinguishes named subscribers from anonymous connections"` — RED
+      first (`named` undefined), then GREEN after the count-field change.
+- [x] Full suite green (47/47), `count` back-compat intact.
 
 **Dependencies:** none. This is the foundation.
 

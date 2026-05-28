@@ -743,4 +743,48 @@ describe("grapevine cli", () => {
     expect(JSON.parse(lines[0]).from).toBe("other");
     t.proc.kill("SIGTERM");
   });
+
+  test("a hard-killed tail is reaped from who within a few seconds", async () => {
+    await bunRun(["open", "test_reap"]);
+    const t = spawnTail("test_reap", ["--as", "ghost"]);
+    await sleep(600); // let the subscription land
+    const before = JSON.parse((await bunRun(["who", "test_reap"])).stdout);
+    expect(before.subscribers).toContain("ghost");
+
+    // SIGKILL simulates a crashed / abruptly-terminated consumer — no clean
+    // SSE close. This is the failure mode that left minute-long ghosts in the
+    // V1.6 multi-channel roundtable (the daemon's enqueue-catch reaper does not
+    // fire reliably under Bun, leaving idleTimeout:255 as the de-facto reaper).
+    t.proc.kill("SIGKILL");
+
+    // Poll who until ghost is reaped, up to ~6s. A correct daemon reaps the
+    // dead connection within seconds; the pre-fix daemon lingers far past this.
+    let reaped = false;
+    const deadline = Date.now() + 6000;
+    while (Date.now() < deadline) {
+      await sleep(500);
+      const w = JSON.parse((await bunRun(["who", "test_reap"])).stdout);
+      if (!w.subscribers.includes("ghost")) {
+        reaped = true;
+        break;
+      }
+    }
+    expect(reaped).toBe(true);
+  }, 15000);
+
+  test("who distinguishes named subscribers from anonymous connections", async () => {
+    await bunRun(["open", "test_anon"]);
+    const named = spawnTail("test_anon", ["--as", "alice"]);
+    const anon = spawnTail("test_anon"); // no --as → null alias, like a watch tab
+    await sleep(600);
+    const who = JSON.parse((await bunRun(["who", "test_anon"])).stdout);
+    // The name list shows only the named subscriber; explicit counts account
+    // for the anonymous connection so `count` is never a mystery vs. names.
+    expect(who.subscribers).toEqual(["alice"]);
+    expect(who.named).toBe(1);
+    expect(who.anonymous).toBe(1);
+    expect(who.connections).toBe(2);
+    named.proc.kill("SIGTERM");
+    anon.proc.kill("SIGTERM");
+  });
 });

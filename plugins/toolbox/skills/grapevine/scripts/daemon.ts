@@ -514,10 +514,21 @@ async function handle(req: Request): Promise<Response> {
 
     if (sub === "/subscribers" && method === "GET") {
       const ch = channels.get(name);
+      const subs = ch ? Array.from(ch.subscribers.values()) : [];
+      // Honest presence accounting: `connections` is the raw socket count,
+      // `named` is connections carrying an alias, `anonymous` is null-alias
+      // connections (e.g. watch tabs). named + anonymous === connections, so a
+      // `count` that exceeds the visible name list is always explainable rather
+      // than reading as a ghost. `count` stays === connections for back-compat.
+      const named = subs.filter((s) => s.alias).length;
+      const anonymous = subs.filter((s) => !s.alias).length;
       return json({
         channel: name,
         subscribers: subscriberAliases(name),
-        count: ch?.subscribers.size ?? 0,
+        count: subs.length,
+        connections: subs.length,
+        named,
+        anonymous,
         topic: ch?.topic ?? null,
       });
     }

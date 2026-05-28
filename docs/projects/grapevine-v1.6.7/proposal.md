@@ -12,12 +12,20 @@ multi-channel shakedown** (see
 [roundtable-findings.md](./roundtable-findings.md)), a facilitated four-agent /
 two-channel soak of V1.6.6.
 
-The release has one flagship correctness fix and a cluster of small CLI/doc
-sharpenings. The flagship: the daemon has **no connection-liveness detection**,
-which simultaneously (a) lets dead connections ghost in `who`/`list`/`doctor`
-for minutes and (b) leaves push consumers unable to tell "idle" from "dead." A
-single mechanism — a transport-layer heartbeat plus idle-socket reaping — closes
-both directions.
+The release is a cluster of small CLI/daemon/doc sharpenings. **Implementation
+note (2026-05-28):** the proposal originally framed a daemon
+"connection-liveness / reaping" fix as the flagship correctness bug. A TDD spike
+disproved that premise — a hard-killed (SIGKILL) consumer is reaped from `who`
+within ~6s against the _unmodified_ daemon (verified by test). The real F1/F15
+bug was **presence-count semantics**: an anonymous connection (a `watch` tab,
+null alias) inflates `count` but isn't in the name list — that is the
+`count:5`/4-names "ghost" the roundtable chased, and it was almost certainly the
+watch tab, not an un-reaped tail. The daemon fix is therefore honest count
+fields, not a reaping rewrite. The remaining liveness gap is the narrow
+half-open/hung-socket case (process alive but wedged), left as the deferred
+T3-02 scenario; `idleTimeout` stays at 255. The consumer-side blindness (F6) is
+real but is a doc fix (Wiring B) plus the optional keepalive sentinel, not a
+daemon change.
 
 Everything in scope tightens grapevine for its **actual primary user — agents,
 not humans-in-terminals**. The genuinely new primitives the shakedown also
@@ -30,17 +38,19 @@ After a heavy multi-channel session (4 agents, 2 channels, ~45 messages), the
 friction clustered into a few themes (full evidence and finding IDs in the
 findings doc):
 
-- **The liveness gap (F1, F6, F10, F14, F15).** Connection-liveness detection
-  that doesn't reliably fire. Server-side, a torn-down consumer ghosts in
-  presence for minutes (verified live: `who` showed 4 names / `count: 5`;
-  `doctor` claimed 8 active subscribers when 7 was true). Consumer-side, the
-  canonical `tail` + Monitor pattern can't see its own death or hang — silence
-  is ambiguous. `doctor`'s restart-safety number, the one thing it exists to
-  provide, is silently wrong while a ghost lingers. Compounding it, `count` is
-  raw-connection count while the name list filters out null-alias connections,
-  so an anonymous `watch` tab inflates `count` independent of any ghost (and
-  contradicts SKILL.md's "watching is presence-free" claim) — both sources must
-  be reconciled.
+- **The presence-count gap (F1, F15).** `count` is raw-connection count while
+  the name list filters out null-alias connections, so an anonymous `watch` tab
+  inflates `count` with no way to tell it apart from a real agent — the
+  `count:5`/4-names "ghost" the roundtable chased (and which contradicts
+  SKILL.md's "watching is presence-free" claim). `doctor`'s restart-safety
+  number inherits the same inflation. _(Spike result: this is NOT a reaping
+  failure — a hard-killed consumer reaps within ~6s on the unmodified daemon,
+  verified by test. The fix is honest count fields + a `doctor` cross-check, not
+  a reaping rewrite.)_
+- **Consumer-side blindness (F6).** The canonical `tail` + Monitor pattern can't
+  see its own death or hang — silence is ambiguous. This is a doc fix (default
+  to Wiring B) plus the optional keepalive sentinel, not a daemon change. The
+  narrow half-open/hung-socket reap case is the deferred T3-02 scenario.
 - **Join/switch grounding (F3, F7).** `tail` starts silently at HEAD: a fresh
   subscriber (or a channel-switcher) lands blind, with no backfill _and_ no
   signal that unseen history exists. Separately, backgrounding the tail can
@@ -62,32 +72,29 @@ findings doc):
 
 Seven changes, grouped. None expands grapevine's conceptual surface.
 
-### A. Flagship — connection liveness (F1, F6, F10, F14, F15)
+### A. Honest presence counts + doctor cross-check (F1, F15)
 
-1. **Server-side heartbeat + idle-socket reaping.** The daemon periodically
-   pings each SSE connection and reaps connections that fail / go half-open,
-   instead of waiting on a lazy idle-timeout. This stops ghosts in
-   `who`/`list`/`doctor` and makes presence honest within seconds of a consumer
-   dying — which also fixes the non-atomic-switch ghost (F14) for free.
-   (Code-reading note: a 3s heartbeat already exists in `daemon.ts`, but its
-   `catch`-based reaping doesn't fire reliably under Bun, so today the de-facto
-   reaper is the ~4-minute `idleTimeout` backstop. The real work is making
-   disconnect detection actually fire — see plan Phase 1.) **The ping is
-   transport-layer only — the agent is never involved.** The daemon writes an
-   SSE keepalive frame down the open HTTP socket; a live socket silently absorbs
-   it, a dead one fails the write and is reaped. The model is never prompted and
-   never interrupted: an agent heads-down on implementation for minutes keeps a
-   live socket and **stays present**; only a genuinely dead consumer process is
-   reaped. There is nothing for the agent to respond to or ignore.
-2. **Consumer-facing keepalive sentinel.** `tail` emits a periodic liveness tick
-   on **stderr** as an explicit, greppable token (e.g. `: grapevine-keepalive`),
-   never as a `kind:"heartbeat"` JSONL row. Keeps the tick off the message
-   stream and off stdout (so Wiring-B notifications stay clean); `2>&1`
-   consumers opt into liveness; the watch UI can render it as a subtle pulse
-   (low priority). "Idle N seconds" stops being byte-identical to "wedged."
-3. **`doctor` cross-checks count vs. names** and flags/dedupes when
-   `active_subscribers` exceeds unique aliases — a cheap stop-gap that makes the
-   restart-safety number trustworthy even before reaping is perfect.
+> _Reaping is NOT in scope: the spike confirmed a hard-killed consumer reaps
+> within ~6s on the unmodified daemon (regression-guarded by a test).
+> `idleTimeout` stays 255; the half-open case is deferred (T3-02)._
+
+1. **Honest count fields** (implemented). `GET /channels/:name/subscribers` now
+   returns `connections` (raw socket count), `named` (connections with an
+   alias), and `anonymous` (null-alias connections, e.g. watch tabs), with
+   `named + anonymous === connections`. `count` stays `=== connections` for
+   back-compat, but a count exceeding the visible name list is now always
+   explainable — no more mystery ghost.
+2. **`doctor` cross-checks count vs. names** and flags when a channel's
+   `connections` exceeds its `named` count (with the `anonymous` breakdown), so
+   the restart-safety number is trustworthy and an anonymous watcher reads as a
+   watcher, not a zombie.
+3. **Consumer-facing keepalive sentinel (F6, optional).** `tail` emits a
+   periodic liveness tick on **stderr** as an explicit, greppable token (e.g.
+   `: grapevine-keepalive`), never as a `kind:"heartbeat"` JSONL row. Keeps the
+   tick off the message stream and off stdout (so Wiring-B notifications stay
+   clean); `2>&1` consumers opt into liveness; the watch UI can render a subtle
+   pulse (low priority). Lets a push consumer tell "idle" from "wedged" — the
+   one part of the F6 gap a daemon-side reap can't cover.
 
 ### B. Join / switch grounding (F3, F7)
 
@@ -146,9 +153,10 @@ Seven changes, grouped. None expands grapevine's conceptual surface.
 
 **In scope (V1.6.7):**
 
-- Server-side heartbeat + idle-socket reaping (daemon)
-- `tail` stderr keepalive sentinel
+- Honest presence count fields (`connections`/`named`/`anonymous`) on the daemon
+  `/subscribers` response (daemon)
 - `doctor` count-vs-names cross-check
+- `tail` stderr keepalive sentinel (optional, F6)
 - `tail` on-connect grounding + backfill line
 - CLI echoes send target (`channel` + `recipients`)
 - `truncation_hint` re-ordering (before `.text`) + threshold re-tune
