@@ -13,11 +13,12 @@
 //   DELETE /             — shut down the daemon
 //   GET    /watch        — HTML control plane (chat-bubble live view; channel from URL hash)
 //   GET    /channels     — list channels
+//   GET    /presence     — cross-channel roster: [{ name, subscribers:[alias], connections, named, anonymous }]
 //   POST   /channels     — { name, topic? } create channel (idempotent)
 //   DELETE /channels/:name — close channel
 //   POST   /channels/:name/messages — { from, text } append + broadcast
 //   GET    /channels/:name/messages — backlog (?since=<id>)
-//   GET    /channels/:name/subscribers — { channel, subscribers: [alias], count, topic }
+//   GET    /channels/:name/subscribers — { channel, subscribers:[alias], count, connections, named, anonymous, topic }
 //   GET    /channels/:name/topic    — { channel, topic }
 //   PUT    /channels/:name/topic    — { topic, from? } update topic (appends a kind:"topic" message)
 //   GET    /channels/:name/tail     — SSE: live messages (?since=<id> for catch-up, ?as=<alias> registers)

@@ -307,30 +307,31 @@ nice-to-have that can trail the CLI/daemon work.
 
 ## Results Addendum
 
-_Filled in during and after test execution by the implementing agent._
+_Executed 2026-05-28 — automated suite (`bun test cli.test.ts`, 52/52) + live
+2-agent smoke (`vintner` + `tesla`) on the real daemon rolled to branch 2.9.0._
 
-| Scenario | Status            | Notes                            |
-| -------- | ----------------- | -------------------------------- |
-| T1-01    | Pass/Fail/Blocked | [Details on failures or blocks]  |
-| T1-02    | Pass/Fail/Blocked | [Details on failures or blocks]  |
-| T1-03    | Pass/Fail/Blocked | [Details on failures or blocks]  |
-| T2-01    | Pass/Fail/Blocked | Flagship reaping gate            |
-| T2-02    | Pass/Fail/Blocked | [Details]                        |
-| T2-03    | Pass/Fail/Blocked | [Details]                        |
-| T2-04    | Pass/Fail/Blocked | [Details]                        |
-| T2-05    | Pass/Fail/Blocked | [Details]                        |
-| T2-06    | Pass/Fail/Blocked | [Details]                        |
-| T2-07    | Pass/Fail/Blocked | [Details]                        |
-| T2-08    | Pass/Fail/Blocked | [Details]                        |
-| T3-01    | Skipped           | Tier 3 — deferred (manual spike) |
-| T3-02    | Skipped           | Tier 3 — deferred (manual spike) |
-| T3-03    | Skipped           | Tier 3 — deferred                |
-| T3-04    | Skipped           | Tier 3 — deferred                |
-| T3-05    | Skipped           | Tier 3 — non-goal                |
+| Scenario | Status  | Notes                                                                                                                     |
+| -------- | ------- | ------------------------------------------------------------------------------------------------------------------------- |
+| T1-01    | Pass    | `bun test cli.test.ts` → 52/52, 165 assertions.                                                                           |
+| T1-02    | Pass    | open/send/pull round-trip (suite + smoke).                                                                                |
+| T1-03    | Pass    | `info`/`doctor` report `2.9.0` after the daemon roll.                                                                     |
+| T2-01    | Pass    | Flagship gate. SIGKILL'd tail reaped from `who` ≤ ~6s — and the spike showed reaping was already working (no fix needed). |
+| T2-02    | Pass    | `who` → `connections:2, named:1, anonymous:1`; smoke confirmed the watch tab is the anonymous one.                        |
+| T2-03    | Pass    | `who --all` returns names × channel in one call (unit + smoke).                                                           |
+| T2-04    | Pass    | `doctor` emits the divergence hint ("…1 anonymous (e.g. a watch tab)… not a ghost").                                      |
+| T2-05    | Pass    | Grounding line on join: `tesla` got `earlier:3` + topic + backfill hint (F7).                                             |
+| T2-06    | Pass    | 2527-char msg: `truncation_hint` is the **first key** (before `.text`), survived the clip, `read` recovered the body.     |
+| T2-07    | Pass    | `# → <chan> · N recipient(s)` on stderr; stdout JSON unchanged.                                                           |
+| T2-08    | Pass    | `: grapevine-keepalive` ~every 3s under `2>&1`; absent on the plain stdout tail (off the message stream).                 |
+| T3-01    | Skipped | Tier 3 — deferred (slow-idle false-reap; manual spike).                                                                   |
+| T3-02    | Skipped | Tier 3 — deferred (abrupt half-open socket; manual spike).                                                                |
+| T3-03    | Skipped | Tier 3 — deferred. Grounding is a parseable/skippable `kind`; reviewer confirmed no consumer break.                       |
+| T3-04    | Skipped | Tier 3 — deferred. Version-advert path unchanged; the branch CLI correctly flagged the 2.8.0 daemon during the roll.      |
+| T3-05    | Skipped | Tier 3 — non-goal (watch-UI pulse).                                                                                       |
 
-**Blocked scenarios:** None expected — no external prerequisites. T2-01/T2-08
-require subprocess spawn/kill and an idle-observation window; mark blocked only
-if the harness can't spawn real subprocesses.
+**Blocked scenarios:** None. All Tier-1/Tier-2 scenarios executed and passed; an
+independent code review (`feature-dev:code-reviewer`) returned **Ready to merge:
+Yes** with no blocking findings.
 
 ## Visual Artifacts
 
