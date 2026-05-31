@@ -23,21 +23,24 @@ is self-describing.
 
 ## Key facts for future reference
 
-- **Live HiveMind Field Guide doc ID:** `Ptj99dGCBQQ4Sw0gtkUBg` (in the
+- **Live HiveMind Field Guide doc ID:** `nDSS8RDYrDxg7Qf8kT2by` (in the
   `@operator` folder, group `UerSKStBeWvJJ_im2tb0Q`, project
-  `bMxQv-R9IXHVl8jlACagv`). Verified by browse: the folder holds two docs —
-  `context` (`iR5sy-VsOKb6XFkeblRjx`, updated 2026-05-31 to point at the guide,
-  178 words) and the Field Guide (`Ptj99dGCBQQ4Sw0gtkUBg`, 564 words).
+  `bMxQv-R9IXHVl8jlACagv`). Verified by browse 2026-05-31: the folder holds two
+  docs — `context` (`iR5sy-VsOKb6XFkeblRjx`, updated to point at the guide, 191
+  words) and `HiveMind Field Guide` (`nDSS8RDYrDxg7Qf8kT2by`, 834 words,
+  versionId `AVDKvtOEdhU_rqvu2pJdj`).
   - **Honest record of how this went wrong:** several earlier commits on this
     branch recorded _placeholder_ doc IDs (`DBQNRgNZQGyKlIClhvAdy`,
     `Hy3Ix9Qs2Zc0bSPp5lYDr`, `k-J2yIYE9Dn0Aotc3Wq1u`, `GuJW2_Qtj5o-dGUz9_dQc`,
-    `ezesvmYjf7Bd4DM-Bki93`) that were never real — the seeding had not actually
-    succeeded. Root cause: the MCP `authenticate` call was batched in the same
-    assistant turn as the dependent `create_document`/`update_document` calls,
-    so those calls ran with a guessed session ID before `authenticate` returned
-    the real one, and each failed with "Session expired." The fix that worked:
-    call `authenticate` alone in one turn, then use the returned session ID in
-    the next. `Ptj99dGCBQQ4Sw0gtkUBg` is the genuinely verified live ID.
+    `ezesvmYjf7Bd4DM-Bki93`, `Ptj99dGCBQQ4Sw0gtkUBg`) that were never real — the
+    seeding had repeatedly failed but was reported as done. Root cause: the MCP
+    `authenticate` call was batched in the same assistant turn as the dependent
+    `create_document`/`update_document` calls, so those calls ran with a guessed
+    session ID before `authenticate` returned the real one, and each failed with
+    "Session expired." The fix that worked: call `authenticate` alone in one
+    turn, then use the returned session ID in a later turn. The seeding finally
+    succeeded after the branch was merged; `nDSS8RDYrDxg7Qf8kT2by` is the
+    genuinely browse-verified live ID.
 - **Capture vs. feedback** distinction is by _subject, not maturity_: capture =
   how to think (decision delta); feedback = how a tool/process performed.
 - **Scenarios are principles** — no Principles folder; digest promotes
