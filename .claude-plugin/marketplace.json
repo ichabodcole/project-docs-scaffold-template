@@ -45,6 +45,18 @@
       "source": "./plugins/agent-bridge",
       "category": "communication",
       "tags": ["agent-bridge", "cross-project", "knowledge-sharing"]
+    },
+    {
+      "name": "hivemind",
+      "source": "./plugins/hivemind",
+      "category": "knowledge",
+      "tags": [
+        "hivemind",
+        "cross-project",
+        "knowledge-sharing",
+        "playbooks",
+        "feedback"
+      ]
     }
   ]
 }
