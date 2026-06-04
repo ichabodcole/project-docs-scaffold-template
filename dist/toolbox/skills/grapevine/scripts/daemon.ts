@@ -13,11 +13,12 @@
 //   DELETE /             — shut down the daemon
 //   GET    /watch        — HTML control plane (chat-bubble live view; channel from URL hash)
 //   GET    /channels     — list channels
+//   GET    /presence     — cross-channel roster: [{ name, subscribers:[alias], connections, named, anonymous }]
 //   POST   /channels     — { name, topic? } create channel (idempotent)
 //   DELETE /channels/:name — close channel
 //   POST   /channels/:name/messages — { from, text } append + broadcast
 //   GET    /channels/:name/messages — backlog (?since=<id>)
-//   GET    /channels/:name/subscribers — { channel, subscribers: [alias], count, topic }
+//   GET    /channels/:name/subscribers — { channel, subscribers:[alias], count, connections, named, anonymous, topic }
 //   GET    /channels/:name/topic    — { channel, topic }
 //   PUT    /channels/:name/topic    — { topic, from? } update topic (appends a kind:"topic" message)
 //   GET    /channels/:name/tail     — SSE: live messages (?since=<id> for catch-up, ?as=<alias> registers)
@@ -318,6 +319,26 @@ async function handle(req: Request): Promise<Response> {
     return json({ channels: listChannels() });
   }
 
+  // Cross-channel presence aggregation — one shot of names × channel for the
+  // `who --all` view and `doctor`'s cross-check. Only channels with at least
+  // one live connection appear (presence only exists for loaded channels).
+  if (path === "/presence" && method === "GET") {
+    const out = [];
+    for (const ch of channels.values()) {
+      const subs = Array.from(ch.subscribers.values());
+      if (subs.length === 0) continue;
+      out.push({
+        name: ch.name,
+        subscribers: subscriberAliases(ch.name),
+        connections: subs.length,
+        named: subs.filter((s) => s.alias).length,
+        anonymous: subs.filter((s) => !s.alias).length,
+      });
+    }
+    out.sort((a, b) => a.name.localeCompare(b.name));
+    return json({ channels: out });
+  }
+
   if (path === "/channels" && method === "POST") {
     const body = await readJsonBody(req);
     if (!body || typeof body.name !== "string") {
@@ -514,10 +535,21 @@ async function handle(req: Request): Promise<Response> {
 
     if (sub === "/subscribers" && method === "GET") {
       const ch = channels.get(name);
+      const subs = ch ? Array.from(ch.subscribers.values()) : [];
+      // Honest presence accounting: `connections` is the raw socket count,
+      // `named` is connections carrying an alias, `anonymous` is null-alias
+      // connections (e.g. watch tabs). named + anonymous === connections, so a
+      // `count` that exceeds the visible name list is always explainable rather
+      // than reading as a ghost. `count` stays === connections for back-compat.
+      const named = subs.filter((s) => s.alias).length;
+      const anonymous = subs.filter((s) => !s.alias).length;
       return json({
         channel: name,
         subscribers: subscriberAliases(name),
-        count: ch?.subscribers.size ?? 0,
+        count: subs.length,
+        connections: subs.length,
+        named,
+        anonymous,
         topic: ch?.topic ?? null,
       });
     }
@@ -566,7 +598,7 @@ async function handle(req: Request): Promise<Response> {
           // grounding context before any messages arrive.
           controller.enqueue(
             enc.encode(
-              `event: subscribed\ndata: ${JSON.stringify({ channel: name, since, as: alias, topic: ch.topic })}\n\n`
+              `event: subscribed\ndata: ${JSON.stringify({ channel: name, since, as: alias, topic: ch.topic, latest_id: ch.next_id - 1 })}\n\n`
             )
           );
           // Replay backlog before live tail begins.

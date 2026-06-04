@@ -1,7 +1,7 @@
 {
-  "name": "toolbox",
-  "version": "2.10.0",
-  "description": "Specialist development utilities — testing, optimization, and tooling skills that aren't specific to project documentation",
+  "name": "hivemind",
+  "version": "0.1.0",
+  "description": "Cross-project knowledge cycle — capture scenarios and feedback, consult accumulated knowledge, and digest it into playbooks. Operator-backed.",
   "author": {
     "name": "Cole Reed"
   },

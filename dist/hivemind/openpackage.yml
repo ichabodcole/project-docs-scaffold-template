@@ -1,0 +1,6 @@
+name: hivemind
+version: 0.1.0
+description: "Cross-project knowledge cycle — capture scenarios and feedback, consult accumulated knowledge, and digest it into playbooks. Operator-backed."
+keywords: [agent-skills, documentation, ai-coding-agent]
+author: "Cole Reed"
+license: MIT

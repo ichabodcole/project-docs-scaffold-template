@@ -450,30 +450,45 @@ describe("grapevine cli", () => {
     expect(msg.text).toBe(`text with <brackets> & "quotes" & \`backticks\``);
   });
 
-  test("tail emits truncation hint for long messages", async () => {
+  test("tail emits truncation hint before text for long messages", async () => {
     await bunRun(["open", "test_trunc"]);
     const t = spawnTail("test_trunc", ["--as", "observer"]);
     await sleep(400);
-    const longBody = "x".repeat(1500);
+    const longBody = "x".repeat(2500); // > the raised ~2000 default threshold
     await bunRun(["send", "test_trunc", "--from", "talker", longBody]);
     await sleep(400);
-    const line = t.output().split("\n").filter(Boolean)[0];
+    const line = t
+      .output()
+      .split("\n")
+      .filter(Boolean)
+      .find((l) => l.includes('"text"'));
     expect(line).toBeDefined();
     const payload = JSON.parse(line);
-    expect(payload.text.length).toBe(1500);
+    expect(payload.text.length).toBe(2500);
     expect(payload.truncation_hint).toBeDefined();
-    expect(payload.truncation_hint).toContain("1500 chars");
-    expect(payload.truncation_hint).toContain("pull to read");
+    expect(payload.truncation_hint).toContain("2500 chars");
+    // Hint carries the exact recovery command: `read <channel> <id>`.
+    expect(payload.truncation_hint).toContain(`read test_trunc ${payload.id}`);
+    // F17: the hint must serialize BEFORE .text so a notification clip (which
+    // lands inside .text) can't bury it.
+    expect(line.indexOf("truncation_hint")).toBeGreaterThanOrEqual(0);
+    expect(line.indexOf("truncation_hint")).toBeLessThan(line.indexOf('"text"'));
     t.proc.kill("SIGTERM");
   });
 
-  test("tail does not emit truncation hint for short messages", async () => {
+  test("tail does not emit truncation hint below the raised threshold", async () => {
     await bunRun(["open", "test_short"]);
     const t = spawnTail("test_short", ["--as", "observer"]);
     await sleep(400);
-    await bunRun(["send", "test_short", "--from", "talker", "tiny"]);
+    // 1000 chars: above the OLD 800 default, below the NEW ~2000 default — so a
+    // raised threshold means no hint. Proves the default was actually raised.
+    await bunRun(["send", "test_short", "--from", "talker", "z".repeat(1000)]);
     await sleep(400);
-    const line = t.output().split("\n").filter(Boolean)[0];
+    const line = t
+      .output()
+      .split("\n")
+      .filter(Boolean)
+      .find((l) => l.includes('"text"'));
     expect(line).toBeDefined();
     const payload = JSON.parse(line);
     expect(payload.truncation_hint).toBeUndefined();
@@ -682,6 +697,210 @@ describe("grapevine cli", () => {
     const data = JSON.parse(r.stdout);
     expect(data.subscriber_aliases).toEqual(["alice"]);
     expect(data.subscribers).toBe(1);
+    a.proc.kill("SIGTERM");
+  });
+
+  test("read returns one full message by id", async () => {
+    await bunRun(["open", "test_read"]);
+    await bunRun(["send", "test_read", "--from", "a", "first"]);
+    await bunRun(["send", "test_read", "--from", "b", "second"]);
+    await bunRun(["send", "test_read", "--from", "c", "third"]);
+    const r = await bunRun(["read", "test_read", "2"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(data.ok).toBe(true);
+    expect(data.message.id).toBe(2);
+    expect(data.message.from).toBe("b");
+    expect(data.message.text).toBe("second");
+  });
+
+  test("read --text prints prose without JSON envelope", async () => {
+    await bunRun(["open", "test_read_text"]);
+    await bunRun(["send", "test_read_text", "--from", "narrator", "the body"]);
+    const r = await bunRun(["read", "test_read_text", "1", "--text"]);
+    expect(r.code).toBe(0);
+    expect(r.stdout).toContain("[1] narrator");
+    expect(r.stdout).toContain("the body");
+    expect(r.stdout.trimStart().startsWith("{")).toBe(false);
+  });
+
+  test("read errors on a missing id", async () => {
+    await bunRun(["open", "test_read_missing"]);
+    await bunRun(["send", "test_read_missing", "--from", "x", "only one"]);
+    const r = await bunRun(["read", "test_read_missing", "999"]);
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain("not found");
+  });
+
+  test("send accepts --as as an identity alias (interchangeable with --from)", async () => {
+    await bunRun(["open", "test_as_send"]);
+    const r = await bunRun(["send", "test_as_send", "--as", "viaAs", "hi"]);
+    expect(r.code).toBe(0);
+    const pulled = await bunRun(["pull", "test_as_send", "--since", "0"]);
+    expect(JSON.parse(pulled.stdout).messages[0].from).toBe("viaAs");
+  });
+
+  test("tail accepts --from as an identity alias (self-echo suppressed)", async () => {
+    await bunRun(["open", "test_from_tail"]);
+    // Subscribe with --from instead of --as; our own sends should be dropped.
+    const t = spawnTail("test_from_tail", ["--from", "self"]);
+    await sleep(400);
+    await bunRun(["send", "test_from_tail", "--from", "self", "echo me"]);
+    await bunRun(["send", "test_from_tail", "--from", "other", "keep me"]);
+    await sleep(400);
+    const lines = t
+      .output()
+      .trim()
+      .split("\n")
+      .filter((l) => l);
+    expect(lines.length).toBe(1);
+    expect(JSON.parse(lines[0]).from).toBe("other");
+    t.proc.kill("SIGTERM");
+  });
+
+  test("a hard-killed tail is reaped from who within a few seconds", async () => {
+    await bunRun(["open", "test_reap"]);
+    const t = spawnTail("test_reap", ["--as", "ghost"]);
+    await sleep(600); // let the subscription land
+    const before = JSON.parse((await bunRun(["who", "test_reap"])).stdout);
+    expect(before.subscribers).toContain("ghost");
+
+    // SIGKILL simulates a crashed / abruptly-terminated consumer — no clean
+    // SSE close. This is the failure mode that left minute-long ghosts in the
+    // V1.6 multi-channel roundtable (the daemon's enqueue-catch reaper does not
+    // fire reliably under Bun, leaving idleTimeout:255 as the de-facto reaper).
+    t.proc.kill("SIGKILL");
+
+    // Poll who until ghost is reaped, up to ~6s. A correct daemon reaps the
+    // dead connection within seconds; the pre-fix daemon lingers far past this.
+    let reaped = false;
+    const deadline = Date.now() + 6000;
+    while (Date.now() < deadline) {
+      await sleep(500);
+      const w = JSON.parse((await bunRun(["who", "test_reap"])).stdout);
+      if (!w.subscribers.includes("ghost")) {
+        reaped = true;
+        break;
+      }
+    }
+    expect(reaped).toBe(true);
+  }, 15000);
+
+  test("who distinguishes named subscribers from anonymous connections", async () => {
+    await bunRun(["open", "test_anon"]);
+    const named = spawnTail("test_anon", ["--as", "alice"]);
+    const anon = spawnTail("test_anon"); // no --as → null alias, like a watch tab
+    await sleep(600);
+    const who = JSON.parse((await bunRun(["who", "test_anon"])).stdout);
+    // The name list shows only the named subscriber; explicit counts account
+    // for the anonymous connection so `count` is never a mystery vs. names.
+    expect(who.subscribers).toEqual(["alice"]);
+    expect(who.named).toBe(1);
+    expect(who.anonymous).toBe(1);
+    expect(who.connections).toBe(2);
+    named.proc.kill("SIGTERM");
+    anon.proc.kill("SIGTERM");
+  });
+
+  test("who --all returns subscribers across all channels in one call", async () => {
+    await bunRun(["open", "wa_one"]);
+    await bunRun(["open", "wa_two"]);
+    const a = spawnTail("wa_one", ["--as", "alice"]);
+    const b = spawnTail("wa_two", ["--as", "bob"]);
+    const a2 = spawnTail("wa_two", ["--as", "alice"]);
+    await sleep(600);
+    const r = await bunRun(["who", "--all"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    expect(Array.isArray(data.channels)).toBe(true);
+    const one = data.channels.find((c: any) => c.name === "wa_one");
+    const two = data.channels.find((c: any) => c.name === "wa_two");
+    expect(one.subscribers).toEqual(["alice"]);
+    expect(two.subscribers.sort()).toEqual(["alice", "bob"]);
+    expect(two.connections).toBe(2);
+    a.proc.kill("SIGTERM");
+    b.proc.kill("SIGTERM");
+    a2.proc.kill("SIGTERM");
+  });
+
+  test("doctor reports named/anonymous breakdown and flags count-vs-names divergence", async () => {
+    await bunRun(["open", "doc_div"]);
+    const named = spawnTail("doc_div", ["--as", "alice"]);
+    const anon = spawnTail("doc_div"); // null alias, like a watch tab
+    await sleep(600);
+    const r = await bunRun(["doctor"]);
+    expect(r.code).toBe(0);
+    const data = JSON.parse(r.stdout);
+    const entry = data.active_subscribers.busy_channels.find(
+      (c: any) => c.name === "doc_div"
+    );
+    expect(entry).toBeDefined();
+    expect(entry.connections).toBe(2);
+    expect(entry.named).toBe(1);
+    expect(entry.anonymous).toBe(1);
+    // Divergence (connections > named) is surfaced as a hint so the anonymous
+    // watcher reads as a watcher, not a ghost.
+    expect(
+      data.hints.some(
+        (h: string) => h.includes("doc_div") && /anonymous|named/i.test(h)
+      )
+    ).toBe(true);
+    named.proc.kill("SIGTERM");
+    anon.proc.kill("SIGTERM");
+  });
+
+  test("tail emits a grounding line on stdout when joining a channel with history", async () => {
+    await bunRun(["open", "ground_hist"]);
+    await bunRun(["send", "ground_hist", "--from", "a", "old one"]);
+    await bunRun(["send", "ground_hist", "--from", "a", "old two"]);
+    // Default (HEAD) join: the newcomer sees nothing of the 2 prior messages,
+    // so a grounding line should announce that earlier history exists (F7).
+    const t = spawnTail("ground_hist", ["--as", "newcomer"]);
+    await sleep(500);
+    const grounding = t
+      .output()
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => JSON.parse(l))
+      .find((m) => m.kind === "grounding");
+    expect(grounding).toBeDefined();
+    expect(grounding.channel).toBe("ground_hist");
+    expect(grounding.earlier).toBe(2);
+    t.proc.kill("SIGTERM");
+  });
+
+  test("tail emits a keepalive sentinel on stderr while idle", async () => {
+    await bunRun(["open", "test_keepalive"]);
+    const errBuf: Buffer[] = [];
+    const proc = spawn(
+      process.execPath,
+      [CLI, "tail", "test_keepalive", "--as", "k"],
+      {
+        env: { ...process.env, GRAPEVINE_HOME: HOME },
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    proc.stderr.on("data", (b) => errBuf.push(b));
+    TRACKED_PROCS.add(proc);
+    proc.on("exit", () => TRACKED_PROCS.delete(proc));
+    await sleep(4000); // longer than one 3s daemon heartbeat
+    proc.kill("SIGTERM");
+    const err = Buffer.concat(errBuf).toString("utf-8");
+    expect(err).toContain("grapevine-keepalive");
+  }, 10000);
+
+  test("send echoes its target channel + recipient count to stderr", async () => {
+    await bunRun(["open", "test_echo"]);
+    const a = spawnTail("test_echo", ["--as", "listener"]);
+    await sleep(400);
+    const r = await bunRun(["send", "test_echo", "--from", "sender", "hi"]);
+    expect(r.code).toBe(0);
+    // stdout stays pure JSON (back-compat).
+    const data = JSON.parse(r.stdout);
+    expect(data.channel).toBe("test_echo");
+    // stderr carries the human-visible target confirmation (misroute detection).
+    expect(r.stderr).toContain("test_echo");
+    expect(r.stderr).toMatch(/→|recipient/);
     a.proc.kill("SIGTERM");
   });
 });
