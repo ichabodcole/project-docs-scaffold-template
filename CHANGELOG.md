@@ -1,5 +1,17 @@
 # Changelog
 
+## [4.5.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.4.0...project-docs-scaffold-template-v4.5.0) (2026-06-04)
+
+
+### Features
+
+* **hivemind:** add HiveMind plugin — cross-project knowledge cycle ([1d8ae8d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1d8ae8d6ab093ab17d805ce17acddabd2b04a8e8))
+
+
+### Bug Fixes
+
+* **toolbox/grapevine:** V1.6.8 — correct push-consumer stderr guidance ([#140](https://github.com/ichabodcole/project-docs-scaffold-template/issues/140)) ([93879ce](https://github.com/ichabodcole/project-docs-scaffold-template/commit/93879ce3ef10182f64b54be950fe08167efee441))
+
 ## [4.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.3.0...project-docs-scaffold-template-v4.4.0) (2026-05-28)
 
 
