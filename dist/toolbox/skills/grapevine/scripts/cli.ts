@@ -6,6 +6,7 @@
 //   bun cli.ts list
 //   bun cli.ts send <name> --from <alias> <text...>
 //   bun cli.ts tail <name> [--since <id>] [--from-start]
+//   bun cli.ts read <name> <id> [--text]
 //   bun cli.ts close <name>
 //   bun cli.ts stop
 //   bun cli.ts info
@@ -81,14 +82,30 @@ async function maybeWarnOnVersionMismatch(port: number) {
 // GRAPEVINE_FROM sets the default --from / --as alias so agents don't have
 // to repeat their identity on every verb. Per-verb flags still override.
 const DEFAULT_ALIAS = process.env.GRAPEVINE_FROM ?? undefined;
+
+// Identity flags are interchangeable across verbs. `send` historically took
+// `--from` while `tail`/`wait` took `--as` — same concept (who am I), and the
+// asymmetry trips you mid-flow. Accept either everywhere identity is meant,
+// falling back to GRAPEVINE_FROM. (grep's `--from` is a different thing — an
+// author *filter*, not identity — so it doesn't use this.)
+function resolveAlias(
+  flags: Record<string, string | boolean>
+): string | undefined {
+  return (
+    (flags.from as string | undefined) ??
+    (flags.as as string | undefined) ??
+    DEFAULT_ALIAS
+  );
+}
 // Truncation-hint threshold. Messages longer than this get a `truncation_hint`
 // field on the tail JSON so consumers (e.g. Monitor) know the notification
-// preview is incomplete and they should `pull` for the full body. Empirical
-// data from real sessions puts the Monitor notification cap around 500–800
-// chars; we default to 800 so typical agent-to-agent status messages don't
-// trigger noise. Overridable via env var for tuning without a release.
+// preview is incomplete and should `read` the full body. In agent-to-agent
+// traffic, long messages are the NORM (the V1.6 roundtable saw most substantive
+// messages exceed 800), so an 800 default fired on nearly everything and the
+// recovery path became the main path. Default raised to 2000 so the hint marks
+// the genuinely-long outliers. Overridable via env var for tuning.
 const TRUNCATION_HINT_THRESHOLD = parseInt(
-  process.env.GRAPEVINE_TRUNCATION_HINT_THRESHOLD ?? "800",
+  process.env.GRAPEVINE_TRUNCATION_HINT_THRESHOLD ?? "2000",
   10
 );
 
@@ -225,6 +242,15 @@ async function cmdSend(
     { from, text }
   );
   if (status >= 400) die(data?.error ?? `HTTP ${status}`);
+  // Target echo on stderr — confirms WHERE the message landed so a misrouted
+  // reply (right prompt, wrong channel) is caught the instant it happens (F9).
+  // On stderr so it never pollutes the stdout JSON receipt, and it fires even
+  // under --quiet (the safety signal shouldn't be silenced).
+  const recip =
+    data.recipients !== undefined
+      ? `${data.recipients} recipient(s)`
+      : `${data.subscribers ?? 0} subscriber(s)`;
+  process.stderr.write(`# → ${data.channel} · ${recip}\n`);
   if (opts.quiet) return;
   // Terse default: id + subscriber count + void warning. --verbose also
   // includes the subscriber alias list (same data as the `who` verb,
@@ -259,6 +285,33 @@ async function cmdPull(name: string, since: number) {
   const msgs = data.messages ?? [];
   const cursor = msgs.length ? msgs[msgs.length - 1].id : since;
   printJson({ ok: true, messages: msgs, cursor });
+}
+
+async function cmdRead(name: string, id: number, opts: { text?: boolean }) {
+  if (!name || !Number.isFinite(id))
+    die("usage: grapevine read <channel> <id> [--text]");
+  const port = await ensureDaemon();
+  await api(port, "POST", "/channels", { name });
+  // Built on the existing range fetch — `since=id-1` returns id and beyond;
+  // we pick the exact id. No daemon API change. This is the targeted
+  // "give me message N in full" verb that recovers a clipped tail preview
+  // without the pull-range + jq dance.
+  const { status, data } = await api(
+    port,
+    "GET",
+    `/channels/${name}/messages?since=${id - 1}`
+  );
+  if (status >= 400) die(data?.error ?? `HTTP ${status}`);
+  const msg = (data.messages ?? []).find((m: any) => m.id === id);
+  if (!msg) die(`message ${id} not found in ${name}`, 1);
+  if (opts.text) {
+    // Prose mode: header + body, no JSON envelope, so a human (or an agent
+    // recovering a truncated notification) can read it directly.
+    const ts = new Date(msg.ts).toISOString();
+    process.stdout.write(`[${msg.id}] ${msg.from} · ${ts}\n${msg.text}\n`);
+    return;
+  }
+  printJson({ ok: true, message: msg });
 }
 
 async function cmdWait(
@@ -311,6 +364,19 @@ async function cmdWho(name: string) {
   printJson({ ok: true, ...data });
 }
 
+async function cmdWhoAll() {
+  // Cross-channel roster — names × channel in one call, so you don't fan out
+  // N `who` calls + a manual join to answer "who is on which vine?".
+  const port = await readDaemonPort();
+  if (!port) {
+    printJson({ ok: true, daemon: false, channels: [] });
+    return;
+  }
+  const { status, data } = await api(port, "GET", "/presence");
+  if (status >= 400) die(data?.error ?? `HTTP ${status}`);
+  printJson({ ok: true, ...data });
+}
+
 async function cmdTail(
   name: string,
   opts: { since?: number; fromStart?: boolean; as?: string }
@@ -332,6 +398,9 @@ async function cmdTail(
 
   let highestSeen = opts.fromStart ? 0 : (opts.since ?? -1);
   let reconnectDelay = 250;
+  // Emit the grounding line only on the first subscribe, never on reconnects
+  // (a reconnect resumes from highestSeen — there's no unseen history then).
+  let grounded = false;
 
   while (!stopped) {
     const port = await ensureDaemon();
@@ -382,7 +451,14 @@ async function cmdTail(
         let eventName = "message";
         const dataLines: string[] = [];
         for (const line of lines) {
-          if (line.startsWith(":")) continue;
+          if (line.startsWith(":")) {
+            // Daemon liveness heartbeat (`: hb <ts>`). Surface a recognizable
+            // sentinel on stderr so a `2>&1` consumer can tell "idle" from
+            // "wedged" (F6). Kept off stdout — the JSONL stream stays pure.
+            if (line.startsWith(": hb"))
+              process.stderr.write(": grapevine-keepalive\n");
+            continue;
+          }
           if (line.startsWith("event:")) eventName = line.slice(6).trim();
           else if (line.startsWith("data:"))
             dataLines.push(line.slice(5).trim());
@@ -396,6 +472,33 @@ async function cmdTail(
             );
             if (payload.topic)
               process.stderr.write(`# topic: ${payload.topic}\n`);
+            // Structured grounding on stdout (F3/F7) — under the default
+            // Wiring-B Monitor, stdout surfaces as notifications, so a fresh
+            // subscriber actually sees the topic + that earlier history exists.
+            // Gated: only when there's something to ground (unseen history or a
+            // topic), and only on the first subscribe (not reconnects).
+            if (!grounded) {
+              grounded = true;
+              const latest =
+                typeof payload.latest_id === "number" ? payload.latest_id : 0;
+              const earlier =
+                highestSeen < 0
+                  ? latest
+                  : Math.max(0, Math.min(highestSeen, latest));
+              if (earlier > 0 || payload.topic) {
+                const grounding: Record<string, unknown> = {
+                  kind: "grounding",
+                  channel: payload.channel,
+                  joined_at:
+                    highestSeen < 0 ? latest : Math.min(highestSeen, latest),
+                  earlier,
+                };
+                if (payload.topic) grounding.topic = payload.topic;
+                if (earlier > 0)
+                  grounding.hint = `${earlier} earlier message(s) exist — use --from-start or --since <id> to backfill`;
+                process.stdout.write(JSON.stringify(grounding) + "\n");
+              }
+            }
             continue;
           }
           if (typeof payload.id === "number" && payload.id > highestSeen) {
@@ -405,16 +508,22 @@ async function cmdTail(
           // ourselves. The sender already got the receipt as the POST
           // response, so re-emitting it on tail is pure noise.
           if (myAlias && payload.from === myAlias) continue;
-          // Mark messages whose body exceeds the notification cap so
-          // consumers know the preview is incomplete and a pull is needed
-          // for the full text.
+          // Mark messages whose body exceeds the notification cap so consumers
+          // know the preview is incomplete and should `read` the full text.
+          // The hint must serialize BEFORE `.text`: a notification clip lands
+          // inside the long `.text`, so a hint trailing after it gets eaten
+          // (F17). Spreading payload after the hint puts the hint first.
           if (
             typeof payload.text === "string" &&
             payload.text.length > TRUNCATION_HINT_THRESHOLD
           ) {
-            payload.truncation_hint = `+${payload.text.length} chars — pull to read`;
+            const truncation_hint = `+${payload.text.length} chars — full: read ${name} ${payload.id}`;
+            process.stdout.write(
+              JSON.stringify({ truncation_hint, ...payload }) + "\n"
+            );
+          } else {
+            process.stdout.write(JSON.stringify(payload) + "\n");
           }
-          process.stdout.write(JSON.stringify(payload) + "\n");
         } catch (e: any) {
           process.stderr.write(`# bad sse data: ${e.message}\n`);
         }
@@ -533,7 +642,13 @@ async function cmdDoctor() {
   // daemon right now?" without needing to also run `list` and read the
   // output. Empty if no daemon is running.
   let totalSubscribers = 0;
-  const busyChannels: Array<{ name: string; subscribers: number }> = [];
+  const busyChannels: Array<{
+    name: string;
+    subscribers: number;
+    connections: number;
+    named: number;
+    anonymous: number;
+  }> = [];
   if (port) {
     try {
       const { data } = await api(port, "GET", "/");
@@ -542,16 +657,23 @@ async function cmdDoctor() {
       // daemon went away between port check and api call
     }
     try {
-      const { data: chData } = await api<{ channels: Array<any> }>(
+      // /presence gives the honest per-channel breakdown (connections vs named
+      // vs anonymous) — so the restart-safety total isn't a mystery and an
+      // anonymous watch tab reads as a watcher, not a ghost.
+      const { data: presData } = await api<{ channels: Array<any> }>(
         port,
         "GET",
-        "/channels"
+        "/presence"
       );
-      for (const ch of chData?.channels ?? []) {
-        if (typeof ch.subscribers === "number" && ch.subscribers > 0) {
-          totalSubscribers += ch.subscribers;
-          busyChannels.push({ name: ch.name, subscribers: ch.subscribers });
-        }
+      for (const ch of presData?.channels ?? []) {
+        totalSubscribers += ch.connections;
+        busyChannels.push({
+          name: ch.name,
+          subscribers: ch.connections, // back-compat: previously the raw count
+          connections: ch.connections,
+          named: ch.named,
+          anonymous: ch.anonymous,
+        });
       }
     } catch {
       // best-effort
@@ -639,6 +761,16 @@ async function cmdDoctor() {
   } else if (authoritative) {
     hints.push("No active subscribers — daemon restart is non-disruptive.");
   }
+  // Explain any channel where the connection count exceeds named agents — an
+  // anonymous watch tab inflates `count`/`connections` but isn't a ghost.
+  for (const ch of busyChannels) {
+    if (ch.anonymous > 0) {
+      hints.push(
+        `${ch.name}: ${ch.connections} connection(s), ${ch.named} named agent(s) + ` +
+          `${ch.anonymous} anonymous (e.g. a watch tab). The count over the name list is expected, not a ghost.`
+      );
+    }
+  }
 
   printJson({
     ok: true,
@@ -671,6 +803,8 @@ const BOOLEAN_FLAGS = new Set([
   "verbose",
   "stdin",
   "literal",
+  "text",
+  "all",
 ]);
 
 function parseFlags(argv: string[]): {
@@ -709,14 +843,14 @@ async function main(argv: string[]): Promise<number> {
     case "open":
       await cmdOpen(positional[0], {
         topic: flags.topic as string | undefined,
-        from: (flags.from as string | undefined) ?? DEFAULT_ALIAS,
+        from: resolveAlias(flags),
       });
       return 0;
     case "topic":
       await cmdTopic(
         positional[0],
         positional.length > 1 ? positional.slice(1).join(" ") : undefined,
-        (flags.from as string | undefined) ?? DEFAULT_ALIAS
+        resolveAlias(flags)
       );
       return 0;
     case "list":
@@ -724,7 +858,7 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     case "send": {
       const name = positional[0];
-      const from = (flags.from as string | undefined) ?? DEFAULT_ALIAS;
+      const from = resolveAlias(flags);
       let text: string;
       if (flags.stdin) {
         // Bypass shell quoting entirely — read raw bytes from stdin.
@@ -736,7 +870,9 @@ async function main(argv: string[]): Promise<number> {
         text = positional.slice(1).join(" ");
       }
       if (!from)
-        die("send: --from <alias> required (or set GRAPEVINE_FROM env var)");
+        die(
+          "send: identity required — pass --from/--as <alias> or set GRAPEVINE_FROM env var"
+        );
       await cmdSend(name, from, text, {
         quiet: !!flags.quiet,
         verbose: !!flags.verbose,
@@ -748,21 +884,27 @@ async function main(argv: string[]): Promise<number> {
       await cmdPull(positional[0], since);
       return 0;
     }
+    case "read": {
+      const id = positional[1] ? parseInt(positional[1], 10) : NaN;
+      await cmdRead(positional[0], id, { text: !!flags.text });
+      return 0;
+    }
     case "wait": {
       const since = flags.since ? parseInt(flags.since as string, 10) : 0;
       const timeout = flags.timeout ? parseFloat(flags.timeout as string) : 30;
-      const alias = (flags.as as string | undefined) ?? DEFAULT_ALIAS;
+      const alias = resolveAlias(flags);
       await cmdWait(positional[0], since, timeout, alias);
       return 0;
     }
     case "who":
-      await cmdWho(positional[0]);
+      if (flags.all) await cmdWhoAll();
+      else await cmdWho(positional[0]);
       return 0;
     case "tail":
       await cmdTail(positional[0], {
         since: flags.since ? parseInt(flags.since as string, 10) : undefined,
         fromStart: !!flags["from-start"],
-        as: (flags.as as string | undefined) ?? DEFAULT_ALIAS,
+        as: resolveAlias(flags),
       });
       return 0;
     case "grep": {
@@ -796,9 +938,10 @@ async function main(argv: string[]): Promise<number> {
 Usage:
   grapevine open <name> [--topic <text>]
   grapevine list
-  grapevine send <name> [--from <alias>] [--quiet] [--verbose] [--stdin] <text...>
-  grapevine tail <name> [--as <alias>] [--since <id>] [--from-start]
+  grapevine send <name> [--from/--as <alias>] [--quiet] [--verbose] [--stdin] <text...>
+  grapevine tail <name> [--as/--from <alias>] [--since <id>] [--from-start]
   grapevine pull <name> [--since <id>]
+  grapevine read <name> <id> [--text]   # one full message by id (--text = prose)
   grapevine wait <name> [--since <id>] [--timeout <s>]
   grapevine grep <name> <pattern> [--literal] [--from <alias>]
   grapevine topic <name> [<text>]   # no text → read current; with text → update
@@ -810,7 +953,7 @@ Usage:
   grapevine doctor                  # health check — daemon, zombies, channels
 
 Env:
-  GRAPEVINE_FROM   Default alias for --from (send) and --as (tail).
+  GRAPEVINE_FROM   Default identity alias (--from/--as are interchangeable).
   GRAPEVINE_HOME   Data dir (default ~/.grapevine).
 `);
       return 0;
