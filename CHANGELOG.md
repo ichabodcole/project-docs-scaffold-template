@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.5.0...project-docs-scaffold-template-v5.0.0) (2026-06-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **toolbox:** toolbox no longer ships the digestify, grapevine, magpie, or tuskboard skills; install them from the spellbook repo instead.
+
+### Code Refactoring
+
+* **toolbox:** remove spellbook-extracted skills ([29cc605](https://github.com/ichabodcole/project-docs-scaffold-template/commit/29cc605c8600b7708fe991e63ec2674bf70a9041))
+
 ## [4.5.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.4.0...project-docs-scaffold-template-v4.5.0) (2026-06-04)
 
 
