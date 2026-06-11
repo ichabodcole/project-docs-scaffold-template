@@ -45,7 +45,7 @@ following the [Agent Skills](https://agentskills.io) open standard.
 ├── plugins/                          # Source plugins.
 │   ├── project-docs/                 # Doc workflow plugin (commands + skills + agents).
 │   ├── recipes/                      # Umbrella recipes skill + library/.
-│   ├── toolbox/                      # Specialist utilities (digestify, mockups, ...).
+│   ├── toolbox/                      # Specialist utilities (mockups, testing, optimization).
 │   ├── operator/                     # Operator-specific commands.
 │   └── agent-bridge/                 # Skills for the agent-bridge MCP server.
 ├── dist/                             # Built, portable skill bundles per plugin.

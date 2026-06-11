@@ -64,7 +64,7 @@ at `library/<name>/RECIPE.md` — read that file for the full guide.
 - **`agent-surface-bun`** — Bun + TypeScript scaffold for small agent-driven
   browser surfaces (one-shot review pages, duplex/streaming surfaces like task
   boards). Includes the JSON-lines stdio + WebSocket proxy pattern and three Bun
-  1.3.x gotchas that bit during the digestify port.
+  1.3.x gotchas. Canonical worked examples live in the `spellbook` repo.
 
 ## Tooling & Build
 

@@ -8,7 +8,7 @@ plugin, packaged for cross-agent installation.
 
 | Type   | Count | Cross-tool?                      |
 | ------ | ----- | -------------------------------- |
-| Skills | 7     | Yes — Agent Skills open standard |
+| Skills | 3     | Yes — Agent Skills open standard |
 
 ## Installation
 
