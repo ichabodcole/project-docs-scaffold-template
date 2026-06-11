@@ -86,11 +86,11 @@ iteration through real projects, which is what this project is doing.
   - **recipes** — an umbrella `recipes:recipes` skill that indexes and loads 20
     implementation recipes (authentication, sync, IPC, voice-to-text, quality
     gates, …) plus a `create-recipe` skill for extracting new ones.
-  - **toolbox** — specialist utilities not specific to documentation: digestify
-    (one-shot browser review), tuskboard (duplex agent ↔ user task surface),
-    grapevine (multi-agent walkie-talkie over named channels, cross-runtime),
-    magpie (extract individual visual assets from moodboards via Gemini),
-    html-mockup-prototyping, maestro-testing, screenshot-optimization.
+  - **toolbox** — specialist utilities not specific to documentation:
+    html-mockup-prototyping, maestro-testing, screenshot-optimization. (The
+    agent-surface "spells" — digestify, tuskboard (now `bounty`), grapevine,
+    magpie — were extracted to the standalone `spellbook` repo, now their single
+    source of truth.)
   - **operator** — Operator Editor integration with `operator-setup` and
     `operator-triage`.
   - **agent-bridge** — a `bridge-agent` skill for cross-project knowledge

@@ -120,6 +120,40 @@ auto-surfacing value (e.g., `init-branch`, `update-deps`).
 - [ ] Verify skill count matches actual directories:
       `ls plugins/<plugin>/skills/ | wc -l`
 
+### Removing a Plugin Skill
+
+Removing a skill is a **breaking change** — anyone who installed the plugin for
+that skill loses it on upgrade. Treat it as a major version bump and scrub every
+_live_ reference, while leaving the historical record intact.
+
+- [ ] Delete the skill directory from `plugins/<plugin>/skills/<skill-name>/`.
+      Watch for untracked leftovers (e.g. `.DS_Store`) that keep the dir on disk
+      after `git rm` — remove them so the folder is fully gone.
+- [ ] Bump plugin version in `plugins/<plugin>/.claude-plugin/plugin.json` —
+      **major** (removal is breaking). Use a `refactor(plugin)!:` or
+      `feat(plugin)!:` commit with a breaking-change footer.
+- [ ] Rebuild `dist/` (`./scripts/build-skills-dist.sh` cleans and regenerates,
+      so the skill drops out of the bundle automatically) and commit it.
+- [ ] Update `docs/PROJECT_MANIFESTO.md` — skill count and any current-state
+      plugin roster that names the removed skill. Leave dated retrospective
+      prose alone (it's historical record, not a current-state claim).
+- [ ] Scrub other **live** current-state references: `docs/PROJECT-SUMMARY.md`,
+      plugin READMEs, root `README.md`, `marketplace.json` tags.
+- [ ] **Decouple dependents.** Grep for the removed skill's _paths_ across
+      `plugins/`, `recipes/`, and other skills
+      (`grep -rn 'skills/<skill-name>'`) — recipes or other skills may point at
+      its files as canonical examples. Rewrite those to not reference dead
+      paths; bump the dependent plugin's version too (usually minor).
+- [ ] **Leave history alone.** `docs/projects/*`, `docs/memories/*`,
+      investigations, reports, `CHANGELOG.md`, and dated manifesto reflections
+      document work that genuinely happened — removing the skill does not
+      un-happen it. Don't rewrite them.
+- [ ] Verify no live pointers remain:
+      `grep -rIn 'skills/<skill-name>' plugins/ .claude-plugin/ README.md AGENTS.md`
+      should be empty.
+- [ ] Verify skill count matches actual directories:
+      `ls plugins/<plugin>/skills/ | wc -l`
+
 ### Adding or Modifying a Plugin Command
 
 Commands are for explicit user actions only — things a user deliberately invokes

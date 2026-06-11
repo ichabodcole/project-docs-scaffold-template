@@ -21,16 +21,15 @@ flavor (agent writes → user reads + responds → submit ends the session) and 
 **duplex / streaming** flavor (agent and user pass messages back and forth while
 the surface stays open).
 
-Two reference implementations live in this repo and exercise the patterns end to
-end:
+Two canonical reference implementations live in the standalone `spellbook` repo
+and exercise the patterns end to end:
 
-- **`plugins/toolbox/skills/digestify/scripts/review.ts`** — one-shot.
-- **`plugins/toolbox/skills/tuskboard/scripts/server.ts`** + `join.ts` — duplex
-  / streaming, with drag-and-drop, multi-agent participation, and full branding
-  ("Tusk Board"). The canonical example of the duplex shape.
+- A one-shot doc-review surface (`digestify`).
+- A duplex task board (`bounty`) — drag-and-drop, multi-agent participation,
+  full branding. The canonical example of the duplex shape.
 
-Read those when you want to see the full pattern; this recipe walks through what
-they share and why.
+This recipe is the implementation-agnostic abstraction; read the `spellbook`
+sources when you want to see a full worked example.
 
 ## When to Use
 
@@ -94,7 +93,7 @@ Every surface — one-shot or duplex — has the same three actors:
 
 The agent never talks to the browser directly — the surface script is the proxy.
 
-### One-shot variant (`review.ts` shape)
+### One-shot variant
 
 ```
 agent ──spawn──► surface ──http──► browser
@@ -116,7 +115,7 @@ Exit codes:
 | 124  | Idle timeout                                  |
 | 130  | User cancelled (closed tab after interacting) |
 
-### Duplex / streaming variant (tuskboard `server.ts` shape)
+### Duplex / streaming variant
 
 ```
 agent ──stdin (JSON-lines: init|patch|message|close)──► surface
@@ -136,9 +135,9 @@ Exit codes mirror the one-shot variant.
 
 ## Build a New Surface — Step by Step
 
-1. **Copy `review.ts` (one-shot) or tuskboard's `server.ts` (duplex)** depending
-   on which shape you want, plus duplex. Drop it into your skill folder as
-   `scripts/<name>.ts`.
+1. **Start from the one-shot or duplex shape** depending on which you want, and
+   drop your script into your skill folder as `scripts/<name>.ts`. (The
+   `spellbook` sources are a good starting point to copy from.)
 2. **Edit the protocol types.** For one-shot, decide what shape the agent passes
    in (markdown? config object?) and what the submit response looks like. For
    duplex, decide the `init`/`patch`/`event` shapes for your domain. Keep them
@@ -165,8 +164,8 @@ Exit codes mirror the one-shot variant.
 
 ## Bun 1.3.x Gotchas (read these once)
 
-These bit during the `digestify` port; capturing them so you don't have to
-re-discover.
+These bit while building the reference surfaces; capturing them so you don't
+have to re-discover.
 
 ### 1. `Bun.spawn({ stdin: "pipe" })` returns a `FileSink`, not a `WritableStream`
 
@@ -234,7 +233,8 @@ Bun won't pick up `test_review.ts` — rename to `review.test.ts`.
 `digestify-<8-hex>-p<port>` lets a relaunch reuse the same port. Same origin →
 same browser `localStorage` namespace → in-progress drafts survive. The script
 parses the port out of `--id` and tries to bind to it; falls through to a random
-port if it's taken. See `parsePortFromSessionId` in `review.ts`.
+port if it's taken. See the `parsePortFromSessionId` helper in the `spellbook`
+one-shot source.
 
 ### Sliding-window idle timeout
 
@@ -271,20 +271,25 @@ const payloadJson = JSON.stringify(payload).replace(/<\//g, "<\\/");
 
 The browser still parses it as valid JSON.
 
-## Examples in This Repo
+## Reference Implementations
 
-- **`plugins/toolbox/skills/digestify/scripts/review.ts`** + `template.html` —
-  full one-shot implementation. Markdown with `:::question` fences, themed UI,
-  inline comments, session recovery via `localStorage`. Read this first for a
-  complete one-shot reference.
-- **`plugins/toolbox/skills/tuskboard/scripts/`** — the duplex reference.
-  `server.ts` is the host (stdio ↔ WS proxy with state snapshot); `join.ts` is
-  the joining-agent client (symmetric stdio bridge over WS); `template.html` is
-  a real branded UI ("Tusk Board") with drag-and-drop. This is the example to
-  study and copy when building a new duplex surface.
-- **`plugins/toolbox/skills/digestify/scripts/review.test.ts`** — `bun test`
-  patterns: pure-function tests, subprocess integration tests, helpers like
-  `spawnAndWaitForReady` and `postSubmit`. Copy these as a starting point.
+The canonical worked examples live in the standalone `spellbook` repo (extracted
+from this repo's `toolbox` plugin so they have a single source of truth):
+
+- **`digestify`** — full one-shot implementation. Markdown with `:::question`
+  fences, themed UI, inline comments, session recovery via `localStorage`. The
+  reference for the one-shot shape.
+- **`bounty`** — the duplex reference. A host (stdio ↔ WS proxy with state
+  snapshot), a joining-agent client (symmetric stdio bridge over WS), and a real
+  branded UI with drag-and-drop. Study and copy this when building a new duplex
+  surface.
+- **`digestify`'s test suite** — `bun test` patterns: pure-function tests,
+  subprocess integration tests, and helpers like `spawnAndWaitForReady` /
+  `postSubmit`. A good starting point to copy.
+
+> These surfaces previously lived in this repo's `toolbox` plugin; they were
+> extracted to `spellbook` as their single source of truth. As patterns improve
+> in `spellbook`, fold the learnings back into this recipe via a PR or issue.
 
 ## What This Recipe Doesn't Cover
 
