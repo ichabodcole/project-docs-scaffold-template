@@ -1,6 +1,6 @@
 # Agent-Surface (Bun) Recipe — Evolve the Duplex Shape to Daemon + Thin-CLI
 
-**Status:** Draft **Created:** 2026-06-16 **Author:** Cole Reed
+**Status:** Approved **Created:** 2026-06-16 **Author:** Cole Reed
 
 ---
 
