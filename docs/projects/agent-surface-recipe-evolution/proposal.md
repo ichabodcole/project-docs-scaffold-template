@@ -7,7 +7,7 @@
 ## Overview
 
 The `recipes/agent-surface-bun` recipe documents how to build a browser surface
-an agent drives. Its **one-shot** ("cantrip") shape is still accurate, but its
+an agent drives. Its **one-shot** shape is still accurate, but its
 **duplex/streaming** shape documents the _previous generation_ of the agent
 interface — `Bun.spawn` + JSON-lines stdio + an ephemeral surface. In the
 standalone Spellbook repo, two heavily-iterated spells (**grapevine**,
@@ -52,11 +52,20 @@ that's mid-deprecation, and two latent SSE bugs.
 
 ## Proposed Solution
 
-Keep the **one-shot (cantrip)** section essentially as-is — still correct for
-the simplest case. Rewrite the **duplex** section as the **daemon + thin-CLI
-("conjuration")** pattern, explicitly noting stdio JSON-lines as the _prior
-generation_ (fine for the simplest streaming cases, not for a standing,
-agent-driven, persistent surface).
+Present **two co-equal shapes** with neutral names — **one-shot** and
+**standing** — and weight the **standing** shape as primary, since that's where
+applications are trending (dynamic, real-time agent↔human back-and-forth). Keep
+the **one-shot** section (the async "agent opens a surface, the user works it
+and submits back" shape — digestify's model) essentially as-is; it's still the
+right fit when the richer standing surface would be overkill. Rewrite the
+**standing** section as the **daemon + thin-CLI** pattern, explicitly noting
+stdio JSON-lines as the _prior generation_ (fine for the simplest streaming
+cases, not for a standing, agent-driven, persistent surface). Add explicit
+**"which shape when"** guidance so a builder can choose deliberately.
+
+Use neutral "one-shot / standing" language, not spellbook's themed
+"cantrip/conjuration" vocabulary — the theme fits _in_ spellbook but reads as
+unexplained jargon to an agent consulting a general recipe.
 
 ### The evolved pattern
 
@@ -98,11 +107,15 @@ A standing surface the agent drives across a whole session:
    these by name and role, no hardcoded spellbook file paths.
 3. **Qualify the persistence claim.** Rewrite "the surface is ephemeral /
    persistence belongs elsewhere" to: the _one-shot_ surface is ephemeral; the
-   _conjuration_ daemon owns canonical state with snapshot/restore.
+   _standing_ daemon owns canonical state with snapshot/restore.
 4. **Add a surface-tech ladder:** vanilla inline JS → **Alpine-over-CDN** (no
-   build) → **React via Bun's HTML-import bundler**
-   (`import index from "./index.html"` + `bunfig.toml` tailwind + HMR). Document
-   the HTML-import bundling path the recipe currently omits.
+   build) → **React via Bun's HTML-import bundler**. Name the ladder and the
+   tradeoffs (the hard-won part: _when_ to climb a rung, and that the standing
+   daemon makes a build step viable), but **don't reproduce Bun's HTML-import
+   docs** — link to them and point at the imago surface as the worked example.
+   This follows the "is the information easily reachable?" principle: capture
+   non-obvious, hard-won patterns in the recipe; for anything already documented
+   elsewhere, give an obvious next step (a link) rather than repeating it.
 5. **Add two `/events`-frame gotchas:**
    - **(a) Envelope-id collision.** Building the SSE log as
      `{ id: ++seq, ...msg }` when payloads already carry a bare `id` (e.g. a
@@ -132,7 +145,8 @@ A standing surface the agent drives across a whole session:
   as worked example).
 - Add the surface-tech ladder (vanilla → Alpine-CDN → React/Bun-HTML-import).
 - Qualify the persistence and "ephemeral" claims.
-- Keep the one-shot (cantrip) section as-is apart from light framing edits.
+- Keep the one-shot section as-is apart from light framing edits, and add a
+  "which shape when" decision aid steering between one-shot and standing.
 - `recipes` minor version bump (substantive guidance change); rebuild `dist/`.
 
 **Out of Scope:**
@@ -185,16 +199,26 @@ surface-tech ladder, and two hard-won frame-design gotchas before they hit them.
 **Complexity:** Medium — the substance is settled; the work is careful technical
 writing and accurate contract description.
 
-## Open Questions
+## Resolved Decisions
 
-- **One section or two shapes?** Present "cantrip (one-shot)" and "conjuration
-  (daemon + thin-CLI)" as two co-equal shapes, or keep one-shot primary with
-  conjuration as the "when it needs to stand"? (Leaning: two co-equal shapes,
-  one-shot first.)
-- **How much React/Bun-HTML-import detail** belongs here vs. a pointer to Bun
-  docs + the imago surface as the example?
-- **Naming:** adopt the spellbook "cantrip/conjuration" vocabulary in the
-  recipe, or keep neutral "one-shot/standing"? (The grimoire uses the former.)
+Resolved with the author on approval (2026-06-16):
+
+- **Two co-equal shapes, standing weighted primary.** Present **one-shot** and
+  **standing** as co-equal, but give the **standing** (dynamic agent↔human
+  back-and-forth) shape the most how-to depth — that's where applications are
+  trending. Keep the **one-shot** async shape (digestify's model); it's still
+  the right call when the standing surface would be overkill. Add explicit
+  **"which shape when"** decision guidance.
+- **Point to docs for documented tech; capture only hard-won patterns.** For the
+  React/Bun-HTML-import rung, link to Bun's docs and cite the imago surface as
+  the worked example rather than reproducing documented material. General
+  principle (the HiveMind _"is the information easily reachable?"_ lens): the
+  recipe earns its space on non-obvious, hard-won patterns we're actively
+  recommending; anything already documented elsewhere gets an obvious next step
+  (a link), not a copy.
+- **Neutral vocabulary.** Use "one-shot / standing", not spellbook's
+  "cantrip/conjuration". The theme is on-brand inside spellbook but reads as
+  unexplained jargon to an agent consulting a general recipe.
 
 ## Success Criteria
 
