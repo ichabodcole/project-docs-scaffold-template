@@ -1,7 +1,7 @@
 # Agent-Surface (Bun) Recipe Evolution — Implementation Plan
 
 **Created:** 2026-06-16 **Related Proposal:** [proposal.md](./proposal.md)
-**Status:** Draft
+**Status:** Completed
 
 ---
 
