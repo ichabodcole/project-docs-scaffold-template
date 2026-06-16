@@ -6,7 +6,7 @@ Build a small browser-based UI that an AI agent can drive — a "surface" the
 agent opens for the user, exchanges messages with, and tears down when the
 interaction is over. Examples: a doc-review page with embedded questions
 (`digestify`), a task board the agent posts work into and the user drags around
-(`tuskboard`), a side-by-side comparison view, a configurator, a live editor.
+(`bounty`), a side-by-side comparison view, a configurator, a live editor.
 
 The common shape is:
 
