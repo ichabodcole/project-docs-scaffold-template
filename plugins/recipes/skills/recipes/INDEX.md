@@ -61,10 +61,13 @@ at `library/<name>/RECIPE.md` — read that file for the full guide.
 
 ## Agent Surfaces
 
-- **`agent-surface-bun`** — Bun + TypeScript scaffold for small agent-driven
-  browser surfaces (one-shot review pages, duplex/streaming surfaces like task
-  boards). Includes the JSON-lines stdio + WebSocket proxy pattern and three Bun
-  1.3.x gotchas. Canonical worked examples live in the `spellbook` repo.
+- **`agent-surface-bun`** — Bun + TypeScript scaffold for agent-driven browser
+  surfaces in two shapes: **one-shot** (open → user works it → submit) and
+  **standing** (a persistent daemon holds canonical state, driven by a stateless
+  thin CLI over HTTP/SSE, with a WebSocket browser). Covers the daemon-detach
+  substrate (`node:child_process`, not `Bun.spawn`), `/events` cursor/actor
+  frame design, anti-flood stdio discipline, and a vanilla→Alpine→React
+  surface-tech ladder. Canonical worked examples live in the `spellbook` repo.
 
 ## Tooling & Build
 

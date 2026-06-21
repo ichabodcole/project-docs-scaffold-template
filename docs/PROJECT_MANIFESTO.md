@@ -83,7 +83,7 @@ iteration through real projects, which is what this project is doing.
     generate-dev-plan, generate-test-plan, finalize-branch, review-docs,
     project-summary, project-manifesto, ground-in-project, idea-to-spec,
     generate-spec, implementation-blueprint, consolidate-long-branch, …).
-  - **recipes** — an umbrella `recipes:recipes` skill that indexes and loads 20
+  - **recipes** — an umbrella `recipes:recipes` skill that indexes and loads 21
     implementation recipes (authentication, sync, IPC, voice-to-text, quality
     gates, …) plus a `create-recipe` skill for extracting new ones.
   - **toolbox** — specialist utilities not specific to documentation:
