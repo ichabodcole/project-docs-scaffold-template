@@ -191,9 +191,11 @@ git commit -m "<single descriptive commit message>"
 **Strategy B — Multi-commit consolidation (for large branches):**
 
 Use when the branch has **~20+ commits** and the work naturally splits into 5–10
-logical chapters (e.g., "schema + migrations", "API", "UI", "tests", "docs").
-Preserving those chapters on the base branch makes the feature's evolution
-readable months later, which matters more for big features.
+logical chapters (e.g., "schema + migrations", "API", "UI", "tests", "docs"),
+**and each chapter is functionally independent** — it builds and delivers value
+on its own, not only once a later chapter lands. Preserving those chapters on
+the base branch makes the feature's evolution readable months later, which
+matters more for big features.
 
 For this strategy, **invoke the `consolidate-long-branch` skill** — it provides
 the full safe workflow (backup refs, cherry-pick + soft-reset, tree-equivalence
@@ -201,15 +203,33 @@ verification) so the consolidation cannot silently drop or duplicate changes. Do
 not attempt a hand-rolled multi-commit squash; the tree-equivalence check is the
 only reliable way to verify the consolidated branch matches the original tip.
 
-**How to decide:**
+**How to decide — lead with functional independence, not commit count:**
 
-- Commit count under ~10 → Strategy A, no question.
-- Commit count 10–20 → Strategy A unless the user explicitly wants to preserve
-  chapters.
-- Commit count 20+ → Propose Strategy B, but let the user choose.
-- Always present your recommendation with the count and reasoning, then ask:
-  _"This branch has N commits. I recommend [Strategy A/B] because [reason].
-  Proceed with that, or use the other approach?"_
+The real question is **"does each proposed chapter deliver something useful and
+buildable on its own?"** — not "how many commits are there?" Chapters are only
+justified when each one stands alone: it builds and delivers value _without_ the
+later chapters. A chapter that "only makes sense once the next chapter lands" is
+exactly the partial, interdependent commit Strategy B is meant to avoid, just at
+a coarser grain — collapse those into a single squash.
+
+- **Apply the independence test first.** Can each candidate chapter be checked
+  out and built/run in isolation, delivering self-contained value? If not, use
+  Strategy A regardless of commit count.
+  - _Failure mode to watch for:_ a new daemon whose `server.ts` imports its own
+    bundled UI surface — a "daemon" chapter won't build without the "surface"
+    chapter, and the surface is inert without the daemon. Neither stands alone,
+    so despite a high commit count the branch correctly collapses to one commit.
+- **Commit count is a secondary signal** — it _prompts_ the question, it doesn't
+  answer it. A high count hints there may be separable work; it doesn't
+  establish it.
+  - Under ~10 commits → Strategy A, no question.
+  - 10–20 → Strategy A unless chapters are both wanted _and_ independently
+    buildable.
+  - 20+ → run the independence test; propose Strategy B only if the chapters
+    pass it, otherwise Strategy A.
+- Always present your recommendation with the count, the independence judgment,
+  and reasoning, then ask: _"This branch has N commits. I recommend [Strategy
+  A/B] because [reason]. Proceed with that, or use the other approach?"_
 
 ### Step 8.5: Verify the Squashed Result
 
