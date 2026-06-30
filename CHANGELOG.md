@@ -1,5 +1,22 @@
 # Changelog
 
+## [6.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v5.0.0...project-docs-scaffold-template-v6.0.0) (2026-06-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* **project-docs:** rename report-issue -> provide-feedback; finalize-branch independence test
+
+### Features
+
+* **project-docs:** rename report-issue -&gt; provide-feedback; finalize-branch independence test ([1fe3f8d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1fe3f8df8966b8baa8f2cc728d7919d803fac1b2))
+* **recipes/agent-surface-bun:** evolve duplex shape to daemon + thin-CLI ([#145](https://github.com/ichabodcole/project-docs-scaffold-template/issues/145)) ([63785d1](https://github.com/ichabodcole/project-docs-scaffold-template/commit/63785d1b1058d91ff64f720d1e1f264a27c03c60))
+
+
+### Bug Fixes
+
+* **recipes/agent-surface-bun:** correct stale tuskboard branding ([#145](https://github.com/ichabodcole/project-docs-scaffold-template/issues/145)) ([87e54e3](https://github.com/ichabodcole/project-docs-scaffold-template/commit/87e54e349ebebadd1af0de4ba44cea51abe76b44))
+
 ## [5.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v4.5.0...project-docs-scaffold-template-v5.0.0) (2026-06-11)
 
 
