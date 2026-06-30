@@ -154,6 +154,38 @@ _live_ reference, while leaving the historical record intact.
 - [ ] Verify skill count matches actual directories:
       `ls plugins/<plugin>/skills/ | wc -l`
 
+### Renaming a Plugin Skill
+
+A rename is remove-old + add-new at once, and it's a **breaking change** (the
+old invocation name disappears). It's also often the right fix when the skill's
+name doesn't match the vocabulary users actually use to trigger it — a mismatch
+that causes misrouting. Steps:
+
+- [ ] `git mv plugins/<plugin>/skills/<old> plugins/<plugin>/skills/<new>` so
+      the rename is tracked (preserves history; watch for untracked leftovers
+      like `.DS_Store` keeping the old dir on disk).
+- [ ] Update the skill's `name:` frontmatter and its `description:` (especially
+      the "Triggers when…" phrases) to match the new vocabulary — the
+      description is what drives agent routing, so this is the load-bearing part
+      of a rename.
+- [ ] Bump plugin version in `plugins/<plugin>/.claude-plugin/plugin.json` —
+      **major** (renamed skill is breaking). Use a `feat(plugin)!:` or
+      `refactor(plugin)!:` commit.
+- [ ] Rebuild `dist/` (`./scripts/build-skills-dist.sh`) and commit it; confirm
+      the old name is gone and the new one present in `dist/`.
+- [ ] Update `plugins/<plugin>/README.md` — the Skills table row **and** a new
+      version-history entry describing the rename (it's fine for that entry to
+      name the old skill — that's history, not a live pointer).
+- [ ] **Skill count is unchanged** (rename, not add/remove) — so
+      `PROJECT_MANIFESTO` counts don't move; only update the manifesto if it
+      _names_ the old skill in a current-state list.
+- [ ] Scrub **live** references to the old name across `plugins/`,
+      `.claude-plugin/`, root `README.md`, `AGENTS.md`, hooks, and any
+      skill/command that points at it. Leave **historical** mentions (CHANGELOG,
+      briefs, old reports, prior version-history entries) intact.
+- [ ] `grep -rIn '<old-name>' plugins/ .claude-plugin/ AGENTS.md README.md`
+      should show only intentional history entries.
+
 ### Adding or Modifying a Plugin Command
 
 Commands are for explicit user actions only — things a user deliberately invokes

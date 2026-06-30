@@ -205,13 +205,13 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Utility Skills
 
-| Skill                     | Description                                                                                                                                                                |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ground-in-project`       | Lightweight ephemeral session priming — reads anchor docs, recent commits, and active projects to give a short in-chat orientation; no artifacts written                   |
-| `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                                       |
-| `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export                        |
-| `report-issue`            | File a GitHub issue against the project-docs-scaffold-template repo for bugs, docs issues, or enhancements in any shipped plugin or recipe                                 |
-| `consolidate-long-branch` | Safely collapse a long-running branch's many commits into a few coherent chapter commits using cherry-pick + soft-reset with backup refs and tree-equivalence verification |
+| Skill                     | Description                                                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ground-in-project`       | Lightweight ephemeral session priming — reads anchor docs, recent commits, and active projects to give a short in-chat orientation; no artifacts written                        |
+| `html-mockup-prototyping` | Build self-contained HTML prototypes (Tailwind + Alpine.js) for UI exploration before implementation                                                                            |
+| `generate-slide-deck`     | Generate Slidev slide decks from project documents for human review; supports Mermaid diagrams and interactive decision slides with feedback export                             |
+| `provide-feedback`        | Provide feedback (bug, rough edge, improvement, or suggestion) on any project-docs-scaffold-template component — files it as a GitHub issue upstream after confirming the draft |
+| `consolidate-long-branch` | Safely collapse a long-running branch's many commits into a few coherent chapter commits using cherry-pick + soft-reset with backup refs and tree-equivalence verification      |
 
 ---
 
@@ -277,6 +277,20 @@ docs/
    significantly
 
 ## Version History
+
+### 3.0.0 (2026-06-30)
+
+- **Renamed `report-issue` → `provide-feedback`** (breaking). The skill files
+  the same GitHub issue, but the vocabulary now matches how feedback is actually
+  requested ("provide feedback on project-docs"), which improves agent routing.
+  The description and triggers lead with feedback — bugs, improvements,
+  suggestions, not only defects — and the body broadens beyond a bug-report
+  structure. Added the `hivemind` plugin to the covered components.
+- `finalize-branch` — Step 8 (squash strategy) now **leads with a
+  functional-independence test** (does each chapter build and deliver on its
+  own?) rather than commit count, which becomes a secondary signal that only
+  _prompts_ the question. Adds the daemon-imports-its-own-bundled-surface
+  failure mode as an illustration.
 
 ### 2.5.0 (2026-05-15)
 
