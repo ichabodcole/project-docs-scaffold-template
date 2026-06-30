@@ -1,7 +1,16 @@
 ---
 name: operator-setup
-description:
-  Setup, authentication and session usage for Operator Editor MCP access
+description: >
+  Authenticate to Operator (the Operator Editor MCP server) and establish a
+  reusable session before using any Operator MCP tools — reading, writing,
+  browsing, searching, or triaging documents. This is the gateway skill for all
+  Operator access: it handles the `.operator` credential file, API-key auth,
+  session reuse (24h), and re-authentication when a session expires. Use
+  whenever the user wants to work with Operator at all, or hits an auth/session
+  error. Triggers when the user says "use Operator", "connect to Operator", "log
+  into Operator", "authenticate Operator", "read/write/browse my Operator docs",
+  "set up Operator", "my Operator session expired", or mentions "Operator" or a
+  `.operator` file for the first time in a session.
 ---
 
 # Operator Setup
@@ -11,11 +20,15 @@ and writing documents.
 
 ## When to Use
 
-Activate when:
+This is the **gateway skill for all Operator access** — run it (or confirm a
+live session already exists) before any Operator MCP tool call. Activate when:
 
-- User mentions "Operator" for the first time in a session
-- Authentication is needed to access Operator
-- User needs help setting up their `.operator` configuration
+- The user wants to use Operator at all — read, write, browse, search, or triage
+  documents
+- The user mentions "Operator" / the Operator Editor / a `.operator` file for
+  the first time in a session
+- Authentication or a session is needed, or an existing session has expired
+- The user needs help setting up their `.operator` configuration
 
 ## Configuration File
 
