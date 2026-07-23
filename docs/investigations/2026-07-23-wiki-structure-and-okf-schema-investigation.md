@@ -98,8 +98,9 @@ discipline is ours to layer on (as dream-flute did via `SCHEMA.md` + `lint.ts`).
 
 ## Investigation Findings
 
-_(Early observations from context already gathered; the analysis below is the
-work to be done.)_
+_(Updated 2026-07-23 with the type→shape→relation mapping and a proposed schema.
+The structural fork is now resolved; the schema is proposed and awaits a pilot
+to validate.)_
 
 ### Key Observations (initial)
 
@@ -118,49 +119,168 @@ work to be done.)_
   describe _how we work_ and may be better as a tag-linked mesh than a folder
   hierarchy. Candidate answer: **two tracks under one wiki root**, not one soup.
 
-### Options Considered (to be evaluated, not yet decided)
+### Type → shape → relation mapping (analysis)
 
-- **A — By-type (reorg).**
-  `docs/wiki/{architecture, specifications, playbooks, ...}`; keep type-buckets,
-  add frontmatter + link conventions. Lowest risk; least "wiki-like."
-- **B — By-topic (concept graph).** Pages are subjects; `type` demotes to
-  frontmatter; a page may weave architecture + a lesson + a spec. Truest to
-  OKF/LLM-wiki; biggest rethink; least proven for this domain.
-- **Hybrid (leading candidate).** Shallow coarse folders (the dream-flute
-  settlement) + `type` frontmatter driving page shape + a link/tag graph as the
-  primary relation. Possibly split into a **product track** and a **process
-  track**. "Stable coarse frame, fluid graph beneath."
-- **Do nothing.** Keep the flat list; rely on good naming + grep. Cheapest;
-  leaves the ephemeral/durable mixing unaddressed.
+Working each durable type against: its nature, a candidate wiki `type`, where
+the page shape comes from, whether it's **topical** (organizes under subject
+headings) or **atomic/cross-cutting**, and its primary relation mechanism.
+
+| Current folder        | Nature             | Wiki `type`    | Page shape source                           | Topical vs atomic        | Primary relation      |
+| --------------------- | ------------------ | -------------- | ------------------------------------------- | ------------------------ | --------------------- |
+| `architecture/`       | system reference   | `architecture` | existing `TEMPLATE.md`                      | **topical** (subsystem)  | folder + inline links |
+| `specifications/`     | behavior reference | `spec`         | `TEMPLATE-domain/overview`                  | **topical** (domain)     | folder + inline links |
+| `interaction-design/` | UX reference       | `interaction`  | existing `TEMPLATE.md`                      | **topical** (surface)    | folder + inline links |
+| `playbooks/`          | repeatable how-to  | `playbook`     | existing `TEMPLATE.md`                      | semi-topical (by task)   | **tags** + links      |
+| `lessons-learned/`    | durable insight    | `lesson`       | `TEMPLATE.md` (already has `Type:`/`Tags:`) | **atomic/cross-cutting** | **tags** + links      |
+| `memories/`           | work summary       | `memory`       | atomic (README-indexed)                     | **atomic/cross-cutting** | **catalog** + tags    |
+
+**Two decisive pieces of evidence surfaced during the mapping:**
+
+1. **`lessons-learned` already carries proto-frontmatter in its body** —
+   `**Date:**`, `` **Tags:** `#migrations` `#agent-execution` ``,
+   `**Type:** Pattern`. It independently arrived at `type` + `tags` +
+   `timestamp`. Migrating it to YAML frontmatter is a _lift, not a redesign_ —
+   strong evidence the OKF schema fits this domain with near-zero conceptual
+   friction.
+2. **The topical/atomic line falls exactly on the product-ish / process-ish
+   seam.** The system-reference types are genuinely topical (they describe _the
+   thing_, and subjects — "the sync engine" — are the natural unit). The
+   practice types are atomic and cross-cutting (a lesson about "uniform
+   specificity" isn't _about_ one subsystem; it applies across many), so a
+   subject-folder hierarchy fights them — a tag mesh fits.
+
+### Resolution of the A/B/Hybrid fork
+
+**Chosen: Hybrid, organized as two tracks under one wiki root.**
+
+- **System track** (`type: architecture | spec | interaction`) — **topical**,
+  folder-organized by subsystem/domain, heavy inter-linking. This is the "by
+  topic" (B) shape, and it fits because the content is intrinsically topical.
+- **Practice track** (`type: playbook | lesson | memory`) — **atomic**, a
+  **tag-linked mesh** with a flat-ish layout and a catalog index (the
+  `MEMORY.md` discipline). Folders are minimal here; `tags` + `related` carry
+  the graph.
+
+Both share one frontmatter schema, one link-lint, and one catalog convention —
+so tooling built once serves both — but they're organized by their _nature_, not
+forced into a single hierarchy. This keeps pure-**A** (misses the graph) and
+pure-**B** (fights the atomic practice docs) both rejected, and "do nothing"
+rejected for leaving the ephemeral/durable mixing in place.
+
+`type` does double duty: it's OKF's one required field **and** it selects the
+page shape (reusing today's per-type TEMPLATEs) — so "type drives template"
+becomes a load-bearing convention, not decoration.
+
+### Proposed minimal frontmatter schema (to validate in a pilot)
+
+```yaml
+---
+type: architecture | spec | interaction | playbook | lesson | memory # REQUIRED (OKF); also selects page shape
+title: Uniform specificity in migration steps # nav/display name
+description: Every step in an agent-run guide must sit at the same specificity. # one line; doubles as the catalog hook
+tags: [migrations, agent-execution, documentation] # OKF convention; the practice track's primary relation
+related: [lesson/scaffold-checklist, playbook/writing-migrations] # explicit graph edges (optional; complements inline links)
+status: current # optional: draft | current | superseded (mainly system track)
+updated: 2026-02-15 # OKF timestamp; when the CONTENT last changed
+---
+```
+
+- **Authored:** `type`, `title`, `description`, `tags`, `related`, `status`,
+  `updated`.
+- **Computed, never authored:** backlinks (derive from inbound links/`related`),
+  graph adjacency, "orphan" detection. Tooling derives these; humans/agents
+  don't maintain them.
+- **Dropped from dream-flute's set:** `order` (it existed for a nuxt sidebar
+  sort; project-docs' catalog can sort by `updated` or title — revisit only if a
+  track needs manual ordering).
+- **Strictness:** conform to OKF's required `type` exactly (portability + future
+  cross-project tooling), treat the rest as our documented conventions (OKF
+  permits extras). This is precisely dream-flute's posture.
+
+### Worked example — `lessons-learned` migrated to a `lesson` wiki page
+
+Today (`lessons-learned/migration-steps-uniform-specificity.md`), metadata lives
+in the body:
+
+```markdown
+# Migration Steps Must Be Uniformly Specific
+
+**Date:** 2026-02-15 **Tags:** `#migrations` `#agent-execution` `#documentation`
+**Type:** Pattern
+```
+
+As a wiki page, that same metadata lifts into frontmatter and the body becomes
+pure content:
+
+```markdown
+---
+type: lesson
+title: Migration steps must be uniformly specific
+description:
+  In an agent-run guide, one underspecified step becomes the failure point.
+tags: [migrations, agent-execution, documentation]
+related: [playbook/writing-migrations]
+updated: 2026-02-15
+---
+
+# Migration steps must be uniformly specific
+
+## The lesson
+
+...
+```
+
+The port is mechanical — nothing about the lesson's content resists it — which
+is the evidence the schema is sound. The `memory` type ports the same way
+(atomic body, frontmatter metadata, one catalog line), confirming the practice
+track.
+
+### Options Considered (evaluated)
+
+- **A — By-type (reorg).** Rejected: keeps type-buckets but never delivers the
+  graph; least "wiki-like."
+- **B — By-topic (pure concept graph).** Rejected: fights the atomic practice
+  docs (`lesson`/`memory`), which aren't _about_ a subject.
+- **Hybrid, two tracks. ✅ Chosen** — see Resolution above.
+- **Do nothing.** Rejected: leaves the ephemeral/durable mixing (the brief's
+  core friction) unaddressed.
 
 ## Open Questions
 
-- [ ] Map each current durable type to a candidate wiki `type` and page shape.
-      Which are topical (fit B) vs atomic/cross-cutting (fit a tag-mesh)?
-- [ ] Is the product-ish / process-ish split real enough to warrant **two
-      tracks** under one root, or does one graph suffice?
-- [ ] Minimal frontmatter schema: which of `type`, `title`, `description`,
-      `tags`, `timestamp`, `related`/`links`, `status`, `order` earn their place
-      — and which are _computable_ (e.g. backlinks) rather than authored?
-- [ ] How do relationships get expressed — inline relative-links only
-      (dream-flute), an explicit `related:` frontmatter list (Operator-style),
-      or both? What does graph tooling need to traverse cheaply?
-- [ ] Does `memories/` + `MEMORY.md` port cleanly as the pilot (it's already
-      atomic + indexed), and does that port teach the general pattern?
+- [x] ~~Map each current durable type to a candidate wiki `type` and page
+      shape.~~ Done — see the mapping table.
+- [x] ~~Is the product-ish / process-ish split real enough to warrant two
+      tracks?~~ **Yes** — the topical/atomic line falls exactly on that seam.
+      Resolved: system track + practice track under one root.
+- [x] ~~Minimal frontmatter schema.~~ **Proposed** (`type`, `title`,
+      `description`, `tags`, `related`, `status`, `updated`; backlinks computed;
+      `order` dropped) — awaits pilot validation.
+- [x] ~~How are relationships expressed?~~ **Both** — inline relative links
+      _and_ an optional `related:` list; backlinks/adjacency are computed by
+      tooling.
+- [ ] **Pilot:** does `memories/` (atomic + indexed) actually port cleanly, and
+      does a `lesson` port confirm the schema in practice? (The paper example
+      suggests yes; a real port is the proof.)
 - [ ] Where does the wiki root live and how do inbound references survive the
-      move? (`docs/wiki/` à la dream-flute vs a rename.)
-- [ ] How OKF-strict: conform exactly (portability, future tooling interop) vs
-      extend freely (OKF permits extras) — and does strictness change what
-      shared cross-project tooling can assume?
+      move? (`docs/wiki/` à la dream-flute vs a rename — a migration concern for
+      the project, not this investigation.)
+- [ ] Catalog form: one root `index.md` (dream-flute) vs per-track catalogs vs
+      generated-from-frontmatter — decide with the tooling investigation.
 
 ## Recommendation
 
-- [x] **More Research Needed** — Outstanding structural questions remain.
+- [x] **More Research Needed** — the _structural_ question is resolved; a schema
+      **pilot** and the **tooling-boundary** investigation remain before a
+      proposal.
 
-**Rationale:** The mechanism is proven (dream-flute) but its fit for
-_development/meta_ knowledge is unvalidated, and the schema can't be fixed until
-the type→shape→relation mapping is worked out. The concrete next move is a
-**paper mapping exercise + a `memories/` pilot**, not a proposal yet.
+**Rationale:** The structural fork is settled with evidence — **Hybrid, two
+tracks** (system track topical/folder-linked; practice track atomic/tag-meshed),
+one shared OKF schema, `type` driving page shape. The frontmatter schema is
+proposed and looks sound on paper (the `lesson` port is mechanical because
+`lessons-learned` already carries `Type:`/`Tags:` metadata). What's left is
+_empirical_: run the pilot to validate the schema against real content, and
+answer the tooling questions (lint/CLI/render, Operator-vs-standalone) in the
+sibling investigation. A proposal should wait for both.
 
 ## Next Steps
 
