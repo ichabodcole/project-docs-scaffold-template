@@ -65,10 +65,8 @@ knowledge graph, and the ability to see how documents relate — exactly the
 with MCP tools (`mcp__operator-cloud__*`: `read_document`, `search_documents`,
 `get_links`, `extract_links`, `list_relationships`, `list_dangling_links`,
 `list_orphan_documents`, …). If a project-docs wiki used a compatible
-frontmatter
-
-- link convention, these tools may operate on it directly — making Operator a
-  candidate _navigation home_ without building a bespoke graph engine.
+frontmatter and link convention, these tools may operate on it directly — making
+Operator a candidate _navigation home_ without building a bespoke graph engine.
 
 ### What the schema gives tooling to work with
 
