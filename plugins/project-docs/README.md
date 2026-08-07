@@ -278,6 +278,34 @@ docs/
 
 ## Version History
 
+### 3.1.0 (2026-08-07)
+
+- `finalize-branch` — Step 2 now requires **verifying the reviewer has
+  shell/`Bash` access before dispatch**, rather than defaulting to
+  `feature-dev:code-reviewer` by name; a reviewer limited to reading and
+  grepping produces a static read, not a verified review, and currently that
+  agent has no `Bash` tool
+  ([#148](https://github.com/ichabodcole/project-docs-scaffold-template/issues/148)).
+  Step 8 no longer picks a squash strategy on its own — **this is opt-in and
+  safe to ignore**, and it now looks for a project-owned
+  `## Branch Landing Policy` heading in `AGENTS.md`/`CLAUDE.md`, prints and
+  follows it (running any check it defines) if found, and announces the absence
+  explicitly with strategy options and no default if not. Also computes branch
+  facts (cited commit SHAs in tracked docs, multi-author attribution trailers)
+  unconditionally, since squashing those away is a real risk a guessed default
+  can't see
+  ([#149](https://github.com/ichabodcole/project-docs-scaffold-template/issues/149)).
+  See `update-project-docs`'s
+  [Root-Level Conventions](skills/update-project-docs/SKILL.md#root-level-conventions)
+  section for how to add one — running `update-project-docs` will also recommend
+  it if it's missing.
+- `update-project-docs` — Step 6 generalized from a single hardcoded check (the
+  `docs/` pointer) into a data-driven `## Root-Level Conventions` table: any
+  plugin skill that starts depending on new root `AGENTS.md`/`CLAUDE.md` content
+  adds a row there instead of the change needing its own bespoke detection
+  logic. Checked unconditionally, independent of `docs_version` — see the
+  skill's "Adding a New Root-Level Convention" section.
+
 ### 3.0.0 (2026-06-30)
 
 - **Renamed `report-issue` → `provide-feedback`** (breaking). The skill files

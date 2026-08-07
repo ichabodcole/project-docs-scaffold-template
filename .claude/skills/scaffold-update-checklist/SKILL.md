@@ -119,6 +119,18 @@ auto-surfacing value (e.g., `init-branch`, `update-deps`).
 - [ ] Update `docs/PROJECT_MANIFESTO.md` — skill count
 - [ ] Verify skill count matches actual directories:
       `ls plugins/<plugin>/skills/ | wc -l`
+- [ ] **If the change makes the skill depend on new content in a file the
+      scaffold doesn't mirror or migrate** — root `AGENTS.md`/`CLAUDE.md` are
+      explicitly project-specific (see Mirrored Files above), and the
+      `docs_version`/migration system only covers `docs/` structural changes.
+      Add a row + subsection to `update-project-docs`'s
+      [Root-Level Conventions](../../../plugins/project-docs/skills/update-project-docs/SKILL.md#root-level-conventions)
+      table (see its "Adding a New Root-Level Convention" section) rather than
+      writing the how-to content into the version history entry — the changelog
+      entry should **link there**, not duplicate the example content. One
+      canonical copy of the example content means nothing to keep in sync.
+      Consider whether this repo's own root `AGENTS.md` should adopt the
+      convention too, as a dogfooded example.
 
 ### Removing a Plugin Skill
 
@@ -355,6 +367,27 @@ similar concerns, expose an equivalent health/status verb and check it first.
 - [ ] Verify cookiecutter copies match project-root copies
 - [ ] Grep for the old state to catch missed references (e.g., if you changed
       the pipeline string, grep for the old version across all `.md` files)
+- [ ] **Cold-read verification.** For new or modified skill files, commands,
+      agent files, and document type templates, use the Agent tool to dispatch a
+      fresh agent — one with no context from this conversation, not a fork — to
+      read the file and report back: is anything confusing, is any terminology
+      ambiguous or interpretable more than one way, does the text seem to assume
+      context the reader wouldn't actually have? Writing with the author's
+      context makes it easy to produce something that reads clearly to the
+      author but assumes knowledge a real first-time reader — or the agent that
+      will follow this skill/doc later, in its actual working session — won't
+      have.
+  - Scope the cold-read agent to the changed file plus whatever it explicitly
+    references or links to — mirrors what an actual first-time reader would
+    open, not the whole plugin or doc category.
+  - Report-only: the fresh agent returns feedback, it doesn't edit the file. The
+    author decides what to act on, to keep the check independent.
+  - This scope isn't necessarily exhaustive. If the feedback (or your own
+    judgment) suggests the document leans on background a real reader would have
+    in their actual working session but that isn't captured by a direct link —
+    conversation history, other loaded skills, project memory — treat that as a
+    signal worth noting, not a reason to routinely widen the agent's scope. When
+    in doubt, keep it to the file plus its direct references.
 - [ ] **Meta: does this skill need updating?** If new document categories were
       added, new mirrored file paths were introduced, new plugin components
       changed the count verification commands, or the sync procedure changed,
