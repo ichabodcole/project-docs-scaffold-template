@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.0.0...project-docs-scaffold-template-v6.1.0) (2026-08-08)
+
+
+### Features
+
+* **project-docs:** add sweep-project closure touchpoint ([0baf1cf](https://github.com/ichabodcole/project-docs-scaffold-template/commit/0baf1cfcfff9da0f14c9bbcb2f4862c7c9f0a44c))
+* **project-docs:** verify reviewer capability, defer squash strategy to project policy ([5298cf7](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5298cf7457d46aa1d239ac6dcb51234b21116fe5))
+
+
+### Bug Fixes
+
+* **operator:** normalize dist skill.md casing to SKILL.md ([12cfe24](https://github.com/ichabodcole/project-docs-scaffold-template/commit/12cfe24efdf40a4669b4c5ec73313571e6460836))
+
 ## [6.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v5.0.0...project-docs-scaffold-template-v6.0.0) (2026-06-30)
 
 
