@@ -1,8 +1,17 @@
 ---
 name: operator-triage
-description:
-  Triage Operator documents by assessing content and routing to appropriate
-  workflow stages
+description: >
+  Review Operator documents and route them to the right next step in the
+  project-docs pipeline (investigation, proposal, plan, lesson-learned,
+  fragment, backlog). For each document it assesses type, maturity, and clarity,
+  decides the route via the docs decision framework, and records the decision as
+  a task to execute. Use when the user wants to process, review, sort, or triage
+  a batch of Operator captures (bugs, fragments, on-deck, etc.) and turn them
+  into actionable docs or work. Triggers when the user says "triage my Operator
+  docs", "process the Operator inbox", "review what's in Operator", "sort my
+  fragments", "route these Operator items", or wants to clear an Operator
+  capture folder. Requires Operator access — depends on the operator-setup
+  skill.
 ---
 
 # Operator Document Triage

@@ -169,21 +169,22 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Project Lifecycle Skills
 
-| Skill                        | Description                                                                       |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                |
-| `create-project`             | Create project folder with proposal scaffold in docs/projects/                    |
-| `create-investigation`       | Create investigation from rough idea or voice note                                |
-| `generate-proposal`          | Create project proposal from completed investigation                              |
-| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                       |
-| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                           |
-| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                     |
-| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                 |
-| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                |
-| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies |
-| `dev-discovery`              | Pre-planning technical discovery for complex features                             |
-| `backlog-to-projects`        | Review backlog items and organize them into project groupings                     |
-| `update-project-docs`        | Upgrade docs structure to newer scaffold template version                         |
+| Skill                        | Description                                                                                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                                                                                                                   |
+| `create-project`             | Create project folder with proposal scaffold in docs/projects/                                                                                                                       |
+| `create-investigation`       | Create investigation from rough idea or voice note                                                                                                                                   |
+| `generate-proposal`          | Create project proposal from completed investigation                                                                                                                                 |
+| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                                                                                                                          |
+| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                                                                                                                              |
+| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                                                                                                                        |
+| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                                                                                                                    |
+| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                                                                                                                   |
+| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies                                                                                                    |
+| `dev-discovery`              | Pre-planning technical discovery for complex features                                                                                                                                |
+| `backlog-to-projects`        | Review backlog items and organize them into project groupings                                                                                                                        |
+| `update-project-docs`        | Upgrade docs structure to newer scaffold template version                                                                                                                            |
+| `sweep-project`              | Reconcile a project folder or backlog item against what was actually built, then either record the remaining work or — on confirmation — archive it and update live cross-references |
 
 ### Research & Analysis Skills
 
@@ -277,6 +278,58 @@ docs/
    significantly
 
 ## Version History
+
+### 3.2.0 (2026-08-07)
+
+- **New `sweep-project` skill** — reconciles a project folder or backlog item
+  against what was actually built, then either records the remaining work or,
+  with the human's confirmation, archives it and updates live cross-references.
+  Archival is one of two valid outcomes rather than the goal; the
+  reconcile-and-record path is the common case, since most runs happen because
+  someone _suspects_ a project might be finished.
+- `finalize-branch` — Step 6 gains a **plan reconciliation** soft check: if a
+  `plan.md` or backlog item exists for the branch's work, it is reconciled in
+  place, and if everything comes back complete, the skill offers to delegate to
+  `sweep-project`. It makes no claim about whether the whole project is finished
+  — most branches land mid-project. Step 7 widened from "any new docs" to cover
+  edits and renames, since reconciliation and archival land as modifications and
+  moves.
+- Both skills carry a hard-won rule: **verify completion against artifacts and
+  session records, not checkbox state**. Finished plans in practice leave nearly
+  every box unticked, so checkbox-first reasoning reports shipped work as never
+  started.
+- The documentation cycle string now shows `[sweep → archive]` as a terminal
+  **check-in** stage across `docs/README.md`, `docs/AGENTS.md`,
+  `docs/reports/README.md`, and `PROJECT_MANIFESTO.md`. Nothing archives
+  automatically.
+
+### 3.1.0 (2026-08-07)
+
+- `finalize-branch` — Step 2 now requires **verifying the reviewer has
+  shell/`Bash` access before dispatch**, rather than defaulting to
+  `feature-dev:code-reviewer` by name; a reviewer limited to reading and
+  grepping produces a static read, not a verified review, and currently that
+  agent has no `Bash` tool
+  ([#148](https://github.com/ichabodcole/project-docs-scaffold-template/issues/148)).
+  Step 8 no longer picks a squash strategy on its own — **this is opt-in and
+  safe to ignore**, and it now looks for a project-owned
+  `## Branch Landing Policy` heading in `AGENTS.md`/`CLAUDE.md`, prints and
+  follows it (running any check it defines) if found, and announces the absence
+  explicitly with strategy options and no default if not. Also computes branch
+  facts (cited commit SHAs in tracked docs, multi-author attribution trailers)
+  unconditionally, since squashing those away is a real risk a guessed default
+  can't see
+  ([#149](https://github.com/ichabodcole/project-docs-scaffold-template/issues/149)).
+  See `update-project-docs`'s
+  [Root-Level Conventions](skills/update-project-docs/SKILL.md#root-level-conventions)
+  section for how to add one — running `update-project-docs` will also recommend
+  it if it's missing.
+- `update-project-docs` — Step 6 generalized from a single hardcoded check (the
+  `docs/` pointer) into a data-driven `## Root-Level Conventions` table: any
+  plugin skill that starts depending on new root `AGENTS.md`/`CLAUDE.md` content
+  adds a row there instead of the change needing its own bespoke detection
+  logic. Checked unconditionally, independent of `docs_version` — see the
+  skill's "Adding a New Root-Level Convention" section.
 
 ### 3.0.0 (2026-06-30)
 

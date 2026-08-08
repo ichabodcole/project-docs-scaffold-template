@@ -104,32 +104,25 @@ to reflect the new version.
 
 ### Step 6: Ensure Root-Level Agent Context
 
-Check whether the project's root-level `CLAUDE.md` or `AGENTS.md` references the
-docs structure. Agents read these files first when entering a project — if
-there's no pointer to `docs/`, agents have to discover the documentation on
-their own.
+Some plugin skills expect specific content in a project's root `AGENTS.md` /
+`CLAUDE.md` — conventions that live outside `docs/` structure entirely, so
+they're never covered by the version-tracked migration system above. For each
+row in the `## Root-Level Conventions` table below, run its check against root
+`AGENTS.md`/`CLAUDE.md`. If the check finds nothing, present that row's
+documented example content (in the matching subsection below the table) and ask
+where they'd like it added.
 
-```bash
-grep -l "docs/README\|docs/memories\|documentation.*docs/" CLAUDE.md AGENTS.md 2>/dev/null
-```
+All of these are recommendations, not required steps — the user may prefer to
+word it differently or place it in a different file. Present the blurb, don't
+apply it unasked.
 
-If neither file references the docs structure, recommend adding a section like
-this to whichever file the project uses for agent context:
-
-```markdown
-## Documentation
-
-This project uses structured documentation in `docs/`. See
-[docs/README.md](./docs/README.md) for the full structure overview and document
-type guide.
-
-For quick onboarding on recent work, start with
-[docs/memories/](./docs/memories/).
-```
-
-This is a recommendation, not a required step — the user may prefer to word it
-differently or place it in a different file. Present the blurb and ask where
-they'd like it.
+Checking every row unconditionally is intentional — there's no reliable way for
+this skill to detect exactly which version of a plugin is installed in the
+current environment, and it isn't needed for correctness: recommending a
+convention to someone who hasn't yet upgraded to the plugin version that uses it
+is harmless (inert until they do), while failing to recommend it to someone who
+needs it is the real risk. The table's "Introduced In" column is informational
+only, for humans reading it — not something this step branches on.
 
 ### Step 7: Verify
 
@@ -149,6 +142,90 @@ Run a final check that no stale references to old structure remain:
 | [migrations/v2.3-to-v2.4.md](migrations/v2.3-to-v2.4.md) | 2.3     | 2.4.0 | Add test plan template, external dependencies in DR template, update lifecycle across docs            |
 | [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | Add briefs document type, update pipeline lifecycle to start with Brief                               |
 | [migrations/v2.5-to-v2.6.md](migrations/v2.5-to-v2.6.md) | 2.5     | 2.6.0 | Rename `archive/` → `_archive/` for consistent sort-to-top behavior                                   |
+
+## Root-Level Conventions
+
+Unlike the migrations above, these have nothing to do with `docs_version` — that
+field tracks the **scaffold template's** `docs/` structure. The rows below are
+content a specific **plugin** (e.g. `project-docs`, `recipes`) expects in root
+`AGENTS.md`/`CLAUDE.md`, versioned independently via that plugin's own
+`plugin.json` semver — a completely different, unrelated counter from
+`docs_version`. "Introduced In: project-docs 3.1.0" does not correspond to any
+`docs_version` and shouldn't be looked for in the Available Migrations table
+above. Checked unconditionally by Step 6 regardless of installed plugin version
+(see Step 6 for why).
+
+A check's exit status is what matters, not its stderr — if only one of
+`AGENTS.md`/`CLAUDE.md` exists (common; e.g. this repo's own `CLAUDE.md` is just
+a one-line pointer to `AGENTS.md`), grep prints a harmless "no such file"
+warning for the missing one and still succeeds on the file that exists. Redirect
+stderr (`2>/dev/null`) if that noise is distracting; don't read it as a failure.
+
+| Convention                 | Introduced In               | Check                                                                                        |
+| -------------------------- | --------------------------- | -------------------------------------------------------------------------------------------- |
+| Docs structure pointer     | project-docs (all versions) | `grep -l "docs/README\|docs/memories\|documentation.*docs/" AGENTS.md CLAUDE.md 2>/dev/null` |
+| `## Branch Landing Policy` | project-docs 3.1.0          | `grep -q '^## Branch Landing Policy' AGENTS.md CLAUDE.md 2>/dev/null`                        |
+
+### Docs structure pointer
+
+Agents read root `AGENTS.md`/`CLAUDE.md` first when entering a project — if
+there's no pointer to `docs/`, agents have to discover the documentation on
+their own. If the check finds nothing, recommend adding a section like this to
+whichever file the project uses for agent context:
+
+```markdown
+## Documentation
+
+This project uses structured documentation in `docs/`. See
+[docs/README.md](./docs/README.md) for the full structure overview and document
+type guide.
+
+For quick onboarding on recent work, start with
+[docs/memories/](./docs/memories/).
+```
+
+### `## Branch Landing Policy`
+
+Used by `finalize-branch` Step 8 to decide whether/how to squash a branch before
+merging, instead of guessing one. Optional — recommend it, don't require it;
+without it, `finalize-branch` safely falls back to presenting strategy options
+with no default.
+
+If the check finds nothing, recommend adding a heading with that exact text
+anywhere in root `AGENTS.md` (or `CLAUDE.md`) — matched by heading text, not
+position in the file. Three forms it can take:
+
+An inline policy (the content below is an example to adapt, not a
+project-docs-prescribed default — write your own):
+
+```markdown
+## Branch Landing Policy
+
+Default to a single-commit squash for branches under ~20 commits. Never squash a
+branch whose commits are cited by SHA in tracked docs, or that carries more than
+one distinct author/attribution trailer — merge or PR those as-is instead.
+```
+
+A pointer to a separate file the project maintains:
+
+```markdown
+## Branch Landing Policy
+
+See `docs/BRANCH_POLICY.md`.
+```
+
+Or a fenced, runnable check that `finalize-branch` executes and shows the output
+of:
+
+````markdown
+## Branch Landing Policy
+
+Run this before deciding a strategy:
+
+```bash
+./scripts/check-branch-landing.sh
+```
+````
 
 ## Creating New Migration Guides
 
@@ -197,3 +274,22 @@ When the scaffold template releases structural changes:
 
 [Checkbox list of all migration actions]
 ```
+
+## Adding a New Root-Level Convention
+
+When a plugin skill starts depending on new content in root
+`AGENTS.md`/`CLAUDE.md` (as opposed to a `docs/` structural change, which goes
+through the migration path above):
+
+1. Add a row to the `## Root-Level Conventions` table above: convention name,
+   introducing plugin@version, the exact check command.
+2. Add a matching subsection below the table: what the convention is for, and
+   its example content (worked example, plus any alternate forms — a
+   file-pointer, a runnable check — the way `## Branch Landing Policy` does
+   above).
+3. No `docs_version` bump and no migration file — this table is unversioned
+   relative to the `docs/` migration system, and Step 6 checks every row
+   unconditionally.
+4. The introducing plugin's own README changelog entry should **link here**, not
+   duplicate the example content inline — one canonical copy avoids the two
+   drifting apart.

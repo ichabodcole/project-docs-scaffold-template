@@ -66,6 +66,10 @@ date and a short description.
 Active backlog items reflect current work that needs doing. Completed items are
 archived to keep the active list focused.
 
+The `sweep-project` skill handles step 3 — point it at a backlog item and it
+reconciles the item against what was built, confirms with you, then moves it and
+updates any live references to it.
+
 ## Tips
 
 - **Keep it brief** - A backlog item should be quick to write and quick to read

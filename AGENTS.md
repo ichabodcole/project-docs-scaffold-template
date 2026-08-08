@@ -69,6 +69,13 @@ cookiecutter .
 cookiecutter . --overwrite-if-exists
 ```
 
+## Branch Landing Policy
+
+Default to a single-commit squash for branches under ~20 commits. Never squash a
+branch whose commits are cited by SHA in tracked docs, or that carries more than
+one distinct author/attribution trailer — merge or PR those as-is instead.
+`finalize-branch` computes both checks automatically before choosing a strategy.
+
 ## Claude Code Plugins
 
 This repository develops Claude Code plugins alongside the cookiecutter

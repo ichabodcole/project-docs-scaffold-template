@@ -36,7 +36,7 @@ Reports differ from other documentation:
 Reports complete the documentation lifecycle by feeding back into it:
 
 ```
-Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report → ...
+Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) → Report → ...
 ```
 
 **Examples:**

@@ -77,7 +77,7 @@ iteration through real projects, which is what this project is doing.
   architecture docs, specifications, investigations, projects, backlog, and more
 
 - **Provides a five-plugin Claude Code ecosystem** built around the scaffold:
-  - **project-docs** — the core workflow plugin: 6 commands, 26 skills, 9 agents
+  - **project-docs** — the core workflow plugin: 6 commands, 27 skills, 9 agents
     covering the full pipeline (workshop-idea, create-investigation,
     create-project, generate-proposal, generate-design-resolution,
     generate-dev-plan, generate-test-plan, finalize-branch, review-docs,
@@ -98,8 +98,10 @@ iteration through real projects, which is what this project is doing.
 
 - **Manages the full documentation pipeline** from idea through completion:
   brief → investigation → proposal → [design resolution] → plan → [test plan] →
-  implementation sessions → archival, with each stage having defined conventions
-  and AI-assisted tooling.
+  implementation sessions → [sweep → archival], with each stage having defined
+  conventions and AI-assisted tooling. The final stage is a check-in rather than
+  an automatic close: `sweep-project` reconciles a plan against what was built,
+  and archives only on human confirmation.
 
 - **Ships skills as portable, cross-agent bundles.** Every plugin builds into a
   `dist/<plugin>/openpackage.yml` distribution that conforms to the
@@ -142,9 +144,10 @@ iteration through real projects, which is what this project is doing.
   expressed as a portable skill, it doesn't belong here.
 
 - **Not a rigid process.** The pipeline (investigation → proposal →
-  [design-resolution] → plan → [test-plan] → sessions) is a convention, not a
-  requirement. You can create a project with just a proposal. You can skip
-  investigations for clear features. The structure enables but doesn't enforce.
+  [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) is a
+  convention, not a requirement. You can create a project with just a proposal.
+  You can skip investigations for clear features. The structure enables but
+  doesn't enforce.
 
 - **Not a finished product.** Some parts are battle-tested (documentation
   structure, project conventions); others are experimental (certain skills,
@@ -166,7 +169,7 @@ discovery docs that precede and follow projects, serving as connective tissue.
 **The documentation cycle is a loop:**
 
 ```
-Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report → ...
+Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) → Report → ...
 ```
 
 Briefs capture and refine ideas, investigations explore questions, projects

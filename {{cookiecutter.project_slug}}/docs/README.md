@@ -251,11 +251,16 @@ Not sure what to create? Use this decision flowchart:
 **The documentation cycle:**
 
 ```
-Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report → ...
+Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) → Report → ...
 ```
 
 Reports and investigations are the connective tissue between projects. They
 trigger new work and assess completed work, but live outside any single project.
+
+The bracketed final stage is a **check-in, not an automatic step**. Sweeping a
+project reconciles its plan against what was actually built; archival only
+follows if the work is genuinely done and a human confirms it. Plenty of sweeps
+end with "not yet" — that's a normal outcome, not a failed one.
 
 **Quick Reference:**
 
