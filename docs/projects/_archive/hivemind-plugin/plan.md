@@ -153,7 +153,7 @@ that DO belong in the skills/Field Guide are the destination IDs below.
 - Create: `plugins/hivemind/.claude-plugin/plugin.json`
 - Modify: `.claude-plugin/marketplace.json`
 
-- [ ] **Step 1: Create the plugin manifest**
+- [x] **Step 1: Create the plugin manifest**
 
 Create `plugins/hivemind/.claude-plugin/plugin.json`:
 
@@ -171,7 +171,7 @@ Create `plugins/hivemind/.claude-plugin/plugin.json`:
 }
 ```
 
-- [ ] **Step 2: Register the plugin in the marketplace**
+- [x] **Step 2: Register the plugin in the marketplace**
 
 In `.claude-plugin/marketplace.json`, add this object to the `plugins` array
 (after the `agent-bridge` entry):
@@ -191,13 +191,13 @@ In `.claude-plugin/marketplace.json`, add this object to the `plugins` array
 }
 ```
 
-- [ ] **Step 3: Verify JSON is well-formed**
+- [x] **Step 3: Verify JSON is well-formed**
 
 Run:
 `python3 -c "import json; json.load(open('.claude-plugin/marketplace.json')); json.load(open('plugins/hivemind/.claude-plugin/plugin.json')); print('OK')"`
 Expected: `OK`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add plugins/hivemind/.claude-plugin/plugin.json .claude-plugin/marketplace.json
@@ -216,7 +216,15 @@ it. Authored as a plugin reference file now; seeded into live HiveMind in Task
 
 - Create: `plugins/hivemind/skills/_shared/field-guide.md`
 
-- [ ] **Step 1: Write the Field Guide**
+- [x] **Step 1: Write the Field Guide**
+
+> **Reconciled 2026-08-07 — delivered, but relocated.** The field guide shipped
+> as a per-skill copy at `plugins/hivemind/skills/<skill>/field-guide.md` in all
+> four skills, not at the planned shared path `skills/_shared/field-guide.md`. A
+> `_shared/` directory isn't a skill, so the dist build — which packages one
+> directory per skill — would not have carried it into `dist/hivemind/skills/`.
+> The copies are present in both `plugins/` and `dist/`. Recorded because the
+> deviation isn't self-evident from the plan text.
 
 Create `plugins/hivemind/skills/_shared/field-guide.md` with these required
 sections (content specified — this file IS the deliverable, author in full):
@@ -295,7 +303,7 @@ sections (content specified — this file IS the deliverable, author in full):
    `OPERATOR_HIVEMIND_ADMIN_*` — treat as a local convention, ask if absent). Do
    not enumerate MCP tool names; discover them from the runtime.
 
-- [ ] **Step 2: Verify structure**
+- [x] **Step 2: Verify structure**
 
 Run: `grep -c '^## ' plugins/hivemind/skills/_shared/field-guide.md` Expected:
 `8` (eight `##` sections under the title).
@@ -304,11 +312,11 @@ Run:
 `grep -F 'bMxQv-R9IXHVl8jlACagv' plugins/hivemind/skills/_shared/field-guide.md`
 Expected: the project ID line prints (group-ID map present).
 
-- [ ] **Step 3: Format**
+- [x] **Step 3: Format**
 
 Run: `npm run format` Expected: completes; field-guide.md normalized.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add plugins/hivemind/skills/_shared/field-guide.md
@@ -324,22 +332,22 @@ discovered and the build is green before adding skills.
 
 **Files:** none (build verification only)
 
-- [ ] **Step 1: Build the dist bundle**
+- [x] **Step 1: Build the dist bundle**
 
 Run: `npm run build:dist` Expected: output includes
 `=== Packaging: hivemind ===`. (Skill count 0 is fine at this stage.)
 
-- [ ] **Step 2: Confirm hivemind dist was generated**
+- [x] **Step 2: Confirm hivemind dist was generated**
 
 Run: `ls dist/hivemind/` Expected: `README.md  openpackage.yml  skills` (skills
 contains `_shared/`).
 
-- [ ] **Step 3: Validate**
+- [x] **Step 3: Validate**
 
 Run: `npm run validate:skills` Expected: exits 0. (No `hivemind` SKILL.md yet,
 so nothing under hivemind to fail; other plugins still `OK`.)
 
-- [ ] **Step 4: Commit the generated dist**
+- [x] **Step 4: Commit the generated dist**
 
 ```bash
 git add dist/hivemind
@@ -357,7 +365,7 @@ decision/thinking delta as a named scenario in HiveMind.
 
 - Create: `plugins/hivemind/skills/hivemind-capture/SKILL.md`
 
-- [ ] **Step 1: Write the SKILL.md frontmatter (exact)**
+- [x] **Step 1: Write the SKILL.md frontmatter (exact)**
 
 ```yaml
 ---
@@ -377,7 +385,7 @@ description:
 ---
 ```
 
-- [ ] **Step 2: Author the body from the `capture-scenario` model**
+- [x] **Step 2: Author the body from the `capture-scenario` model**
 
 Required sections (author prose in the source skill's register; preserve its
 two-trigger-mode structure and the scenario file shape):
@@ -405,19 +413,19 @@ Load-bearing content that MUST appear: destination = Scenarios group
 `<YYYY-MM-DD>-<slug>.md`; reference folder by ID; on unresolved ID, surface and
 stop.
 
-- [ ] **Step 3: Build + validate**
+- [x] **Step 3: Build + validate**
 
 Run: `npm run build:dist && npm run validate:skills` Expected: line
 `OK   hivemind/skills/hivemind-capture/SKILL.md`; overall exit 0.
 
-- [ ] **Step 4: Trigger-scenario check**
+- [x] **Step 4: Trigger-scenario check**
 
 Read the `description`. Confirm it WOULD fire on: "capture this scenario",
 "that's a delta worth keeping in HiveMind". Confirm it would NOT fire on: "log a
 bug" (backlog), "the skill was confusing to use" (that's `hivemind-feedback`).
 If the description fires on a near-miss, tighten it.
 
-- [ ] **Step 5: Format + commit**
+- [x] **Step 5: Format + commit**
 
 ```bash
 npm run format
@@ -436,7 +444,7 @@ feedback touchpoint — into HiveMind Feedback.
 
 - Create: `plugins/hivemind/skills/hivemind-feedback/SKILL.md`
 
-- [ ] **Step 1: Write the SKILL.md frontmatter (exact)**
+- [x] **Step 1: Write the SKILL.md frontmatter (exact)**
 
 ```yaml
 ---
@@ -454,7 +462,7 @@ description:
 ---
 ```
 
-- [ ] **Step 2: Author the body**
+- [x] **Step 2: Author the body**
 
 Required sections (capture→align→write flow, lighter than capture):
 
@@ -477,18 +485,18 @@ Load-bearing content that MUST appear: destination = Feedback group
 `c1X2fuiDRd6i7AQfCVm84` in project `bMxQv-R9IXHVl8jlACagv`; reference by ID;
 unresolved ID → surface and stop.
 
-- [ ] **Step 3: Build + validate**
+- [x] **Step 3: Build + validate**
 
 Run: `npm run build:dist && npm run validate:skills` Expected:
 `OK   hivemind/skills/hivemind-feedback/SKILL.md`; exit 0.
 
-- [ ] **Step 4: Trigger-scenario check**
+- [x] **Step 4: Trigger-scenario check**
 
 WOULD fire: "any issues using this skill?", "log feedback on the digest skill".
 Would NOT fire: "capture this decision" (capture), "what does HiveMind know
 about X" (consult). Tighten if it overlaps capture.
 
-- [ ] **Step 5: Format + commit**
+- [x] **Step 5: Format + commit**
 
 ```bash
 npm run format
@@ -508,7 +516,7 @@ into local `docs/`.
 
 - Create: `plugins/hivemind/skills/hivemind-consult/SKILL.md`
 
-- [ ] **Step 1: Write the SKILL.md frontmatter (exact)**
+- [x] **Step 1: Write the SKILL.md frontmatter (exact)**
 
 ```yaml
 ---
@@ -526,7 +534,7 @@ description:
 ---
 ```
 
-- [ ] **Step 2: Author the body**
+- [x] **Step 2: Author the body**
 
 Required sections:
 
@@ -558,17 +566,17 @@ three example scenario slugs as known principles to check against
 `affirmative-scope-over-defensive-exclusion`,
 `intentional-design-for-feedback-loops`).
 
-- [ ] **Step 3: Build + validate**
+- [x] **Step 3: Build + validate**
 
 Run: `npm run build:dist && npm run validate:skills` Expected:
 `OK   hivemind/skills/hivemind-consult/SKILL.md`; exit 0.
 
-- [ ] **Step 4: Trigger-scenario check**
+- [x] **Step 4: Trigger-scenario check**
 
 WOULD fire: "what does HiveMind know about Bun migration", "check this skill
 against what we've learned". Would NOT fire: "capture this", "file feedback".
 
-- [ ] **Step 5: Format + commit**
+- [x] **Step 5: Format + commit**
 
 ```bash
 npm run format
@@ -587,7 +595,7 @@ files to HiveMind documents. Triage Feedback + Scenarios, propose promotions.
 
 - Create: `plugins/hivemind/skills/hivemind-digest/SKILL.md`
 
-- [ ] **Step 1: Write the SKILL.md frontmatter (exact)**
+- [x] **Step 1: Write the SKILL.md frontmatter (exact)**
 
 ```yaml
 ---
@@ -596,7 +604,7 @@ description: Digest accumulated HiveMind knowledge (the cross-project knowledge 
 ---
 ```
 
-- [ ] **Step 2: Author the body from the `incorporate-feedback` model**
+- [x] **Step 2: Author the body from the `incorporate-feedback` model**
 
 Required sections (port the method; swap targets from local files to HiveMind):
 
@@ -625,17 +633,17 @@ Playbooks `R4uC0jYDig8_pylpkHTMP` + Lessons Learned `25izJ8swJEYP0B23UhZz0`;
 reference by ID; triage-and-propose (never auto-write promotions without
 review).
 
-- [ ] **Step 3: Build + validate**
+- [x] **Step 3: Build + validate**
 
 Run: `npm run build:dist && npm run validate:skills` Expected:
 `OK   hivemind/skills/hivemind-digest/SKILL.md`; exit 0.
 
-- [ ] **Step 4: Trigger-scenario check**
+- [x] **Step 4: Trigger-scenario check**
 
 WOULD fire: "process the HiveMind backlog", "what should we promote". Would NOT
 fire: "capture this", "consult HiveMind".
 
-- [ ] **Step 5: Format + commit**
+- [x] **Step 5: Format + commit**
 
 ```bash
 npm run format
@@ -652,29 +660,29 @@ live HiveMind admin session.
 
 **Files:** none (Operator MCP writes)
 
-- [ ] **Step 1: Authenticate**
+- [x] **Step 1: Authenticate**
 
 Use the `operator-setup` flow with the HiveMind admin key from the local
 `.operator`. Confirm the session resolves project `bMxQv-R9IXHVl8jlACagv`.
 
-- [ ] **Step 2: Create the Field Guide document in @operator**
+- [x] **Step 2: Create the Field Guide document in @operator**
 
 Create a document in group `UerSKStBeWvJJ_im2tb0Q` titled
 `HiveMind Field Guide`, body = the content of
 `plugins/hivemind/skills/_shared/field-guide.md` (adapt the "this file" framing
 to "this document"; this live copy is the canonical source of truth).
 
-- [ ] **Step 3: Add a pointer to the context doc**
+- [x] **Step 3: Add a pointer to the context doc**
 
 Append one line to the `context` doc (`iR5sy-VsOKb6XFkeblRjx`):
 `See the **HiveMind Field Guide** (this folder) for document types, frontmatter, and the promotion ladder.`
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Browse group `UerSKStBeWvJJ_im2tb0Q`. Expected: two documents — `context` and
 `HiveMind Field Guide`.
 
-- [ ] **Step 5: Note completion** (no repo commit — external write)
+- [x] **Step 5: Note completion** (no repo commit — external write)
 
 Record the new Field Guide doc ID in the session notes for later reference.
 
@@ -686,33 +694,33 @@ Record the new Field Guide doc ID in the session notes for later reference.
 
 - Create: `plugins/hivemind/README.md`
 
-- [ ] **Step 1: Write the plugin README**
+- [x] **Step 1: Write the plugin README**
 
 Create `plugins/hivemind/README.md` covering: the knowledge-cycle concept
 (collect → digest → disperse); the four skills (one line each); the Field Guide;
 Operator dependency + credential note; that HiveMind is concept-not-Operator and
 may be extracted later. Match the tone of `plugins/operator/` docs.
 
-- [ ] **Step 2: Full build**
+- [x] **Step 2: Full build**
 
 Run: `npm run build:dist` Expected: summary shows `hivemind` with `Skills: 4`.
 
-- [ ] **Step 3: Validate all skills**
+- [x] **Step 3: Validate all skills**
 
 Run: `npm run validate:skills` Expected: four `OK hivemind/...` lines; final
 `All N skills passed validation`; exit 0.
 
-- [ ] **Step 4: Format check**
+- [x] **Step 4: Format check**
 
 Run: `npm run format:check` Expected: passes (run `npm run format` first if
 needed).
 
-- [ ] **Step 5: Confirm dist contents**
+- [x] **Step 5: Confirm dist contents**
 
 Run: `ls dist/hivemind/skills/` Expected:
 `_shared  hivemind-capture  hivemind-consult  hivemind-digest  hivemind-feedback`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 npm run format
@@ -731,19 +739,19 @@ git commit -m "feat(hivemind): add plugin README and finalize dist bundle"
 - Modify: `docs/projects/hivemind-plugin/proposal.md` (status →
   Approved/Completed)
 
-- [ ] **Step 1: Flip proposal status**
+- [x] **Step 1: Flip proposal status**
 
 In `docs/projects/hivemind-plugin/proposal.md` change `**Status:** Draft` to
 `**Status:** Completed` (or `Approved` if any follow-up remains).
 
-- [ ] **Step 2: Write a session note**
+- [x] **Step 2: Write a session note**
 
 Create `docs/projects/hivemind-plugin/sessions/<YYYY-MM-DD>-implementation.md`
 summarizing: what shipped (plugin + 4 skills + Field Guide), the live Field
 Guide doc ID, any open follow-ups (e.g. proactive consult hooks, Principles
 tier, cross-agent dist verification).
 
-- [ ] **Step 3: Format + commit**
+- [x] **Step 3: Format + commit**
 
 ```bash
 npm run format

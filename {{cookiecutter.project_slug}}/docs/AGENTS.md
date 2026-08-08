@@ -37,7 +37,7 @@ This project organizes documentation by purpose and lifecycle:
 ### The Documentation Cycle
 
 ```
-Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions) → Report → ...
+Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) → Report → ...
 ```
 
 Reports and investigations are the connective tissue between projects:

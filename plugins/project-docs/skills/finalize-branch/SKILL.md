@@ -179,20 +179,62 @@ Present recommendations to user and get confirmation before creating:
   code? (DB migrations, service redeployments, environment config changes,
   manual coordination.) If so, create `handoff.md` in the project folder using
   `docs/projects/TEMPLATES/HANDOFF.template.md`.
-- **Architecture** — Reference
-  [docs/architecture/README.md](../../docs/architecture/README.md)
-- **Interaction design** — Reference
-  [docs/interaction-design/README.md](../../docs/interaction-design/README.md)
+- **Architecture** — Did this change the system's structure in a way a future
+  reader would need explained? If so, propose creating or updating a doc in
+  `docs/architecture/` (see `docs/architecture/README.md` for conventions).
+- **Interaction design** — Did this change how users interact with a feature? If
+  so, propose creating or updating a doc in `docs/interaction-design/` (see
+  `docs/interaction-design/README.md` for conventions).
 - **Specifications** — Check if `docs/specifications/` exists and whether
   changes affect documented behavior. Flag any that may need updating.
 - **Test plan** — If `docs/projects/<project-name>/test-plan.md` exists, verify
   that a Results Addendum section is present with pass/fail/blocked statuses.
   Flag any Tier 1 or Tier 2 scenarios without results. This is a soft check —
   don't block the merge, but surface it to the user.
+- **Plan reconciliation** — If a `plan.md` or backlog item exists for this work,
+  reconcile it in place against what was actually built: check off completed
+  items, update a `**Status:**` line if it holds a template enum value. **Verify
+  against the artifacts and the session record, not against the checkboxes'
+  current state** — finished work routinely leaves every box unticked, so an
+  all-unchecked plan means "unreconciled," not "unstarted." This is a soft check
+  like the test-plan one — surface it, don't block the merge.
+
+  This makes no claim about whether the whole _project_ is finished. Most
+  branches land mid-project.
+
+  **If reconciliation comes back with everything complete**, ask whether this
+  branch completes the project, and offer to invoke the `sweep-project` skill —
+  which handles archival and cross-reference updates. **Pass it the project
+  folder (or backlog item) path explicitly** — derive that from the `plan.md`
+  you just reconciled; `sweep-project` will not infer a target, by design, and
+  passing a path inside the project rather than the project itself just makes it
+  do the trimming. This mirrors Step 8's delegation to
+  `consolidate-long-branch`: present the option, then invoke the skill once the
+  user chooses.
+
+  **A yes here is not archival approval.** It means "go look" — `sweep-project`
+  runs its own reconciliation and stops at its own confirmation gate before
+  moving anything. Don't present this question as the last word, and don't treat
+  a yes as license to skip the gate downstream.
+
+  Two sequencing notes:
+  - `sweep-project` re-reads from disk, so it sees the reconciliation you just
+    wrote. The second pass is idempotent, not duplicated work.
+  - When invoked from here, it leaves its changes uncommitted for Step 7. If it
+    archives, Step 8's branch-facts computation and any squash operate on the
+    post-move tree — which is correct, but worth knowing.
 
 ### Step 7: Commit Documentation
 
-Stage and commit any new docs.
+Stage and commit documentation changes under `docs/` — new files, and also edits
+and moves (plan reconciliation and any `sweep-project` archival land as
+modifications and renames, not as new files). Scope the staging to `docs/`
+rather than staging everything, so unrelated uncommitted code doesn't ride
+along.
+
+If Step 8 lands on a single-commit squash, this commit folds into it — that's
+expected. Committing here still matters: it keeps the documentation work
+recoverable and reviewable as its own step before any history rewriting.
 
 ### Step 8: Determine Landing Policy and Execute
 
@@ -418,6 +460,12 @@ Ask for user confirmation at these points:
 - **Rolling your own multi-commit squash** — If Strategy B is chosen, use the
   `consolidate-long-branch` skill. Ad-hoc interactive rebase without the
   tree-equivalence gate is how silent content drift enters the merged history.
+- **Reconciling a plan by restructuring it** — Step 6's reconciliation updates a
+  plan in place. Don't rewrite its shape, add checkboxes it never had, or append
+  a summary section it didn't ask for.
+- **Reading unchecked boxes as unfinished work** — a completed plan with every
+  box unticked is the normal state of a shipped project, not evidence that
+  nothing happened. Check the artifacts and the session record.
 - **Skipping test verification** — Never proceed to merge/PR with failing tests.
   Quality checks (step 3) are a hard gate, not a suggestion.
 - **Open-ended questions** — Don't ask "What should I do next?" Present the

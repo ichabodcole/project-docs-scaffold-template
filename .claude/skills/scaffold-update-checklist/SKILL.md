@@ -30,6 +30,7 @@ reflected in the other.
 **Always mirrored:**
 
 - `docs/README.md`
+- `docs/AGENTS.md`
 - `docs/projects/README.md`
 - All files in `docs/projects/TEMPLATES/`
 - Category READMEs: `docs/architecture/README.md`, `docs/backlog/README.md`,

@@ -278,6 +278,13 @@ Internal references remain valid because they're relative within the folder.
 External references to archived projects use `./_archive/project-name/` paths
 (from the projects directory).
 
+The `sweep-project` skill does this for you, and does it in the right order: it
+reconciles the plan against what was actually built, confirms with you that the
+project really is finished, then moves the folder and updates live
+cross-references — leaving dated session notes and memories alone as historical
+record. Running it on a project that turns out _not_ to be done is a normal
+outcome: it records what remains and moves nothing.
+
 ## Templates
 
 Project-scoped templates are available in the `TEMPLATES/` subfolder:

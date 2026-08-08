@@ -1,7 +1,8 @@
 # Investigation: Missing project-closure and archive touchpoint in the finalize-branch lifecycle
 
-**Date Started:** 2026-08-07 **Investigator:** Claude Code **Status:** Active
-**Outcome:** In Progress
+**Date Started:** 2026-08-07 **Investigator:** Claude Code **Status:** Concluded
+**Outcome:** Proposal Recommended **Proposal created:**
+[docs/projects/sweep-project/proposal.md](../projects/sweep-project/proposal.md)
 
 ---
 
@@ -90,15 +91,16 @@ to a dedicated skill, rather than growing `finalize-branch` further.
    removed: `finalize-branch` making assumptions at a granularity (per-branch)
    that doesn't match the question being asked (per-project), and growing an
    already-long (10-step) skill further.
-3. **Two-piece split (leaning direction)** —
+3. **Two-piece split (chosen)** —
    - A lightweight **plan/backlog reconciliation** step inside `finalize-branch`
      Step 6 ("Assess Additional Documentation"): if a `plan.md` or backlog item
      exists for this work, update it to reflect what was actually built (check
      off completed items, note drift from the original plan) before completion
      options are presented. Runs on every branch; makes no claim about whether
      the whole project is finished.
-   - A new, separately invocable skill (working name `archive-project`) that
-     does the real closure work — move the folder to `_archive/`, sweep and fix
+   - A new, separately invocable skill (named `sweep-project` in the proposal;
+     working name during investigation was `archive-project`) that does the real
+     closure work — move the folder to `_archive/`, sweep and fix
      cross-references to the old path, update `docs/backlog/` links — triggered
      from `finalize-branch` only as a question ("reconciliation shows everything
      checked off — does this complete the project? archive it?"), mirroring the
@@ -106,53 +108,83 @@ to a dedicated skill, rather than growing `finalize-branch` further.
 
 ## Recommendation
 
-- [ ] Create Proposal
+- [x] **Create Proposal** — option 3 (the two-piece split), with all four open
+      questions resolved in discussion on 2026-08-07 (see "Resolved Questions"
+      below). The resolutions are concrete enough to specify behavior rather
+      than intent.
 - [ ] No Action Needed
 - [ ] Monitor
-- [x] **More Research Needed** — the shape (option 3) is fairly well-formed from
-      discussion, but the open questions below (especially the reference-sweep
-      mechanism and what a plan-reconciliation addendum should look like) need
-      to be resolved before a proposal can specify concrete behavior rather than
-      intent.
+- [ ] More Research Needed
 
-**Rationale:** The direction is settled enough that "do nothing" and "fold into
-finalize-branch inline" are both weaker than the two-piece split. What's not yet
-settled is _how_ the reference sweep safely distinguishes a live pointer from a
-historical mention (the same nuance the scaffold checklist's "Removing a Plugin
-Skill" section already handles for skill removal — "leave history alone... don't
-rewrite it"), and what triggers reconciliation vs. archival independently of
-`finalize-branch` (e.g., a standalone sweep for already-stale projects Cole
-hasn't gotten to yet).
+**Rationale:** "Do nothing" and "fold into finalize-branch inline" are both
+weaker than the two-piece split, and the questions that were blocking a proposal
+all resolved toward _less_ new machinery rather than more: the reference sweep
+reuses an existing live-vs-historical rule instead of inventing one, plan
+reconciliation edits documents in place instead of introducing an addendum
+format, and standalone invocation falls out of skills being invocable by name.
+The only genuinely new design decision left — that archival is a **check-in**,
+not something an agent does on its own — is a framing constraint the proposal
+can carry directly into the skill's shape.
 
 ## Next Steps
 
-1. Resolve the open questions below — likely via a short design pass rather than
-   further investigation, since the core shape isn't in doubt.
-2. Once resolved, move to `generate-proposal` for a `archive-project` project
-   folder, scoped to: the new skill, the `finalize-branch` Step 6 addition, and
-   the `docs/README.md` / `PROJECT_MANIFESTO.md` pipeline-diagram update the
-   `scaffold-update-checklist`'s "Updating Pipeline or Lifecycle" section would
-   require once archival becomes an operational stage, not just a described one.
+1. ~~Run `generate-proposal`~~ — **done**, see
+   [docs/projects/sweep-project/proposal.md](../projects/sweep-project/proposal.md).
+   Scoped to the three pieces below, carrying the resolutions as constraints:
+   - the new `sweep-project` skill (reconcile → confirm with the human → either
+     record what's left or archive and update live references), directly
+     invocable, not dependent on `finalize-branch` having called it;
+   - the `finalize-branch` Step 6 plan/backlog reconciliation check plus the
+     delegation question, mirroring the `consolidate-long-branch` pattern;
+   - the `docs/README.md` / `PROJECT_MANIFESTO.md` pipeline-diagram update,
+     framing archival as a check-in stage — required by
+     `scaffold-update-checklist`'s "Updating Pipeline or Lifecycle" section once
+     archival becomes operational rather than merely described.
+2. Note for whoever implements: this adds a skill and modifies one, so the
+   `scaffold-update-checklist`'s "Adding a New Plugin Skill" / "Adding or
+   Modifying a Plugin Skill" paths both apply (dist rebuild, plugin minor bump,
+   README changelog, cold-read verification). It introduces no new root-file
+   convention, so no `## Root-Level Conventions` row is needed — unlike the
+   sibling finding below.
 
-## Open Questions
+## Resolved Questions
 
-- **Reference-sweep mechanism.** How does the archive skill find and safely
-  rewrite cross-references to a path that's moving to `_archive/`? What counts
-  as a live reference (rewrite it) vs. a historical mention (leave it, e.g. in a
-  dated session note or memory)? The skill-removal checklist in
-  `scaffold-update-checklist` already draws this exact line for a different case
-  — worth reusing that reasoning rather than re-deriving it.
-- **Plan-reconciliation format.** What should the addendum in `plan.md` look
-  like — checkbox updates in place, a dated "Delivered" section, something else?
-  Does it differ for backlog items (which are single files, not folders)?
-- **Pipeline-diagram update.** Does making archival operational (not just
-  described) warrant updating the cycle string in `docs/README.md` and
-  `PROJECT_MANIFESTO.md` to show it as an explicit stage agents interact with,
-  per `scaffold-update-checklist`'s "Updating Pipeline or Lifecycle" section?
-- **Standalone invocation.** Should `archive-project` also be directly invocable
-  (not only triggered from `finalize-branch`), so Cole can run a sweep over
-  already-completed-but-not-archived projects/backlog items that predate this
-  tooling?
+Resolved in discussion with Cole on 2026-08-07. Recorded here as constraints for
+the proposal, not as settled implementation detail.
+
+- **Reference-sweep mechanism** — reuse the existing reasoning rather than
+  deriving a second one. `scaffold-update-checklist`'s "Removing a Plugin Skill"
+  section already draws exactly this line: scrub **live** current-state
+  references, and "leave dated retrospective prose alone (it's historical
+  record, not a current-state claim)." Applied to archival: a pointer at
+  `docs/projects/<name>/` from an active README, index, or backlog list is live
+  → rewrite it to the `_archive/` path. The same path inside a dated session
+  note, memory, or retrospective is historical → leave it. No new mechanism to
+  invent.
+- **Plan-reconciliation format** — reconcile **in place**; do not invent an
+  addendum format. Most plans in this scaffold carry phase-level markdown
+  checkboxes, so the step is: review the plan against what was actually built,
+  check off what's complete, leave unchecked what isn't. The resulting
+  checked/unchecked split _is_ the archive-readiness signal — everything checked
+  means the plan is finished and the project is an archival candidate; anything
+  left means it isn't. If the document carries a status property (frontmatter or
+  a `Status:` line), update that too. Backlog items get the same treatment —
+  same checklist-and-status pass, then archive — despite being single files
+  rather than folders. Checklists are the common case, not a guarantee: for a
+  plan without one, report completed vs. remaining narratively rather than
+  fabricating checkboxes into someone else's document.
+- **Pipeline-diagram update** — yes, update it, but the stage it describes is a
+  **check-in, not an automatic action**. The agent surfaces "reconciliation
+  shows everything complete — archive this project?" and the human answers;
+  nothing closes a project unattended. The pipeline docs should read that way
+  rather than implying archival happens on its own at the end of the cycle.
+- **Standalone invocation** — yes, and it costs nothing: a skill is invocable by
+  name by construction, so there's no separate entry point to build. The only
+  real requirement this places on the design is that `sweep-project` must not
+  assume it was called _from_ `finalize-branch` — no dependency on branch
+  context, a base branch, or a just-created session doc — so it works when
+  pointed at an arbitrary already-stale project or backlog item that predates
+  this tooling.
 
 ## Related Finding: Surfacing Plugin-Driven Root-File Conventions
 

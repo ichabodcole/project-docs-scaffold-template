@@ -28,35 +28,35 @@ paths, no invented internal layout, no fabricated URLs.
 
 **Definition of Done:**
 
-- [ ] The recipe presents **two co-equal shapes named `one-shot` and
+- [x] The recipe presents **two co-equal shapes named `one-shot` and
       `standing`** (neutral vocabulary — no "cantrip"/"conjuration"), with the
       **standing** shape carrying the most how-to depth and a "which shape when"
       decision aid.
-- [ ] The standing section documents the **daemon + thin-CLI** contract:
+- [x] The standing section documents the **daemon + thin-CLI** contract:
       stateless `cli.ts`, `POST /cmd` with `--stdin` body, `GET /state[?lean=1]`
       read-back, `GET /events?since=<id>` SSE tail with monotonic cursor +
       resume, wake-set, and asymmetric transport (browser↔daemon WebSocket,
       agent↔daemon HTTP).
-- [ ] **Substrate correction landed:** `node:child_process` `spawn` with
+- [x] **Substrate correction landed:** `node:child_process` `spawn` with
       `detached: true` + `unref()` replaces `Bun.spawn`-as-contract for the
       daemon; `Bun.serve` + the `bun` runtime are retained.
-- [ ] Both `/events`-frame gotchas are in the Gotchas section with before/after
+- [x] Both `/events`-frame gotchas are in the Gotchas section with before/after
       fragments: (a) envelope-id collision; (b) every-mutation-must-emit with an
       actor tag (`by: "user" | "agent" | "system"`), with self-echo suppression
       stated as load-bearing.
-- [ ] The surface-tech ladder (vanilla → Alpine-over-CDN → React via Bun
+- [x] The surface-tech ladder (vanilla → Alpine-over-CDN → React via Bun
       HTML-import) is named with "when to climb a rung" tradeoffs, **linking**
       to Bun's docs and citing the imago surface rather than reproducing
       documented material.
-- [ ] Reference Implementations point at **imago** (canonical-state daemon,
+- [x] Reference Implementations point at **imago** (canonical-state daemon,
       richest example) + **grapevine** (cleanest agent CLI), with post-migration
       **bounty** as the worked board example; no "study and copy bounty" framing
       on the old substrate remains.
-- [ ] The persistence/ephemeral claim is qualified: one-shot is ephemeral; the
+- [x] The persistence/ephemeral claim is qualified: one-shot is ephemeral; the
       standing daemon owns canonical state via debounced snapshot + restore.
-- [ ] The anti-flood stdout/stderr discipline is stated as a general rule,
+- [x] The anti-flood stdout/stderr discipline is stated as a general rule,
       citing grapevine V1.6.8 / issue #140 as the cleanest reference.
-- [ ] One-shot section reads intact end-to-end; `recipes` bumped 2.1.1 → 2.2.0;
+- [x] One-shot section reads intact end-to-end; `recipes` bumped 2.1.1 → 2.2.0;
       `dist/` rebuilt and matching; `npm run format:check` passes.
 
 **Non-Goals:**
@@ -146,11 +146,11 @@ renamed and reweighted toward standing.
 
 **Validation:**
 
-- [ ] The recipe names exactly two shapes: `one-shot` and `standing`. No
+- [x] The recipe names exactly two shapes: `one-shot` and `standing`. No
       occurrence of `duplex` as the canonical name, no `cantrip`/`conjuration`.
-- [ ] A "which shape when" subsection exists and reads as a genuine decision
+- [x] A "which shape when" subsection exists and reads as a genuine decision
       aid.
-- [ ] One-shot guidance still reads coherently and is substantively unchanged.
+- [x] One-shot guidance still reads coherently and is substantively unchanged.
 
 **Dependencies:** None. This is the skeleton.
 
@@ -190,14 +190,14 @@ standing **daemon + thin-CLI** contract — the new substance of the recipe.
 
 **Validation:**
 
-- [ ] The standing section documents all four contract surfaces: `POST /cmd`
+- [x] The standing section documents all four contract surfaces: `POST /cmd`
       (+`--stdin`), `GET /state[?lean=1]`, `GET /events?since=<id>` (monotonic +
       resume + wake-set), and the WS browser broadcast.
-- [ ] The asymmetric-transport point (HTTP for agent, WS for browser) is
+- [x] The asymmetric-transport point (HTTP for agent, WS for browser) is
       explicit.
-- [ ] Daemon-owned persistence (debounced snapshot + `--restore` merge) is
+- [x] Daemon-owned persistence (debounced snapshot + `--restore` merge) is
       stated.
-- [ ] stdio JSON-lines is positioned as prior-generation, not removed wholesale.
+- [x] stdio JSON-lines is positioned as prior-generation, not removed wholesale.
 
 **Dependencies:** Phase 1 (the standing section must exist to write into).
 
@@ -240,12 +240,12 @@ standing **daemon + thin-CLI** contract — the new substance of the recipe.
 
 **Validation:**
 
-- [ ] No `Bun.spawn`-as-the-agent-contract framing remains; the daemon-launch
+- [x] No `Bun.spawn`-as-the-agent-contract framing remains; the daemon-launch
       guidance is `node:child_process` `spawn` + `detached:true` + `unref()`.
-- [ ] `Bun.serve` and the `bun` runtime are still recommended (correction is
+- [x] `Bun.serve` and the `bun` runtime are still recommended (correction is
       scoped to daemon detachment only).
-- [ ] Both gotchas are present with before/after fragments and explicit fixes.
-- [ ] Anti-flood rule is stated generally and cites grapevine V1.6.8 / #140.
+- [x] Both gotchas are present with before/after fragments and explicit fixes.
+- [x] Anti-flood rule is stated generally and cites grapevine V1.6.8 / #140.
 
 **Dependencies:** Phase 2 (the gotchas reference the `/events` and `/cmd`
 contract defined there).
@@ -282,11 +282,11 @@ reference implementations, and qualify the persistence/ephemeral claims.
 
 **Validation:**
 
-- [ ] The ladder names all three rungs with "when to climb" guidance and links
+- [x] The ladder names all three rungs with "when to climb" guidance and links
       to Bun docs + cites the imago surface (no reproduced Bun docs).
-- [ ] Reference Implementations name imago + grapevine + bounty by role; no
+- [x] Reference Implementations name imago + grapevine + bounty by role; no
       "copy bounty on the old substrate" framing; no hardcoded spellbook paths.
-- [ ] The persistence/ephemeral claim is split one-shot vs. standing and is
+- [x] The persistence/ephemeral claim is split one-shot vs. standing and is
       internally consistent with the ladder's build-step guidance.
 
 **Dependencies:** Phases 2–3 (the ladder and persistence text reference the
@@ -320,20 +320,20 @@ README/manifesto edits.
 
 **Validation (verification gate):**
 
-- [ ] `plugin.json` reads `2.2.0`.
-- [ ] `./scripts/build-skills-dist.sh` exits clean and validation passes; the
+- [x] `plugin.json` reads `2.2.0`.
+- [x] `./scripts/build-skills-dist.sh` exits clean and validation passes; the
       dist `RECIPE.md` byte-matches the source `RECIPE.md`.
-- [ ] `npm run format:check` passes.
-- [ ] **No leaked themed vocabulary:**
+- [x] `npm run format:check` passes.
+- [x] **No leaked themed vocabulary:**
       `grep -ni 'cantrip\|conjuration' plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md`
       returns nothing.
-- [ ] **No hardcoded spellbook paths introduced:** grep the recipe for spellbook
+- [x] **No hardcoded spellbook paths introduced:** grep the recipe for spellbook
       file-path patterns (e.g. `spellbook/`, `scripts/`, `.ts` references tied
       to spellbook layout) — only name/role mentions should remain.
-- [ ] **Substrate sanity:** `grep -n 'Bun.spawn' RECIPE.md` shows no remaining
+- [x] **Substrate sanity:** `grep -n 'Bun.spawn' RECIPE.md` shows no remaining
       "Bun.spawn is the agent contract" framing (incidental mentions, if any,
       are clearly historical/prior-generation).
-- [ ] **Coherence read-through:** the recipe reads end-to-end — one-shot intact,
+- [x] **Coherence read-through:** the recipe reads end-to-end — one-shot intact,
       standing section is the new substance, the two shapes are balanced.
 
 **Dependencies:** Phases 1–4 (content complete before bumping/rebuilding).
