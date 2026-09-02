@@ -12,7 +12,17 @@ description: >
   main", "finish this branch", "ready to merge", "wrap up this work", or wants
   to complete feature work with documentation and code review.
 allowed_tools:
-  ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "Task", "AskUserQuestion"]
+  [
+    "Read",
+    "Write",
+    "Edit",
+    "Grep",
+    "Glob",
+    "Bash",
+    "Task",
+    "Skill",
+    "AskUserQuestion",
+  ]
 ---
 
 # Finalize Branch
@@ -173,7 +183,10 @@ message alone provides sufficient context.
 
 ### Step 6: Assess Additional Documentation
 
-Present recommendations to user and get confirmation before creating:
+Present recommendations to user and get confirmation before creating new
+documents. **Plan reconciliation is the exception** — it edits a document that
+already exists, and it is an action to perform, not a recommendation to offer.
+Do it without asking.
 
 - **Handoff** — Does this work require specific deployment steps beyond merging
   code? (DB migrations, service redeployments, environment config changes,
@@ -192,37 +205,67 @@ Present recommendations to user and get confirmation before creating:
   Flag any Tier 1 or Tier 2 scenarios without results. This is a soft check —
   don't block the merge, but surface it to the user.
 - **Plan reconciliation** — If a `plan.md` or backlog item exists for this work,
-  reconcile it in place against what was actually built: check off completed
-  items, update a `**Status:**` line if it holds a template enum value. **Verify
-  against the artifacts and the session record, not against the checkboxes'
-  current state** — finished work routinely leaves every box unticked, so an
-  all-unchecked plan means "unreconciled," not "unstarted." This is a soft check
-  like the test-plan one — surface it, don't block the merge.
+  reconcile it in place against what was actually built: mark the completed
+  items, update a `**Status:**` line if it holds one of the values its own
+  template defines (`docs/projects/TEMPLATES/PLAN.template.md` —
+  `Draft | Active | Completed | Superseded`). If the status is free-form
+  (`V1.5 shipped, awaiting merge`), leave it and report it verbatim; free-form
+  is usually _more_ informative than the enum. **Verify against the artifacts
+  and the session record, not against what the document currently claims** —
+  finished work routinely leaves plans unmarked, so an unmarked plan means
+  "unreconciled," not "unstarted."
+
+  **Mark completion in whatever idiom the plan already uses** — checkboxes if it
+  has them, a per-phase annotation or a short addendum note if that's how it
+  tracks. Don't impose a format the document didn't choose, and don't conclude a
+  plan is unmarked because it isn't using checkboxes.
+
+  Do the reconciliation here rather than deferring it. Updating the plan as the
+  work lands is part of the work — it's what makes the document trustworthy
+  signal for whoever picks the project up next, instead of a field nobody
+  believes. Surfacing the gap without closing it just moves the debt.
+
+  **What's soft here is the discrepancy, not the work.** Performing the
+  reconciliation is mandatory. What doesn't block the merge is an item you
+  genuinely can't resolve — you can't tell from the artifacts or the session
+  record whether it shipped. Record that item as unresolved, say so in your
+  report, and carry on to Step 7. Don't read "soft" as license to skip the edit
+  because reconciling looked expensive. (Contrast the test-plan check above,
+  where "soft" does mean surface-only.)
 
   This makes no claim about whether the whole _project_ is finished. Most
   branches land mid-project.
 
-  **If reconciliation comes back with everything complete**, ask whether this
-  branch completes the project, and offer to invoke the `sweep-project` skill —
-  which handles archival and cross-reference updates. **Pass it the project
-  folder (or backlog item) path explicitly** — derive that from the `plan.md`
-  you just reconciled; `sweep-project` will not infer a target, by design, and
-  passing a path inside the project rather than the project itself just makes it
-  do the trimming. This mirrors Step 8's delegation to
-  `consolidate-long-branch`: present the option, then invoke the skill once the
-  user chooses.
+  **If reconciliation comes back with every item in the plan complete** — not
+  merely the items this branch touched — ask whether this branch completes the
+  project, and offer to invoke the `sweep-project` skill — which handles
+  archival and cross-reference updates. **Pass it the project folder (or backlog
+  item) path explicitly** — derive it from the document you just reconciled: the
+  project folder is the parent directory of `plan.md`, and a backlog item is its
+  own path under `docs/backlog/`. `sweep-project` will not infer a target, by
+  design. Passing a path inside the project (say, the `plan.md` itself) is
+  harmless — it resolves upward to the project folder on its own. This mirrors
+  Step 8's delegation to `consolidate-long-branch`: present the option, then
+  invoke the skill once the user chooses.
 
   **A yes here is not archival approval.** It means "go look" — `sweep-project`
   runs its own reconciliation and stops at its own confirmation gate before
   moving anything. Don't present this question as the last word, and don't treat
   a yes as license to skip the gate downstream.
 
-  Two sequencing notes:
+  Three notes on the handoff:
+  - **Name yourself as the caller when you invoke it.** `sweep-project` gates on
+    a dirty `docs/` tree and carves out delegated runs, but nothing tells it who
+    called — an unannounced run is treated as standalone. State that
+    `finalize-branch` Step 6 is invoking it, alongside the target path, or it
+    stops and asks about the documentation changes you just wrote.
   - `sweep-project` re-reads from disk, so it sees the reconciliation you just
     wrote. The second pass is idempotent, not duplicated work.
   - When invoked from here, it leaves its changes uncommitted for Step 7. If it
-    archives, Step 8's branch-facts computation and any squash operate on the
-    post-move tree — which is correct, but worth knowing.
+    archives, the squash in Step 8 operates on the post-move tree — which is
+    correct. Step 8's sha scan deliberately does not: it reads the branch as it
+    stood _before_ Step 7's documentation commit, so neither the archival nor
+    the reconciliation can veto the squash that carries them.
 
 ### Step 7: Commit Documentation
 
@@ -241,10 +284,10 @@ recoverable and reviewable as its own step before any history rewriting.
 **Whether and how to squash is a project decision, not something this skill can
 assume.** Different projects have different reasons to want one clean commit
 (readability) or to explicitly forbid squashing (SHA-pinned doc citations,
-multi-author attribution trailers — e.g. a multi-agent team where each agent's
-commits carry an identifying trailer like `Anthill-Seat:` — or wanting to bisect
-the reasoning behind a branch where documentation commits are rulings, not
-commentary). This skill's job is to find and follow that decision, not make it.
+commits authored by more than one Anthill seat, each signing its own work with
+an `Anthill-Seat:` trailer — or wanting to bisect the reasoning behind a branch
+where documentation commits are rulings, not commentary). This skill's job is to
+find and follow that decision, not make it.
 
 **How:**
 
@@ -252,18 +295,59 @@ commentary). This skill's job is to find and follow that decision, not make it.
    fact about the branch, not a judgment call, so the skill can own it outright:
 
    ```bash
-   git log <base>..HEAD --oneline | wc -l                     # commit count
-   for sha in $(git log <base>..HEAD --format=%h); do
-     git grep -l "$sha" -- '*.md' && echo "  ^ cited by $sha"
-   done                                                        # shas cited in docs
-   git log <base>..HEAD --format='%an%n%(trailers)' | sort -u  # distinct identities
+   # Substitute the real base branch name. Pasted verbatim, `<base>` is a
+   # shell redirection and the first line is a parse error.
+   BASE=<base>
+   ROOT=$(git rev-parse --show-toplevel)
+
+   # Scan a committed ref, not the working tree, and step past the
+   # documentation commit Step 7 just made. HEAD^ is the normal case; use HEAD
+   # instead if Step 7 had nothing to commit.
+   SCAN=HEAD^
+
+   git log "$BASE"..HEAD --oneline | wc -l                       # commit count
+   for sha in $(git log "$BASE"..HEAD --format=%h); do
+     hits=$(git -C "$ROOT" grep -l "$sha" "$SCAN" -- '*.md')
+     if [ -n "$hits" ]; then printf '%s is cited by:\n%s\n' "$sha" "$hits"; fi
+   done                                                          # shas cited in docs
+
+   # Contributors whose authorship a squash would collapse. Count these two
+   # lists separately; AI co-author trailers are deliberately absent from both.
+   git log "$BASE"..HEAD --format='%(trailers:key=Anthill-Seat,valueonly)' \
+     | grep -v '^$' | sort -u                                    # anthill seats
+   git log "$BASE"..HEAD --format='%an' | sort -u                 # human authors
    ```
 
-   If the sha loop finds any hit, or the identities command's output contains
-   more than one distinct name across the `%an` author lines and any
-   `Co-Authored-By:`/`Anthill-Seat:`-style trailers combined, **squashing would
-   destroy that information.** Surface this explicitly no matter which strategy
-   follows.
+   If the sha loop finds any hit, or **either** identity list returns more than
+   one line, **squashing would destroy that information.** Surface this
+   explicitly no matter which strategy follows.
+
+   **Count seats and human authors — never AI co-author trailers.** A branch
+   with one human author and one `Co-Authored-By: Claude …` trailer carries that
+   exact pairing onto the squashed commit, so a squash destroys nothing; a
+   model-version change mid-branch (`Opus 4.8` → `Opus 5`) is not a second
+   contributor either. In any repo that mandates the trailer, counting it vetoes
+   every branch and makes "default to squash" unreachable — a rule that never
+   permits anything is a rule nobody reads. The case this check exists for is a
+   multi-seat Anthill team, where each seat signs its own commits and a squash
+   really does erase who did what. That is a fact about **the branch**: an
+   Anthill project on which only one seat committed squashes normally.
+
+   **About the sha scan.** It reads a committed ref rather than the working
+   tree: by this point the tree holds the session doc, memory, and reconciled
+   plan written in Steps 4–6, and scanning it lets this skill's own output veto
+   its own squash. It scans the branch rather than `<base>`, because a commit in
+   `<base>..HEAD` did not exist at `<base>` and nothing there could cite it —
+   the citations that matter were written on this branch, by the work itself. A
+   short sha is seven hex characters and can appear incidentally, so read each
+   hit before treating it as a veto.
+
+   **The `-C "$ROOT"` anchor is load-bearing.** `git grep`'s `'*.md'` pathspec
+   resolves against the current directory, so running this from a package
+   subdirectory in a monorepo searches only that subtree and reports zero
+   citations — a silent and _permissive_ failure in the one guard standing
+   between a SHA-cited ruling and the squash that would destroy it. This check
+   fails open, so the anchor is not optional.
 
 2. **Look for a project-owned landing policy.** Check, in order:
    - Root `AGENTS.md`, then root `CLAUDE.md`, for a `## Branch Landing Policy`
@@ -424,7 +508,11 @@ Delete branch and remove worktree if applicable (Options 1 and 4 only).
 Ask for user confirmation at these points:
 
 - After independent code review findings (before proceeding)
-- Before creating additional documentation (beyond session)
+- Before creating additional documentation (beyond session) — note that Step 6's
+  plan reconciliation is exempt: it edits an existing document and is performed,
+  not proposed
+- After reconciliation comes back fully complete, before delegating to
+  `sweep-project` (and again inside that skill, before anything is archived)
 - Before squashing commits (confirm landing policy found or absent, strategy A
   vs B, and commit message)
 - Before merging to the base branch
@@ -437,8 +525,8 @@ Ask for user confirmation at these points:
   `## Branch Landing Policy` section before choosing squash vs. consolidate vs.
   neither (Step 8). Absent a policy, present the options and their costs rather
   than silently defaulting — some projects have real reasons (SHA-cited docs,
-  multiple distinct commit authors/attribution trailers) to forbid squashing
-  entirely.
+  commits from multiple Anthill seats or multiple human authors) to forbid
+  squashing entirely.
 - **Always create session doc** — Even for smooth work
 
 ## Common Mistakes
@@ -455,8 +543,8 @@ Ask for user confirmation at these points:
   the delta is the truth.
 - **Assuming a squash strategy without checking for a landing policy** —
   `AGENTS.md`/`CLAUDE.md` may explicitly forbid squashing (SHA-cited docs,
-  multiple author/attribution trailers). Check for `## Branch Landing Policy`
-  before executing Step 8, and announce it explicitly if none exists.
+  multiple Anthill seats). Check for `## Branch Landing Policy` before executing
+  Step 8, and announce it explicitly if none exists.
 - **Rolling your own multi-commit squash** — If Strategy B is chosen, use the
   `consolidate-long-branch` skill. Ad-hoc interactive rebase without the
   tree-equivalence gate is how silent content drift enters the merged history.

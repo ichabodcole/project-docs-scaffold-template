@@ -279,6 +279,144 @@ docs/
 
 ## Version History
 
+### 3.3.0 (2026-09-02)
+
+- `sweep-project` — generalizes from checkboxes to **completion marks**: any
+  deliberate in-document signal that something is done, including status lines,
+  per-phase annotations, addendum notes on completed steps, and past-tense
+  prose. The skill now reads a document's own idiom before deciding it has none,
+  and writes its updates back in that same idiom rather than imposing a format
+  the document never chose. Scanning for `- [x]`, finding none, and reporting
+  "no completion signals" is called out as a distinct failure mode.
+- `sweep-project` — sharpens the stance on that evidence. An unreconciled plan
+  is now framed as **unfinished work** rather than as inert drift: when the code
+  shipped and the document says nothing, the documentation half of the project
+  was skipped, and closing that gap is part of the work. The "78 checkboxes,
+  zero checked" measurement is recontextualized as the absence of the discipline
+  this skill installs, not an intrinsic property of marks — so their authority
+  is expected to rise with use. Marks present are **trust-but-check**: sample
+  the marked claims against the shipped artifacts rather than re-verifying each
+  one, since exhaustive verification is a code review and not this step. The
+  rule stays asymmetric — unmarked-but-shipped is a gap to close,
+  marked-but-absent is a claim to disbelieve.
+- `finalize-branch` — Step 6 now directs the agent to **do** the plan
+  reconciliation rather than merely surface it, on the grounds that surfacing
+  without closing just moves the debt, and to mark completion in the plan's
+  existing idiom. The step preamble's confirmation gate now carves
+  reconciliation out explicitly (it edits an existing document, so it is
+  performed rather than proposed), "soft" is redefined to mean an unresolvable
+  discrepancy rather than optional work, the `**Status:**` enum is named instead
+  of assumed, "everything complete" is pinned to the whole plan rather than the
+  branch's slice, and `Skill` was added to `allowed_tools` — the skill delegates
+  to two other skills and couldn't reach them.
+
+**Defect fixes found by cold-reading the above** (both skills):
+
+- **`sweep-project` reference discovery covered only two of three relative link
+  forms.** Pattern is now `(projects/|\.\./|\./)` across the discovery grep and
+  both acceptance-criteria greps, with prefix-collision protection re-verified.
+  The `./<name>/` form this adds is defensive rather than a fix for observed
+  breakage: no live instance exists in the repo, and `docs/projects/README.md`
+  prescribes `./` only for the _archived_ target (`./_archive/<name>/`). It is
+  load-bearing for the recovery path, which matches that archived form.
+- **Step 5b's move block ran both variants.** The project and backlog moves
+  shared one fence, separated only by a `# or, for a backlog item:` comment —
+  which does not stop the line beneath it from executing. Split into two fences
+  with an explicit run-exactly-one instruction.
+- **Shell variables don't survive between tool calls**, so `$ROOT`/`$NAME` set
+  in Step 3 arrive empty at Step 5b, yielding `git -C ""` and a source path of
+  `docs/projects/`. Every snippet now re-derives both.
+- **Rung 1 was defined out of existence for docs-only projects** ("evidence at
+  this rung lives outside `docs/`"), collapsing the hierarchy onto the rungs the
+  skill says not to trust. Delivered documents now count as rung 1; only a
+  project's own `artifacts/` research subfolder is carved out.
+- **Sampling had no stopping rule.** Now: three marked claims (or all, if
+  fewer), prefer load-bearing; all hold → accept the rest; any fails → verify
+  everything and report the failure.
+- **It was ambiguous whether the document is edited in Step 2 or Step 5a**, with
+  one reading leaving the archive path marking nothing at all. Pinned to Step 2,
+  unconditional; Step 4 gates the move, not the reconciliation.
+- **A fourth reference bucket contradicted the "three buckets, no overlap"
+  claim** and wasn't reachable from the ordered test — under which this skill
+  file's own illustrative path resolved to Rewrite. Promoted to question 1 as an
+  explicit **Example** bucket.
+- **Step 0's destination-collision row said "Refuse,"** aborting before any
+  reconciliation and contradicting "reconcile always, archive conditionally."
+  Now refuses the move only.
+- **`finalize-branch` Step 8's sha scan read the working tree**, which by then
+  holds the session document, memory, and reconciled plan the skill wrote in
+  Steps 4–6 — so the skill's own output could veto its own squash. Verified
+  against a fixture: the buggy form flagged a citation that existed only in the
+  freshly written session doc, plus the sha of the very commit that introduced
+  it. The scan now reads a committed ref (`HEAD^`, stepping past Step 7's
+  documentation commit), which still catches the case that matters — a ruling
+  written mid-branch citing an earlier commit on it. Scanning `<base>` instead
+  would be vacuous, since a commit in `<base>..HEAD` cannot be cited by a tree
+  that predates it. The loop's `echo` was also inverted, printing "cited by
+  $sha" over the list of files that *cite* `$sha`.
+- **Nothing told `sweep-project` who invoked it,** yet its dirty-`docs/`
+  exception turns on being called from `finalize-branch` Step 6. A skill
+  invocation carries no caller identity, so the exception is now explicit: it
+  applies only when the invoking message says so, an unannounced run is treated
+  as standalone, and inferring the caller from a dirty tree or an in-progress
+  branch is forbidden — those are what the gate exists to notice.
+  `finalize-branch` Step 6 now states its identity when delegating.
+- **"Narrative mode" had two definitions** — by which file was missing (Step 0)
+  and by whether the content was item-shaped (Step 2). A prose-only `plan.md`
+  and a `proposal.md` carrying a checklist each landed in the wrong one. Defined
+  once, by content; Step 0's rows now flag the likely case rather than decide
+  it.
+- **Step 2 ran ~150 lines with the operative instruction buried.** Split into
+  **2a** (judge what happened) and **2b** (write it back), so the half that
+  edits the document is visible in the outline rather than found by reading to
+  the end.
+- **The recovery path's list of pre-move link forms omitted `./<name>/`** — the
+  same gap as the discovery grep, in prose. A resumed run would leave exactly
+  the references the interrupted run was resuming to fix.
+- **The backlog discovery grep required a literal `backlog/`,** which is the one
+  thing backlog references rarely contain. Items are flat siblings, so
+  `README.md`, `INDEX.md`, and neighbouring items link them as `./<name>.md` or
+  bare `<name>.md` — none of which the pattern could match. Fixture-verified: an
+  index holding two live links reported zero, the exact silent-zero-references
+  failure the surrounding prose claims the exclusion clause prevents. Now
+  matches the bare filename, which also removes the need for an `(_archive/)?`
+  alternative.
+- **`finalize-branch` Step 8's sha scan was not anchored to the repo root.**
+  `git grep`'s `'*.md'` pathspec resolves against the current directory, so a
+  run from a package subdirectory in a monorepo searched only that subtree and
+  reported zero citations — failing open, in the one guard between a SHA-cited
+  ruling and the squash that destroys it. Now `git -C "$ROOT"`, verified from
+  both a repo root and a subdirectory.
+- **The sampling rule could condemn a healthy mark set.** Plans mark items that
+  leave nothing on disk by design ("ran the roundtable", "decided to defer X").
+  Sampling one, finding no rung-1 artifact, and declaring the set unreliable
+  escalated to the exhaustive verification the next line says this step is not
+  for. Only marks asserting a concrete artifact are sampled now.
+- **A destination collision routed a _complete_ project into "Step 5a: Not
+  Complete,"** whose body writes `Status: Active`. A collision blocks the move,
+  not the work — a literal executor would overwrite a status Step 2b had just
+  confirmed as `Completed`. 5a now carries a collision carve-out.
+- **Step 8 carried a dead instruction** telling the executor to repoint
+  citations this skill wrote in Steps 4–6, which `SCAN=HEAD^` makes structurally
+  invisible to the scan — and which Step 6 says the opposite of, in the same
+  change. Removed.
+- **The squash veto's identity half fired on every branch.** It counted distinct
+  names across `%an` _and_ `Co-Authored-By:` combined, so in any repo that
+  mandates an AI co-author trailer the count was always at least two and the
+  "default to a single-commit squash" branch was unreachable — 164 of 408
+  commits in this repo carry one. Worse, a model-version change mid-branch
+  (`Opus 4.8` → `Opus 5`) counted as a third contributor. The check now counts
+  distinct `Anthill-Seat:` trailers and distinct human `%an` authors as separate
+  lists and ignores AI co-author trailers entirely, which is the case it was
+  always for: a multi-seat Anthill team where a squash really does erase who did
+  what. It is a fact about the branch, not the project — an Anthill project on
+  which only one seat committed squashes normally. Fixture-verified across four
+  cases (solo, mid-branch model change, one seat, two seats).
+- Smaller corrections: `BASE=<base>` had no placeholder warning despite being an
+  outright shell parse error; a Common Mistakes entry said "three ways" over a
+  four-item list; a classification question still opened "If not historical"
+  after **Example** became question 1.
+
 ### 3.2.0 (2026-08-07)
 
 - **New `sweep-project` skill** — reconciles a project folder or backlog item
