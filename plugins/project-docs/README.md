@@ -279,6 +279,89 @@ docs/
 
 ## Version History
 
+### 3.4.0 (2026-09-02)
+
+- `finalize-branch` — Step 2's reviewer-capability check becomes a **hard gate
+  that leaves a trace.** Validated first: a cold agent given only the skill text
+  ran the census, rejected `feature-dev:code-reviewer` and
+  `feature-dev:code-architect` for lacking `Bash`, correctly identified
+  `code-review:code-review` as a skill rather than a dispatchable agent type,
+  and chose an execution-capable reviewer. The guidance works — but the same
+  reader rated it comfortably skippable, and for the reason that matters: the
+  check **fails open** in exactly the way Step 8's sha scan did. Skip it,
+  dispatch a plausible-sounding reviewer, and the resulting report looks
+  identical to a real one. Nothing downstream notices.
+
+  So the check now requires a **reported census** — reviewers checked, each
+  one's shell-access status, the choice and why — on the principle that a run
+  producing no census did not perform the step. It gains an explicit failure
+  branch (no execution-capable reviewer → stop and ask, rather than falling
+  through to a read-only one), and the static-read disclosure is promoted from
+  rationale buried in a "Why" clause into an imperative in the After-review
+  list.
+
+  **The first version of that gate did not work, and a review dispatched under
+  it said so.** Asked to defeat the gate rather than confirm it, the reviewer
+  pointed out that the step's own text named two reviewers with their exact tool
+  lists and asserted a third's capability outright — so a compliant census could
+  be written verbatim from the page without inspecting anything. The document
+  was handing over the answer it was sending the executor to fetch, and every
+  hedge around it ("worth re-checking rather than trusting") was rhetorical:
+  none of it changed what the required output looked like, so none of it was
+  detectable in the artifact. The contrast that made it obvious is in the same
+  file — Step 8's sha scan cannot be faked because it ships a runnable command
+  whose output cannot be authored from prose.
+
+  A second adversarial pass defeated the fix too, and more usefully: it wrote a
+  compliant census from the page plus general knowledge of Claude Code's stock
+  agent roster, then named why no wording could stop it. **The roster lives in
+  the executor's context, so reading it costs no tool call and leaves no trace —
+  the census is a self-report of an unobservable action.** No constraint on its
+  phrasing can change that; the first fix had only changed the format of the
+  answer the document hands over.
+
+  So the gate stops resting on the census. It is now labelled as testimony
+  rather than proof, trimmed to two rules that at least tie it to a real
+  decision (the roster is what you can dispatch _now_ — repo `agents/` files are
+  not it; and name what you rejected on capability grounds, since a census of
+  only the agent you were always going to pick records nothing). **The evidence
+  moved downstream**, into the one artifact the dispatching agent does not
+  author: the reviewer's prompt template now demands an execution log — "list
+  the commands you actually ran; if you ran none, say so plainly." A parent
+  agent cannot see a subagent's tool calls, only its report, so without that,
+  "the review verified the behavior" was unfalsifiable. All three downstream
+  sites now require quoting that log rather than inferring execution from the
+  presence of `Bash` — having shell access and using it are different claims,
+  and only the second is a review. A skill-driven review no longer discharges
+  the step on its own, since a skill has no tool list for the census to attach
+  to.
+
+  Two further gaps closed with it. The Output section never asked for the census
+  that Common Mistakes says its absence proves a skip — two lists in one file
+  giving contradictory instructions — so a correct executor following the Output
+  list literally produced a "skipped gate" by construction; both now agree, and
+  Step 4 records the census in the session document so the trace outlives the
+  chat. And the `general-purpose` fallback still carried the present-tense
+  capability claim this change had just demoted everywhere else, on precisely
+  the path the gate routes to.
+
+  Two supporting changes. The hardcoded tool list is demoted from a present-
+  tense fact to a **dated observation** — asserting what an agent "currently"
+  has invited trusting this file's cached snapshot over querying the
+  environment, which is the opposite of what the surrounding sentence asks for.
+  And the plan-aware-reviewer bullet now names itself as where the check most
+  often gets skipped: the best-shaped candidate may be read-only, and picking it
+  feels _more_ compliant than falling back. Also flagged: `BashOutput` and
+  `KillShell` without `Bash` read like shell access at a glance but mean the
+  agent can read and kill shells it cannot start.
+
+- `finalize-branch` — `allowed_tools` declared `Task`, the historical name for
+  the dispatch tool, which does not exist in current environments; the same step
+  said "multiple Task calls" two paragraphs after correctly calling it the Agent
+  tool. Both now say `Agent`, with `Task` retained for older environments. The
+  same drift exists across four other skills and eight agent definitions and is
+  tracked separately.
+
 ### 3.3.0 (2026-09-02)
 
 - `sweep-project` — generalizes from checkboxes to **completion marks**: any
