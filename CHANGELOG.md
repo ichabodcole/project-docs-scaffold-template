@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.1.0...project-docs-scaffold-template-v6.2.0) (2026-09-03)
+
+
+### Features
+
+* **project-docs:** generalize sweep-project to completion marks (3.3.0) ([ca0bb1c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ca0bb1cbe52a4eb38263c7edd0e51e85bd2e73b5))
+* **project-docs:** make the reviewer capability check enforceable (3.4.0) ([e945236](https://github.com/ichabodcole/project-docs-scaffold-template/commit/e94523639a444d2862ac22bd50236105bad0177c))
+
 ## [6.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.0.0...project-docs-scaffold-template-v6.1.0) (2026-08-08)
 
 
