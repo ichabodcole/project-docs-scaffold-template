@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.2.0...project-docs-scaffold-template-v6.3.0) (2026-09-03)
+
+
+### Features
+
+* **project-docs:** address dual-review findings on the 3.6.0 convention work (3.6.0) ([eaca414](https://github.com/ichabodcole/project-docs-scaffold-template/commit/eaca414532725b3b6564f306417ef339898ad16c))
+
+
+### Bug Fixes
+
+* **project-docs:** correct Branch Landing Policy example against Step 8 (3.6.0) ([5d18d6d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5d18d6d105a5c902f8018dabfab8ab620f6869fb))
+* **project-docs:** repair dangling pointers found reading update-project-docs whole (3.6.0) ([ec052b5](https://github.com/ichabodcole/project-docs-scaffold-template/commit/ec052b58abef06762be8433217159cd4347cea02))
+* **project-docs:** sync Branch Landing Policy example with its implementation (3.6.0) ([bfd00c9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/bfd00c9abc05480d13c81eb739d1cb80233f9edd))
+
 ## [6.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.1.0...project-docs-scaffold-template-v6.2.0) (2026-09-03)
 
 
