@@ -195,16 +195,36 @@ If the check finds nothing, recommend adding a heading with that exact text
 anywhere in root `AGENTS.md` (or `CLAUDE.md`) — matched by heading text, not
 position in the file. Three forms it can take:
 
-An inline policy (the content below is an example to adapt, not a
-project-docs-prescribed default — write your own):
+An inline policy. Reword this freely — it is an example, not a
+project-docs-prescribed default — except for the one constraint stated after it:
 
 ```markdown
 ## Branch Landing Policy
 
-Default to a single-commit squash for branches under ~20 commits. Never squash a
-branch whose commits are cited by SHA in tracked docs, or that carries more than
-one distinct author/attribution trailer — merge or PR those as-is instead.
+Default to a single-commit squash. Above ~20 commits, consolidating into a few
+logical chapters is usually the better shape. Two exceptions — merge or PR those
+as-is instead:
+
+- **Commits cited by SHA in tracked markdown.** A squash rewrites those SHAs and
+  leaves the citation pointing at nothing. Read each hit before treating it as a
+  veto — a seven-character sha turns up incidentally.
+- **More than one contributor identity authored commits on this branch** —
+  distinct `Anthill-Seat:` trailers (one per seat on a multi-seat agent team),
+  or distinct git author names. A squash collapses who-did-what into a single
+  message that can credit only one of them.
+
+`Co-Authored-By: Claude …` trailers are never counted as a second identity. One
+author plus one AI co-author is a single identity for landing purposes — the
+squashed commit carries that same pairing forward — and a model-version change
+mid-branch is not a second contributor.
 ```
+
+**The constraint:** however the authorship exception gets worded, it must
+exclude AI co-author trailers. In a repo that mandates one on every commit, a
+policy counting them vetoes every branch, making its own stated default
+unreachable. Everything else above is adjustable: `finalize-branch` Step 8
+computes and surfaces the SHA citations regardless of what the policy says, so a
+project that drops that bullet loses nothing.
 
 A pointer to a separate file the project maintains:
 
@@ -293,3 +313,26 @@ through the migration path above):
 4. The introducing plugin's own README changelog entry should **link here**, not
    duplicate the example content inline — one canonical copy avoids the two
    drifting apart.
+
+## Revising an Existing Root-Level Convention
+
+Changing a convention this repo already ships is the step that gets skipped,
+because the change usually starts somewhere else. You notice the problem while
+working in **this repo's own root `AGENTS.md`** — the dogfooded copy — fix it
+there, and ship. The table subsection above is the copy every _downstream_
+project is shown, and nothing about editing `AGENTS.md` prompts you to open it.
+
+So, whenever a root convention changes:
+
+1. **Update this skill's subsection in the same commit as the `AGENTS.md`
+   edit.** Not the same branch, the same commit — a follow-up is a thing to
+   forget.
+2. **Re-check the subsection against the skill that consumes it.** These
+   examples describe behavior implemented elsewhere (`finalize-branch` Step 8,
+   for Branch Landing Policy).
+3. **Leave the "Introduced In" column alone.** It records when the convention
+   was introduced, not when it was last edited — a revision bumps the plugin
+   version instead.
+4. Bump the plugin **minor** — a reworded recommendation changes behavior. As
+   when adding one, the changelog entry should **link here**, not duplicate the
+   example content inline.

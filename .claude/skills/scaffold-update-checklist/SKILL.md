@@ -132,6 +132,13 @@ auto-surfacing value (e.g., `init-branch`, `update-deps`).
       canonical copy of the example content means nothing to keep in sync.
       Consider whether this repo's own root `AGENTS.md` should adopt the
       convention too, as a dogfooded example.
+- [ ] **If you edited a `## `-level convention in this repo's own root
+      `AGENTS.md`** — that is a change to a convention `update-project-docs`
+      also ships to downstream projects, even when it doesn't feel like a plugin
+      change. Update that skill's matching subsection in the **same commit**,
+      per its
+      [Revising an Existing Root-Level Convention](../../../plugins/project-docs/skills/update-project-docs/SKILL.md#revising-an-existing-root-level-convention)
+      section.
 
 ### Removing a Plugin Skill
 
@@ -286,6 +293,12 @@ When skills, agents, or commands change, rebuild the distribution packages:
 ```bash
 ./scripts/build-skills-dist.sh
 ```
+
+**Run Prettier on the source files first, and rebuild again after.** The build
+copies sources into `dist/`, so formatting a source _after_ a build stales the
+bundle silently — `git status` still shows `dist/` as modified, which reads like
+a successful rebuild. Confirm with a final rebuild plus `npm run format:check`:
+a clean rebuild that leaves `dist/` unchanged is the signal.
 
 - [ ] Run the build script after any skill/agent/command changes
 - [ ] Verify all skills pass validation (build script runs

@@ -567,14 +567,23 @@ legitimate final acceptance test of the delegation.
 
 ## Open Questions
 
-- Whether the Phase 4 pipeline wording change needs a `docs_version` bump and
-  migration guide. Current reading is no; confirm before editing.
-- Whether `docs/AGENTS.md` should be added to `scaffold-update-checklist`'s
-  Mirrored Files list. Current reading is yes.
+None remaining.
 
 _Resolved during this plan's revision:_ what `sweep-project` does when a project
 has no `plan.md` — Step 0 now handles it alongside three other target states,
 rather than deferring to Phase 2.
+
+_Resolved before implementation (2026-08-07), both as read:_
+
+- The Phase 4 pipeline wording change needs **no** `docs_version` bump and no
+  migration guide. It changed wording in already-mirrored files — no new
+  directories, no moved files, `_archive/` already existed in the scaffold.
+  Shipped that way in `0baf1cf`. (`docs_version` tracks releases automatically
+  via release-please and has since reached 6.2.0; migration guides remain
+  written only for genuinely structural changes, and still top out at
+  `v2.5-to-v2.6.md`.)
+- `docs/AGENTS.md` **was** added to `scaffold-update-checklist`'s Mirrored Files
+  list, in the same commit.
 
 ---
 

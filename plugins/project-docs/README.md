@@ -279,6 +279,35 @@ docs/
 
 ## Version History
 
+### 3.6.0 (2026-09-02)
+
+- `update-project-docs` — the `## Branch Landing Policy` example in
+  [Root-Level Conventions](skills/update-project-docs/SKILL.md#root-level-conventions)
+  was still the 3.1.0 text, recommending that projects never squash a branch
+  carrying "more than one distinct author/attribution trailer." 3.3.0 replaced
+  that wording in this repo's own root `AGENTS.md` precisely because it is
+  unreachable: any repo mandating a `Co-Authored-By: Claude …` trailer trips the
+  veto on every branch, so the policy's stated default never applies. The
+  example now matches what `finalize-branch` Step 8 actually computes — seats
+  and human authors as two separate lists, AI co-author trailers excluded from
+  both — and states why the exclusion is load-bearing rather than incidental, so
+  a project rewording the example keeps the part that makes it work.
+
+  **The mechanism, since it will recur.** The convention was registered
+  correctly when introduced. What went unpropagated was the later _revision_ to
+  it: the fix landed in the dogfooded copy and never reached the canonical one
+  downstream consumers are shown. Both guidance documents covered only _adding_
+  a convention — the work that starts in `AGENTS.md`, where nothing points back
+  here, had no rule at all.
+
+  Closed at the source rather than by this entry remembering it: a new
+  [Revising an Existing Root-Level Convention](skills/update-project-docs/SKILL.md#revising-an-existing-root-level-convention)
+  section requires the subsection to be updated in the **same commit** as the
+  `AGENTS.md` edit and re-checked against the skill that consumes it, with a
+  matching checklist item in `scaffold-update-checklist`. This entry links
+  rather than restates the example, per the one-canonical-copy rule that section
+  carries forward.
+
 ### 3.5.0 (2026-09-02)
 
 - `finalize-branch` — Step 2 separated guidance from the argument for it, then
