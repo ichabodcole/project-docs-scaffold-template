@@ -81,10 +81,10 @@ Look in this skill's `migrations/` folder for each version step between current
 and target. Migrations must be applied **in sequence** — you can't skip
 versions.
 
-Example: upgrading from v1 to v2.1 requires:
+Example: upgrading from pre-2.0 to 2.3 requires:
 
 1. `migrations/v1-to-v2.md`
-2. `migrations/v2.0-to-v2.1.md` (if it exists)
+2. `migrations/v2.0-to-v2.3.md`
 
 ### Step 4: Execute Each Migration
 
@@ -192,9 +192,10 @@ before merging, instead of guessing a strategy. Optional — recommend it, don't
 require it; with no policy present, Step 8 says so explicitly and presents the
 strategy options with its own recommendation rather than acting on a default.
 
-If the check finds nothing, recommend adding a heading with that exact text
-anywhere in root `AGENTS.md` (or `CLAUDE.md`) — matched by heading text, not
-position in the file. Three forms it can take:
+If the check finds nothing, recommend adding an `##` heading with that exact
+text anywhere in root `AGENTS.md` (or `CLAUDE.md`) — position in the file
+doesn't matter, but the level does: the check is anchored to `^## `, so a
+deeper-nested heading won't be found. Three forms it can take:
 
 An inline policy. Reword this freely — it is an example, not a
 project-docs-prescribed default — except for the one constraint stated after it:

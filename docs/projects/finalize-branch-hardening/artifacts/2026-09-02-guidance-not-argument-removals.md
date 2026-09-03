@@ -1,10 +1,18 @@
 # Removals: guidance-not-argument pass on the 3.6.0 root-convention work — 2026-09-02
 
 Working record for the `guidance-not-argument` pass over the passages added in
-project-docs 3.6.0. Every removal is recorded verbatim with its classification.
-All seven were proposed as a written list and approved before any edit; the
-eighth was surfaced by the post-edit whole-section re-read and is marked as
-such.
+project-docs 3.6.0. Every **removed** passage is recorded verbatim with its
+classification. All seven were proposed as a written list and approved before
+any edit; the eighth was surfaced by the post-edit whole-section re-read and is
+marked as such.
+
+**The replacement text quoted below is as this pass left it, not as the tree
+reads now.** Two later commits on the same branch — `5d18d6d`, correcting the
+example against `finalize-branch` Step 8, and `ec052b5`, repairing dangling
+pointers — revised several of these passages again, so the "After" and "Replaced
+by" snippets in A3, C2 and E1 no longer match the shipped files. That is
+expected: this document records one pass, and the tree is authoritative for
+current wording. The removals themselves are unaffected.
 
 No line-count total is given. The baseline these passages would be measured
 against was never committed — it existed only in the working tree between the

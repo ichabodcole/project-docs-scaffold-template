@@ -303,10 +303,27 @@ docs/
   Closed at the source rather than by this entry remembering it: a new
   [Revising an Existing Root-Level Convention](skills/update-project-docs/SKILL.md#revising-an-existing-root-level-convention)
   section requires the subsection to be updated in the **same commit** as the
-  `AGENTS.md` edit and re-checked against the skill that consumes it, with a
-  matching checklist item in `scaffold-update-checklist`. This entry links
-  rather than restates the example, per the one-canonical-copy rule that section
-  carries forward.
+  `AGENTS.md` edit and re-checked against the skill that consumes it. This entry
+  links rather than restates the example, per the one-canonical-copy rule that
+  section carries forward.
+
+  Review caught that the first attempt at the guardrail was **placed where the
+  failure it describes could not reach it** — a checkbox under "Adding or
+  Modifying a Plugin Skill", in a skill whose triggers didn't mention root
+  `AGENTS.md` and whose Mirrored Files section filed it under "not mirrored". A
+  pure `AGENTS.md` wording change, which is exactly the originating scenario,
+  invoked neither. `scaffold-update-checklist` now names that case in its
+  trigger description and carries a "not mirrored, but still shipped" entry
+  alongside the checklist item.
+
+- Accuracy fixes in the same subsection and its neighbours: the prose promised a
+  heading match looser than the `^## `-anchored check performs; Step 2 claimed
+  every version transition has a migration file, contradicting the rule twenty
+  lines above it and false since migrations stop at `v2.5-to-v2.6` while
+  `docs_version` is 6.2.0; Step 3's worked example cited a migration file that
+  has never existed; and "Update the table above" in Creating New Migration
+  Guides pointed at the nearest preceding table, which is Root-Level
+  Conventions, not Available Migrations.
 
 ### 3.5.0 (2026-09-02)
 

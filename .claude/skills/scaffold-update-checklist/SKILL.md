@@ -9,7 +9,11 @@ description: >
   mirrored docs", "update the README structure", or "add a new document
   category". Also triggers when editing files in cookiecutter template
   directories, plugin skill/command/agent directories, or mirrored doc locations
-  where consistency checks are needed.
+  where consistency checks are needed — and when editing part of the root
+  `AGENTS.md`/`CLAUDE.md` that a plugin ships as a convention (today: the
+  docs-structure pointer and `## Branch Landing Policy`), which looks like a
+  local wording change but is a change to something downstream projects are
+  handed.
 ---
 
 # Scaffold Update Checklist
@@ -53,6 +57,15 @@ reflected in the other.
 - `AGENTS.md` and `CLAUDE.md` at project root (different from cookiecutter
   versions)
 
+**Not mirrored, but still shipped:** content in root `AGENTS.md`/`CLAUDE.md`
+that a row in `update-project-docs`'s
+[Root-Level Conventions](../../../plugins/project-docs/skills/update-project-docs/SKILL.md#root-level-conventions)
+table checks for. No cookiecutter copy and no migration carries it, so "not
+mirrored" is true and misleading at once: the plugin hands downstream projects
+its own copy of that content, and editing it here without updating the table's
+subsection leaves the two disagreeing. See
+[Revising an Existing Root-Level Convention](../../../plugins/project-docs/skills/update-project-docs/SKILL.md#revising-an-existing-root-level-convention).
+
 **Sync procedure (cookiecutter is the source of truth):**
 
 1. Edit the cookiecutter copy first (under `{{cookiecutter.project_slug}}/`)
@@ -83,7 +96,7 @@ reflected in the other.
       `plugins/project-docs/skills/update-project-docs/migrations/` — use the
       `migration-authoring` skill for quality checks
 - [ ] Update migration table in
-      `plugins/project-docs/skills/update-project-docs/skill.md`
+      `plugins/project-docs/skills/update-project-docs/SKILL.md`
 - [ ] Apply the migration to this project's own `docs/` — follow the same steps
       end users would to validate the guide works
 
@@ -132,13 +145,13 @@ auto-surfacing value (e.g., `init-branch`, `update-deps`).
       canonical copy of the example content means nothing to keep in sync.
       Consider whether this repo's own root `AGENTS.md` should adopt the
       convention too, as a dogfooded example.
-- [ ] **If you edited a section of this repo's own root `AGENTS.md` that appears
-      as a row in `update-project-docs`'s Root-Level Conventions table** (today:
-      the docs-structure pointer and `## Branch Landing Policy`; other `##`
-      sections there ship nowhere and don't apply) — that is a change to a
-      convention shipped to downstream projects, even when it doesn't feel like
-      a plugin change. Update that skill's matching subsection in the **same
-      commit**, per its
+- [ ] **If you edited content in this repo's own root `AGENTS.md` that a
+      Root-Level Conventions row in `update-project-docs` checks for** (today:
+      the docs-structure pointer, matched anywhere by text, and the
+      `## Branch Landing Policy` heading; other `##` sections there ship nowhere
+      and don't apply) — that is a change to a convention shipped to downstream
+      projects, even when it doesn't feel like a plugin change. Update that
+      skill's matching subsection in the **same commit**, per its
       [Revising an Existing Root-Level Convention](../../../plugins/project-docs/skills/update-project-docs/SKILL.md#revising-an-existing-root-level-convention)
       section.
 
