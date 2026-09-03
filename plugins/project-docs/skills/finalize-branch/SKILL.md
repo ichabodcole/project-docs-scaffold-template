@@ -73,63 +73,67 @@ git diff --stat <base>
 **This step is not optional and cannot be self-performed.** Dispatch a subagent
 to perform the review — do not review the code yourself.
 
-**Why:** The agent that wrote the code is the worst possible reviewer of it.
-Tunnel vision makes self-review miss the things a fresh pair of eyes catches in
-minutes. An "I've been reviewing as I go, so this is covered" reflex is exactly
-the failure mode this step exists to prevent. If that thought appears, treat it
-as the signal to delegate, not to skip.
+**Why:** The agent that wrote the code cannot be a fresh reader of it. An "I've
+been reviewing as I go, so this is covered" reflex is the signal to delegate,
+not to skip.
 
 **How:**
 
 1. **Verify the reviewer exists and can execute code before dispatching — and
-   show your work.** Check the Agent tool's currently available types first. A
-   name below may no longer exist in this environment (plugins get removed,
-   renamed, or restructured independently of this skill), or may exist only as a
-   skill-driven prompt template rather than a directly dispatchable agent type —
-   a skill name cannot be passed as `subagent_type`. For whichever exists, read
-   its tool list and look for `Bash` (or equivalent shell access).
+   show your work.** Check the Agent tool's currently available types first. Any
+   reviewer name you carry in from habit or from another project may no longer
+   exist here (plugins get removed, renamed, or restructured independently of
+   this skill), or may exist only as a skill-driven prompt template rather than
+   a directly dispatchable agent type — a skill name cannot be passed as
+   `subagent_type`.
 
-   **This check is a hard gate, in the same register as Step 3's quality
-   tools.** Like those, it fails _open_: skip it, dispatch a plausible-sounding
-   reviewer, and you get a confident-looking report with nothing behind it.
-   Nothing downstream will notice. So it has to leave a trace:
-   - **Report the census before dispatching** — the reviewers you checked, each
-     one's shell-access status, which you chose, and why.
+   **Read the capabilities the roster states, and know that most of its answers
+   don't contain the word `Bash`.** Rosters report capability in several shapes:
+   an explicit tool list, a bare wildcard (`*`), `All tools`, or
+   `All tools except …`. Only the first can be searched for the token. A
+   wildcard or an unqualified "all" grants shell access; an exception list
+   grants it unless `Bash` is among the exceptions. Searching for the literal
+   string and concluding "no `Bash`" from a wildcard is the most likely way to
+   fail this check while believing you passed it. **If the roster states no
+   capabilities at all, you cannot run this check** — say so and ask, exactly as
+   if no capable reviewer existed. "I could not determine capability" and "none
+   is capable" are different answers, and both stop here. And beware a list that
+   _looks_ like shell access: `BashOutput` and `KillShell` without `Bash` mean
+   the agent can read and kill shells it has no way to start.
 
-     **The census is your account of what you did. It is not proof, and don't
-     treat it as any.** The roster lives in context, so reading it costs no tool
-     call and leaves no trace; nothing about the resulting text distinguishes a
-     real check from an invented one. Two rules keep it useful anyway, and the
-     evidence that actually bites arrives later, from the reviewer (item 4).
+   **This check is a hard gate, and it fails _open_:** skip it, dispatch a
+   plausible-sounding reviewer, and you get a confident-looking report with
+   nothing behind it. Nothing downstream will notice. So it has to leave a
+   trace:
+   - **Report the census before dispatching** — where you read the roster, the
+     reviewers you checked, each one's shell-access status, which you chose, and
+     why. That field list is the whole of it; the same fields are what Step 4
+     and the Output section ask for.
+
+     **The census is your account of what you did, not proof that you did it.**
+     The roster lives in context, so reading it costs no tool call and leaves no
+     trace; nothing about the resulting text distinguishes a real check from an
+     invented one. A definition and a rule keep it useful anyway, and the
+     evidence that bites arrives later, from the reviewer (item 4).
      1. **The roster is the set of agent types you can dispatch right now**,
-        with the tool lists attached to them. Agent definition files in this
+        with the capabilities attached to them. Agent definition files in this
         repo (`plugins/*/agents/`) are **not** the roster — different prefixes,
         usually no `tools:` field, and silent about what is installed in this
         session. Censusing from them is a real action that answers the wrong
         question.
-     2. **Say what you rejected and why, including at least one rejected on
-        capability grounds.** A census naming only the agent you were always
-        going to pick records no decision.
+     2. **Say what you rejected and why** — including at least one rejected on
+        capability grounds where there is one, and saying plainly that every
+        available reviewer had shell access where there isn't. A census naming
+        only the agent you were always going to pick records no decision; a
+        rejection invented to satisfy this line is worse than none.
 
    - **If no execution-capable reviewer is available, stop and say so**, then
      ask how to proceed. Don't quietly fall through to a read-only reviewer.
-   - **If any part of the review ends up being a static read, label it as one**
-     in your report to the user. A static read presented as a verified review is
-     worse than no review; this disclosure is an instruction, not a caveat.
 
-   Beware a tool list that _looks_ like shell access. `BashOutput` and
-   `KillShell` without `Bash` mean the agent can read and kill shells it has no
-   way to start.
-
-   **Observed 2026-09-02, and worth re-checking rather than trusting:**
-   `feature-dev:code-reviewer` and `feature-dev:code-architect` both lacked
-   `Bash` (each listing only
-   `Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell, BashOutput`).
-   That made `code-reviewer` useful as a confidence-filtered second opinion but
-   not sufficient alone, and it disqualified `code-architect` despite its being
-   the natural fit for the plan-aware slot below. These are notes from one
-   session, not standing facts — the point of the census is that the roster
-   changes underneath this file.
+   **This file prints no reviewer's tool list.** Any list here would be an
+   answer to the question the census sends you to go and ask — and would go
+   stale silently besides. Capability findings from past runs belong in the
+   session records, not on this page.
 
 2. **Choose a reviewer** based on what this branch needs. The review of record
    must come from an execution-capable reviewer; a read-only one may appear only
@@ -140,19 +144,20 @@ as the signal to delegate, not to skip.
      plan-alignment ("did we build what we said we'd build?"), architecture, and
      design-pattern review — check what's actually dispatchable in the current
      environment rather than assuming a previously-known name still resolves.
-     **A skill-driven review does not discharge this step by itself:** a skill
-     has no agent type and no tool list, so the census has nothing to attach to.
-     Route through one if it helps, but the requirements here still apply to
-     whatever it ultimately dispatches — the execution log included. **This
-     bullet is where the capability check most often gets skipped:** the
-     best-shaped candidate for it may well be read-only, and picking it feels
-     _more_ compliant than falling back. Shape does not substitute for the
-     census. If no plan-aware reviewer has shell access, brief a general-purpose
-     reviewer explicitly to check the diff against the plan.
-   - **A confidence-filtered reviewer** (e.g. `feature-dev:code-reviewer`) —
-     tight, low-noise report focused on real bugs, security issues, and clear
-     convention violations. Per the capability check above, pair it with an
-     execution-capable reviewer rather than dispatching it alone.
+     **A skill-driven review does not discharge this step by itself:** the
+     census attaches to a dispatched agent, and a skill is not one. Route
+     through one if it helps, but census whatever it ultimately dispatches, and
+     the requirements here still apply to that — the execution log included.
+     **The best-shaped candidate here may well be read-only, and picking it
+     feels _more_ compliant than falling back — shape does not substitute for
+     the census.** If no plan-aware reviewer has shell access, brief a
+     general-purpose reviewer explicitly to check the diff against the plan.
+   - **A confidence-filtered reviewer** — a tight, low-noise report focused on
+     real bugs, security issues, and clear convention violations. These are
+     frequently read-only. If your census says this one is, it is a labelled
+     second opinion beside an execution-capable reviewer, never the review of
+     record — and it cannot run `git diff` itself, so paste the diff into its
+     prompt.
    - **Dual review (both in parallel)** — for meaty branches: large diffs (~500+
      lines), work spanning multiple subsystems, significant architectural
      decisions, or anything high-stakes. The two reviewers flag different things
@@ -160,16 +165,15 @@ as the signal to delegate, not to skip.
      architecture and plan drift. Dispatch them in parallel (one message,
      multiple Agent calls — the dispatch tool is named `Agent` in current
      environments and `Task` in older ones), then reconcile findings into a
-     single merged report for the user.
-   - **A dedicated subagent spun up specifically for this review** — worth it
-     for a substantial review: full tooling, persistent context, and can be
-     re-dispatched with that context intact for follow-up questions.
-   - **Fallback:** `general-purpose`, if no specialized reviewer with shell
-     access is available. Note this in the session doc. **Census it like any
-     other candidate** — it has had full tool access whenever this was checked,
-     but that is an observation, not a standing fact, and this is the bullet an
-     executor is most tempted to take on trust precisely because the file
-     vouches for it.
+     single merged report for the user. **At least one of the two must be
+     execution-capable**; a pair of read-only reviewers is two static reads, not
+     a dual review.
+   - **A general reviewer briefed specifically for this branch** — the fallback
+     when no specialist has shell access, and often the better option anyway:
+     full tooling, persistent context, and re-dispatchable with that context
+     intact for follow-up questions. Note the fallback in the session doc, and
+     **census it like any other candidate** — this file makes no claim about
+     what any agent can do.
 
 3. **Scope the review to the net diff.** `git diff <base>..HEAD` is the truth —
    commit history is noise. Tell the reviewer to review the delta, not the
@@ -185,14 +189,16 @@ as the signal to delegate, not to skip.
    - **Tests-vs-mocks check:** "Do the tests actually test logic, or do they
      mostly exercise mocks? Flag tests that pass without proving the code under
      test works."
+   - **A read-only constraint:** "Report only — make no edits to the repository
+     under review." An execution-capable reviewer can write, and one that
+     helpfully fixes what it finds alters the diff between here and the landing
+     checks in Step 8 — which read the tree and the branch you are about to
+     squash. You will not see it happen.
    - **Execution log:** "List the commands you actually ran. If you ran none,
-     say so plainly." **This is the load-bearing one.** You cannot see a
-     subagent's tool calls — only its final report — so without this, "the
-     review verified the behavior" is a claim nobody can check, including you.
-     It is also the only part of Step 2 you do not author yourself, which is
-     what makes it evidence where the census is merely testimony. A report that
-     comes back with no commands was a static read, whatever its confidence; say
-     so when you surface it.
+     say so plainly." You cannot see a subagent's tool calls — only its final
+     report — so without this, "the review verified the behavior" is a claim
+     nobody can check, including you. You do not author it — which is what makes
+     it evidence, where the census is testimony.
    - **Ship verdict:** "End your report with a clear verdict — _Ready to merge:
      Yes / No / With fixes_ — and a one-sentence reasoning."
 
@@ -208,15 +214,18 @@ as the signal to delegate, not to skip.
   before moving to quality checks.
 - For subjective or low-confidence suggestions, defer to the user.
 - If the reviewer(s) produce a "Ready to merge: No" or "With fixes" verdict,
-  treat those fixes as blocking before Step 3.
+  treat those fixes as blocking before Step 3. **Blocking attaches to the
+  concrete findings, not to the verdict label** — where the fixes behind a "With
+  fixes" are all subjective, that is the previous bullet's case: present them
+  and let the user decide.
 - If the reviewer produces nothing actionable, that's a valid result — say so
   explicitly rather than pretending no review happened.
-- **State which reviewers ran and what each actually executed** — quoting from
-  the execution log you asked for in the prompt template, not inferred from the
-  fact that a reviewer _had_ `Bash`. Having shell access and using it are
-  different claims, and only the second one is a review. If a reviewer came back
-  with no commands, say so; the user cannot otherwise tell a verified review
-  from a plausible one.
+- **State which reviewers ran and what each actually executed** — quoting the
+  execution log, not inferring it from the fact that a reviewer _had_ `Bash`.
+  Having shell access and using it are different claims, and only the second is
+  a review. A reviewer that came back with no commands did a static read: label
+  it as one. A static read presented as a verified review is worse than no
+  review, because the user cannot tell them apart.
 
 ### Step 3: Run Quality Tools
 
@@ -232,11 +241,12 @@ pnpm run test
 
 ### Step 4: Create Session Document
 
-The document must include a **Review** paragraph — reviewers checked and their
-shell-access status, which ran, and what they executed, quoted from their
-execution logs. Chat scrollback is not a trace; it survives the session and
-nothing else. A future reader asking "was this genuinely reviewed, or only
-reviewed-looking?" has this file and nothing else to go on.
+The document must include a **Review** paragraph carrying the Step 2 census —
+the same fields, including where the roster was read — plus which reviewers ran
+and what each executed, quoted from their execution logs. Chat scrollback is not
+a trace; it survives the session and nothing else. A future reader asking "was
+this genuinely reviewed, or only reviewed-looking?" has this file and nothing
+else to go on.
 
 Always create in the relevant project's `docs/projects/<project-name>/sessions/`
 folder. If no project folder exists for this work, create the session in a new
@@ -602,14 +612,15 @@ Ask for user confirmation at these points:
 
 ## Common Mistakes
 
-- **Self-reviewing the code** — The single most common failure mode. If you
+- **Self-reviewing the code** — the failure this step exists to prevent. If you
   catch yourself thinking "I've been reviewing as I worked, this is fine," stop.
   Dispatch a subagent per Step 2. Always. No exceptions.
 - **Dispatching a reviewer without verifying it has shell access** — A reviewer
   limited to reading and grepping produces a static read, not a verified review
-  — it can't run tests or reproduce a defect. Check the agent's tool list for
-  `Bash` before choosing it, and report the census (Step 2). A run whose output
-  contains no census skipped the gate, whatever it says it did.
+  — it can't run tests or reproduce a defect. Read the capabilities the roster
+  states before choosing — most of its answers don't contain the word `Bash` —
+  and report the census (Step 2). A run whose output contains no census has not
+  shown the gate was run — which is the only thing anyone downstream can check.
 - **Asking the subagent to review commit-by-commit** — Give it the net diff
   (`git diff <base>..HEAD`), not the commit history. The commit log is noise;
   the delta is the truth.

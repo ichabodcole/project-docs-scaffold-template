@@ -279,6 +279,44 @@ docs/
 
 ## Version History
 
+### 3.5.0 (2026-09-02)
+
+- `finalize-branch` — Step 2 separated guidance from the argument for it, then
+  repaired what the separation exposed. The compression itself was modest (149 →
+  132 lines: a dated tool-list block, a fallback's capability claim, a restated
+  mechanism, a third copy of the static-read rule, an unmeasured frequency
+  claim, and a cross-reference describing another section's character). A cold
+  reader then found nine correctness defects, and the repairs took the section
+  to 158 — **longer than it started.** Recorded plainly because a later reader
+  comparing line counts would otherwise conclude the pass failed. Every line
+  added is a rule; the lines removed were stories.
+
+  The largest defect: **the capability test did not match the data the
+  environment supplies.** The step said "read its tool list and look for
+  `Bash`", while rosters answer in four shapes — an explicit list, `*`,
+  `All tools`, `All tools except …` — of which only the first contains the
+  token. A reader following it literally concludes capability by inference,
+  which is the unverified assumption the census exists to prevent. Now stated
+  per shape, with a third outcome the step previously lacked: a roster stating
+  no capabilities means the check **cannot be run**, which is different from no
+  capable reviewer existing, and both halt.
+
+  Also: the page had begun breaking its own new "this file prints no reviewer's
+  tool list" policy twelve lines below stating it; a mandatory "reject at least
+  one on capability grounds" was unsatisfiable in environments where every
+  reviewer has shell access, and so pressured inventing one; the prompt template
+  let a full-tools reviewer edit the tree between the review and Step 8's
+  landing checks, with no read-only constraint; a paired read-only reviewer was
+  told to review `git diff <base>..HEAD`, which it cannot run; the dual-review
+  bullet dropped the execution-capable requirement its own lead-in states; and
+  two bullets described one dispatch.
+
+  A full re-read of the whole file afterwards — not the diff, not the section —
+  caught four places where the Step 2 fixes had gone stale elsewhere, including
+  a Common Mistakes entry still carrying the replaced test and a claim that two
+  other sections asked for "the same fields" when one did not. None was visible
+  to the build, the validator or the formatter.
+
 ### 3.4.0 (2026-09-02)
 
 - `finalize-branch` — Step 2's reviewer-capability check becomes a **hard gate
