@@ -18,7 +18,9 @@ allowed-tools:
   - Grep
   - Glob
   - Bash
+  - Agent
   - Task
+  - Skill
   - AskUserQuestion
 ---
 
@@ -69,56 +71,107 @@ git diff --stat <base>
 **This step is not optional and cannot be self-performed.** Dispatch a subagent
 to perform the review — do not review the code yourself.
 
-**Why:** The agent that wrote the code is the worst possible reviewer of it.
-Tunnel vision makes self-review miss the things a fresh pair of eyes catches in
-minutes. An "I've been reviewing as I go, so this is covered" reflex is exactly
-the failure mode this step exists to prevent. If that thought appears, treat it
-as the signal to delegate, not to skip.
+**Why:** The agent that wrote the code cannot be a fresh reader of it. An "I've
+been reviewing as I go, so this is covered" reflex is the signal to delegate,
+not to skip.
 
 **How:**
 
-1. **Verify the reviewer exists and can execute code before dispatching.** Check
-   the Agent tool's currently available types first — a name below may no longer
-   exist in this environment (plugins get removed, renamed, or restructured
-   independently of this skill) or may exist only as a skill-driven prompt
-   template rather than a directly dispatchable agent type. For whichever
-   exists, check its tool list for `Bash` (or equivalent shell access) before
-   choosing it. A mandatory review that can only read and grep shares the
-   author's blind spot — reasoning about what the code does instead of observing
-   it. It cannot run tests, run the CLI, or reproduce a reported defect, and a
-   static read presented as a review is worse than no review if it isn't
-   disclosed as one. `feature-dev:code-reviewer` in particular does **not**
-   currently have a `Bash` tool (only
-   `Glob, Grep, LS, Read, NotebookRead, WebFetch, TodoWrite, WebSearch, KillShell, BashOutput`)
-   — useful as a confidence-filtered second opinion, not sufficient alone for a
-   review that claims to verify behavior.
+1. **Verify the reviewer exists and can execute code before dispatching — and
+   show your work.** Check the Agent tool's currently available types first. Any
+   reviewer name you carry in from habit or from another project may no longer
+   exist here (plugins get removed, renamed, or restructured independently of
+   this skill), or may exist only as a skill-driven prompt template rather than
+   a directly dispatchable agent type — a skill name cannot be passed as
+   `subagent_type`.
 
-2. **Choose a reviewer** based on what this branch needs, from whatever
-   execution-capable reviewers are currently available:
+   **Read the capabilities the roster states, and know that most of its answers
+   don't contain the word `Bash`.** Rosters report capability in several shapes:
+   an explicit tool list, a bare wildcard (`*`), `All tools`, or
+   `All tools except …`. Only the first can be searched for the token. A
+   wildcard or an unqualified "all" grants shell access; an exception list
+   grants it unless `Bash` is among the exceptions. Searching for the literal
+   string and concluding "no `Bash`" from a wildcard is the most likely way to
+   fail this check while believing you passed it. **If the roster states no
+   capabilities at all, you cannot run this check** — say so and ask, exactly as
+   if no capable reviewer existed. "I could not determine capability" and "none
+   is capable" are different answers, and both stop here. And beware a list that
+   _looks_ like shell access: `BashOutput` and `KillShell` without `Bash` mean
+   the agent can read and kill shells it has no way to start.
+
+   **This check is a hard gate, and it fails _open_:** skip it, dispatch a
+   plausible-sounding reviewer, and you get a confident-looking report with
+   nothing behind it. Nothing downstream will notice. So it has to leave a
+   trace:
+   - **Report the census before dispatching** — where you read the roster, the
+     reviewers you checked, each one's shell-access status, which you chose, and
+     why. That field list is the whole of it; the same fields are what Step 4
+     and the Output section ask for.
+
+     **The census is your account of what you did, not proof that you did it.**
+     The roster lives in context, so reading it costs no tool call and leaves no
+     trace; nothing about the resulting text distinguishes a real check from an
+     invented one. A definition and a rule keep it useful anyway, and the
+     evidence that bites arrives later, from the reviewer (item 4).
+     1. **The roster is the set of agent types you can dispatch right now**,
+        with the capabilities attached to them. Agent definition files in this
+        repo (`plugins/*/agents/`) are **not** the roster — different prefixes,
+        usually no `tools:` field, and silent about what is installed in this
+        session. Censusing from them is a real action that answers the wrong
+        question.
+     2. **Say what you rejected and why** — including at least one rejected on
+        capability grounds where there is one, and saying plainly that every
+        available reviewer had shell access where there isn't. A census naming
+        only the agent you were always going to pick records no decision; a
+        rejection invented to satisfy this line is worse than none.
+
+   - **If no execution-capable reviewer is available, stop and say so**, then
+     ask how to proceed. Don't quietly fall through to a read-only reviewer.
+
+   **This file prints no reviewer's tool list.** Any list here would be an
+   answer to the question the census sends you to go and ask — and would go
+   stale silently besides. Capability findings from past runs belong in the
+   session records, not on this page.
+
+2. **Choose a reviewer** based on what this branch needs. The review of record
+   must come from an execution-capable reviewer; a read-only one may appear only
+   in a paired, clearly-labelled second-opinion role:
    - **A plan-aware reviewer** — prefer when the branch has an approved
      `proposal.md`, `plan.md`, design resolution, or similar spec to validate
      against. Look for an available agent or skill-driven review specialized for
      plan-alignment ("did we build what we said we'd build?"), architecture, and
      design-pattern review — check what's actually dispatchable in the current
-     environment rather than assuming a previously-known name still resolves. If
-     none exists, brief a general-purpose reviewer explicitly to check the diff
-     against the plan.
-   - **A confidence-filtered reviewer** (e.g. `feature-dev:code-reviewer`) —
-     tight, low-noise report focused on real bugs, security issues, and clear
-     convention violations. Per the capability check above, pair it with an
-     execution-capable reviewer rather than dispatching it alone.
+     environment rather than assuming a previously-known name still resolves.
+     **A skill-driven review does not discharge this step by itself:** the
+     census attaches to a dispatched agent, and a skill is not one. Route
+     through one if it helps, but census whatever it ultimately dispatches, and
+     the requirements here still apply to that — the execution log included.
+     **The best-shaped candidate here may well be read-only, and picking it
+     feels _more_ compliant than falling back — shape does not substitute for
+     the census.** If no plan-aware reviewer has shell access, brief a
+     general-purpose reviewer explicitly to check the diff against the plan.
+   - **A confidence-filtered reviewer** — a tight, low-noise report focused on
+     real bugs, security issues, and clear convention violations. These are
+     frequently read-only. If your census says this one is, it is a labelled
+     second opinion beside an execution-capable reviewer, never the review of
+     record — and it cannot run `git diff` itself, so paste the diff into its
+     prompt.
    - **Dual review (both in parallel)** — for meaty branches: large diffs (~500+
      lines), work spanning multiple subsystems, significant architectural
      decisions, or anything high-stakes. The two reviewers flag different things
      — one's confidence filter catches bugs the other misses, the other catches
      architecture and plan drift. Dispatch them in parallel (one message,
-     multiple Task calls), then reconcile findings into a single merged report
-     for the user.
-   - **A dedicated subagent spun up specifically for this review** — worth it
-     for a substantial review: full tooling, persistent context, and can be
-     re-dispatched with that context intact for follow-up questions.
-   - **Fallback:** `general-purpose` (full tool access) if no specialized
-     reviewer with shell access is available. Note this in the session doc.
+     multiple Agent calls — the dispatch tool is named `Agent` in current
+     environments and `Task` in older ones), then reconcile findings into a
+     single merged report for the user. **At least one of the two must be
+     execution-capable**; a pair of read-only reviewers is two static reads, not
+     a dual review.
+   - **A general reviewer briefed specifically for this branch** — the fallback
+     when no specialist has shell access, and often the better option anyway:
+     full tooling, persistent context, and re-dispatchable with that context
+     intact for follow-up questions. Note the fallback in the session doc, and
+     **census it like any other candidate** — this file makes no claim about
+     what any agent can do.
 
 3. **Scope the review to the net diff.** `git diff <base>..HEAD` is the truth —
    commit history is noise. Tell the reviewer to review the delta, not the
@@ -134,6 +187,16 @@ as the signal to delegate, not to skip.
    - **Tests-vs-mocks check:** "Do the tests actually test logic, or do they
      mostly exercise mocks? Flag tests that pass without proving the code under
      test works."
+   - **A read-only constraint:** "Report only — make no edits to the repository
+     under review." An execution-capable reviewer can write, and one that
+     helpfully fixes what it finds alters the diff between here and the landing
+     checks in Step 8 — which read the tree and the branch you are about to
+     squash. You will not see it happen.
+   - **Execution log:** "List the commands you actually ran. If you ran none,
+     say so plainly." You cannot see a subagent's tool calls — only its final
+     report — so without this, "the review verified the behavior" is a claim
+     nobody can check, including you. You do not author it — which is what makes
+     it evidence, where the census is testimony.
    - **Ship verdict:** "End your report with a clear verdict — _Ready to merge:
      Yes / No / With fixes_ — and a one-sentence reasoning."
 
@@ -149,9 +212,18 @@ as the signal to delegate, not to skip.
   before moving to quality checks.
 - For subjective or low-confidence suggestions, defer to the user.
 - If the reviewer(s) produce a "Ready to merge: No" or "With fixes" verdict,
-  treat those fixes as blocking before Step 3.
+  treat those fixes as blocking before Step 3. **Blocking attaches to the
+  concrete findings, not to the verdict label** — where the fixes behind a "With
+  fixes" are all subjective, that is the previous bullet's case: present them
+  and let the user decide.
 - If the reviewer produces nothing actionable, that's a valid result — say so
   explicitly rather than pretending no review happened.
+- **State which reviewers ran and what each actually executed** — quoting the
+  execution log, not inferring it from the fact that a reviewer _had_ `Bash`.
+  Having shell access and using it are different claims, and only the second is
+  a review. A reviewer that came back with no commands did a static read: label
+  it as one. A static read presented as a verified review is worse than no
+  review, because the user cannot tell them apart.
 
 ### Step 3: Run Quality Tools
 
@@ -167,6 +239,13 @@ pnpm run test
 
 ### Step 4: Create Session Document
 
+The document must include a **Review** paragraph carrying the Step 2 census —
+the same fields, including where the roster was read — plus which reviewers ran
+and what each executed, quoted from their execution logs. Chat scrollback is not
+a trace; it survives the session and nothing else. A future reader asking "was
+this genuinely reviewed, or only reviewed-looking?" has this file and nothing
+else to go on.
+
 Always create in the relevant project's `docs/projects/<project-name>/sessions/`
 folder. If no project folder exists for this work, create the session in a new
 or existing project folder. See `docs/projects/README.md` for conventions.
@@ -180,7 +259,10 @@ message alone provides sufficient context.
 
 ### Step 6: Assess Additional Documentation
 
-Present recommendations to user and get confirmation before creating:
+Present recommendations to user and get confirmation before creating new
+documents. **Plan reconciliation is the exception** — it edits a document that
+already exists, and it is an action to perform, not a recommendation to offer.
+Do it without asking.
 
 - **Handoff** — Does this work require specific deployment steps beyond merging
   code? (DB migrations, service redeployments, environment config changes,
@@ -199,37 +281,67 @@ Present recommendations to user and get confirmation before creating:
   Flag any Tier 1 or Tier 2 scenarios without results. This is a soft check —
   don't block the merge, but surface it to the user.
 - **Plan reconciliation** — If a `plan.md` or backlog item exists for this work,
-  reconcile it in place against what was actually built: check off completed
-  items, update a `**Status:**` line if it holds a template enum value. **Verify
-  against the artifacts and the session record, not against the checkboxes'
-  current state** — finished work routinely leaves every box unticked, so an
-  all-unchecked plan means "unreconciled," not "unstarted." This is a soft check
-  like the test-plan one — surface it, don't block the merge.
+  reconcile it in place against what was actually built: mark the completed
+  items, update a `**Status:**` line if it holds one of the values its own
+  template defines (`docs/projects/TEMPLATES/PLAN.template.md` —
+  `Draft | Active | Completed | Superseded`). If the status is free-form
+  (`V1.5 shipped, awaiting merge`), leave it and report it verbatim; free-form
+  is usually _more_ informative than the enum. **Verify against the artifacts
+  and the session record, not against what the document currently claims** —
+  finished work routinely leaves plans unmarked, so an unmarked plan means
+  "unreconciled," not "unstarted."
+
+  **Mark completion in whatever idiom the plan already uses** — checkboxes if it
+  has them, a per-phase annotation or a short addendum note if that's how it
+  tracks. Don't impose a format the document didn't choose, and don't conclude a
+  plan is unmarked because it isn't using checkboxes.
+
+  Do the reconciliation here rather than deferring it. Updating the plan as the
+  work lands is part of the work — it's what makes the document trustworthy
+  signal for whoever picks the project up next, instead of a field nobody
+  believes. Surfacing the gap without closing it just moves the debt.
+
+  **What's soft here is the discrepancy, not the work.** Performing the
+  reconciliation is mandatory. What doesn't block the merge is an item you
+  genuinely can't resolve — you can't tell from the artifacts or the session
+  record whether it shipped. Record that item as unresolved, say so in your
+  report, and carry on to Step 7. Don't read "soft" as license to skip the edit
+  because reconciling looked expensive. (Contrast the test-plan check above,
+  where "soft" does mean surface-only.)
 
   This makes no claim about whether the whole _project_ is finished. Most
   branches land mid-project.
 
-  **If reconciliation comes back with everything complete**, ask whether this
-  branch completes the project, and offer to invoke the `sweep-project` skill —
-  which handles archival and cross-reference updates. **Pass it the project
-  folder (or backlog item) path explicitly** — derive that from the `plan.md`
-  you just reconciled; `sweep-project` will not infer a target, by design, and
-  passing a path inside the project rather than the project itself just makes it
-  do the trimming. This mirrors Step 8's delegation to
-  `consolidate-long-branch`: present the option, then invoke the skill once the
-  user chooses.
+  **If reconciliation comes back with every item in the plan complete** — not
+  merely the items this branch touched — ask whether this branch completes the
+  project, and offer to invoke the `sweep-project` skill — which handles
+  archival and cross-reference updates. **Pass it the project folder (or backlog
+  item) path explicitly** — derive it from the document you just reconciled: the
+  project folder is the parent directory of `plan.md`, and a backlog item is its
+  own path under `docs/backlog/`. `sweep-project` will not infer a target, by
+  design. Passing a path inside the project (say, the `plan.md` itself) is
+  harmless — it resolves upward to the project folder on its own. This mirrors
+  Step 8's delegation to `consolidate-long-branch`: present the option, then
+  invoke the skill once the user chooses.
 
   **A yes here is not archival approval.** It means "go look" — `sweep-project`
   runs its own reconciliation and stops at its own confirmation gate before
   moving anything. Don't present this question as the last word, and don't treat
   a yes as license to skip the gate downstream.
 
-  Two sequencing notes:
+  Three notes on the handoff:
+  - **Name yourself as the caller when you invoke it.** `sweep-project` gates on
+    a dirty `docs/` tree and carves out delegated runs, but nothing tells it who
+    called — an unannounced run is treated as standalone. State that
+    `finalize-branch` Step 6 is invoking it, alongside the target path, or it
+    stops and asks about the documentation changes you just wrote.
   - `sweep-project` re-reads from disk, so it sees the reconciliation you just
     wrote. The second pass is idempotent, not duplicated work.
   - When invoked from here, it leaves its changes uncommitted for Step 7. If it
-    archives, Step 8's branch-facts computation and any squash operate on the
-    post-move tree — which is correct, but worth knowing.
+    archives, the squash in Step 8 operates on the post-move tree — which is
+    correct. Step 8's sha scan deliberately does not: it reads the branch as it
+    stood _before_ Step 7's documentation commit, so neither the archival nor
+    the reconciliation can veto the squash that carries them.
 
 ### Step 7: Commit Documentation
 
@@ -248,10 +360,10 @@ recoverable and reviewable as its own step before any history rewriting.
 **Whether and how to squash is a project decision, not something this skill can
 assume.** Different projects have different reasons to want one clean commit
 (readability) or to explicitly forbid squashing (SHA-pinned doc citations,
-multi-author attribution trailers — e.g. a multi-agent team where each agent's
-commits carry an identifying trailer like `Anthill-Seat:` — or wanting to bisect
-the reasoning behind a branch where documentation commits are rulings, not
-commentary). This skill's job is to find and follow that decision, not make it.
+commits authored by more than one Anthill seat, each signing its own work with
+an `Anthill-Seat:` trailer — or wanting to bisect the reasoning behind a branch
+where documentation commits are rulings, not commentary). This skill's job is to
+find and follow that decision, not make it.
 
 **How:**
 
@@ -259,18 +371,59 @@ commentary). This skill's job is to find and follow that decision, not make it.
    fact about the branch, not a judgment call, so the skill can own it outright:
 
    ```bash
-   git log <base>..HEAD --oneline | wc -l                     # commit count
-   for sha in $(git log <base>..HEAD --format=%h); do
-     git grep -l "$sha" -- '*.md' && echo "  ^ cited by $sha"
-   done                                                        # shas cited in docs
-   git log <base>..HEAD --format='%an%n%(trailers)' | sort -u  # distinct identities
+   # Substitute the real base branch name. Pasted verbatim, `<base>` is a
+   # shell redirection and the first line is a parse error.
+   BASE=<base>
+   ROOT=$(git rev-parse --show-toplevel)
+
+   # Scan a committed ref, not the working tree, and step past the
+   # documentation commit Step 7 just made. HEAD^ is the normal case; use HEAD
+   # instead if Step 7 had nothing to commit.
+   SCAN=HEAD^
+
+   git log "$BASE"..HEAD --oneline | wc -l                       # commit count
+   for sha in $(git log "$BASE"..HEAD --format=%h); do
+     hits=$(git -C "$ROOT" grep -l "$sha" "$SCAN" -- '*.md')
+     if [ -n "$hits" ]; then printf '%s is cited by:\n%s\n' "$sha" "$hits"; fi
+   done                                                          # shas cited in docs
+
+   # Contributors whose authorship a squash would collapse. Count these two
+   # lists separately; AI co-author trailers are deliberately absent from both.
+   git log "$BASE"..HEAD --format='%(trailers:key=Anthill-Seat,valueonly)' \
+     | grep -v '^$' | sort -u                                    # anthill seats
+   git log "$BASE"..HEAD --format='%an' | sort -u                 # human authors
    ```
 
-   If the sha loop finds any hit, or the identities command's output contains
-   more than one distinct name across the `%an` author lines and any
-   `Co-Authored-By:`/`Anthill-Seat:`-style trailers combined, **squashing would
-   destroy that information.** Surface this explicitly no matter which strategy
-   follows.
+   If the sha loop finds any hit, or **either** identity list returns more than
+   one line, **squashing would destroy that information.** Surface this
+   explicitly no matter which strategy follows.
+
+   **Count seats and human authors — never AI co-author trailers.** A branch
+   with one human author and one `Co-Authored-By: Claude …` trailer carries that
+   exact pairing onto the squashed commit, so a squash destroys nothing; a
+   model-version change mid-branch (`Opus 4.8` → `Opus 5`) is not a second
+   contributor either. In any repo that mandates the trailer, counting it vetoes
+   every branch and makes "default to squash" unreachable — a rule that never
+   permits anything is a rule nobody reads. The case this check exists for is a
+   multi-seat Anthill team, where each seat signs its own commits and a squash
+   really does erase who did what. That is a fact about **the branch**: an
+   Anthill project on which only one seat committed squashes normally.
+
+   **About the sha scan.** It reads a committed ref rather than the working
+   tree: by this point the tree holds the session doc, memory, and reconciled
+   plan written in Steps 4–6, and scanning it lets this skill's own output veto
+   its own squash. It scans the branch rather than `<base>`, because a commit in
+   `<base>..HEAD` did not exist at `<base>` and nothing there could cite it —
+   the citations that matter were written on this branch, by the work itself. A
+   short sha is seven hex characters and can appear incidentally, so read each
+   hit before treating it as a veto.
+
+   **The `-C "$ROOT"` anchor is load-bearing.** `git grep`'s `'*.md'` pathspec
+   resolves against the current directory, so running this from a package
+   subdirectory in a monorepo searches only that subtree and reports zero
+   citations — a silent and _permissive_ failure in the one guard standing
+   between a SHA-cited ruling and the squash that would destroy it. This check
+   fails open, so the anchor is not optional.
 
 2. **Look for a project-owned landing policy.** Check, in order:
    - Root `AGENTS.md`, then root `CLAUDE.md`, for a `## Branch Landing Policy`
@@ -430,8 +583,15 @@ Delete branch and remove worktree if applicable (Options 1 and 4 only).
 
 Ask for user confirmation at these points:
 
+- **Step 2, if no execution-capable reviewer is available** — stop and ask
+  before dispatching anything. This is a halt, not a note; the review of record
+  cannot be a static read
 - After independent code review findings (before proceeding)
-- Before creating additional documentation (beyond session)
+- Before creating additional documentation (beyond session) — note that Step 6's
+  plan reconciliation is exempt: it edits an existing document and is performed,
+  not proposed
+- After reconciliation comes back fully complete, before delegating to
+  `sweep-project` (and again inside that skill, before anything is archived)
 - Before squashing commits (confirm landing policy found or absent, strategy A
   vs B, and commit message)
 - Before merging to the base branch
@@ -444,26 +604,28 @@ Ask for user confirmation at these points:
   `## Branch Landing Policy` section before choosing squash vs. consolidate vs.
   neither (Step 8). Absent a policy, present the options and their costs rather
   than silently defaulting — some projects have real reasons (SHA-cited docs,
-  multiple distinct commit authors/attribution trailers) to forbid squashing
-  entirely.
+  commits from multiple Anthill seats or multiple human authors) to forbid
+  squashing entirely.
 - **Always create session doc** — Even for smooth work
 
 ## Common Mistakes
 
-- **Self-reviewing the code** — The single most common failure mode. If you
+- **Self-reviewing the code** — the failure this step exists to prevent. If you
   catch yourself thinking "I've been reviewing as I worked, this is fine," stop.
   Dispatch a subagent per Step 2. Always. No exceptions.
 - **Dispatching a reviewer without verifying it has shell access** — A reviewer
   limited to reading and grepping produces a static read, not a verified review
-  — it can't run tests or reproduce a defect. Check the agent's tool list for
-  `Bash` before choosing it (Step 2).
+  — it can't run tests or reproduce a defect. Read the capabilities the roster
+  states before choosing — most of its answers don't contain the word `Bash` —
+  and report the census (Step 2). A run whose output contains no census has not
+  shown the gate was run — which is the only thing anyone downstream can check.
 - **Asking the subagent to review commit-by-commit** — Give it the net diff
   (`git diff <base>..HEAD`), not the commit history. The commit log is noise;
   the delta is the truth.
 - **Assuming a squash strategy without checking for a landing policy** —
   `AGENTS.md`/`CLAUDE.md` may explicitly forbid squashing (SHA-cited docs,
-  multiple author/attribution trailers). Check for `## Branch Landing Policy`
-  before executing Step 8, and announce it explicitly if none exists.
+  multiple Anthill seats). Check for `## Branch Landing Policy` before executing
+  Step 8, and announce it explicitly if none exists.
 - **Rolling your own multi-commit squash** — If Strategy B is chosen, use the
   `consolidate-long-branch` skill. Ad-hoc interactive rebase without the
   tree-equivalence gate is how silent content drift enters the merged history.
@@ -492,7 +654,11 @@ Ask for user confirmation at these points:
 At completion, summarize:
 
 - Branch finalized
+- **The reviewer census** — reviewers checked, each one's shell-access status,
+  the choice and why, and where the roster was read from
 - Code review findings and resolutions
+- **What each reviewer actually executed**, quoted from its execution log — not
+  inferred from its tool list. Say it even when the answer is flattering
 - Quality check results
 - Documentation created/updated
 - Final commit message

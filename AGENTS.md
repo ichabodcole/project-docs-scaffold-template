@@ -71,10 +71,29 @@ cookiecutter . --overwrite-if-exists
 
 ## Branch Landing Policy
 
-Default to a single-commit squash for branches under ~20 commits. Never squash a
-branch whose commits are cited by SHA in tracked docs, or that carries more than
-one distinct author/attribution trailer — merge or PR those as-is instead.
-`finalize-branch` computes both checks automatically before choosing a strategy.
+Default to a single-commit squash for branches under ~20 commits. Two
+exceptions, both narrow:
+
+- **Commits cited by SHA in tracked docs.** A squash rewrites those SHAs and
+  leaves the citation pointing at nothing. Merge or PR as-is.
+- **More than one Anthill seat authored commits on this branch.** On an Anthill
+  team each seat signs its own commits with an `Anthill-Seat:` trailer, and
+  squashing collapses who-did-what into one message that can only credit one of
+  them. Merge or PR as-is. Two or more distinct _human_ authors lose the same
+  thing and count the same way.
+
+The second exception is a fact about **the branch, not the project**. An Anthill
+project where only one seat ended up committing squashes normally — what matters
+is whether multiple seats actually authored commits in this range.
+
+**`Co-Authored-By: Claude …` never counts toward it.** One human author plus one
+AI co-author is a single identity for landing purposes, whichever model version
+signed it: the squashed commit carries that same pairing forward, so nothing is
+lost. A model change mid-branch (`Opus 4.8` → `Opus 5`) is not a second
+contributor either. Without this carve-out the rule would fire on every branch
+this repo produces, and the default above would be unreachable.
+
+`finalize-branch` computes both checks before choosing a strategy.
 
 ## Claude Code Plugins
 
