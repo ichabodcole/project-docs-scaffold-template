@@ -71,8 +71,9 @@ structure with `proposals/`, `plans/`, `sessions/`).
 ### Step 2: Identify Target Version
 
 Check the latest version available. The target is typically the version in the
-scaffold template you're upgrading to. Migration files in this skill document
-each version transition.
+scaffold template you're upgrading to. Only structural transitions have a
+migration file, so expect gaps: the `## Available Migrations` table is the
+authoritative list, and a version range absent from it needs no migration work.
 
 ### Step 3: Find Applicable Migrations
 
@@ -80,10 +81,10 @@ Look in this skill's `migrations/` folder for each version step between current
 and target. Migrations must be applied **in sequence** — you can't skip
 versions.
 
-Example: upgrading from v1 to v2.1 requires:
+Example: upgrading from pre-2.0 to 2.3 requires:
 
 1. `migrations/v1-to-v2.md`
-2. `migrations/v2.0-to-v2.1.md` (if it exists)
+2. `migrations/v2.0-to-v2.3.md`
 
 ### Step 4: Execute Each Migration
 
@@ -186,25 +187,48 @@ For quick onboarding on recent work, start with
 
 ### `## Branch Landing Policy`
 
-Used by `finalize-branch` Step 8 to decide whether/how to squash a branch before
-merging, instead of guessing one. Optional — recommend it, don't require it;
-without it, `finalize-branch` safely falls back to presenting strategy options
-with no default.
+Used by `finalize-branch` Step 8 to decide whether and how to squash a branch
+before merging, instead of guessing a strategy. Optional — recommend it, don't
+require it; with no policy present, Step 8 says so explicitly and presents the
+strategy options with its own recommendation rather than acting on a default.
 
-If the check finds nothing, recommend adding a heading with that exact text
-anywhere in root `AGENTS.md` (or `CLAUDE.md`) — matched by heading text, not
-position in the file. Three forms it can take:
+If the check finds nothing, recommend adding an `##` heading with that exact
+text anywhere in root `AGENTS.md` (or `CLAUDE.md`) — position in the file
+doesn't matter, but the level does: the check is anchored to `^## `, so a
+deeper-nested heading won't be found. Three forms it can take:
 
-An inline policy (the content below is an example to adapt, not a
-project-docs-prescribed default — write your own):
+An inline policy. Reword this freely — it is an example, not a
+project-docs-prescribed default — except for the one constraint stated after it:
 
 ```markdown
 ## Branch Landing Policy
 
-Default to a single-commit squash for branches under ~20 commits. Never squash a
-branch whose commits are cited by SHA in tracked docs, or that carries more than
-one distinct author/attribution trailer — merge or PR those as-is instead.
+Default to a single-commit squash, at any commit count. Split into chapters only
+when each one builds and delivers value on its own; a high commit count is a
+reason to ask that question, not an answer to it. Two exceptions — merge or PR
+those as-is instead:
+
+- **Commits cited by SHA in tracked markdown.** A squash rewrites those SHAs and
+  leaves the citation pointing at nothing. Read each hit before treating it as a
+  veto — a seven-character sha turns up incidentally.
+- **More than one contributor identity authored commits on this branch** —
+  distinct `Anthill-Seat:` trailers (one per seat on a multi-seat agent team),
+  or distinct git author names. A squash collapses who-did-what into a single
+  message that can credit only one of them.
+
+`Co-Authored-By: Claude …` trailers are never counted as a second identity. One
+author plus one AI co-author is a single identity for landing purposes — the
+squashed commit carries that same pairing forward — and a model-version change
+mid-branch is not a second contributor.
 ```
+
+**The constraint, which applies to all three forms:** however the authorship
+exception gets worded — inline, in the pointed-to file, or in what the script
+prints — it must exclude AI co-author trailers. In a repo that mandates one on
+every commit, a policy counting them vetoes every branch, making its own stated
+default unreachable. The rest is adjustable — including the SHA bullet, which a
+project can drop without losing the protection: `finalize-branch` Step 8
+computes and surfaces cited SHAs regardless of what the policy says.
 
 A pointer to a separate file the project maintains:
 
@@ -234,7 +258,7 @@ When the scaffold template releases structural changes:
 1. Create a new migration file: `migrations/vX-to-vY.md`
 2. Use the `migration-authoring` skill to ensure every step is agent-executable
 3. Run the quality checklist before finalizing
-4. Update the table above
+4. Add a row to the `## Available Migrations` table
 5. The version in `docs/README.md` is bumped automatically by release-please
 
 **Migration file structure:**
@@ -277,6 +301,10 @@ When the scaffold template releases structural changes:
 
 ## Adding a New Root-Level Convention
 
+_For maintainers of the plugin that ships the convention, not for projects
+consuming it: this section and the next describe editing this skill's own
+table._
+
 When a plugin skill starts depending on new content in root
 `AGENTS.md`/`CLAUDE.md` (as opposed to a `docs/` structural change, which goes
 through the migration path above):
@@ -290,6 +318,31 @@ through the migration path above):
 3. No `docs_version` bump and no migration file — this table is unversioned
    relative to the `docs/` migration system, and Step 6 checks every row
    unconditionally.
-4. The introducing plugin's own README changelog entry should **link here**, not
-   duplicate the example content inline — one canonical copy avoids the two
-   drifting apart.
+4. The introducing plugin's own README changelog entry should **link to the
+   convention's subsection under `## Root-Level Conventions`**, not duplicate
+   the example content inline — one canonical copy keeps the changelog and the
+   subsection from drifting apart.
+5. Bump the introducing plugin **minor** — a new convention changes behavior.
+
+## Revising an Existing Root-Level Convention
+
+Revising a shipped convention is the step that gets skipped, because the change
+starts somewhere else. The maintainer hits the problem while working in the
+plugin repo's own root `AGENTS.md` — the dogfooded copy — fixes it there, and
+ships. The table subsection above is the copy every _downstream_ project is
+shown, and nothing about editing `AGENTS.md` prompts anyone to open it.
+
+So, whenever a root convention changes:
+
+1. **Update this skill's subsection in the same commit as the `AGENTS.md`
+   edit.** Not the same branch, the same commit — a follow-up is a thing to
+   forget.
+2. **Re-check the subsection against the skill that consumes it.** These
+   examples describe behavior implemented elsewhere (`finalize-branch` Step 8,
+   for Branch Landing Policy).
+3. **Leave the "Introduced In" column alone.** It records when the convention
+   was introduced, not when it was last edited.
+4. Bump the plugin **minor** — a reworded recommendation changes behavior. As
+   when adding one, the plugin's README changelog entry should **link to the
+   convention's subsection under `## Root-Level Conventions`**, not duplicate
+   the example content inline.

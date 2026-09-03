@@ -71,10 +71,11 @@ cookiecutter . --overwrite-if-exists
 
 ## Branch Landing Policy
 
-Default to a single-commit squash for branches under ~20 commits. Two
-exceptions, both narrow:
+Default to a single-commit squash, at any commit count. Split into chapters only
+when each one builds and delivers value on its own; a high commit count is a
+reason to ask that question, not an answer to it. Two exceptions, both narrow:
 
-- **Commits cited by SHA in tracked docs.** A squash rewrites those SHAs and
+- **Commits cited by SHA in tracked markdown.** A squash rewrites those SHAs and
   leaves the citation pointing at nothing. Merge or PR as-is.
 - **More than one Anthill seat authored commits on this branch.** On an Anthill
   team each seat signs its own commits with an `Anthill-Seat:` trailer, and
