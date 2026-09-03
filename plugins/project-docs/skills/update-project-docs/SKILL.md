@@ -186,10 +186,10 @@ For quick onboarding on recent work, start with
 
 ### `## Branch Landing Policy`
 
-Used by `finalize-branch` Step 8 to decide whether/how to squash a branch before
-merging, instead of guessing one. Optional — recommend it, don't require it;
-without it, `finalize-branch` safely falls back to presenting strategy options
-with no default.
+Used by `finalize-branch` Step 8 to decide whether and how to squash a branch
+before merging, instead of guessing a strategy. Optional — recommend it, don't
+require it; without one, Step 8 says so explicitly and presents the strategy
+options with its own recommendation rather than acting on a default.
 
 If the check finds nothing, recommend adding a heading with that exact text
 anywhere in root `AGENTS.md` (or `CLAUDE.md`) — matched by heading text, not
@@ -201,9 +201,10 @@ project-docs-prescribed default — except for the one constraint stated after i
 ```markdown
 ## Branch Landing Policy
 
-Default to a single-commit squash. Above ~20 commits, consolidating into a few
-logical chapters is usually the better shape. Two exceptions — merge or PR those
-as-is instead:
+Default to a single-commit squash, at any commit count. Split into chapters only
+when each one builds and delivers value on its own; a high commit count is a
+reason to ask that question, not an answer to it. Two exceptions — merge or PR
+those as-is instead:
 
 - **Commits cited by SHA in tracked markdown.** A squash rewrites those SHAs and
   leaves the citation pointing at nothing. Read each hit before treating it as a
@@ -222,9 +223,9 @@ mid-branch is not a second contributor.
 **The constraint:** however the authorship exception gets worded, it must
 exclude AI co-author trailers. In a repo that mandates one on every commit, a
 policy counting them vetoes every branch, making its own stated default
-unreachable. Everything else above is adjustable: `finalize-branch` Step 8
-computes and surfaces the SHA citations regardless of what the policy says, so a
-project that drops that bullet loses nothing.
+unreachable. The rest is adjustable — including the SHA bullet, which a project
+can drop without losing the protection: `finalize-branch` Step 8 computes and
+surfaces cited SHAs regardless of what the policy says.
 
 A pointer to a separate file the project maintains:
 
@@ -310,17 +311,23 @@ through the migration path above):
 3. No `docs_version` bump and no migration file — this table is unversioned
    relative to the `docs/` migration system, and Step 6 checks every row
    unconditionally.
-4. The introducing plugin's own README changelog entry should **link here**, not
-   duplicate the example content inline — one canonical copy avoids the two
-   drifting apart.
+4. The introducing plugin's own README changelog entry should **link to the
+   convention's subsection under `## Root-Level Conventions`**, not duplicate
+   the example content inline — one canonical copy keeps the changelog and the
+   subsection from drifting apart.
+5. Bump the introducing plugin **minor** — a new convention changes behavior.
 
 ## Revising an Existing Root-Level Convention
 
-Changing a convention this repo already ships is the step that gets skipped,
-because the change usually starts somewhere else. You notice the problem while
-working in **this repo's own root `AGENTS.md`** — the dogfooded copy — fix it
-there, and ship. The table subsection above is the copy every _downstream_
-project is shown, and nothing about editing `AGENTS.md` prompts you to open it.
+_For maintainers of the plugin that ships the convention, not for projects
+consuming it. Like the section above, this describes editing this skill's own
+table._
+
+Revising a shipped convention is the step that gets skipped, because the change
+starts somewhere else. The maintainer hits the problem while working in the
+plugin repo's own root `AGENTS.md` — the dogfooded copy — fixes it there, and
+ships. The table subsection above is the copy every _downstream_ project is
+shown, and nothing about editing `AGENTS.md` prompts anyone to open it.
 
 So, whenever a root convention changes:
 
@@ -334,5 +341,6 @@ So, whenever a root convention changes:
    was introduced, not when it was last edited — a revision bumps the plugin
    version instead.
 4. Bump the plugin **minor** — a reworded recommendation changes behavior. As
-   when adding one, the changelog entry should **link here**, not duplicate the
-   example content inline.
+   when adding one, the plugin's README changelog entry should **link to the
+   convention's subsection under `## Root-Level Conventions`**, not duplicate
+   the example content inline.

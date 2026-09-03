@@ -132,11 +132,13 @@ auto-surfacing value (e.g., `init-branch`, `update-deps`).
       canonical copy of the example content means nothing to keep in sync.
       Consider whether this repo's own root `AGENTS.md` should adopt the
       convention too, as a dogfooded example.
-- [ ] **If you edited a `## `-level convention in this repo's own root
-      `AGENTS.md`** — that is a change to a convention `update-project-docs`
-      also ships to downstream projects, even when it doesn't feel like a plugin
-      change. Update that skill's matching subsection in the **same commit**,
-      per its
+- [ ] **If you edited a section of this repo's own root `AGENTS.md` that appears
+      as a row in `update-project-docs`'s Root-Level Conventions table** (today:
+      the docs-structure pointer and `## Branch Landing Policy`; other `##`
+      sections there ship nowhere and don't apply) — that is a change to a
+      convention shipped to downstream projects, even when it doesn't feel like
+      a plugin change. Update that skill's matching subsection in the **same
+      commit**, per its
       [Revising an Existing Root-Level Convention](../../../plugins/project-docs/skills/update-project-docs/SKILL.md#revising-an-existing-root-level-convention)
       section.
 
@@ -294,13 +296,15 @@ When skills, agents, or commands change, rebuild the distribution packages:
 ./scripts/build-skills-dist.sh
 ```
 
-**Run Prettier on the source files first, and rebuild again after.** The build
-copies sources into `dist/`, so formatting a source _after_ a build stales the
-bundle silently — `git status` still shows `dist/` as modified, which reads like
-a successful rebuild. Confirm with a final rebuild plus `npm run format:check`:
-a clean rebuild that leaves `dist/` unchanged is the signal.
+**Format before you build.** The build copies sources into `dist/`, so running
+Prettier on a source _after_ a build stales the bundle silently — `git status`
+still shows `dist/` as modified, which reads like a successful rebuild.
 
+- [ ] Run Prettier on changed sources **before** the build
 - [ ] Run the build script after any skill/agent/command changes
+- [ ] Re-run the build once more at the end; a rebuild that leaves `dist/`
+      unchanged, with `npm run format:check` passing, is the signal that source
+      and bundle agree
 - [ ] Verify all skills pass validation (build script runs
       `validate-skills-dist.py` automatically)
 - [ ] Verify `dist/` output matches expectations (check summary counts)
