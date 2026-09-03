@@ -71,8 +71,9 @@ structure with `proposals/`, `plans/`, `sessions/`).
 ### Step 2: Identify Target Version
 
 Check the latest version available. The target is typically the version in the
-scaffold template you're upgrading to. Migration files in this skill document
-each version transition.
+scaffold template you're upgrading to. Only structural transitions have a
+migration file, so expect gaps: the `## Available Migrations` table is the
+authoritative list, and a version range absent from it needs no migration work.
 
 ### Step 3: Find Applicable Migrations
 
@@ -188,8 +189,8 @@ For quick onboarding on recent work, start with
 
 Used by `finalize-branch` Step 8 to decide whether and how to squash a branch
 before merging, instead of guessing a strategy. Optional — recommend it, don't
-require it; without one, Step 8 says so explicitly and presents the strategy
-options with its own recommendation rather than acting on a default.
+require it; with no policy present, Step 8 says so explicitly and presents the
+strategy options with its own recommendation rather than acting on a default.
 
 If the check finds nothing, recommend adding a heading with that exact text
 anywhere in root `AGENTS.md` (or `CLAUDE.md`) — matched by heading text, not
@@ -220,12 +221,13 @@ squashed commit carries that same pairing forward — and a model-version change
 mid-branch is not a second contributor.
 ```
 
-**The constraint:** however the authorship exception gets worded, it must
-exclude AI co-author trailers. In a repo that mandates one on every commit, a
-policy counting them vetoes every branch, making its own stated default
-unreachable. The rest is adjustable — including the SHA bullet, which a project
-can drop without losing the protection: `finalize-branch` Step 8 computes and
-surfaces cited SHAs regardless of what the policy says.
+**The constraint, which applies to all three forms:** however the authorship
+exception gets worded — inline, in the pointed-to file, or in what the script
+prints — it must exclude AI co-author trailers. In a repo that mandates one on
+every commit, a policy counting them vetoes every branch, making its own stated
+default unreachable. The rest is adjustable — including the SHA bullet, which a
+project can drop without losing the protection: `finalize-branch` Step 8
+computes and surfaces cited SHAs regardless of what the policy says.
 
 A pointer to a separate file the project maintains:
 
@@ -255,7 +257,7 @@ When the scaffold template releases structural changes:
 1. Create a new migration file: `migrations/vX-to-vY.md`
 2. Use the `migration-authoring` skill to ensure every step is agent-executable
 3. Run the quality checklist before finalizing
-4. Update the table above
+4. Add a row to the `## Available Migrations` table
 5. The version in `docs/README.md` is bumped automatically by release-please
 
 **Migration file structure:**
@@ -298,6 +300,10 @@ When the scaffold template releases structural changes:
 
 ## Adding a New Root-Level Convention
 
+_For maintainers of the plugin that ships the convention, not for projects
+consuming it: this section and the next describe editing this skill's own
+table._
+
 When a plugin skill starts depending on new content in root
 `AGENTS.md`/`CLAUDE.md` (as opposed to a `docs/` structural change, which goes
 through the migration path above):
@@ -319,10 +325,6 @@ through the migration path above):
 
 ## Revising an Existing Root-Level Convention
 
-_For maintainers of the plugin that ships the convention, not for projects
-consuming it. Like the section above, this describes editing this skill's own
-table._
-
 Revising a shipped convention is the step that gets skipped, because the change
 starts somewhere else. The maintainer hits the problem while working in the
 plugin repo's own root `AGENTS.md` — the dogfooded copy — fixes it there, and
@@ -338,8 +340,7 @@ So, whenever a root convention changes:
    examples describe behavior implemented elsewhere (`finalize-branch` Step 8,
    for Branch Landing Policy).
 3. **Leave the "Introduced In" column alone.** It records when the convention
-   was introduced, not when it was last edited — a revision bumps the plugin
-   version instead.
+   was introduced, not when it was last edited.
 4. Bump the plugin **minor** — a reworded recommendation changes behavior. As
    when adding one, the plugin's README changelog entry should **link to the
    convention's subsection under `## Root-Level Conventions`**, not duplicate
