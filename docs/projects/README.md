@@ -317,10 +317,13 @@ cross-references — leaving dated session notes and memories alone as historica
 record. Running it on a project that turns out _not_ to be done is a normal
 outcome: it records what remains and moves nothing.
 
-Leaving those historical references alone has a cost the documentation lint now
-makes visible: most of the broken links in this tree are memories and sessions
-pointing at projects that were archived after they were written. See
-[backlog/2026-09-02-sweep-project-archive-internal-link-exception.md](../backlog/2026-09-02-sweep-project-archive-internal-link-exception.md).
+Leaving those historical references alone has a cost the documentation lint
+makes visible the first time it runs: a large share of the broken links in a
+mature tree are memories and sessions pointing at projects that were archived
+after they were written. The reference was correct when it was made and rotted
+without anyone touching it. Fix them as the lint reports them — the rewrite is
+inserting `_archive/` before the project name — and expect a fresh batch after
+every archival until `sweep-project` learns to rewrite them itself.
 
 ## Templates
 

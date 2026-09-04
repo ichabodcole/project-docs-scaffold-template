@@ -14,9 +14,10 @@
     "docs:report": "bun docs/lint.ts --report",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check": "npm run format:check && npm run docs:lint && npm run test",
+    "check": "npm run format:check && npm run docs:lint && npm run check:mirror && npm run test",
     "prepare": "husky",
-    "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d"
+    "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d",
+    "check:mirror": "./scripts/check-mirror.sh"
   },
   "devDependencies": {
     "@slidev/cli": "^52.14.1",

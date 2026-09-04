@@ -3,11 +3,7 @@
   "version": "6.3.0",
   "lint": {
     "adopting": false,
-    "exclude": [
-      "docs/projects/markdown-slide-decks/artifacts/*-prototype.md",
-      "dist/**",
-      "\\{\\{cookiecutter.project_slug\\}\\}/**"
-    ],
+    "exclude": [],
     "durable": [
       "architecture",
       "specifications",
@@ -25,9 +21,6 @@
       "fragments",
       "cycles"
     ],
-    "skip": [
-      "_archive",
-      "superpowers"
-    ]
+    "skip": ["_archive"]
   }
 }

@@ -1,11 +1,21 @@
+---
+type: fragment # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "Fragment: [Brief Description]"
+description: "[One sentence: what did not feel right.]"
+tags: [area] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: open # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 # Fragment: [Brief Description]
 
-**Date**: YYYY-MM-DD
-**Context**: [Where/when this observation came up - session, feature work, etc.]
+**Context:** [Where/when this observation came up - session, feature work, etc.]
 
 ## Observation
 
-[What doesn't feel right? What did you work around? What's incomplete? What's an alternative solution that could be interesting to explore?]
+[What doesn't feel right? What did you work around? What's incomplete? What's an
+alternative solution that could be interesting to explore?]
 
 ## Why It Might Matter
 
@@ -15,7 +25,8 @@
 
 **What would make this worth investigating?**
 
-[Define the conditions that would prompt action. This is the key to making fragments actionable later. Examples:
+[Define the conditions that would prompt action. This is the key to making
+fragments actionable later. Examples:
 
 - "If tests become flaky"
 - "If performance becomes an issue"
@@ -27,7 +38,7 @@
 
 ## Related Documentation
 
-- Session: [Link to project session if applicable](../projects/project-name/sessions/session-name.md)
+- Session: [Link to session doc if applicable]
 - Code: [Link to relevant files/locations]
 - Related: [Other docs that provide context]
 

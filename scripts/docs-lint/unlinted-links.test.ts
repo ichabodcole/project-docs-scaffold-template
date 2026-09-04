@@ -75,19 +75,14 @@ describe("what it is exempt from, and why each exemption has to hold", () => {
     expect(linkProblemsFor(ROOT, [p])).toEqual([]);
   });
 
-  // dist/ is `scripts/build-skills-dist.sh` output: a finding there is a finding in
-  // plugins/, reported a second time in a file nobody edits.
-  test("dist/ is not read, because it is a copy of a tree that is", () => {
+  // `dist/` and the cookiecutter payload used to be excluded by a constant in this
+  // module. They are the CALLER's business now — see `lint.exclude` in
+  // `.project-docs.json` and the exclusion tests in `docs/lint.test.ts`. What is left
+  // here is the guarantee that this function reads whatever it is handed, so a caller
+  // that forgets to filter gets a report rather than silence.
+  test("a path the caller did not filter is read, not silently skipped", () => {
     const p = put("dist/project-docs/skills/s/SKILL.md", "See [x](./nowhere.md).\n");
-    expect(linkProblemsFor(ROOT, [p])).toEqual([]);
-  });
-
-  // The payload's relative links resolve against a GENERATED project root, not this one, so
-  // `../../` means something different here than where the document ends up. Reading it here
-  // reports links that are correct and misses ones that are not.
-  test("the cookiecutter payload is not read, because its links resolve elsewhere", () => {
-    const p = put("{{cookiecutter.project_slug}}/docs/README.md", "See [x](./nowhere.md).\n");
-    expect(linkProblemsFor(ROOT, [p])).toEqual([]);
+    expect(linkProblemsFor(ROOT, [p])).toHaveLength(1);
   });
 
   // The prefixes are anchored, so a sibling directory whose name merely starts the same way is

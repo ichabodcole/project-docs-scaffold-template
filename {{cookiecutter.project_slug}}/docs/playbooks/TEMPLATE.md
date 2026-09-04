@@ -1,3 +1,13 @@
+---
+type: playbook # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Topic] Playbook"
+description:
+  "[One sentence: what this playbook gets done, and when to reach for it.]"
+tags: [process, area] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create playbooks and when NOT to create them.
@@ -13,17 +23,15 @@ Adapt sections as needed - some playbooks might need 2 phases, others might need
 
 # [Topic] Playbook
 
-**Created:** YYYY-MM-DD
-**Last Updated:** YYYY-MM-DD
-**Status:** Draft | Active | Deprecated
-
 ---
 
 ## Context
 
 What is this playbook for?
 
-[1-2 paragraph description of what problem this playbook solves or what pattern it codifies. If this is for augmenting an existing system, describe the system and why additions follow a consistent pattern.]
+[1-2 paragraph description of what problem this playbook solves or what pattern
+it codifies. If this is for augmenting an existing system, describe the system
+and why additions follow a consistent pattern.]
 
 ## Applicability
 
@@ -65,7 +73,8 @@ The general strategy and guiding principles
 
 ## Steps / Phases
 
-Coarse sequence of actions (adapt as needed - add or remove phases based on your playbook)
+Coarse sequence of actions (adapt as needed - add or remove phases based on your
+playbook)
 
 ### Phase 1: [Phase Name]
 
@@ -113,7 +122,8 @@ Common pitfalls to avoid (add as many as relevant for your playbook)
 - **Root cause:** [Why it happens]
 - **Mitigation:** [How to avoid or fix it]
 
-[Add more gotchas based on experience - these are valuable lessons for future users]
+[Add more gotchas based on experience - these are valuable lessons for future
+users]
 
 ## Validation & Acceptance
 
@@ -136,12 +146,12 @@ Concrete examples of this playbook in use (add examples as they occur)
 
 ### Example 1: [Scenario]
 
-**Context:** [What was the situation]
-**Outcome:** [What happened]
-**Lessons:** [What was learned or refined from this use]
-**Reference:** [Link to project plan/session/PR]
+**Context:** [What was the situation] **Outcome:** [What happened] **Lessons:**
+[What was learned or refined from this use] **Reference:** [Link to
+plan/session/PR]
 
-[Add more examples as this playbook gets used - they validate and refine the approach]
+[Add more examples as this playbook gets used - they validate and refine the
+approach]
 
 ## Related Patterns
 

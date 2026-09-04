@@ -1,3 +1,13 @@
+---
+type: investigation # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "Investigation: [Topic or Question]"
+description: "[One sentence: the question this sets out to answer.]"
+tags: [area, question] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: active # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create investigations and when NOT to create them.
@@ -13,20 +23,20 @@ Focus on: What did you investigate? What did you find? What should happen next?
 
 # Investigation: [Topic/Question]
 
-**Date Started:** YYYY-MM-DD
-**Investigator:** [Name or "Claude Code"]
-**Status:** Active | Concluded
-**Outcome:** [TBD | Project created → projects/project-name/ | No Action Needed | Needs More Research | Monitoring]
+**Outcome:** [TBD | Proposal Recommended | No Action Needed | Needs More
+Research | Monitoring]
 
 ---
 
 ## Question / Motivation
 
-What are we investigating and why? What prompted this? What decision needs to be made?
+What are we investigating and why? What prompted this? What decision needs to be
+made?
 
 ## Current State Analysis
 
-What does the code/system look like today? Include relevant code references, metrics, patterns, or pain points.
+What does the code/system look like today? Include relevant code references,
+metrics, patterns, or pain points.
 
 ## Investigation Findings
 
@@ -34,7 +44,8 @@ What did we discover through analysis?
 
 ### Evidence Gathered
 
-[Code patterns, performance measurements, technology evaluations, concrete examples]
+[Code patterns, performance measurements, technology evaluations, concrete
+examples]
 
 ### Key Observations
 
@@ -42,13 +53,14 @@ What did we discover through analysis?
 
 ### Options Considered
 
-[If action might be needed, what are potential approaches? Include tradeoffs and complexity estimates. Don't forget "Do Nothing" as an option.]
+[If action might be needed, what are potential approaches? Include tradeoffs and
+complexity estimates. Don't forget "Do Nothing" as an option.]
 
 ## Recommendation
 
 Based on findings, what should we do? (Check one and explain)
 
-- [ ] **Create Project** - Action is warranted; create a project folder with a proposal
+- [ ] **Create Proposal** - Action is warranted
 - [ ] **No Action Needed** - Current state is acceptable
 - [ ] **Monitor** - Watch for specific signals/thresholds
 - [ ] **More Research Needed** - Outstanding questions remain
@@ -57,7 +69,8 @@ Based on findings, what should we do? (Check one and explain)
 
 ## Next Steps
 
-[Concrete actions based on recommendation - create project folder with proposal, document decision, schedule follow-up, etc.]
+[Concrete actions based on recommendation - create proposal, document decision,
+schedule follow-up, etc.]
 
 ## Open Questions (Optional)
 
@@ -68,5 +81,5 @@ Based on findings, what should we do? (Check one and explain)
 **Related Documents:**
 
 - [Code analyzed](../../src/path/to/code.ts)
-- [Related project](../projects/project-name/proposal.md) (if created)
+- [Related proposal](../projects/project-name/proposal.md) (if created)
 - [Related architecture](../architecture/architecture-name.md)

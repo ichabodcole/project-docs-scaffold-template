@@ -12,6 +12,20 @@ proposal in `proposals/`, its plan in `plans/`, and its sessions in `sessions/`,
 everything lives together. Opening a project folder gives you the complete
 history of why and how something was built.
 
+### Projects and Cycles
+
+A project is the **topical home of one feature** — it exists for as long as that
+feature does, and it outlives every stretch of work that touches it. A
+[cycle](../cycles/README.md) is the **work in play right now**, and it points at
+projects rather than holding their documents.
+
+The two are easy to conflate and worth keeping apart. Three projects can be in
+one cycle; one project can be touched by three cycles a year apart. If cycles
+owned documents, that project's record would be scattered across all three.
+
+So: proposals, plans, sessions and artifacts stay here. A cycle links to them
+and says which ones are live.
+
 ### Why Use Project Folders?
 
 - **Full story in one place** - Proposal, plan, sessions, and artifacts are
@@ -120,6 +134,17 @@ explore options, constraints, and expected outcomes.
 - Still uncertain if action is needed — investigate first
 - Trivial changes — use backlog
 - Already know exactly what to do — skip to a plan
+
+**State:** a proposal's frontmatter carries `lifecycle`, and the value that
+matters most is that **`approved` is not `implemented`**. A proposal can be
+argued and accepted long before anything is built, and the gap between those two
+states is where most of this folder actually lives. The full vocabulary —
+`draft`, `approved`, `deferred`, `implemented`, `withdrawn`, `superseded` — is
+in [SCHEMA.md](../SCHEMA.md).
+
+Do not write a `**Status:**` line in the body. That convention is what produced
+`Approved (in flight)` in three proposals, invented because the vocabulary had
+no word for it; `lifecycle` now does, and the lint checks it.
 
 **Length guidance:**
 
@@ -273,17 +298,32 @@ prefixes.
 
 ## Archival
 
+**Archival is a `lifecycle` value first and a folder move second.** Setting a
+proposal to `implemented`, `withdrawn` or `deferred` is what records that the
+work is over; moving the folder is housekeeping that may follow. Every terminal
+value permits the move and none requires it, which lets `sweep-project` decide
+on state rather than on where a folder sits. A project inside an active cycle's
+`scope` is never moved.
+
 When a project is complete, move the entire folder to `projects/_archive/`.
 Internal references remain valid because they're relative within the folder.
 External references to archived projects use `./_archive/project-name/` paths
 (from the projects directory).
 
-The `sweep-project` skill does this for you, and does it in the right order:
-it reconciles the plan against what was actually built, confirms with you that
-the project really is finished, then moves the folder and updates live
+The `sweep-project` skill does this for you, and does it in the right order: it
+reconciles the plan against what was actually built, confirms with you that the
+project really is finished, then moves the folder and updates live
 cross-references — leaving dated session notes and memories alone as historical
-record. Running it on a project that turns out *not* to be done is a normal
+record. Running it on a project that turns out _not_ to be done is a normal
 outcome: it records what remains and moves nothing.
+
+Leaving those historical references alone has a cost the documentation lint
+makes visible the first time it runs: a large share of the broken links in a
+mature tree are memories and sessions pointing at projects that were archived
+after they were written. The reference was correct when it was made and rotted
+without anyone touching it. Fix them as the lint reports them — the rewrite is
+inserting `_archive/` before the project name — and expect a fresh batch after
+every archival until `sweep-project` learns to rewrite them itself.
 
 ## Templates
 
@@ -297,5 +337,12 @@ Project-scoped templates are available in the `TEMPLATES/` subfolder:
 - `TEMPLATES/YYYY-MM-DD-SESSION.template.md` — Starting point for session
   journals
 - `TEMPLATES/HANDOFF.template.md` — Starting point for deployment handoffs
+
+Each template opens with the frontmatter block its document type requires. Fill
+it in rather than deleting it — `title`, `description` and `generated` are the
+fields the lint asks for, and `description` is one sentence that has to stand on
+its own. A test renders every template and checks the result passes the gate, so
+a template that drifts from the schema fails in CI rather than in your first
+document.
 
 Copy the relevant template into your project folder when needed.

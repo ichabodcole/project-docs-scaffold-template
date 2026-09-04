@@ -11,6 +11,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { loadConfig } from "../scripts/docs-lint/config.ts";
 import {
   type Ctx,
   DURABLE_TYPE,
@@ -286,6 +287,29 @@ describe("lint.exclude — files that are not documentation", () => {
     expect(ctx.config.lint.exclude).toEqual([]);
     expect(thinTier(ctx)).toHaveLength(1);
   });
+
+  // `{a,b}` is alternation in a glob, so a directory literally named
+  // `{{cookiecutter.project_slug}}` needs its braces escaped or the pattern matches
+  // nothing — silently, which is the bad way for an exclusion to fail. This repo's
+  // own config carries that pattern; the escaping is easy to lose in a JSON edit.
+  test("a literal-brace path needs escaped braces, and gets no warning without them", () => {
+    const escaped = new Bun.Glob("\\{\\{cookiecutter.project_slug\\}\\}/**");
+    const bare = new Bun.Glob("{{cookiecutter.project_slug}}/**");
+    const path = "{{cookiecutter.project_slug}}/docs/README.md";
+    expect(escaped.match(path)).toBe(true);
+    expect(bare.match(path)).toBe(false);
+  });
+
+  // These two trees used to be a constant inside `unlinted-links.ts`, which put one
+  // repository's directory names in a file shipped to every other one. They are
+  // config now, so this is what holds them in place.
+  test("this repository excludes its build output and its template payload", () => {
+    const config = loadConfig(REPO_ROOT);
+    expect(config.lint.exclude).toContain("dist/**");
+    expect(config.lint.exclude).toContain(
+      "\\{\\{cookiecutter.project_slug\\}\\}/**",
+    );
+  });
 });
 
 describe("frontmatter a real YAML parser would reject", () => {
@@ -323,6 +347,30 @@ describe("frontmatter a real YAML parser would reject", () => {
 
   test("templates and READMEs are not read here either", () => {
     const ctx = fixture({ "docs/reports/TEMPLATE.md": doc("Broken: yes.") });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+  });
+
+  // A trailing comment is not part of the value. This check used to test the raw
+  // text after the colon, so the first real page to carry `status: draft # OKF
+  // §5.4: draft | stable | deprecated` was reported as broken frontmatter — by a
+  // rule about a hazard that was in the comment, not in the value.
+  test("an inline comment containing a colon is not part of the scalar", () => {
+    const ctx = fixture({
+      "docs/reports/2026-09-04-a.md":
+        "---\ntype: report\ntitle: A\ndescription: A report.\n" +
+        "status: draft # OKF \u00a75.4: draft | stable | deprecated\n" +
+        "generated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
+    });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+    expect(thinTier(ctx)).toEqual([]);
+  });
+
+  test("a `#` inside a quoted value is still part of the value, not a comment", () => {
+    const ctx = fixture({
+      "docs/reports/2026-09-04-b.md":
+        '---\ntype: report\ntitle: B\ndescription: "Tagged #urgent: act now"\n' +
+        "status: stable\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# B\n",
+    });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 });

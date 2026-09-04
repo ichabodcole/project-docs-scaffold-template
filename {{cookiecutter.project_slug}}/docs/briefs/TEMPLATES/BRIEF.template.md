@@ -1,3 +1,13 @@
+---
+type: brief # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Idea Title]"
+description: "[One sentence: the idea, in its own terms.]"
+tags: [area, idea] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: active # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to docs/briefs/ as `YYYY-MM-DD-<name>.md`.
 
@@ -12,9 +22,6 @@ For more guidance, see: ../README.md
 -->
 
 # [Idea Title]
-
-**Created:** YYYY-MM-DD\
-**Status:** Draft | Active | Spawned | Parked
 
 ---
 

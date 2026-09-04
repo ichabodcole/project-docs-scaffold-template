@@ -278,14 +278,18 @@ Reports can become stale as systems evolve:
 
 - **Investigations** - Reports provide evidence that triggers investigations;
   investigations reference reports as context
-- **Proposals** - Reports identify problems that proposals aim to solve;
-  proposals reference reports as motivation
-- **Plans** - Reports can trigger proposals that lead to plans
-- **Sessions** - Implementation work may generate new reports (e.g.,
-  post-implementation code review)
+- **Projects** - Reports identify problems that projects aim to solve; project
+  proposals reference reports as motivation. Reports can also trigger new
+  projects directly when the path forward is clear.
+- **Backlog** - Report findings that are small and well-defined can go directly
+  to backlog items
 - **Lessons Learned** - Reports may uncover patterns that become lessons learned
 - **Architecture** - Architecture assessment reports evaluate existing
   architecture docs
+
+Reports stay top-level alongside investigations. They are cross-cutting,
+observational documents that serve as connective tissue between projects rather
+than belonging to any single body of work.
 
 ---
 
@@ -366,12 +370,12 @@ This prevents unnecessary re-checking and provides confidence in system health.
    - Finding: Input validation inconsistent across API endpoints
    - Recommendation: Standardize input sanitization approach
 
-2. **Proposal:** `2025-11-16-input-sanitization-framework-proposal.md`
+2. **Project:** `projects/input-sanitization/proposal.md`
    - References security audit as motivation
    - Proposes unified sanitization library
    - Outlines implementation approach
 
-3. **Plan:** `2025-11-20-input-sanitization-framework-plan.md`
+3. **Plan:** `projects/input-sanitization/plan.md`
    - Implementation roadmap based on proposal
    - Phases, acceptance criteria, timeline
 
@@ -382,7 +386,7 @@ This prevents unnecessary re-checking and provides confidence in system health.
    - Root cause: Missing virtualization
    - Recommendation: Implement virtual scrolling (clear solution)
 
-2. **Direct to Plan:** `2025-12-02-virtual-scrolling-implementation-plan.md`
+2. **Direct to Project:** `projects/virtual-scrolling/plan.md`
    - No investigation needed - solution is obvious
    - References performance report as motivation
    - Outlines implementation approach
@@ -398,9 +402,9 @@ After generating a report, consider:
    ignoring?
 3. **Create follow-up work:**
    - **Investigation** if unclear whether to act or need more analysis
-   - **Proposal** if action is clearly warranted and you need to plan the
+   - **Project** if action is clearly warranted and you need to plan the
      solution
-   - **Issues/tasks** for small, straightforward fixes
+   - **Backlog item** for small, straightforward fixes
    - **Nothing** if findings show the system is healthy
 4. **Share the report** - Ensure relevant team members are aware of findings
 5. **Archive when superseded** - Mark the report as archived when a newer

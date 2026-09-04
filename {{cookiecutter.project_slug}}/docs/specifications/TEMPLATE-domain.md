@@ -1,3 +1,12 @@
+---
+type: specification # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Domain Name] Specification"
+description: "[One sentence: what this domain must do.]"
+tags: [domain, area] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create specifications and what to include.
@@ -16,7 +25,8 @@ No framework names, no library names, no language-specific syntax.
 
 ## Overview
 
-[1-3 sentences describing what this domain is and why it exists in the application. What role does it play?]
+[1-3 sentences describing what this domain is and why it exists in the
+application. What role does it play?]
 
 ## Data Model
 
@@ -80,9 +90,9 @@ Use ASCII art for the diagram and a table for transition details.
              [State D]
 ```
 
-| From | Event | To | Side Effects |
-| ---- | ----- | -- | ------------ |
-|      |       |    |              |
+| From | Event | To  | Side Effects |
+| ---- | ----- | --- | ------------ |
+|      |       |     |              |
 
 ## User Interactions
 
