@@ -14,7 +14,7 @@
     "docs:report": "bun docs/lint.ts --report",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check": "npm run format:check && npm run docs:lint",
+    "check": "npm run format:check && npm run docs:lint && npm run test",
     "prepare": "husky",
     "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d"
   },
