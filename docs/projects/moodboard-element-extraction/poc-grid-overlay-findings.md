@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "PoC Findings — Grid Overlay for Coordinate Constraint"
+description:
+  Whether overlaying a labelled grid lets a model name cells instead of guessing
+  pixels. It does, roughly.
 status: stable
 generated: { by: unknown, at: 2026-05-23 }
 ---

@@ -1,6 +1,9 @@
 ---
 type: report
 title: "PM Work-Taxonomy Landscape: intent, grouping, and in-play units"
+description:
+  What Shape Up, Linear, Jira and their neighbours each call the container for
+  work in play, and what they agree on.
 status: stable
 generated: { by: unknown, at: 2026-09-03 }
 ---

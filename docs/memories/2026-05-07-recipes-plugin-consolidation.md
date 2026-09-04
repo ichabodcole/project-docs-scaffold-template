@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Recipes plugin consolidated to umbrella skill
+description:
+  Twenty-one recipe skills became one umbrella skill loading recipes on demand,
+  trading public skill names for a namespace that stops growing.
+tags: [recipes, plugins, consolidation]
 status: stable
 generated: { by: unknown, at: 2026-05-07 }
 ---

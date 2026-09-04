@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Create Toolbox Plugin — 2026-03-22"
+description:
+  Created the toolbox namespace for utilities that are not about project
+  documentation, and moved two skills into it.
 status: stable
 generated: { by: unknown, at: 2026-03-22 }
 ---

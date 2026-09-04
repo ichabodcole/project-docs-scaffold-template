@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Digestify Reference Input — Initial Implementation — 2026-05-07"
+description:
+  Added --reference so digestify reads the document from disk, and the agent's
+  context never carries it.
 status: stable
 generated: { by: unknown, at: 2026-05-07 }
 ---

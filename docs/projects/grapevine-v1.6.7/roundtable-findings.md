@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "Grapevine V1.6 Multi-Channel Shakedown — Roundtable Findings"
+description:
+  What the multi-channel two-agent session actually broke, recorded as it
+  happened rather than reconstructed after.
 status: stable
 generated: { by: unknown, at: 2026-05-28 }
 ---

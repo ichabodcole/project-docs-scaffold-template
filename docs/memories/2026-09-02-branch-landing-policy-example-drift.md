@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Branch Landing Policy example had drifted from its implementation
+description:
+  The landing-policy example shipped to downstream projects still carried
+  wording this repo had already replaced for being unreachable.
+tags: [skills, update-project-docs, drift]
 status: stable
 generated: { by: unknown, at: 2026-09-02 }
 ---

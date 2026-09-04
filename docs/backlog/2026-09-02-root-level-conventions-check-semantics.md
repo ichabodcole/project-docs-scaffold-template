@@ -3,6 +3,9 @@ type: backlog
 title:
   '`Root-Level Conventions`: "if the check finds nothing" is ambiguous across
   the two rows'
+description:
+  update-project-docs Step 6 checks whether a convention heading exists, not
+  whether its content is current, so a drifted convention passes.
 status: stable
 lifecycle: open
 generated: { by: unknown, at: 2026-09-02 }

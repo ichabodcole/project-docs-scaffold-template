@@ -137,7 +137,10 @@ export const SPEC: Record<
   // "promoted" is the rarer outcome where an item turns out to need a project.
   // Without `done` the common case had no word, which is the same failure that
   // produced `Approved (in flight)` on the proposals.
-  backlog: { type: "backlog", lifecycle: ["open", "done", "promoted", "dropped"] },
+  backlog: {
+    type: "backlog",
+    lifecycle: ["open", "done", "promoted", "dropped"],
+  },
   fragments: { type: "fragment", lifecycle: ["open", "promoted", "dropped"] },
   briefs: { type: "brief", lifecycle: ["active", "spent"] },
   investigations: { type: "investigation", lifecycle: ["active", "concluded"] },
@@ -351,6 +354,48 @@ function generatedProblems(
   return [];
 }
 
+/**
+ * Frontmatter that this repo's lenient parser accepts and a real YAML parser
+ * would not.
+ *
+ * `description: finalize-branch stopped assuming: it verifies …` is a mapping
+ * with two colons, and every YAML library reads it as a syntax error or as a
+ * nested key. `parseFrontmatter` here splits on the FIRST colon and hands back
+ * the rest as a string, so the document looks fine to the gate and breaks in
+ * the next tool that reads it.
+ *
+ * Checked across both tiers, because the hazard is the punctuation rather than
+ * the folder — and hand-written `description` values are exactly where a colon
+ * turns up.
+ */
+export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
+  const excluded = excluder(ctx);
+  const skip = new Set([...ctx.config.lint.skip, "TEMPLATES"]);
+  const problems: string[] = [];
+
+  for (const path of walkMarkdown(ctx.docsRoot, skip)) {
+    const name = basename(path);
+    if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
+    const rel = relative(ctx.repoRoot, path);
+    if (excluded(rel)) continue;
+    const m = /^---\n([\s\S]*?)\n---/.exec(readFileSync(path, "utf8"));
+    if (!m) continue;
+
+    for (const line of (m[1] as string).split("\n")) {
+      const kv = /^([A-Za-z_][\w-]*):\s+(\S.*)$/.exec(line);
+      if (!kv) continue;
+      const value = (kv[2] as string).trim();
+      // Quoted, a flow collection, or a mapping — all unambiguous.
+      if (/^["'[{]/.test(value)) continue;
+      if (/:\s/.test(value))
+        problems.push(
+          `BAD SCALAR     ${rel}: \`${kv[1]}\` contains ": " unquoted  (a real YAML parser reads this as a nested mapping)`
+        );
+    }
+  }
+  return problems;
+}
+
 // ---------------------------------------------------------------------------------------
 // The library: the ported core, plus the catalog hook check
 // ---------------------------------------------------------------------------------------
@@ -385,9 +430,14 @@ export function catalogEntries(
     if (m)
       out.push({
         target: (m[1] ?? "").replace(/^\.\//, ""),
+        // Prettier escapes markdown-active characters in body text and not in
+        // YAML, so a description containing `_archive/` reaches the catalog as
+        // `\_archive/`. Comparing the two verbatim would fail on the escape
+        // rather than on the drift the check exists to find.
         hook: (m[2] ?? "")
           .replace(/\s+/g, " ")
           .replace(/^\s*—\s*/, "")
+          .replace(/\\([_*`[\]<>#~])/g, "$1")
           .trim(),
       });
   }
@@ -639,6 +689,7 @@ function main(): void {
   console.log(`\n── workbench (thin tier) ───────────────────────────────`);
   const rest = [
     ...thinTier(ctx),
+    ...frontmatterSyntaxProblems(ctx),
     ...schemaTableChecks(readFileSync(join(ctx.docsRoot, "SCHEMA.md"), "utf8")),
     // Everything git tracks outside the docs root: README, AGENTS, and the
     // shipped plugin pages, where a link to a moved playbook is a broken

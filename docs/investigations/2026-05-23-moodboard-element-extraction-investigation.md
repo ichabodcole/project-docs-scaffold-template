@@ -1,6 +1,9 @@
 ---
 type: investigation
 title: Agentic Moodboard / Branding-Board Element Extraction
+description:
+  How to split an AI-generated branding board into its individual elements
+  without cropping each one by hand.
 status: stable
 lifecycle: concluded
 generated: { by: unknown, at: 2026-05-23 }
@@ -296,14 +299,13 @@ Claude Code agent turn):
 
    > Detected 4 candidate regions:
    >
-   > 1. ![](preview_001.png) — upper-left, 380×360px → suggested name
-   >    `mascot.webp`
-   > 2. ![](preview_002.png) — upper-right, 220×220px → suggested name
+   > 1. `preview_001.png` — upper-left, 380×360px → suggested name `mascot.webp`
+   > 2. `preview_002.png` — upper-right, 220×220px → suggested name
    >    `favicon.png`
-   > 3. ![](preview_003.png) — center, 800×600px → suggested name
+   > 3. `preview_003.png` — center, 800×600px → suggested name
    >    `mascot-large.webp`
-   > 4. ![](preview_004.png) — bottom-left, 120×40px (looks like a colour swatch
-   >    — likely noise?)
+   > 4. `preview_004.png` — bottom-left, 120×40px (looks like a colour swatch —
+   >    likely noise?)
    >
    > Accept all? Reject specific numbers? Rename?
 

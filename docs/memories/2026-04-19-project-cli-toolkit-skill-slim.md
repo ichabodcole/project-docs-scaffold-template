@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Slimmed project-cli-toolkit Skill to Companion Doc
+description:
+  The project-cli-toolkit recipe shrank from 1071 lines to 386 once an installer
+  owned the scaffold and the recipe kept only the rationale.
+tags: [recipes, cli, skill-design]
 status: stable
 generated: { by: unknown, at: 2026-04-19 }
 ---

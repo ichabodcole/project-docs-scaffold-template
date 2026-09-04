@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: Consolidating a Long Branch Playbook
+description:
+  How to collapse a branch of dozens of WIP saves and reversals into a history
+  someone can read.
 status: stable
 generated: { by: unknown, at: 2026-04-12 }
 ---
@@ -420,8 +423,8 @@ clean grouping. Pre-writing all seven commit messages to
 
 ## Related Patterns
 
-- [Playbooks README](./README.md) — when to write a playbook vs. a plan or
-  session
+- [Playbooks README](../../playbooks/README.md) — when to write a playbook vs. a
+  plan or session
 - Project guidance: `AGENTS.md` (branch workflow: branch off `develop`, merge to
   `develop`, user handles `develop` → `main`)
 

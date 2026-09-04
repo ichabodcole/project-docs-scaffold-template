@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Tuskboard skill shipped
+description:
+  Tuskboard shipped — a duplex agent-and-user task board in the browser, and the
+  first flagship use of the agent-surface-bun pattern.
+tags: [toolbox, tuskboard, agent-surfaces]
 status: stable
 generated: { by: unknown, at: 2026-05-24 }
 ---

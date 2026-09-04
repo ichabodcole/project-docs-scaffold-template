@@ -1,6 +1,9 @@
 ---
 type: brief
 title: "Knowledge Wiki Layer — a durable, graph-shaped documentation surface"
+description:
+  docs/ mixes durable knowledge that should grow with ephemeral artifacts that
+  close, and treats both the same way.
 status: stable
 lifecycle: active
 generated: { by: unknown, at: 2026-07-23 }

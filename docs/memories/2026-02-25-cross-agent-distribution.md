@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Cross-agent skill distribution pipeline
+description:
+  A build script packages plugin skills, agents and commands into dist/ with
+  OpenPackage manifests, so they run outside Claude Code.
+tags: [distribution, plugins, build]
 status: stable
 generated: { by: unknown, at: 2026-02-25 }
 ---
@@ -16,5 +20,5 @@ skills validate against the Agent Skills spec via `skills-ref`. Run
 `scripts/validate-skills-dist.py`, `dist/`
 
 **Docs:**
-[Session](docs/projects/cross-agent-distribution/sessions/2026-02-25-initial-implementation.md),
-[Investigation](docs/investigations/2026-02-25-cross-agent-skill-portability.md)
+[Session](../projects/_archive/cross-agent-distribution/sessions/2026-02-25-initial-implementation.md),
+[Investigation](../investigations/2026-02-25-cross-agent-skill-portability.md)

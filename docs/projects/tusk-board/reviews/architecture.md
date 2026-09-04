@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "Architectural Review — Tusk Board"
+description:
+  A read of the first duplex surface's architecture — the stdio contract holds;
+  the state model is where to look next.
 status: stable
 generated: { by: unknown, at: 2026-05-24 }
 ---

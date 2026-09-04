@@ -1,6 +1,9 @@
 ---
 type: backlog
 title: "`sweep-project` reference boundary class misses three real terminators"
+description:
+  The boundary class in sweep-project's discovery pattern stops one false match
+  and lets several others through.
 status: stable
 lifecycle: open
 generated: { by: unknown, at: 2026-09-02 }

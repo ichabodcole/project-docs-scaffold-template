@@ -3,6 +3,9 @@ type: artifact
 title:
   "Removals: guidance-not-argument pass on the 3.6.0 root-convention work —
   2026-09-02"
+description:
+  Every passage the guidance-not-argument pass removed from 3.6.0, quoted
+  verbatim with why it went.
 status: stable
 generated: { by: unknown, at: 2026-09-02 }
 ---

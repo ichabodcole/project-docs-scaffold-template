@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Layout Pattern Components — 2026-03-19"
+description:
+  Added the layout-level component patterns that an agent-builder prototype kept
+  needing and the reference did not have.
 status: stable
 generated: { by: unknown, at: 2026-03-19 }
 ---

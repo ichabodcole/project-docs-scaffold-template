@@ -1,6 +1,8 @@
 ---
 type: session
 title: "Skill Refinement and Agent Creation — 2026-03-13"
+description:
+  Reviewed and tightened the new skill, then added the agent that drives it.
 status: stable
 generated: { by: unknown, at: 2026-03-13 }
 ---
@@ -79,4 +81,4 @@ content updates), major for breaking changes.
 **Related Documents:**
 
 - [Session 1](./2026-03-13-tooling-investigation-and-skill.md)
-- [Investigation](../../investigations/2026-03-13-markdown-slide-deck-tooling.md)
+- [Investigation](../../../investigations/_archive/2026-03-13-markdown-slide-deck-tooling.md)

@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Migration scripts added to update-project-docs skill
+description:
+  Migration guides gained shell scripts for their mechanical steps, so an
+  upgrade is run rather than transcribed.
+tags: [migrations, scripts, update-project-docs]
 status: stable
 generated: { by: unknown, at: 2026-03-03 }
 ---
@@ -17,4 +21,4 @@ guides updated with "Run the Script First" sections and `[Agent]` labels.
 `plugins/project-docs/skills/update-project-docs/migrations/v*.md`
 
 **Docs:**
-[Session](../projects/migration-scripts/sessions/2026-03-03-implement-migration-scripts.md)
+[Session](../projects/_archive/migration-scripts/sessions/2026-03-03-implement-migration-scripts.md)

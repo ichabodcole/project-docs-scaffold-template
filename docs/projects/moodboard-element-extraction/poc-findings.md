@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "PoC Findings — Claude Vision Bbox Precision"
+description:
+  Can Claude's own vision return crop-precise bounding boxes on a multi-element
+  board? The kill criterion fired.
 status: stable
 generated: { by: unknown, at: 2026-05-23 }
 ---

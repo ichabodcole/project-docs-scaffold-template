@@ -1,6 +1,9 @@
 ---
 type: plan
 title: Grapevine V1.6.7 Implementation Plan
+description:
+  "The route for the V1.6.7 scope: the connection-liveness fix first, then the
+  cluster of CLI paper cuts around it."
 status: stable
 lifecycle: completed
 generated: { by: unknown, at: 2026-05-28 }

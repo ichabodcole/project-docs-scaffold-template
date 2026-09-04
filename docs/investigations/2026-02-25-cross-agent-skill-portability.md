@@ -1,6 +1,9 @@
 ---
 type: investigation
 title: Cross-Agent Skill Portability and Distribution
+description:
+  Whether skills distributed only through the Claude Code marketplace can be
+  made to run under other agent harnesses.
 status: stable
 lifecycle: active
 generated: { by: unknown, at: 2026-02-25 }

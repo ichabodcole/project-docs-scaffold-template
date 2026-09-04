@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Digestify Session Recovery — Initial Implementation — 2026-05-08"
+description:
+  Added the countdown, heartbeat and draft recovery that stop a slow review from
+  losing what was typed.
 status: stable
 generated: { by: unknown, at: 2026-05-08 }
 ---
@@ -169,4 +172,4 @@ dev tool.
 - [Toolbox 1.5.0 commit](../../../../) (squashed onto develop on merge)
 - [Prior session](../../digestify-reference-input/sessions/2026-05-07-initial-implementation.md)
   — context for why digestify ships with `--reference` and idle timers stacked
-- [SKILL.md](../../../../plugins/toolbox/skills/digestify/SKILL.md)
+- `plugins/toolbox/skills/digestify/SKILL.md`

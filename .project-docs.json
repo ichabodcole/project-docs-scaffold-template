@@ -2,7 +2,7 @@
   "docsRoot": "docs",
   "version": "6.3.0",
   "lint": {
-    "adopting": true,
+    "adopting": false,
     "exclude": [
       "docs/projects/markdown-slide-decks/artifacts/*-prototype.md"
     ],

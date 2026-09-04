@@ -1,6 +1,10 @@
 ---
 type: manifesto
 title: Project Manifesto
+description:
+  What this project is for, what it deliberately is not, and the principles that
+  decide the arguments in between.
+tags: [manifesto, principles, scope]
 status: stable
 generated: { by: unknown, at: 2026-05-21 }
 ---

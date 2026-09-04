@@ -2,6 +2,9 @@
 type: backlog
 title:
   "`_archive`-internal link exception escapes `sweep-project`'s own invariants"
+description:
+  sweep-project leaves inbound references alone when it archives a project, so
+  every archive breaks the memories and sessions that cite it.
 status: stable
 lifecycle: open
 generated: { by: unknown, at: 2026-09-02 }

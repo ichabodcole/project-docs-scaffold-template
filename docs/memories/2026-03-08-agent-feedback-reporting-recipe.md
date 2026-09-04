@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Added agent-feedback-reporting recipe
+description:
+  A recipe for giving agents a structured way to report difficulty mid-run, with
+  the entity_id correlation gotcha written down.
+tags: [recipes, agent-feedback, patterns]
 status: stable
 generated: { by: unknown, at: 2026-03-08 }
 ---
@@ -17,4 +21,4 @@ processing entity (e.g., ad-hoc MCP tool calls). MCP variant guidance included.
 **Key files:** `plugins/recipes/skills/agent-feedback-reporting/SKILL.md`
 
 **Docs:**
-[Session](docs/projects/agent-feedback-reporting/sessions/2026-03-08-recipe-authoring.md)
+[Session](../projects/_archive/agent-feedback-reporting/sessions/2026-03-08-recipe-authoring.md)

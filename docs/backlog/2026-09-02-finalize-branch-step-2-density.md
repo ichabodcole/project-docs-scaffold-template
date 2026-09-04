@@ -1,6 +1,9 @@
 ---
 type: backlog
 title: "`finalize-branch` Step 2 is 149 lines of argument for a short procedure"
+description:
+  finalize-branch Step 2 is 149 lines, most of it justification an executing
+  agent has to read past to find the instruction.
 status: stable
 lifecycle: open
 generated: { by: unknown, at: 2026-09-02 }

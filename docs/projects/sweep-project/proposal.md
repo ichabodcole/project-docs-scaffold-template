@@ -1,8 +1,11 @@
 ---
 type: proposal
 title: "Project Sweep & Closure Touchpoint"
+description:
+  The pipeline described archival as its terminal stage and nothing performed
+  it; this is the skill that reconciles a project and closes it.
 status: stable
-lifecycle: approved
+lifecycle: implemented
 generated: { by: unknown, at: 2026-08-07 }
 ---
 

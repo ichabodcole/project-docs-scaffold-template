@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Finalize — 2026-05-24"
+description:
+  Closed the branch that started as drag-and-drop and became a branded duplex
+  surface, including the mid-branch rename.
 status: stable
 generated: { by: unknown, at: 2026-05-24 }
 ---

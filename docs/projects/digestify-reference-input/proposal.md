@@ -1,8 +1,11 @@
 ---
 type: proposal
 title: "Digestify — Reference Input"
+description:
+  Let the agent hand Digestify a file path instead of pasting the document
+  through stdin, so a long review costs no context.
 status: stable
-lifecycle: approved
+lifecycle: implemented
 generated: { by: unknown, at: 2026-05-07 }
 ---
 

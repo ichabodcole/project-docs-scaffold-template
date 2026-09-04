@@ -3,6 +3,9 @@ type: report
 title:
   "File-Based Work-Tracking Landscape: repo-native units, status vocabularies,
   and closure"
+description:
+  How file-based conventions — KEPs, PEPs, RFDs, ADRs — name the states of a
+  piece of work, and where OKF fits.
 status: stable
 generated: { by: unknown, at: 2026-09-03 }
 ---

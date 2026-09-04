@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Skill update for Claude Desktop DCR gotcha — 2026-04-16"
+description:
+  Traced the silent Desktop connector failure to a DCR response nobody was
+  allowed to see, and wrote it into the recipe.
 status: stable
 generated: { by: unknown, at: 2026-04-16 }
 ---

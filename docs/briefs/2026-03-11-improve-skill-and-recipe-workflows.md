@@ -1,6 +1,9 @@
 ---
 type: brief
 title: "Improve Skill & Improve Recipe Workflows"
+description:
+  Using skills and recipes in another project surfaced gaps in them, and there
+  was no route for that feedback to reach the source.
 status: stable
 lifecycle: active
 generated: { by: unknown, at: 2026-03-11 }

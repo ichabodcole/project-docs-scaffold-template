@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Completion marks generalization and cold-read hardening — 2026-09-02"
+description:
+  Generalized checkbox-hunting into reading completion marks in whatever idiom
+  the document already uses.
 status: stable
 generated: { by: unknown, at: 2026-09-02 }
 ---

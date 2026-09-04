@@ -3,6 +3,9 @@ type: proposal
 title:
   "OKF Frontmatter Layer — machine-readable metadata, lint, and cycles on the
   existing docs/ structure"
+description:
+  OKF frontmatter on every document, a two-tier lint that gates commits and CI,
+  and one new type for the work in play.
 status: stable
 lifecycle: approved
 generated: { by: unknown, at: 2026-09-03 }

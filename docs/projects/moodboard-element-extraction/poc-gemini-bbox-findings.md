@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "PoC Findings — Gemini 3.5 Flash bbox via OpenRouter"
+description:
+  Gemini returns bounding boxes precise enough to crop from, where Claude's
+  vision did not.
 status: stable
 generated: { by: unknown, at: 2026-05-23 }
 ---

@@ -1,6 +1,9 @@
 ---
 type: plan
 title: OKF Frontmatter Layer Implementation Plan
+description:
+  The route from a repo with no TypeScript and 117 unmarked documents to one
+  where the lint gates every commit.
 tags: [line, if, present]
 status: stable
 lifecycle: active

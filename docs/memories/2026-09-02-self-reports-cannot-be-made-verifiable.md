@@ -1,6 +1,10 @@
 ---
 type: memory
 title: A self-report can't be made verifiable by constraining its wording
+description:
+  Constraining how an agent words a self-report does not make the report
+  verifiable; only checking the capability does.
+tags: [skills, finalize-branch, verification]
 status: stable
 generated: { by: unknown, at: 2026-09-02 }
 ---

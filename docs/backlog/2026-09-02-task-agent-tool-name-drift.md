@@ -1,6 +1,9 @@
 ---
 type: backlog
 title: "`Task` vs `Agent`: stale dispatch-tool name across skills and agents"
+description:
+  Four skills still declare the subagent tool as `Task`, a name that no longer
+  exists in any current environment.
 status: stable
 lifecycle: open
 generated: { by: unknown, at: 2026-09-02 }

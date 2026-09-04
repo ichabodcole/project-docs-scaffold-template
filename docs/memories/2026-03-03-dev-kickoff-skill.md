@@ -1,6 +1,10 @@
 ---
 type: memory
 title: dev-kickoff skill replaces parallel-worktree-dev
+description:
+  dev-kickoff replaced parallel-worktree-dev with one orchestrator that handles
+  both the worktree and main-repo paths.
+tags: [skills, workflow, worktrees]
 status: stable
 generated: { by: unknown, at: 2026-03-03 }
 ---

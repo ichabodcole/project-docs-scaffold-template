@@ -1,6 +1,9 @@
 ---
 type: plan
 title: "Project Sweep & Closure Touchpoint Implementation Plan"
+description:
+  "The two-piece split: a skill that reconciles a project against what was
+  built, and the touchpoint that calls it."
 status: stable
 lifecycle: completed
 generated: { by: unknown, at: 2026-08-07 }

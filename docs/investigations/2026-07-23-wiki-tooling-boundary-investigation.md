@@ -2,6 +2,9 @@
 type: investigation
 title:
   "Wiki tooling boundary — reusable vs app-coupled, and the navigation home"
+description:
+  How solid a frontmatter standard has to be before tooling can be built on it,
+  and where that tooling should live.
 status: stable
 lifecycle: active
 generated: { by: unknown, at: 2026-07-23 }

@@ -1,6 +1,10 @@
 ---
 type: summary
 title: Project Summary
+description:
+  "A synthesized overview of the repository: what it ships, how it is laid out,
+  and where the work currently stands."
+tags: [overview, summary, orientation]
 status: stable
 generated: { by: unknown, at: 2026-06-23 }
 ---

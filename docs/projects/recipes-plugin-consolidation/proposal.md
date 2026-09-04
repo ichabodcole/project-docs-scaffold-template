@@ -1,6 +1,9 @@
 ---
 type: proposal
 title: Recipes Plugin Consolidation
+description:
+  Twenty-one recipe skills become one umbrella skill loading recipes on demand,
+  so the namespace stops growing with the library.
 status: stable
 lifecycle: implemented
 generated: { by: unknown, at: 2026-05-07 }

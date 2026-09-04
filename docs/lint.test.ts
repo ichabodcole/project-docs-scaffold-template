@@ -18,6 +18,7 @@ import {
   SPEC,
   catalogEntries,
   context,
+  frontmatterSyntaxProblems,
   graphTier,
   hookChecks,
   isTemplate,
@@ -284,6 +285,45 @@ describe("lint.exclude — files that are not documentation", () => {
     const ctx = fixture({ "docs/briefs/2026-09-03-a.md": "# A\n" });
     expect(ctx.config.lint.exclude).toEqual([]);
     expect(thinTier(ctx)).toHaveLength(1);
+  });
+});
+
+describe("frontmatter a real YAML parser would reject", () => {
+  const doc = (description: string) =>
+    `---\ntype: report\ntitle: A\ndescription: ${description}\nstatus: stable\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# A\n`;
+
+  // The lenient parser here splits on the first colon and hands back the rest
+  // as a string, so the document passes the gate and breaks in the next tool.
+  test("an unquoted value containing a colon-space", () => {
+    const ctx = fixture({
+      "docs/reports/2026-09-03-a.md": doc("finalize-branch stopped assuming: it verifies capability."),
+    });
+    const problems = frontmatterSyntaxProblems(ctx);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("BAD SCALAR");
+    expect(problems[0]).toContain("`description`");
+  });
+
+  test("the same value, quoted, is fine", () => {
+    const ctx = fixture({
+      "docs/reports/2026-09-03-a.md": doc('"finalize-branch stopped assuming: it verifies capability."'),
+    });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+  });
+
+  test("a colon with no space after it is not a mapping", () => {
+    const ctx = fixture({ "docs/reports/2026-09-03-a.md": doc("Ratios of 3:1 and up.") });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+  });
+
+  test("`generated: { by, at }` is a flow mapping, not a loose scalar", () => {
+    const ctx = fixture({ "docs/reports/2026-09-03-a.md": doc("A plain sentence.") });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+  });
+
+  test("templates and READMEs are not read here either", () => {
+    const ctx = fixture({ "docs/reports/TEMPLATE.md": doc("Broken: yes.") });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 });
 

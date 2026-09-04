@@ -3,6 +3,9 @@ type: investigation
 title:
   Missing project-closure and archive touchpoint in the finalize-branch
   lifecycle
+description:
+  finalize-branch closes a branch and nothing closes a project, so finished work
+  sits in the active tree indefinitely.
 status: stable
 lifecycle: concluded
 generated: { by: unknown, at: 2026-08-07 }

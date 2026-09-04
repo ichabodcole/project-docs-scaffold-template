@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Digestify skill shipped in toolbox plugin
+description:
+  "Digestify shipped: a terminal agent writes markdown with question fences, the
+  user answers in a browser, and the answers land in the same turn."
+tags: [toolbox, digestify, agent-surfaces]
 status: stable
 generated: { by: unknown, at: 2026-05-07 }
 ---

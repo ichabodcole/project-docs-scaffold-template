@@ -1,6 +1,9 @@
 ---
 type: report
 title: Cross-Harness Event/Push Landscape for AI Coding Agents
+description:
+  Which agent harnesses besides Claude Code can be woken by an external event,
+  and which can only be polled.
 status: stable
 generated: { by: unknown, at: 2026-05-28 }
 ---

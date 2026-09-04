@@ -1,8 +1,11 @@
 ---
 type: proposal
 title: "Spellbook Extraction — Toolbox Cleanup"
+description:
+  The four agent-surface spells now live in their own repo, so this one removes
+  the copies rather than keeping two sources of truth.
 status: stable
-lifecycle: approved
+lifecycle: implemented
 generated: { by: unknown, at: 2026-06-11 }
 ---
 

@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Cookiecutter install-to-current-directory option
+description:
+  The cookiecutter learned to install docs/ into an existing project rather than
+  only into a fresh slug folder.
+tags: [cookiecutter, scaffold, install]
 status: stable
 generated: { by: unknown, at: 2026-02-22 }
 ---
@@ -16,4 +20,4 @@ root README.
 **Key files:** `cookiecutter.json`, `hooks/post_gen_project.py`, `README.md`
 
 **Docs:**
-[Session](../projects/install-to-current-directory/sessions/2026-02-22-implementation.md)
+[Session](../projects/_archive/install-to-current-directory/sessions/2026-02-22-implementation.md)

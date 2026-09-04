@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "Step 2 density pass — removals, verbatim"
+description:
+  Every passage removed from finalize-branch Step 2, quoted verbatim with its
+  original line numbers.
 status: stable
 generated: { by: unknown, at: 2026-09-02 }
 ---

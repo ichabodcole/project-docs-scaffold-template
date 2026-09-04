@@ -1,6 +1,10 @@
 ---
 type: memory
 title: "Magpie skill shipped — Gemini-bbox moodboard extraction"
+description:
+  "Magpie shipped: every distinct element on a moodboard extracted as its own
+  PNG, discovered by a vision model for a penny or two a board."
+tags: [toolbox, magpie, vision]
 status: stable
 generated: { by: unknown, at: 2026-05-23 }
 ---

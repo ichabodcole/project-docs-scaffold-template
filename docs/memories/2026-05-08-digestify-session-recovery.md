@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Digestify session-recovery features shipped
+description:
+  Digestify gained an idle countdown, heartbeat keep-alive and draft recovery,
+  so a slow review no longer loses what was typed.
+tags: [toolbox, digestify, reliability]
 status: stable
 generated: { by: unknown, at: 2026-05-08 }
 ---

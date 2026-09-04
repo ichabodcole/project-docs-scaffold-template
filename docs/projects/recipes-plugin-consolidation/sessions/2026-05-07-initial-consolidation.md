@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Recipes Consolidation — Initial Implementation — 2026-05-07"
+description:
+  Collapsed 21 recipe skills into one umbrella skill loading from library/, and
+  took the major version bump that costs.
 status: stable
 generated: { by: unknown, at: 2026-05-07 }
 ---

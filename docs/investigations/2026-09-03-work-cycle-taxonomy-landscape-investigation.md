@@ -2,6 +2,9 @@
 type: investigation
 title:
   'What are the right primitives for "work in play" in a file-based docs system?'
+description:
+  What the PM and file-based landscapes call the unit of work in play, and which
+  of those primitives this tree is missing.
 status: stable
 lifecycle: concluded
 generated: { by: unknown, at: 2026-09-03 }

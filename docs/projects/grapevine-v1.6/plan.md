@@ -1,6 +1,9 @@
 ---
 type: plan
 title: Grapevine V1.6 Implementation Plan
+description:
+  "Three additive changes to the grapevine skill: a truncation hint, a grep
+  verb, and a clean daemon-CLI split."
 status: stable
 lifecycle: draft
 generated: { by: unknown, at: 2026-05-27 }

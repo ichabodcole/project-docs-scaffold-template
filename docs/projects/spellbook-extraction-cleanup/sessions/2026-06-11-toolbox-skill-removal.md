@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Toolbox Skill Removal — 2026-06-11"
+description:
+  Removed the four agent-surface spells from the toolbox plugin, leaving the
+  spellbook repo as their only source.
 status: stable
 generated: { by: unknown, at: 2026-06-11 }
 ---

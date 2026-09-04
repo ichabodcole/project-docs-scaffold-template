@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Digestify — Initial Implementation — 2026-05-07"
+description:
+  Built digestify end to end, from the scaffolded doc-review name to a working
+  browser round trip in one turn.
 status: stable
 generated: { by: unknown, at: 2026-05-07 }
 ---

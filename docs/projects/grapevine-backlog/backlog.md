@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "Grapevine — Feature Backlog"
+description:
+  Grapevine feature ideas not yet assigned to a version — the shape of each, and
+  why it might matter.
 status: stable
 generated: { by: unknown, at: 2026-05-27 }
 ---

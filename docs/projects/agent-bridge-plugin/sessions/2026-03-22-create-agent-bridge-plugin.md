@@ -1,6 +1,9 @@
 ---
 type: session
 title: "Create Agent Bridge Plugin — 2026-03-22"
+description:
+  Created the agent-bridge plugin for cross-project knowledge sharing and
+  agent-to-agent messaging.
 status: stable
 generated: { by: unknown, at: 2026-03-22 }
 ---

@@ -171,7 +171,7 @@ When investigating performance concerns:
 **Example:**
 
 > Based on
-> [Investigation: AI Composable Refactoring](../investigations/2025-10-14-ai-composable-refactoring-investigation.md),
+> `[Investigation: AI Composable Refactoring](../investigations/2025-10-14-ai-composable-refactoring-investigation.md)`,
 > we found 70% code duplication across AI workflows. This proposal outlines a
 > composable factory pattern to reduce duplication.
 

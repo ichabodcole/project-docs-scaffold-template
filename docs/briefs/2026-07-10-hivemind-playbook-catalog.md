@@ -1,6 +1,9 @@
 ---
 type: brief
 title: "HiveMind Playbook Catalog & Apply Vocabulary"
+description:
+  Enough HiveMind scenarios have accumulated that their takeaways rhyme, which
+  is the point at which a catalog beats a search.
 status: stable
 lifecycle: active
 generated: { by: unknown, at: 2026-07-10 }

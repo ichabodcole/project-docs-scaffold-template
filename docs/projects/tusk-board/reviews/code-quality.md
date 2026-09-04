@@ -1,6 +1,9 @@
 ---
 type: artifact
 title: "Code Quality Review — Tusk Board"
+description:
+  "A read of the surface scripts: clean separation and correct guards, with the
+  places that will not scale named."
 status: stable
 generated: { by: unknown, at: 2026-05-24 }
 ---

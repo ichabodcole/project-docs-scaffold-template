@@ -3,6 +3,9 @@ type: session
 title:
   "Branch Landing Policy: the shipped example had drifted from its
   implementation — 2026-09-02"
+description:
+  An audit question — had the recent work followed the checklist? — that turned
+  up an example shipped three releases stale.
 status: stable
 generated: { by: unknown, at: 2026-09-02 }
 ---

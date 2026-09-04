@@ -1,6 +1,10 @@
 ---
 type: memory
 title: "Sweep-project closure touchpoint added; first two projects archived"
+description:
+  sweep-project arrived to reconcile a project against what was actually built,
+  with archival as a human decision rather than a step.
+tags: [skills, sweep-project, archive]
 status: stable
 generated: { by: unknown, at: 2026-08-07 }
 ---

@@ -1,6 +1,10 @@
 ---
 type: memory
 title: Digestify --reference flag shipped
+description:
+  Digestify learned to render a file the agent never has to read, which is the
+  whole token win when reviewing a long document.
+tags: [toolbox, digestify, agent-surfaces]
 status: stable
 generated: { by: unknown, at: 2026-05-07 }
 ---

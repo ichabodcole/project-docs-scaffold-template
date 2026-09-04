@@ -1,6 +1,9 @@
 ---
 type: investigation
 title: "Wiki structure & OKF schema for durable _development_ knowledge"
+description:
+  What structure and OKF schema a durable-knowledge layer would need, if the
+  durable docs were pulled out of the flat list.
 tags: [migrations, agent-execution]
 status: stable
 lifecycle: active
