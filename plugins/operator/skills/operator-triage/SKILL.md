@@ -62,8 +62,8 @@ Read the document and determine:
 
 #### B. Decide Routing
 
-**Reference the docs framework:** See [docs/README.md](docs/README.md) for the
-complete decision flowchart and document type definitions.
+**Reference the docs framework:** See `docs/README.md` in the target project for
+the complete decision flowchart and document type definitions.
 
 **Operator → Docs Routing** (from docs/README.md):
 
@@ -168,5 +168,5 @@ Description:
 - **Preserve context**: Include enough detail in task to execute later without
   re-reading
 - **Ask when unclear**: If routing isn't obvious, ask user for guidance
-- **Reference the framework**: When uncertain, consult
-  [docs/README.md](docs/README.md) decision flowchart
+- **Reference the framework**: When uncertain, consult the `docs/README.md`
+  decision flowchart

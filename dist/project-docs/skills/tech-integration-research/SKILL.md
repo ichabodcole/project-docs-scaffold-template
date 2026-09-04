@@ -131,7 +131,6 @@ Structure findings for easy scanning and comparison:
 ```language
 // Example code from official docs
 ```
-````
 
 ## Setup Requirements
 
@@ -178,12 +177,12 @@ Structure findings for easy scanning and comparison:
 1. [Source Title](URL) - Published/Updated: [date], Accessed: [date]
 2. [Source Title](URL) - Published/Updated: [date], Accessed: [date]
 3. [etc.]
-
-```
+````
 
 ## Quality Checklist
 
 Before returning findings:
+
 - [ ] Checked 3+ sources minimum
 - [ ] Included at least one official source
 - [ ] Assigned confidence levels (High/Medium/Low) to each finding
@@ -198,11 +197,13 @@ Before returning findings:
 ## Example Questions
 
 **Good (specific and actionable):**
+
 - "How does Tool A authenticate with Tool B's JWKS endpoint?"
 - "What's the recommended Docker Compose setup for Service X with Database Y?"
 - "How do I migrate from Library A to Library B?"
 
 **Too Broad (needs scoping):**
+
 - "How does Tool X work?" → Scope to specific aspect
 - "Tell me about Technology Y" → What specifically about it?
 - "Best practices for category Z" → Too vague, narrow the question
@@ -212,22 +213,27 @@ Before returning findings:
 Match your research effort to the question's complexity:
 
 **Simple question** (e.g., "What package integrates X with Y?"):
+
 - Check official docs for both tools
 - Find 2-3 community examples or guides
 - Stop when sources converge on the same answer
 
 **Moderate question** (e.g., "How do I set up X with Y and Z?"):
+
 - Check official docs for all tools involved
 - Find 5-8 sources across different angles (setup guides, examples, discussions)
 - Look for complete working examples
 - Stop when you have a clear integration pattern and setup steps
 
-**Complex question** (e.g., "How do I migrate from A to B while maintaining C?"):
+**Complex question** (e.g., "How do I migrate from A to B while maintaining
+C?"):
+
 - Check official migration guides and docs
 - Find 10+ sources including GitHub discussions, migration stories, and examples
 - Look for edge cases and common pitfalls
 - Compare multiple approaches if they exist
 - Stop when you have clear recommendations with trade-offs explained
 
-**Too complex?** If you've checked 15+ sources and still need more depth, or the question involves architectural decisions beyond simple integration, consider using the investigator agent instead.
-```
+**Too complex?** If you've checked 15+ sources and still need more depth, or the
+question involves architectural decisions beyond simple integration, consider
+using the investigator agent instead.

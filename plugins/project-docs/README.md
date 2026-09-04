@@ -279,6 +279,23 @@ docs/
 
 ## Version History
 
+### 3.6.1 (2026-09-03)
+
+- Broken and unresolvable links across the plugin's pages, found by the new
+  `docs:lint` link pass in the scaffold repo. `init-branch`, `dev-kickoff` and
+  `operator-triage` linked paths like `docs/playbooks/README.md` as if they
+  resolved next to the skill; they name files in the repository the skill is
+  _run against_, so they are now code spans rather than links that could only
+  ever be broken. The two illustrative links in `create-investigation`'s
+  overview and `generate-proposal`'s step 7 are examples of a line the skill
+  writes, not references this page has, and read as code for the same reason.
+- `tech-integration-research` — the output-format template closed its
+  ```markdown fence two-thirds of the way through, so a third of the template
+  (Setup Requirements through Sources Consulted) rendered as live document
+  instead of as the template it is, and a stray fence at the end of the file
+  swallowed the Quality Checklist and Example Questions sections. Both repaired.
+  ```
+
 ### 3.6.0 (2026-09-02)
 
 - `update-project-docs` — the `## Branch Landing Policy` example in

@@ -218,4 +218,4 @@ When a worktree's work is complete:
 
 ## Reference Documents
 
-- [Playbooks](docs/playbooks/README.md) — General workflow playbooks
+- `docs/playbooks/README.md` — General workflow playbooks

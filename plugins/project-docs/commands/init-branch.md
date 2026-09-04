@@ -6,7 +6,7 @@ allowed_tools: ["Bash", "AskUserQuestion"]
 You are tasked with initializing a new branch for development work.
 
 **Playbook reference:** Follow the workflow in
-[docs/playbooks/branch-initialization-playbook.md](../../docs/playbooks/branch-initialization-playbook.md)
+`docs/playbooks/branch-initialization-playbook.md`
 
 ## Workflow Summary
 

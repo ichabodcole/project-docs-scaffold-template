@@ -78,7 +78,7 @@ investigation document.
 7. **Link documents together**
    - Reference the investigation in the proposal's "Related Documents" section
    - Note in the proposal: "This proposal is based on
-     [Investigation: Topic](../../investigations/investigation-file.md)"
+     `[Investigation: Topic](../../investigations/investigation-file.md)`"
 
 **Important guidelines:**
 
