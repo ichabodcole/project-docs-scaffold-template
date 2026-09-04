@@ -1,6 +1,15 @@
-# Moodboard Element Extraction — Investigation Through Shipped Magpie Skill
+---
+type: session
+title:
+  "Moodboard Element Extraction — Investigation Through Shipped Magpie Skill"
+description:
+  Started needing three files out of one branding board, ended with a shipped
+  skill for any board.
+status: stable
+generated: { by: unknown, at: 2026-05-23 }
+---
 
-**Date:** 2026-05-23 (work spanned into the early hours of 2026-05-24)
+# Moodboard Element Extraction — Investigation Through Shipped Magpie Skill
 
 ## Context
 

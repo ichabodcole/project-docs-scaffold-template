@@ -48,6 +48,16 @@ Each memory should be short — a heading, a few sentences, key files, and a lin
 to deeper docs. If you're writing more than a short paragraph, the detail
 probably belongs in a session doc or project folder instead.
 
+**Ship it `status: stable`.** The template opens at `draft` because most
+document types are drafted before they are trusted, but a memory records
+something that already happened — there is no later review that would promote
+it. A memory is `draft` only while you are still writing it, and `deprecated`
+when what it describes is no longer how the project works.
+
+A memory is a **library page**, so it also needs a line in
+[../index.md](../index.md) under `## Memories`, with its own `description`
+copied across as the hook. Without one the lint reports it as an orphan.
+
 ## Pruning
 
 Remove old memories when they're no longer relevant for onboarding context. A

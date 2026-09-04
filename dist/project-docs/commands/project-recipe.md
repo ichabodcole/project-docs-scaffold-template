@@ -154,406 +154,425 @@ can be used to scaffold similar projects in the future.
 
 6. **Generate the PROJECT-RECIPE.md document**
 
-   Create `docs/PROJECT-RECIPE.md` with this structure:
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
 
-   ```markdown
-   # Project Recipe: [Project Type Description]
+Create `docs/PROJECT-RECIPE.md` with this structure:
 
-   **Generated:** YYYY-MM-DD **Based on:** [Project name from package.json or
-   README] **Project Type:** [e.g., "Electron Desktop App with React", "Expo
-   React Native App", "Python FastAPI Backend"]
+```markdown
+# Project Recipe: [Project Type Description]
 
-   ---
+**Generated:** YYYY-MM-DD **Based on:** [Project name from package.json or
+README] **Project Type:** [e.g., "Electron Desktop App with React", "Expo React
+Native App", "Python FastAPI Backend"]
 
-   ## Overview
+---
 
-   This recipe describes how to scaffold a new project using the same structure,
-   tooling, and patterns as [source project]. It captures the foundational setup
-   and architectural patterns that make this project structure effective.
+## Overview
 
-   **What's included in this recipe:**
+This recipe describes how to scaffold a new project using the same structure,
+tooling, and patterns as [source project]. It captures the foundational setup
+and architectural patterns that make this project structure effective.
 
-   - ✅ Foundational tooling and configuration
-   - ✅ Project structure and organization conventions
-   - ✅ Code quality and development workflow setup [List other included systems
-     based on user selections]
+**What's included in this recipe:**
 
-   **What's NOT included:**
+- ✅ Foundational tooling and configuration
+- ✅ Project structure and organization conventions
+- ✅ Code quality and development workflow setup [List other included systems
+  based on user selections]
 
-   - ❌ Application-specific business logic
-   - ❌ Feature implementations
-   - ❌ App-specific data models and content
+**What's NOT included:**
 
-   ---
+- ❌ Application-specific business logic
+- ❌ Feature implementations
+- ❌ App-specific data models and content
 
-   ## Technology Stack
+---
 
-   ### Runtime & Framework
+## Technology Stack
 
-   - **Primary Language:** [Language and version]
-   - **Framework:** [Main framework - e.g., React 18, FastAPI, Electron]
-   - **Runtime:** [Node.js, Python, etc. with version]
+### Runtime & Framework
 
-   ### Build & Development Tools
+- **Primary Language:** [Language and version]
+- **Framework:** [Main framework - e.g., React 18, FastAPI, Electron]
+- **Runtime:** [Node.js, Python, etc. with version]
 
-   - **Package Manager:** [npm/pnpm/yarn/pip/etc.]
-   - **Build Tool:** [Vite/Webpack/tsc/etc.]
-   - **Dev Server:** [If applicable]
+### Build & Development Tools
 
-   ### Code Quality
+- **Package Manager:** [npm/pnpm/yarn/pip/etc.]
+- **Build Tool:** [Vite/Webpack/tsc/etc.]
+- **Dev Server:** [If applicable]
 
-   - **Linting:** [ESLint, etc. with key plugins]
-   - **Formatting:** [Prettier, etc. with key config]
-   - **Type Checking:** [TypeScript, mypy, etc.]
-   - **Pre-commit:** [Husky, lint-staged, etc.]
+### Code Quality
 
-   ### Testing
+- **Linting:** [ESLint, etc. with key plugins]
+- **Formatting:** [Prettier, etc. with key config]
+- **Type Checking:** [TypeScript, mypy, etc.]
+- **Pre-commit:** [Husky, lint-staged, etc.]
 
-   - **Framework:** [Jest/Vitest/pytest/etc.]
-   - **Testing Libraries:** [Testing Library, etc.]
-   - **Coverage:** [Coverage tool if used]
+### Testing
 
-   ---
+- **Framework:** [Jest/Vitest/pytest/etc.]
+- **Testing Libraries:** [Testing Library, etc.]
+- **Coverage:** [Coverage tool if used]
 
-   ## Project Structure
+---
 
-   ### Directory Layout
-   ```
+## Project Structure
 
-   [Insert directory tree showing the organizational structure] project-root/
-   ├── src/ │ ├── components/ # [Description of what goes here] │ ├──
-   services/ # [Description] │ ├── utils/ # [Description] │ └── ... ├── tests/ #
-   [Description] ├── docs/ # [Description] ├── [other directories] └── ...
+### Directory Layout
+```
 
-   ````
+[Insert directory tree showing the organizational structure] project-root/ ├──
+src/ │ ├── components/ # [Description of what goes here] │ ├── services/ #
+[Description] │ ├── utils/ # [Description] │ └── ... ├── tests/ # [Description]
+├── docs/ # [Description] ├── [other directories] └── ...
 
-   ### Organization Principles
+````
 
-   **[Primary organization pattern - e.g., "Feature-based organization", "Layer-based organization"]**
+### Organization Principles
 
-   [1-2 paragraphs explaining the organizational philosophy]
+**[Primary organization pattern - e.g., "Feature-based organization", "Layer-based organization"]**
 
-   **Key conventions:**
-   - [Convention 1 - e.g., "Components are organized by feature, not type"]
-   - [Convention 2 - e.g., "Tests live alongside source files with .test.ts suffix"]
-   - [Convention 3 - e.g., "Shared utilities live in src/utils, feature-specific in feature folder"]
+[1-2 paragraphs explaining the organizational philosophy]
 
-   ### File Naming Conventions
+**Key conventions:**
+- [Convention 1 - e.g., "Components are organized by feature, not type"]
+- [Convention 2 - e.g., "Tests live alongside source files with .test.ts suffix"]
+- [Convention 3 - e.g., "Shared utilities live in src/utils, feature-specific in feature folder"]
 
-   - **Components:** [e.g., PascalCase for React components: Button.tsx]
-   - **Utilities:** [e.g., camelCase: formatDate.ts]
-   - **Tests:** [e.g., *.test.ts or *.spec.ts]
-   - **Config files:** [e.g., kebab-case: vite.config.ts]
-   - [Other conventions]
+### File Naming Conventions
 
-   ---
+- **Components:** [e.g., PascalCase for React components: Button.tsx]
+- **Utilities:** [e.g., camelCase: formatDate.ts]
+- **Tests:** [e.g., *.test.ts or *.spec.ts]
+- **Config files:** [e.g., kebab-case: vite.config.ts]
+- [Other conventions]
 
-   ## Setup Instructions
+---
 
-   ### 1. Initialize Project
+## Setup Instructions
 
-   ```bash
-   # Create project directory
-   mkdir my-new-project
-   cd my-new-project
+### 1. Initialize Project
 
-   # Initialize package manager
-   [npm init / pnpm init / etc.]
-   ````
+```bash
+# Create project directory
+mkdir my-new-project
+cd my-new-project
 
-   ### 2. Install Core Dependencies
+# Initialize package manager
+[npm init / pnpm init / etc.]
+````
 
-   **Framework and runtime:**
+### 2. Install Core Dependencies
 
-   ```bash
-   [Installation commands for core dependencies]
-   ```
+**Framework and runtime:**
 
-   **Development dependencies:**
+```bash
+[Installation commands for core dependencies]
+```
 
-   ```bash
-   [Installation commands for dev tools]
-   ```
+**Development dependencies:**
 
-   Key dependencies to install:
-   - [Dependency 1]: [Purpose]
-   - [Dependency 2]: [Purpose]
-   - [List 5-10 most important dependencies]
+```bash
+[Installation commands for dev tools]
+```
 
-   ### 3. Configure Build Tooling
+Key dependencies to install:
 
-   **[Build tool name - e.g., Vite]**
+- [Dependency 1]: [Purpose]
+- [Dependency 2]: [Purpose]
+- [List 5-10 most important dependencies]
 
-   Create `[config file name]`:
+### 3. Configure Build Tooling
 
-   ```[language]
-   [Key configuration showing the important patterns, not necessarily complete config]
-   ```
+**[Build tool name - e.g., Vite]**
 
-   Key configuration points:
-   - [Config point 1 and why it matters]
-   - [Config point 2 and why it matters]
+Create `[config file name]`:
 
-   [Repeat for other major config files: tsconfig, etc.]
+```[language]
+[Key configuration showing the important patterns, not necessarily complete config]
+```
 
-   ### 4. Configure Code Quality Tools
+Key configuration points:
 
-   **Linting**
+- [Config point 1 and why it matters]
+- [Config point 2 and why it matters]
 
-   Create `[linter config file]`:
+[Repeat for other major config files: tsconfig, etc.]
 
-   ```[format]
-   [Key linting rules and plugins]
-   ```
+### 4. Configure Code Quality Tools
 
-   **Formatting**
+**Linting**
 
-   Create `[formatter config file]`:
+Create `[linter config file]`:
 
-   ```[format]
-   [Key formatting rules]
-   ```
+```[format]
+[Key linting rules and plugins]
+```
 
-   **Pre-commit Hooks**
+**Formatting**
 
-   [Setup instructions for pre-commit tooling]
+Create `[formatter config file]`:
 
-   ### 5. Configure Testing
+```[format]
+[Key formatting rules]
+```
 
-   **Test Framework Setup**
+**Pre-commit Hooks**
 
-   [Configuration for test framework]
+[Setup instructions for pre-commit tooling]
 
-   **Test organization:**
-   - [How tests are organized - e.g., "Co-located with source files"]
-   - [Naming convention - e.g., "*.test.ts"]
-   - [Test structure patterns]
+### 5. Configure Testing
 
-   ### 6. Create Directory Structure
+**Test Framework Setup**
 
-   ```bash
-   mkdir -p src/[subdirs]
-   mkdir -p tests
-   mkdir -p docs
-   # [Other directories]
-   ```
+[Configuration for test framework]
 
-   ### 7. Set Up Environment Configuration
+**Test organization:**
 
-   Create `.env.example`:
+- [How tests are organized - e.g., "Co-located with source files"]
+- [Naming convention - e.g., "*.test.ts"]
+- [Test structure patterns]
 
-   ```
-   [Example environment variables needed]
-   ```
+### 6. Create Directory Structure
 
-   **Environment setup:**
-   - [How environment variables are loaded]
-   - [Different environments: dev, test, prod]
+```bash
+mkdir -p src/[subdirs]
+mkdir -p tests
+mkdir -p docs
+# [Other directories]
+```
 
-   ### 8. Create Entry Points
+### 7. Set Up Environment Configuration
 
-   **Main entry point:** `src/[entry file]`
+Create `.env.example`:
 
-   ```[language]
-   [Basic entry point structure showing initialization pattern]
-   ```
+```
+[Example environment variables needed]
+```
 
-   [Other entry points if applicable]
+**Environment setup:**
 
-   ***
+- [How environment variables are loaded]
+- [Different environments: dev, test, prod]
 
-   ## Architectural Patterns
+### 8. Create Entry Points
 
-   [Include this section and subsections based on user selections in step 5]
+**Main entry point:** `src/[entry file]`
 
-   ### [Pattern 1 - e.g., State Management]
+```[language]
+[Basic entry point structure showing initialization pattern]
+```
 
-   **Approach:** [Brief description of the pattern]
+[Other entry points if applicable]
 
-   **Setup:** [How to set this up in a new project]
+---
 
-   **Key conventions:**
-   - [Convention 1]
-   - [Convention 2]
+## Architectural Patterns
 
-   **Example structure:**
+[Include this section and subsections based on user selections in step 5]
 
-   ```[language]
-   [Code example showing the pattern]
-   ```
+### [Pattern 1 - e.g., State Management]
 
-   ### [Pattern 2 - e.g., Routing]
+**Approach:** [Brief description of the pattern]
 
-   [Repeat structure]
+**Setup:** [How to set this up in a new project]
 
-   ### [Pattern 3 - e.g., API Layer]
+**Key conventions:**
 
-   [Repeat structure]
+- [Convention 1]
+- [Convention 2]
 
-   ***
+**Example structure:**
 
-   ## Domain-Specific Systems
+```[language]
+[Code example showing the pattern]
+```
 
-   [Include this section only if user selected any domain-specific systems]
+### [Pattern 2 - e.g., Routing]
 
-   ### [System 1 - e.g., AI Agent Orchestration]
+[Repeat structure]
 
-   **Purpose:** [What this system does]
+### [Pattern 3 - e.g., API Layer]
 
-   **Structure:** [Directory organization for this system]
+[Repeat structure]
 
-   **Setup:** [How to set up this system in a new project]
+---
 
-   **Key abstractions:**
-   - [Abstraction 1 with brief explanation]
-   - [Abstraction 2 with brief explanation]
+## Domain-Specific Systems
 
-   **Usage pattern:**
+[Include this section only if user selected any domain-specific systems]
 
-   ```[language]
-   [Example showing how this system is typically used]
-   ```
+### [System 1 - e.g., AI Agent Orchestration]
 
-   ***
+**Purpose:** [What this system does]
 
-   ## Development Workflow
+**Structure:** [Directory organization for this system]
 
-   ### Available Scripts
+**Setup:** [How to set up this system in a new project]
 
-   [Based on package.json scripts or equivalent]
-   - `[script command]`: [What it does]
-   - `[script command]`: [What it does]
-   - [List key scripts]
+**Key abstractions:**
 
-   ### Common Development Tasks
+- [Abstraction 1 with brief explanation]
+- [Abstraction 2 with brief explanation]
 
-   **Starting development:**
+**Usage pattern:**
 
-   ```bash
-   [Command to start dev environment]
-   ```
+```[language]
+[Example showing how this system is typically used]
+```
 
-   **Running tests:**
+---
 
-   ```bash
-   [Command to run tests]
-   ```
+## Development Workflow
 
-   **Building for production:**
+### Available Scripts
 
-   ```bash
-   [Command to build]
-   ```
+[Based on package.json scripts or equivalent]
 
-   **Linting and formatting:**
+- `[script command]`: [What it does]
+- `[script command]`: [What it does]
+- [List key scripts]
 
-   ```bash
-   [Commands for code quality checks]
-   ```
+### Common Development Tasks
 
-   ***
+**Starting development:**
 
-   ## Best Practices & Conventions
+```bash
+[Command to start dev environment]
+```
 
-   ### Code Organization
-   - [Best practice 1 - e.g., "Keep components small and focused"]
-   - [Best practice 2 - e.g., "Co-locate related files"]
-   - [Best practice 3]
+**Running tests:**
 
-   ### Naming & Style
-   - [Convention 1 - e.g., "Use descriptive names over abbreviations"]
-   - [Convention 2 - e.g., "Prefix boolean variables with is/has/should"]
-   - [Convention 3]
+```bash
+[Command to run tests]
+```
 
-   ### Testing
-   - [Practice 1 - e.g., "Test behavior, not implementation"]
-   - [Practice 2 - e.g., "Maintain >80% coverage for critical paths"]
-   - [Practice 3]
+**Building for production:**
 
-   ### Documentation
-   - [Practice 1 - e.g., "Document 'why' in comments, not 'what'"]
-   - [Practice 2 - e.g., "Keep README up to date with setup changes"]
-   - [Practice 3]
+```bash
+[Command to build]
+```
 
-   ***
+**Linting and formatting:**
 
-   ## Key Files Reference
+```bash
+[Commands for code quality checks]
+```
 
-   ### Configuration Files
+---
 
-   | File     | Purpose   | Notes             |
-   | -------- | --------- | ----------------- |
-   | `[file]` | [Purpose] | [Important notes] |
-   | `[file]` | [Purpose] | [Important notes] |
+## Best Practices & Conventions
 
-   ### Important Source Files
+### Code Organization
 
-   | File     | Purpose   | Notes             |
-   | -------- | --------- | ----------------- |
-   | `[file]` | [Purpose] | [Important notes] |
-   | `[file]` | [Purpose] | [Important notes] |
+- [Best practice 1 - e.g., "Keep components small and focused"]
+- [Best practice 2 - e.g., "Co-locate related files"]
+- [Best practice 3]
 
-   ***
+### Naming & Style
 
-   ## Adapting This Recipe
+- [Convention 1 - e.g., "Use descriptive names over abbreviations"]
+- [Convention 2 - e.g., "Prefix boolean variables with is/has/should"]
+- [Convention 3]
 
-   ### For Similar Projects
+### Testing
 
-   This recipe works well for:
-   - [Project type 1 - e.g., "Desktop applications using Electron"]
-   - [Project type 2 - e.g., "React-based applications with complex state"]
-   - [Use case]
+- [Practice 1 - e.g., "Test behavior, not implementation"]
+- [Practice 2 - e.g., "Maintain >80% coverage for critical paths"]
+- [Practice 3]
 
-   ### Customization Points
+### Documentation
 
-   Common customizations when using this recipe:
-   1. **[Customization 1 - e.g., "Swap Zustand for Redux"]**
-      - [When you might want this]
-      - [How to adapt the recipe]
+- [Practice 1 - e.g., "Document 'why' in comments, not 'what'"]
+- [Practice 2 - e.g., "Keep README up to date with setup changes"]
+- [Practice 3]
 
-   2. **[Customization 2]**
-      - [When you might want this]
-      - [How to adapt the recipe]
+---
 
-   ### What to Change for Different Domains
+## Key Files Reference
 
-   If adapting for a different domain:
-   - [Guidance 1 - e.g., "Replace UI component system with domain-appropriate
-     patterns"]
-   - [Guidance 2]
+### Configuration Files
 
-   ***
+| File     | Purpose   | Notes             |
+| -------- | --------- | ----------------- |
+| `[file]` | [Purpose] | [Important notes] |
+| `[file]` | [Purpose] | [Important notes] |
 
-   ## Gotchas & Important Notes
+### Important Source Files
 
-   [Lessons learned from this project structure - things that aren't obvious]
-   - ⚠️ [Gotcha 1 - e.g., "Build config requires X setting for hot reload to
-     work"]
-   - ⚠️ [Gotcha 2]
-   - 💡 [Tip 1 - e.g., "Use absolute imports to avoid ../../../ hell"]
-   - 💡 [Tip 2]
+| File     | Purpose   | Notes             |
+| -------- | --------- | ----------------- |
+| `[file]` | [Purpose] | [Important notes] |
+| `[file]` | [Purpose] | [Important notes] |
 
-   ***
+---
 
-   ## Maintenance
+## Adapting This Recipe
 
-   **Updating this recipe:**
+### For Similar Projects
 
-   When the source project evolves significantly:
-   - Run `/project-recipe` again to regenerate
-   - Compare with previous version to see what changed
-   - Update dependent projects if breaking changes occurred
+This recipe works well for:
 
-   **Recipe version:** 1.0.0 (YYYY-MM-DD)
+- [Project type 1 - e.g., "Desktop applications using Electron"]
+- [Project type 2 - e.g., "React-based applications with complex state"]
+- [Use case]
 
-   ***
+### Customization Points
 
-   _This recipe was generated by analyzing [source project] on YYYY-MM-DD. It
-   represents the project structure and patterns at that point in time._
+Common customizations when using this recipe:
 
-   ```
+1.  **[Customization 1 - e.g., "Swap Zustand for Redux"]**
+    - [When you might want this]
+    - [How to adapt the recipe]
 
-   ```
+2.  **[Customization 2]**
+    - [When you might want this]
+    - [How to adapt the recipe]
+
+### What to Change for Different Domains
+
+If adapting for a different domain:
+
+- [Guidance 1 - e.g., "Replace UI component system with domain-appropriate
+  patterns"]
+- [Guidance 2]
+
+---
+
+## Gotchas & Important Notes
+
+[Lessons learned from this project structure - things that aren't obvious]
+
+- ⚠️ [Gotcha 1 - e.g., "Build config requires X setting for hot reload to work"]
+- ⚠️ [Gotcha 2]
+- 💡 [Tip 1 - e.g., "Use absolute imports to avoid ../../../ hell"]
+- 💡 [Tip 2]
+
+---
+
+## Maintenance
+
+**Updating this recipe:**
+
+When the source project evolves significantly:
+
+- Run `/project-recipe` again to regenerate
+- Compare with previous version to see what changed
+- Update dependent projects if breaking changes occurred
+
+**Recipe version:** 1.0.0 (YYYY-MM-DD)
+
+---
+
+_This recipe was generated by analyzing [source project] on YYYY-MM-DD. It
+represents the project structure and patterns at that point in time._
+
+```
+
+```
 
 7. **Present results to user**
 

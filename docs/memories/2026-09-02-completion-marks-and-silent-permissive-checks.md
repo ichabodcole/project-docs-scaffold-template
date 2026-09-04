@@ -1,6 +1,16 @@
-# Completion marks generalized; two fail-open checks found by execution review
+---
+type: memory
+title:
+  "Completion marks generalized; two fail-open checks found by execution review"
+description:
+  sweep-project now reads completion marks in whatever idiom a document already
+  uses, rather than looking for checkboxes.
+tags: [skills, sweep-project, review]
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Date:** 2026-09-02
+# Completion marks generalized; two fail-open checks found by execution review
 
 Shipped project-docs 3.3.0. `sweep-project` no longer reasons about checkboxes
 specifically but about **completion marks** — any deliberate in-document signal

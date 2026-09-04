@@ -132,15 +132,15 @@ steps.
   one specific feature
 - **Capture the why, not just the what** - Explain principles and gotchas, not
   just steps
-- **Include examples** - Reference real plans/sessions where this playbook was
-  used
+- **Include examples** - Reference real project plans/sessions where this
+  playbook was used
 
 ### Extracting Playbooks
 
-- **From sessions** - When you hit the same multi-step pattern repeatedly,
-  extract to playbook
-- **From plans** - When a plan reveals an approach worth reusing, generalize it
-  into a playbook
+- **From project sessions** - When you hit the same multi-step pattern
+  repeatedly, extract to playbook
+- **From project plans** - When a plan reveals an approach worth reusing,
+  generalize it into a playbook
 - **From lessons learned** - When a lesson grows into a multi-step process, it
   might become a playbook
 

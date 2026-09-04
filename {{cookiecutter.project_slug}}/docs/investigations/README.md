@@ -1,26 +1,33 @@
 # Investigations
 
-This directory contains investigation documents for exploring questions, gathering data, and determining whether action is needed before committing to a formal proposal.
+This directory contains investigation documents for exploring questions,
+gathering data, and determining whether action is needed before committing to a
+formal proposal.
 
 ---
 
 ## Purpose
 
-The main purpose of an investigation is to **explore uncertainty** and **gather evidence** before deciding if action is warranted. Investigations help answer:
+The main purpose of an investigation is to **explore uncertainty** and **gather
+evidence** before deciding if action is warranted. Investigations help answer:
 
 - "Should we refactor this code?"
 - "Is this technology a good fit for our use case?"
 - "Is there actually a performance problem here?"
 - "What are the options for solving X?"
 
-Investigations bridge the gap between an initial question and a formal proposal. They're for when you're not yet sure if building something is the right move.
+Investigations bridge the gap between an initial question and a formal proposal.
+They're for when you're not yet sure if building something is the right move.
 
 ### Why Document Investigations?
 
-- **Prevent re-investigation** - Avoid re-examining the same question months later
+- **Prevent re-investigation** - Avoid re-examining the same question months
+  later
 - **Share learning** - Make findings accessible to team members (human and AI)
-- **Document "no" decisions** - Capture why we chose not to act, preventing future wheel-spinning
-- **Build evidence-based culture** - Ground decisions in research, not assumptions
+- **Document "no" decisions** - Capture why we chose not to act, preventing
+  future wheel-spinning
+- **Build evidence-based culture** - Ground decisions in research, not
+  assumptions
 
 ---
 
@@ -28,13 +35,17 @@ Investigations bridge the gap between an initial question and a formal proposal.
 
 Create an investigation when:
 
-- **Uncertain if action is needed** - You have a question but don't know if it warrants a proposal
-- **Need data before deciding** - Performance metrics, code analysis, feasibility checks
+- **Uncertain if action is needed** - You have a question but don't know if it
+  warrants a proposal
+- **Need data before deciding** - Performance metrics, code analysis,
+  feasibility checks
 - **Evaluating alternatives** - Comparing technologies, approaches, or patterns
 - **Code quality concerns** - "Should we refactor X?" requires analysis first
 - **Exploring feasibility** - "Could we even build this?" before proposing it
 
-**Complexity:** Investigations should be **lightweight to moderate complexity** - focused research with clear boundaries. If the investigation grows too complex, document progress and continue in a follow-up investigation.
+**Complexity:** Investigations should be **lightweight to moderate
+complexity** - focused research with clear boundaries. If the investigation
+grows too complex, document progress and continue in a follow-up investigation.
 
 **Signs an investigation is growing too complex:**
 
@@ -44,16 +55,20 @@ Create an investigation when:
 - Uncovering new questions faster than answering the original one
 - Needing input from multiple stakeholders to proceed
 
-**Note:** Avoid time-boxing investigations. Use complexity indicators (scope, file count, depth) rather than hour estimates, as AI agents and humans work at different speeds.
+**Note:** Avoid time-boxing investigations. Use complexity indicators (scope,
+file count, depth) rather than hour estimates, as AI agents and humans work at
+different speeds.
 
 ---
 
 ## When NOT to Create an Investigation
 
 - **Already certain action is needed** - Create a proposal instead
-- **Trivial questions** - Quick code reads or minimal-complexity explorations don't need documentation
+- **Trivial questions** - Quick code reads or minimal-complexity explorations
+  don't need documentation
 - **Historical record** - Use sessions to document what happened during work
-- **Already have a proposal** - Don't investigate what's already decided; create a plan instead
+- **Already have a proposal** - Don't investigate what's already decided; create
+  a plan instead
 
 ---
 
@@ -69,15 +84,19 @@ Create an investigation when:
 
 ## Template
 
-A ready-to-use template is available: **[YYYY-MM-DD-TEMPLATE-investigation.md](./YYYY-MM-DD-TEMPLATE-investigation.md)**
+A ready-to-use template is available:
+**[YYYY-MM-DD-TEMPLATE-investigation.md](./YYYY-MM-DD-TEMPLATE-investigation.md)**
 
-Copy this template to start a new investigation, replacing `YYYY-MM-DD` with the current date and `TEMPLATE` with your topic. The template includes all recommended sections with guidance on what to include.
+Copy this template to start a new investigation, replacing `YYYY-MM-DD` with the
+current date and `TEMPLATE` with your topic. The template includes all
+recommended sections with guidance on what to include.
 
 ### Key Sections
 
 The template provides structure for:
 
-- **Metadata** (Date, Investigator, Status, Outcome) - Consistent across all investigations
+- **Metadata** (Date, Investigator, Status, Outcome) - Consistent across all
+  investigations
 - **Question/Motivation** - What we're investigating and why
 - **Current State Analysis** - Code references, metrics, observations
 - **Investigation Findings** - Evidence, observations, options considered
@@ -85,7 +104,8 @@ The template provides structure for:
 - **Open Questions** - What needs further discussion
 - **Next Steps** - Concrete actions
 
-Feel free to adapt sections as needed - the template is a starting point, not a rigid requirement.
+Feel free to adapt sections as needed - the template is a starting point, not a
+rigid requirement.
 
 ---
 
@@ -93,17 +113,23 @@ Feel free to adapt sections as needed - the template is a starting point, not a 
 
 ### Effective Investigation Practices
 
-1. **Scope ruthlessly** - Keep investigations lightweight to moderate complexity. If scope grows too large, document progress and create a follow-up investigation
-2. **Focus on evidence** - Code references, metrics, concrete examples over speculation
-3. **Be objective** - Present findings neutrally; recommendation comes at the end
-4. **Document "no" decisions** - Capturing why we didn't act is as valuable as capturing why we did
+1. **Scope ruthlessly** - Keep investigations lightweight to moderate
+   complexity. If scope grows too large, document progress and create a
+   follow-up investigation
+2. **Focus on evidence** - Code references, metrics, concrete examples over
+   speculation
+3. **Be objective** - Present findings neutrally; recommendation comes at the
+   end
+4. **Document "no" decisions** - Capturing why we didn't act is as valuable as
+   capturing why we did
 5. **Link generously** - Reference code files, existing docs, related issues
 
 ### Code Analysis
 
 When analyzing code:
 
-- Use specific file paths and line numbers: `src/renderer/composables/useAI.ts:42-67`
+- Use specific file paths and line numbers:
+  `src/renderer/composables/useAI.ts:42-67`
 - Quote relevant code snippets (keep short - 5-10 lines max)
 - Identify patterns (duplication, complexity, inconsistency)
 - Note test coverage gaps if relevant
@@ -144,7 +170,10 @@ When investigating performance concerns:
 
 **Example:**
 
-> Based on [Investigation: AI Composable Refactoring](../../investigations/2025-10-14-ai-composable-refactoring-investigation.md), we found 70% code duplication across AI workflows. This proposal outlines a composable factory pattern to reduce duplication.
+> Based on
+> `[Investigation: AI Composable Refactoring](../../investigations/2025-10-14-ai-composable-refactoring-investigation.md)`,
+> we found 70% code duplication across AI workflows. This proposal outlines a
+> composable factory pattern to reduce duplication.
 
 ### Outcome: No Action Needed
 
@@ -154,7 +183,8 @@ When investigating performance concerns:
 - What would trigger revisiting this (if anything)
 - Any monitoring or metrics to watch
 
-**Consider:** Write a brief "decision not to act" note in the investigation's conclusion, or reference it in architecture docs if relevant.
+**Consider:** Write a brief "decision not to act" note in the investigation's
+conclusion, or reference it in architecture docs if relevant.
 
 ### Outcome: Needs More Research
 
@@ -201,8 +231,8 @@ When investigating performance concerns:
 - Tauri doesn't support libSQL main process patterns
 - Major architecture changes required
 
-**Outcome:** No Action Needed
-**Rationale:** Migration cost outweighs benefits; Electron working well for our use case
+**Outcome:** No Action Needed **Rationale:** Migration cost outweighs benefits;
+Electron working well for our use case
 
 ### Example 3: Performance Analysis
 
@@ -220,33 +250,44 @@ When investigating performance concerns:
 
 ## Investigation → Project Flow
 
-Investigations precede projects. When an investigation concludes with "yes, build this":
+Investigations precede projects. When an investigation concludes with "yes,
+build this":
 
 1. **Create a project folder** in `projects/` with a descriptive kebab-case name
 2. **Write the project's proposal** referencing this investigation
-3. **Update the investigation's Outcome field** to point to the project (e.g., `Project created → projects/oauth-upgrade/`)
+3. **Update the investigation's Outcome field** to point to the project (e.g.,
+   `Project created → projects/oauth-upgrade/`)
 4. **Update Related Documents** to link to the project's proposal
 
-The investigation stays in `investigations/` — it never moves into the project folder. This keeps the link stable and acknowledges that investigations can feed multiple projects.
+The investigation stays in `investigations/` — it never moves into the project
+folder. This keeps the link stable and acknowledges that investigations can feed
+multiple projects.
 
 ## Archival
 
 Archive an investigation when:
 
-- **Action was taken:** The resulting project work has been completed. The investigation's value is now captured in the project's documents.
-- **No action needed:** The investigation concluded that no work is warranted. Archive it to document the decision.
+- **Action was taken:** The resulting project work has been completed. The
+  investigation's value is now captured in the project's documents.
+- **No action needed:** The investigation concluded that no work is warranted.
+  Archive it to document the decision.
 - **Superseded:** A newer investigation covers the same ground.
 
-**Don't archive** an investigation while its resulting project is still active — the investigation provides context that may be referenced during implementation.
+**Don't archive** an investigation while its resulting project is still active —
+the investigation provides context that may be referenced during implementation.
 
 Move completed investigations to `investigations/_archive/`.
 
 ## Relationship to Other Documentation
 
-- **Projects** contain proposals, plans, and sessions; investigations determine whether a project is warranted
-- **Architecture** documents existing systems; investigations analyze if those systems need changes
-- **Lessons Learned** capture specific problems solved; investigations explore potential problems
-- **Reports** assess current state; both reports and investigations can trigger new projects
+- **Projects** contain proposals, plans, and sessions; investigations determine
+  whether a project is warranted
+- **Architecture** documents existing systems; investigations analyze if those
+  systems need changes
+- **Lessons Learned** capture specific problems solved; investigations explore
+  potential problems
+- **Reports** assess current state; both reports and investigations can trigger
+  new projects
 
 ---
 
@@ -254,18 +295,21 @@ Move completed investigations to `investigations/_archive/`.
 
 ### How is an investigation different from a proposal?
 
-**Investigation:** "Should we do something?" (uncertain outcome)
-**Proposal:** "What should we build?" (committed to action)
+**Investigation:** "Should we do something?" (uncertain outcome) **Proposal:**
+"What should we build?" (committed to action)
 
-Investigations can conclude with "no action needed." Proposals assume action is warranted.
+Investigations can conclude with "no action needed." Proposals assume action is
+warranted.
 
 ### Can an investigation conclude that no proposal is needed?
 
-**Yes!** This is a valid and valuable outcome. Documenting why we investigated and chose NOT to act prevents future wheel-spinning on the same question.
+**Yes!** This is a valid and valuable outcome. Documenting why we investigated
+and chose NOT to act prevents future wheel-spinning on the same question.
 
 ### How complex should an investigation be?
 
-**Lightweight to moderate complexity** - focused analysis with clear boundaries. If the investigation becomes too complex, you should either:
+**Lightweight to moderate complexity** - focused analysis with clear boundaries.
+If the investigation becomes too complex, you should either:
 
 - Conclude with current findings
 - Document progress and continue in a follow-up investigation
@@ -281,4 +325,6 @@ Ask yourself:
 
 ### Should investigations be updated as we learn more?
 
-**Yes**, while the investigation is **Active**. Once concluded, investigations should generally not be updated. If new information emerges later, create a new investigation or reference the old one in a new proposal.
+**Yes**, while the investigation is **Active**. Once concluded, investigations
+should generally not be updated. If new information emerges later, create a new
+investigation or reference the old one in a new proposal.

@@ -1,7 +1,15 @@
-# Project Sweep & Closure Touchpoint Implementation Plan
+---
+type: plan
+title: "Project Sweep & Closure Touchpoint Implementation Plan"
+description:
+  "The two-piece split: a skill that reconciles a project against what was
+  built, and the touchpoint that calls it."
+status: stable
+lifecycle: completed
+generated: { by: unknown, at: 2026-08-07 }
+---
 
-**Created:** 2026-08-07 **Related Proposal:** [proposal.md](./proposal.md)
-**Status:** Completed
+# Project Sweep & Closure Touchpoint Implementation Plan
 
 _Reconciled 2026-08-07: all six phases complete. Phase 2's archival runs were
 held at the confirmation gate until explicitly approved, then executed —

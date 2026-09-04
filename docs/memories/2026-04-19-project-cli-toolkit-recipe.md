@@ -1,6 +1,15 @@
-# Project CLI Toolkit Recipe Added
+---
+type: memory
+title: Project CLI Toolkit Recipe Added
+description:
+  "A recipe for the dual-audience CLI pattern: TTY-aware text for people, a
+  machine-readable envelope for agents, from one command."
+tags: [recipes, cli, agent-surfaces]
+status: stable
+generated: { by: unknown, at: 2026-04-19 }
+---
 
-**Date:** 2026-04-19
+# Project CLI Toolkit Recipe Added
 
 Added `project-cli-toolkit` recipe skill capturing Story Loom's dual-audience
 CLI pattern (humans get TTY-aware text, agents get `{ok, data, meta}` JSON

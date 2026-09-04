@@ -1,6 +1,15 @@
-# Digestify --reference flag shipped
+---
+type: memory
+title: Digestify --reference flag shipped
+description:
+  Digestify learned to render a file the agent never has to read, which is the
+  whole token win when reviewing a long document.
+tags: [toolbox, digestify, agent-surfaces]
+status: stable
+generated: { by: unknown, at: 2026-05-07 }
+---
 
-**Date:** 2026-05-07
+# Digestify --reference flag shipped
 
 Extended the digestify skill so the agent can pass `--reference PATH` pointing
 at an existing doc on disk. The doc renders in the browser without its content

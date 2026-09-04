@@ -1,3 +1,13 @@
+---
+type: session
+title: "Reviewer capability gate: two defeats and a relocation — 2026-09-02"
+description:
+  Turned the reviewer-capability guidance into a gate, after confirming the
+  guidance alone held only by luck.
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
+
 # Reviewer capability gate: two defeats and a relocation — 2026-09-02
 
 ## Context

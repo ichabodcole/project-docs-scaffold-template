@@ -1,3 +1,13 @@
+---
+type: proposal # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Proposal Title]"
+description: "[One sentence: what this proposes and why.]"
+tags: [area, feature] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project folder as `proposal.md`.
 
@@ -13,27 +23,25 @@ For more guidance on proposals, see the projects README: ../README.md
 
 # [Proposal Title]
 
-**Status:** Draft | Under Review | Approved | Rejected | Superseded
-**Created:** YYYY-MM-DD
-**Author:** [Name]
-
----
-
 ## Overview
 
 [1-2 paragraph summary of what this proposal is about and why it matters]
 
 ## Problem Statement
 
-What problem are we solving? What's the pain point or opportunity? Who's affected and why does this matter?
+What problem are we solving? What's the pain point or opportunity? Who's
+affected and why does this matter?
 
 ## Proposed Solution
 
-What's the high-level approach? Describe the major components and how they fit together.
+What's the high-level approach? Describe the major components and how they fit
+together.
 
-How will users experience this? Include concrete examples, user stories, or scenarios that illustrate the feature in action.
+How will users experience this? Include concrete examples, user stories, or
+scenarios that illustrate the feature in action.
 
-[If comparing alternatives is important, discuss them here - what options were considered and why this approach was chosen]
+[If comparing alternatives is important, discuss them here - what options were
+considered and why this approach was chosen]
 
 ## Scope
 
@@ -45,13 +53,17 @@ How will users experience this? Include concrete examples, user stories, or scen
 
 ## Technical Approach
 
-High-level technical strategy - how does this fit into existing architecture? What patterns, technologies, or major components are involved?
+High-level technical strategy - how does this fit into existing architecture?
+What patterns, technologies, or major components are involved?
 
-What are the key dependencies (existing features, systems, or external libraries)?
+What are the key dependencies (existing features, systems, or external
+libraries)?
 
-[If data changes are significant: What new entities or relationships are needed? Keep high-level - detailed schemas belong in implementation plans]
+[If data changes are significant: What new entities or relationships are needed?
+Keep high-level - detailed schemas belong in implementation plans]
 
-[Use illustrative examples or pseudocode if helpful, but avoid production-ready code - that belongs in implementation plans]
+[Use illustrative examples or pseudocode if helpful, but avoid production-ready
+code - that belongs in implementation plans]
 
 ## Impact & Risks
 

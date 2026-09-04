@@ -166,15 +166,15 @@ before block for context. Treat ASCII art the same as code — literal content,
 not intent.
 
 **Reference:**
-[migration-steps-uniform-specificity](../../docs/lessons-learned/migration-steps-uniform-specificity.md)
+[migration-steps-uniform-specificity](../../../docs/lessons-learned/migration-steps-uniform-specificity.md)
 
 ---
 
 ## Related Resources
 
-- [Update Project Docs skill](../../plugins/project-docs/skills/update-project-docs/skill.md)
+- [Update Project Docs skill](../../../plugins/project-docs/skills/update-project-docs/SKILL.md)
   — the consumer of migration guides
 - [Scaffold Update Checklist](../scaffold-update-checklist/SKILL.md) — the
   release workflow that triggers migration guide creation
-- [Lessons Learned](../../docs/lessons-learned/) — where migration authoring
-  failures are documented
+- [Lessons Learned](../../../docs/lessons-learned/README.md) — where migration
+  authoring failures are documented

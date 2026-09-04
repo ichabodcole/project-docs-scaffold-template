@@ -1,3 +1,14 @@
+---
+type: brief
+title: "Knowledge Wiki Layer — a durable, graph-shaped documentation surface"
+description:
+  docs/ mixes durable knowledge that should grow with ephemeral artifacts that
+  close, and treats both the same way.
+status: stable
+lifecycle: spent
+generated: { by: unknown, at: 2026-07-23 }
+---
+
 <!--
 USAGE: Copy this file to docs/briefs/ as `YYYY-MM-DD-<name>.md`.
 
@@ -12,11 +23,6 @@ For more guidance, see: ../README.md
 -->
 
 # Knowledge Wiki Layer — a durable, graph-shaped documentation surface
-
-**Created:** 2026-07-23\
-**Status:** Active
-
----
 
 ## The Spark
 
@@ -204,3 +210,22 @@ works well, _then_ let the cross-project pattern emerge from evidence.
   lint.ts, OKF frontmatter, dual render)
 - Related: [HiveMind playbook catalog](2026-07-10-hivemind-playbook-catalog.md)
   (the cross-project knowledge-cycle thread this converges with)
+
+---
+
+## Outcome
+
+**Spent 2026-09-04.** All four of its next steps are done, in the order it set:
+both investigations concluded, and
+[project/okf-frontmatter-layer](../projects/okf-frontmatter-layer/proposal.md)
+dogfooded the layer in project-docs before the cookiecutter template was touched
+— which is what the brief asked for, and what caught most of the defects.
+
+Two of its assumptions did not survive contact. **The durable docs were not
+reshaped**: no folder moved, and the layer went on the flat list as it stands,
+with the restructure left as an explicitly open question for a later phase.
+**And the template was touched in the same body of work**, not after a separate
+proving period — the layer is additive, so shipping it in the payload cost
+nothing that reversing it would not also cost.
+
+Cross-project standardization stays parked, as the brief intended.

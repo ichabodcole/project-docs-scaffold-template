@@ -1,8 +1,15 @@
-# Digestify
-
-**Status:** Approved (in flight) **Created:** 2026-05-07 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Digestify
+description:
+  "A one-shot browser review tool: the agent writes markdown with question
+  fences, the user answers in a browser, the answers return in the same turn."
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-05-07 }
+---
+
+# Digestify
 
 ## Overview
 

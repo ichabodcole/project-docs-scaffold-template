@@ -243,6 +243,10 @@ Review the complete specification set for gaps.
 
 ## Output Format
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 Write specification files to `docs/specifications/` (or user-specified location)
 using the same structure and conventions as the `generate-spec` skill:
 

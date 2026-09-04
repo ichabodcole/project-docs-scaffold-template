@@ -1,9 +1,15 @@
-# UI Experimentation Framework
-
-**Created:** 2026-03-11\
-**Status:** Active
-
 ---
+type: brief
+title: UI Experimentation Framework
+description:
+  "HTML mockups built as recipe references could serve a larger purpose: a way
+  to try an interface before committing to building it."
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-03-11 }
+---
+
+# UI Experimentation Framework
 
 ## The Spark
 

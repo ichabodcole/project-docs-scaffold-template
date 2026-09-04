@@ -1,9 +1,14 @@
-# Grapevine — Feature Backlog
-
-**Status:** Living document **Last Updated:** 2026-05-27 (V1.6.1 rollout
-retrospective added operator-family items + message edit)
-
 ---
+type: artifact
+title: "Grapevine — Feature Backlog"
+description:
+  Grapevine feature ideas not yet assigned to a version — the shape of each, and
+  why it might matter.
+status: stable
+generated: { by: unknown, at: 2026-05-27 }
+---
+
+# Grapevine — Feature Backlog
 
 ## What this is
 
@@ -45,11 +50,6 @@ own merits if motivation accrues.
 
 ### ~~Cross-channel broadcast (`announce` verb)~~ → Promoted to V1.7
 
-**Status:** Promoted **Originated:** 2026-05-27 **Promoted:** 2026-05-27 (same
-day, after the V1.6 rollout demonstrated the need concretely — release
-announcement + correction took eight manual sends across four channels; one
-`announce` call would have done each)
-
 See [grapevine-v1.7/proposal.md](../grapevine-v1.7/proposal.md) feature **#7**
 for the live design. Full sketch and open questions migrated there.
 
@@ -59,8 +59,6 @@ graduates when motivation accrues, not on a fixed schedule.
 ---
 
 ### Timed announcements / facilitation timer
-
-**Status:** Idea **Originated:** 2026-05-27 (V1.7 design conversation)
 
 **Idea:** A timer primitive that fires a deferred `announce`-style message after
 a delay. Useful for facilitating timed activities ("five-minute brainstorm —
@@ -108,8 +106,6 @@ pencils down at the buzzer").
 
 ### V1.6.2 patch candidates (operator-family, defensive)
 
-**Status:** Sketched **Originated:** 2026-05-27 (V1.6.1 rollout retrospective)
-
 A small bundle of defensive operator-family fixes. All tiny code; main value is
 **eliminating silent-degradation modes** and **preventing zombie state**.
 
@@ -149,9 +145,6 @@ coherent "V1.6.2 — operator polish" release note.
 
 ### `rename <old> <new>` verb
 
-**Status:** Sketched **Originated:** 2026-05-27 (V1.6.1 rollout — had to write
-an ad-hoc bun script to rename `grapevine-v17` → `grapevine-v1.7`)
-
 **Idea:** Proper daemon-aware channel rename. Today's rename required: manually
 checking if the channel was loaded, renaming the JSONL file, rewriting the
 `channel` field on each existing message line. About 5 lines of script, but each
@@ -183,10 +176,6 @@ is a footgun if done wrong (especially with a loaded channel).
 
 ### ~~`doctor` / `diagnose` verb~~ → Shipped (minimal version) in V1.6.3
 
-**Status:** Partially shipped **Originated:** 2026-05-27 (V1.6.1 rollout — found
-zombies via `ps aux`; should be a first-class verb) **Shipped:** 2026-05-27
-(minimal version in V1.6.3 / toolbox 2.5.0)
-
 The read-only visibility version landed: reports authoritative daemon, other
 grapevine daemons on the machine, channels on disk, and hints (version
 mismatch + cleanup suggestions). Does NOT take destructive action — cleanup is
@@ -209,9 +198,6 @@ worth the cost.
 
 ### `doctor` / `diagnose` verb — original sketch (superseded)
 
-**Status:** Sketched **Originated:** 2026-05-27 (V1.6.1 rollout — found zombies
-via `ps aux`; should be a first-class verb)
-
 **Idea:** A health-check verb that surfaces operator-relevant state in one
 output. Saves dropping to `ps`, `lsof`, `ls`, etc. when something's off.
 
@@ -232,9 +218,6 @@ processes, remove stale files). Destructive things stay manual.
 ---
 
 ### `stop --hold <duration>` flag
-
-**Status:** Idea **Originated:** 2026-05-27 (V1.6.1 rollout — manual
-coordination dance during daemon upgrade)
 
 **Idea:** Stop the daemon and prevent auto-respawn for N seconds. Gives the
 upgrading caller a guaranteed window to spawn the new version without losing the
@@ -260,8 +243,6 @@ race to existing CLIs' auto-reconnect logic.
 ---
 
 ### Message edit (`kind:"edit"` paired with threading)
-
-**Status:** Idea **Originated:** 2026-05-27 (V1.7 design conversation)
 
 **Idea:** Allow the sender of a message to post a corrected/updated version.
 Renderers show the edited content with an "edited" indicator.
@@ -313,9 +294,6 @@ correction land cleanly in V1.7 and whether scope has room.
 ---
 
 ### Standalone `grapevine` CLI for humans (companion-app pattern)
-
-**Status:** Idea **Originated:** 2026-05-27 (post-V1.6.x retrospective on how
-the toolbox suite presents to humans vs. agents)
 
 **Idea:** Ship a standalone `grapevine` CLI installable on PATH — `npm i -g` or
 `brew install`, ergonomics TBD — that wraps the same daemon and channel data the

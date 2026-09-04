@@ -1,3 +1,13 @@
+---
+type: session
+title: "Tooling Investigation and Skill — 2026-03-13"
+description:
+  "The whole arc in one sitting: evaluating slide tooling, prototyping in two of
+  them, and shipping the skill."
+status: stable
+generated: { by: unknown, at: 2026-03-13 }
+---
+
 # Tooling Investigation and Skill — 2026-03-13
 
 ## Context
@@ -63,5 +73,5 @@ FeedbackSummary, TellMeMore).
 
 **Related Documents:**
 
-- [Investigation](../../investigations/2026-03-13-markdown-slide-deck-tooling.md)
-- [Brief](../../briefs/2026-03-13-markdown-slide-decks.md)
+- [Investigation](../../../investigations/_archive/2026-03-13-markdown-slide-deck-tooling.md)
+- [Brief](../../../briefs/2026-03-13-markdown-slide-decks.md)

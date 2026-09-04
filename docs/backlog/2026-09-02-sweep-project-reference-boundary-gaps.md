@@ -1,6 +1,15 @@
-# `sweep-project` reference boundary class misses three real terminators
+---
+type: backlog
+title: "`sweep-project` reference boundary class misses three real terminators"
+description:
+  The boundary class in sweep-project's discovery pattern stops one false match
+  and lets several others through.
+status: stable
+lifecycle: open
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Added:** 2026-09-02
+# `sweep-project` reference boundary class misses three real terminators
 
 Step 3's discovery pattern ends with the boundary class `([/)\"'[:space:]]|$)`,
 which exists to stop `grapevine` matching `grapevine-v1.6.7`. It works for that,

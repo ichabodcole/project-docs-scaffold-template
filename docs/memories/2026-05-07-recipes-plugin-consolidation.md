@@ -1,6 +1,15 @@
-# Recipes plugin consolidated to umbrella skill
+---
+type: memory
+title: Recipes plugin consolidated to umbrella skill
+description:
+  Twenty-one recipe skills became one umbrella skill loading recipes on demand,
+  trading public skill names for a namespace that stops growing.
+tags: [recipes, plugins, consolidation]
+status: stable
+generated: { by: unknown, at: 2026-05-07 }
+---
 
-**Date:** 2026-05-07
+# Recipes plugin consolidated to umbrella skill
 
 Consolidated the recipes plugin from 21 individual skills into a single umbrella
 `recipes` skill that loads recipes on demand from `library/`. Recipes are now

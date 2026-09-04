@@ -9,7 +9,8 @@ description: >
   Triggers when the user says "is this project done", "archive this project",
   "sweep this project", "reconcile the plan", "check if we can archive this",
   "clean up completed projects", "did we ever archive that", or "this project
-  looks finished".
+  looks finished". Also sweeps a cycle: "close this cycle", "is the cycle done",
+  "sweep the cycle".
 allowed-tools:
   - Read
   - Write
@@ -25,11 +26,13 @@ allowed-tools:
 Reconcile a project folder or backlog item against what was actually built, and
 close it out if it's done.
 
-**Archival is one of two valid outcomes, not the goal.** Most runs happen
+**Archival is one outcome among several, not the goal.** Most runs happen
 because someone _suspects_ a project might be finished. Often it isn't — and a
 run that reconciles the document, records what's left, and moves nothing is a
-successful run, not a failed one. The skill is named for the pass over the
-project, not for a terminal action that is conditional.
+successful run, not a failed one. So is one that writes a terminal `lifecycle`
+and deliberately leaves the folder in place, and so is one that closes a cycle.
+The skill is named for the pass over the work, not for a terminal action that is
+conditional.
 
 ## When to Use
 
@@ -41,6 +44,8 @@ project, not for a terminal action that is conditional.
 - You're sweeping up already-completed work that was never archived
 - `finalize-branch` Step 6 reconciliation came back clean and asked whether this
   completes the project
+- A **cycle** may be finished — every project and backlog item in its `scope`
+  has landed — and needs its Outcome written and its `lifecycle` closed
 
 **Don't use this skill for:**
 
@@ -61,6 +66,25 @@ Before starting, verify:
   ```bash
   ROOT=$(git rev-parse --show-toplevel)
   ```
+
+- **The docs root.** Every path in this skill is written as `docs/`, but it is
+  configurable. Resolve it once, here, and substitute it into every command
+  below:
+
+  ```bash
+  DOCS=$(node -p "require('$ROOT/.project-docs.json').docsRoot" 2>/dev/null || echo docs)
+  ```
+
+- **Whether the project has the frontmatter layer.** Steps 2a, 2b, 4, 5a and the
+  Cycle Path all branch on it, and the test is one file:
+
+  ```bash
+  [ -f "$ROOT/$DOCS/SCHEMA.md" ] && echo "frontmatter layer: yes" || echo "older scaffold"
+  ```
+
+  With the layer, `lifecycle` in frontmatter is the declared state and `cycles/`
+  exists. Without it, the bold `**Status:**` line is all there is, and the Cycle
+  Path never runs.
 
 - **A clean-enough working tree.** This skill's validation story is "review the
   diff before accepting," which is unreadable against a tree full of unrelated
@@ -101,15 +125,18 @@ Before starting, verify:
 - **Live references get rewritten; historical ones don't.** A dated session note
   saying "we put the proposal in `docs/projects/foo/`" is a true statement about
   the past. Rewriting it makes the record wrong, not right.
-- **Nothing closes unattended.** The human confirms before any move.
+- **Nothing moves and no cycle closes without confirmation.** Reconciliation
+  edits — `lifecycle` included — need none; they happen on every run. What the
+  human gates is the archival move and the closing of a cycle.
 
 ## Workflow
 
 ### Step 0: Resolve the Target and Check Its State
 
-Accept an explicit target — a project folder name, or a path to a backlog item.
-The target may come from the user directly, or be passed in by a calling skill
-(e.g. `finalize-branch` Step 6). If no target is given, **ask**.
+Accept an explicit target — a project folder name, a path to a backlog item, or
+a path to a cycle file under `docs/cycles/`. The target may come from the user
+directly, or be passed in by a calling skill (e.g. `finalize-branch` Step 6). If
+no target is given, **ask**.
 
 A caller may hand you a path _inside_ the target rather than the target itself —
 `docs/projects/foo/plan.md` instead of the folder `foo`. Reducing that to its
@@ -124,15 +151,16 @@ standalone.
 
 Once resolved, check the target's state before doing anything else:
 
-| State                                                         | Action                                                                                                                                                      |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Doesn't exist                                                 | Refuse. List the active targets (`ls "$ROOT/docs/projects/"` or `ls "$ROOT/docs/backlog/"`) so the user can correct the name.                               |
-| Already under `_archive/`                                     | Don't re-archive. Run the **recovery path** below instead.                                                                                                  |
-| Something of the same name already exists at the destination  | Reconcile as normal, then refuse **the move** — never merge, overwrite, or auto-rename. Report the collision and stop at 5a, under its collision carve-out. |
-| Is a backlog item (a single `.md` file under `docs/backlog/`) | Reconcile from that one file, which serves as plan, proposal, and record. Skip the folder-shaped rows below.                                                |
-| Has `plan.md`                                                 | Normal path.                                                                                                                                                |
-| Has `proposal.md` but no `plan.md`                            | Reconcile from the proposal and `sessions/`. Usually narrative mode — see below. Say so in the report.                                                      |
-| Has neither                                                   | Reconcile from whatever Markdown the folder does contain. Usually narrative mode — see below. Say so.                                                       |
+| State                                                                                   | Action                                                                                                                                                      |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Doesn't exist                                                                           | Refuse. List the active targets (`ls "$ROOT/docs/projects/"` or `ls "$ROOT/docs/backlog/"` or `ls "$ROOT/docs/cycles/"`) so the user can correct the name.  |
+| Already under `_archive/`                                                               | Don't re-archive. Run the **recovery path** below instead.                                                                                                  |
+| Something of the same name already exists at the destination                            | Reconcile as normal, then refuse **the move** — never merge, overwrite, or auto-rename. Report the collision and stop at 5a, under its collision carve-out. |
+| Is a backlog item (a single `.md` file under `docs/backlog/`)                           | Reconcile from that one file, which serves as plan, proposal, and record. Skip the folder-shaped rows below.                                                |
+| Is a cycle (a single `.md` file under `docs/cycles/`, not `README.md` or `TEMPLATE.md`) | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                           |
+| Has `plan.md`                                                                           | Normal path.                                                                                                                                                |
+| Has `proposal.md` but no `plan.md`                                                      | Reconcile from the proposal and `sessions/`. Usually narrative mode — see below. Say so in the report.                                                      |
+| Has neither                                                                             | Reconcile from whatever Markdown the folder does contain. Usually narrative mode — see below. Say so.                                                       |
 
 **"Narrative mode" is a property of the content, not of which files exist.** A
 document is in narrative mode when it has nothing item-shaped to update — no
@@ -147,6 +175,131 @@ so: run Step 3's discovery and classification, then apply the rewrites from Step
 5b — skipping its `git mv`. Match on the target's **pre-move** path form
 (`projects/<name>`, `../<name>/`, `./<name>/`), since that's what any stale
 reference still contains. Then report as normal.
+
+### The Cycle Path — replaces Steps 1 through 5b
+
+Only for a cycle target, reached from Step 0. It is a complete alternative
+pipeline, not an interstitial: **Steps 1, 2, 3, 4, 5a and 5b are all skipped**,
+and you rejoin at Step 6 to report. It is unnumbered on purpose — the file's
+`a`/`b` suffixes mean "a part or branch of that numbered step," and this is
+neither.
+
+A cycle is an index over work in play. It owns nothing, so there is no plan to
+reconcile and nothing to archive. Sweeping one means asking whether everything
+it points at has finished, and if so, writing down what happened.
+
+**1. Read the cycle's `scope:`.** Each entry is a `type/slug` reference, not a
+path. `project/<name>` means the folder `docs/projects/<name>/`;
+`backlog/<item>` means the file `docs/backlog/<item>.md`.
+
+**2. Check each entry's `lifecycle`.** A `project/` entry is a folder holding
+several documents that each carry one, so read them all:
+
+```bash
+ROOT=$(git rev-parse --show-toplevel)
+NAME=<project-folder-name>
+grep -H '^lifecycle:' "$ROOT/docs/projects/$NAME"/*.md 2>/dev/null
+
+# for a backlog entry
+ITEM=<backlog-filename-without-extension>
+grep -H '^lifecycle:' "$ROOT/docs/backlog/$ITEM.md"
+```
+
+`docs/SCHEMA.md`'s **Lifecycle by type** table is the source of truth for which
+values exist — `docs/lint.ts` parses that table and fails if it disagrees, so it
+is the copy that cannot drift. Read it rather than trusting the summary here.
+The terminal values, as of writing:
+
+| Type                | Terminal `lifecycle`                                    |
+| ------------------- | ------------------------------------------------------- |
+| `proposal`          | `implemented` · `deferred` · `withdrawn` · `superseded` |
+| `plan`              | `completed` · `abandoned`                               |
+| `design-resolution` | `resolved` · `superseded`                               |
+| `test-plan`         | `completed`                                             |
+| `backlog`           | `done` · `promoted` · `dropped`                         |
+
+**A project entry is finished when every document in its folder that carries a
+`lifecycle` has reached a terminal one.** A proposal at `implemented` beside a
+plan still at `active` is the ordinary mid-project state, not a contradiction —
+and not finished. A project with a proposal and no plan is finished on its
+proposal alone; there is no missing document to wait for.
+
+**One exception, or the cycle wedges.** A proposal at `deferred` means the work
+was deliberately parked, and Step 2b tells you to leave its plan at `active` —
+which is not terminal, so the entry could never close and neither could the
+cycle. **A `deferred` proposal closes its entry regardless of plan state.** Name
+it in the Outcome as cut, not delivered.
+
+**Read the frontmatter, but do not trust it.** A `lifecycle` is a claim like any
+other. The evidence hierarchy in Step 2a still governs: rung 1 is the shipped
+thing itself, and it outranks every document. If a scope entry says
+`implemented` and the thing it names isn't on disk, that is a finding — report
+it and treat the cycle as open. The field makes the check cheap; it doesn't make
+it authoritative.
+
+**3. If any entry is non-terminal, reconcile the cycle and stop.** Reporting is
+not the whole of it — this skill leaves every document more accurate than it
+found it, on every run, and a cycle has three things that drift:
+
+- **`## Sessions` lines still marked `(open)` for branches that landed.** Check
+  each against `git log`; change a landed one to `(landed YYYY-MM-DD)` using its
+  merge date. This is `finalize-branch` Step 6's job and it gets skipped.
+- **`scope:` entries naming a folder or file that no longer exists** — usually
+  archived. Fix the reference to its `_archive/` location, or report it if you
+  cannot tell what it meant.
+- **The body's `## Scope` links**, which are ordinary relative links and break
+  the same way any other does.
+
+Then report which entries are holding the cycle open and what state each is in,
+and offer to sweep each unfinished project or backlog item — that is this
+skill's normal path, run once per target, and it may well move an entry to
+terminal and let the cycle close on a second run. **Don't recurse
+automatically:** each of those runs has its own confirmation gate, and batching
+them past the human is what the gate exists to prevent.
+
+**4. If every entry is terminal, close the cycle** — after asking, via
+`AskUserQuestion`. This is the cycle path's equivalent of Step 4's archival
+question: show the reconciliation (each scope entry and the lifecycle that
+settles it) and ask, rather than closing because the arithmetic came out.
+Closing writes four things into the cycle file:
+
+- `lifecycle: closed` — or `abandoned`, if the cycle was dropped rather than
+  finished. Say which you are writing and why.
+- `closed: YYYY-MM-DD`, today's date, added as a key beside `started:`. It is
+  not in `docs/cycles/TEMPLATE.md`; add it.
+- The `## Outcome` section, replacing its `_Written at close, not before._`
+  placeholder.
+- **`## Sessions`** — every line still marked `(open)` moved to
+  `(landed YYYY-MM-DD)`. A closed cycle that still says a branch is open is the
+  most visible way to get this wrong.
+
+**Leave `status:` alone.** `status` says whether the document can be trusted and
+`lifecycle` says where the work got to; a closed cycle is still a `stable`
+document, and more so than before.
+
+**The Outcome is the point of the whole document.** Write what shipped, what was
+cut and why, and what was learned that will change how the next cycle is scoped.
+Two paragraphs is usually enough. Write it from the scoped documents and their
+sessions, not from the cycle's own `## Scope` section — restating the plan as
+though it were the result is the failure mode here. The test: the Outcome must
+name at least one thing that was cut, or learned, that appears nowhere in
+`## Scope`. If it cannot, you have summarised the plan.
+
+**5. Verify, then rejoin at Step 6.**
+
+```bash
+bun docs/lint.ts && echo "cycle accepted"
+grep -c '^lifecycle: active' "$ROOT"/docs/cycles/*.md | grep -v ':0$'
+```
+
+The lint checks the frontmatter you just wrote and the links in the body. The
+second command should now name at most one file: **at most one cycle may be
+`active`**, `docs/SCHEMA.md` states it and the lint enforces it, and closing one
+is exactly when someone opens the next.
+
+**A closed cycle is not an archived one.** Cycles stay in `docs/cycles/`
+permanently; the folder is the project's record of what was in play when. There
+is no `docs/cycles/_archive/`.
 
 ### Step 1: Gather Reconciliation Sources
 
@@ -238,11 +391,24 @@ this step is. Verifying an unhealthy one is the point.
 
 2. **Session documents** (`sessions/*.md`) — a contemporaneous record of what
    happened, written while it was happening.
-3. **A `**Status:**` line** — a deliberate human claim, but often stale. When
-   `plan.md` and `proposal.md` both carry one and they agree, treat them as one
-   signal. When they disagree, **`plan.md` is closer to execution and ranks
-   higher** — but the disagreement is a finding in its own right, so report both
-   values rather than quietly using one.
+3. **A declared state** — a deliberate human claim, but often stale. Look for it
+   in this order:
+   1. **`lifecycle` in frontmatter**, when the project has adopted the
+      frontmatter layer (`docs/SCHEMA.md` exists). This is the field the lint
+      checks and the one every other skill writes, so it is the current one.
+   2. **A bold `**Status:**` line in the body**, for projects still on the older
+      scaffold, or for documents the backfill never reached.
+
+   If a document carries both and they disagree, the frontmatter wins and the
+   stale bold line is a finding — say so, and offer to remove it, since a
+   document carrying two answers will be read by whoever finds the wrong one
+   first.
+
+   When `plan.md` and `proposal.md` both declare a state and they agree, treat
+   them as one signal. When they disagree, **`plan.md` is closer to execution
+   and ranks higher** — but the disagreement is a finding in its own right, so
+   report both values rather than quietly using one.
+
 4. **Completion marks** — checkbox state, per-phase annotations, addendum notes.
    Weakest, and diagnostic rather than conclusive. A mark is a claim that
    something shipped; sample against rung 1 before relying on the set. A mark
@@ -265,14 +431,33 @@ a conclusion, and lead with it. "Surface conflicts" (below) means _show the
 conflicting evidence and which rung decided it_, not "decline to decide."
 Silence is the thing being forbidden, not judgment.
 
-**Plans and proposals use different status vocabularies — don't read a
-difference as a disagreement.** `PLAN.template.md` defines
-`Draft | Active | Completed | Superseded`; `PROPOSAL.template.md` defines
-`Draft | Under Review | Approved | Rejected | Superseded`. So a proposal marked
-`Approved` beside a plan marked `Completed` is two documents each in their own
-terminal-ish state — entirely consistent, and reporting it as a conflict is
-noise. A real conflict is one document claiming done while the other claims
-not-started, or either contradicting the artifacts.
+**Plans and proposals use different vocabularies — don't read a difference as a
+disagreement.** Under the frontmatter layer, `docs/SCHEMA.md` is the source of
+truth and the lint enforces it:
+
+| Type                | `lifecycle` values                                                             |
+| ------------------- | ------------------------------------------------------------------------------ |
+| `proposal`          | `draft` · `approved` · `deferred` · `implemented` · `withdrawn` · `superseded` |
+| `plan`              | `draft` · `active` · `completed` · `abandoned`                                 |
+| `backlog`           | `open` · `done` · `promoted` · `dropped`                                       |
+| `design-resolution` | `draft` · `resolved` · `superseded`                                            |
+| `test-plan`         | `draft` · `ready` · `active` · `completed`                                     |
+
+(On the older scaffold the bold lines read
+`Draft | Active | Completed | Superseded` for a plan and
+`Draft | Under Review | Approved | Rejected | Superseded` for a proposal. Same
+idea, different words.)
+
+So a proposal at `implemented` beside a plan at `completed` is two documents
+each in their own terminal state — entirely consistent, and reporting it as a
+conflict is noise. A real conflict is one document claiming done while the other
+claims not-started, or either contradicting the artifacts.
+
+**`approved` is not `implemented`, and this is where that matters.** A proposal
+left at `approved` when the thing was built is exactly the drift this step
+exists to correct — not a terminal state to leave alone. Seventeen proposals in
+this repository were checked against the tree in one pass and eleven of them
+were wrong in that direction.
 
 #### Step 2b: Write the Reconciliation Back
 
@@ -281,6 +466,33 @@ checking each planned item against reality and updating the document to match;
 the marks are the output of this step, not its input. This edit is unconditional
 and needs no confirmation: it happens on every run, including runs that archive
 nothing. What Step 4 gates is the _move_, not the reconciliation.
+
+**Write `lifecycle` first, before touching any marks.** Under the frontmatter
+layer it is the one field every other skill reads and the lint checks, and it is
+the answer to the question this whole run was called to settle. Set it from what
+Step 2a concluded, using that type's vocabulary from the table above:
+
+- The work shipped → `implemented` on the proposal, `completed` on the plan,
+  `done` on a backlog item.
+- The work was dropped → `withdrawn` (proposal), `abandoned` (plan), `dropped`
+  (backlog item).
+- Someone else's proposal replaced it → `superseded`.
+- Deliberately parked, still wanted → `deferred` on the proposal; leave the plan
+  at `active` and say why in the report.
+- Genuinely still in flight → leave it. `active` on a plan whose work is
+  half-done is correct, not drift.
+
+Getting to a terminal `lifecycle` is what makes the rest possible: Step 5b won't
+move a project that hasn't reached one, and a cycle can't close until every
+entry in its scope has.
+
+**On the older scaffold, with no frontmatter**, the same conclusion goes into
+the bold `**Status:**` line instead, and it goes in here — Step 5a is the
+unfinished branch and Step 5b only moves files, so nothing downstream writes it.
+A finished plan gets `Completed`; a dropped one gets `Superseded` or a short
+free-form line saying what happened. The rule against normalizing a free-form
+status still holds: if the line already says something more informative than the
+enum, ask before replacing it.
 
 Steps 5a and 5b therefore inherit an already-reconciled document. 5a adds the
 status update and, where warranted, a note on why work remains; 5b moves the
@@ -410,7 +622,7 @@ Three asymmetries with the project variant, all deliberate:
   items — the same silent-zero-references failure this step exists to prevent.
   On the recovery path, exclude `^docs/backlog/_archive/${NAME}\.md:` instead.
 
-**Classify every hit into one of four buckets:**
+**Classify every hit into one of five buckets:**
 
 Classify on **three questions, in this order**, so no hit can land in two
 buckets:
@@ -424,18 +636,36 @@ buckets:
    account of a moment rather than a description of the present. Dated filenames
    are the usual tell, but the test is the document's _voice_, not its folder: a
    lesson-learned is retrospective by nature even when undated. → **Leave.**
-3. **If neither an example nor historical: is the path a link target, or is it
-   prose?** A markdown link destination or a bare path being used as a pointer →
+3. **Is the referencing document itself under `_archive/`, and is the hit a
+   sibling-relative `../<name>/` form?** Such a link resolves to
+   `docs/projects/_archive/<name>/` the moment the target moves — it corrects
+   itself, and applying the rewrite anyway produces `_archive/_archive/<name>/`.
+   → **Self-correcting.** (Real instance in this repository:
+   `docs/projects/_archive/test-plan-doc-type/proposal.md` links to a sibling
+   that is also archived.) Only the `../` form self-corrects; a
+   `projects/<name>` or `./<name>/` hit in the same file does not, and falls
+   through to question 4.
+4. **If none of the above: is the path a link target, or is it prose?** A
+   markdown link destination or a bare path being used as a pointer →
    **Rewrite.** A path embedded in a sentence that asserts something about the
    project ("the `docs/projects/foo/` folder contains a proposal and plan") →
    **Flag.**
 
-| Bucket      | Action                                                                   |
-| ----------- | ------------------------------------------------------------------------ |
-| **Rewrite** | Rewrite to the `_archive/` path                                          |
-| **Leave**   | Leave it. Report it as deliberately left, so the omission is visible     |
-| **Flag**    | **Do not rewrite.** Show the surrounding sentence and ask how to proceed |
-| **Example** | Leave it. Report the count only, not each hit                            |
+| Bucket              | Action                                                                            |
+| ------------------- | --------------------------------------------------------------------------------- |
+| **Rewrite**         | Rewrite to the `_archive/` path                                                   |
+| **Leave**           | Leave it. Report it as deliberately left, so the omission is visible              |
+| **Flag**            | **Do not rewrite.** Show the surrounding sentence and ask how to proceed          |
+| **Example**         | Leave it. Report the count only, not each hit                                     |
+| **Self-correcting** | Leave it, and say why — it is correct after the move, not an omission. Count only |
+
+**Why `Self-correcting` is its own bucket rather than a footnote on `Leave`.**
+It was one, and the footnote escaped both of this step's invariants: the
+three-question test classified the hit as **Rewrite**, Step 5b then declined to
+rewrite it, and correctness grep 2 reported it as a reference still pointing at
+the old location — so a correct run looked like a failed one, and an executor
+"fixing" it produced `_archive/_archive/`. A rule that one case is exempt from
+is a rule with a hole in it; a fifth bucket has no hole.
 
 **Earlier questions win outright.** A link inside a dated session note is still
 Leave (question 2 settles it before question 3 can call it a Rewrite). A prose
@@ -454,6 +684,14 @@ skill shouldn't make unattended.
 only. References in JSON/YAML config, scripts, or outside this repository are
 not found. That's deliberate, but a reader needs to know it.
 
+**One classification rule the buckets don't cover: a cycle's two halves split.**
+A cycle is date-named and reads like a record of a moment, which sends it to
+**Leave** by question 2 — but its `## Scope` section links live documents, and
+those links break when the target moves. Split it: a cycle's `## Scope` links
+are **Rewrite**, closed or not; its `## Outcome` and `## Why now` prose is
+**Leave**. The `scope:` frontmatter entries are `type/slug` references and need
+no change at all.
+
 ### Step 4: Present and Check In
 
 Show the human two things together:
@@ -466,25 +704,70 @@ Then ask, via `AskUserQuestion`. Everything accounted for makes this an
 **archival candidate** — not an archived project. Present archival as a choice,
 with the evidence, and let the human answer.
 
+**Under the frontmatter layer, the move is optional and the `lifecycle` is
+not.** A terminal `lifecycle` is what records that the work closed; moving the
+folder is housekeeping on top of that. Say so when you present the choice —
+"nothing moves" is a complete outcome here, not a deferral, and a project left
+in place with `lifecycle: implemented` is properly closed.
+
+**One case where the move is refused rather than offered: the target is named in
+an `active` cycle's `scope`.**
+
+Match the `type/slug` form the entries actually use, anchored so a longer
+sibling name can't answer for a shorter one — `project/foo-v2` must not match a
+search for `project/foo`:
+
+```bash
+ROOT=$(git rev-parse --show-toplevel)
+NAME=<project-folder-name>          # or the backlog filename, without .md
+KIND=project                        # or: backlog
+for c in "$ROOT"/docs/cycles/*.md; do
+  case "$c" in *TEMPLATE*|*README*) continue;; esac
+  grep -q '^lifecycle: active' "$c" || continue
+  grep -nE "^[[:space:]]*-[[:space:]]*${KIND}/${NAME}[[:space:]]*$" "$c"
+done
+```
+
+**Why the move breaks it:** not the `scope:` entries themselves — those are
+`type/slug` references and survive any folder move untouched — but the body's
+`## Scope` section, which links each entry with an ordinary relative path
+(`../projects/foo/proposal.md`). Those break like any other link, and the thin
+tier checks them. The cycle is also the one document that still needs to point
+at this work.
+
+Reconcile as normal, write the terminal `lifecycle`, report the cycle by name,
+leave the folder where it is, and **go to Step 6** — not to Step 5a, whose
+status guidance is written for a genuinely unfinished project and would
+overwrite what you just concluded. The folder becomes movable when that cycle
+closes, which is what the Cycle Path is for.
+
 ### Step 5a: Not Complete — Record and Stop
 
 The marking already happened in Step 2b. What's left here:
 
 - Confirm the Step 2b marking is written to disk; leave incomplete items
   unmarked.
-- Update a `**Status:**` line **if it holds a template enum value** — for a
-  plan, that vocabulary is `Draft | Active | Completed | Superseded`. Work
-  started and work remaining means `Active`. If the line is free-form
+- Confirm the `lifecycle` Step 2b wrote is on disk. Work started and work
+  remaining means `active` on the plan; the proposal usually stays `approved`.
+- On the older scaffold, update a `**Status:**` line **if it holds a template
+  enum value** — for a plan, that vocabulary is
+  `Draft | Active | Completed | Superseded`. If the line is free-form
   (`V1.5 shipped, awaiting merge`), leave it and report it verbatim; ask before
-  changing it (Step 2b).
+  changing it (Step 2b). A free-form status is exactly the signal the
+  `lifecycle` vocabulary was built from — if it names a state the vocabulary
+  can't express, say so in the report rather than rounding it off.
 
-**Carve-out: a run that reached 5a only because of a destination collision**
-(Step 0). Nothing about that project is incomplete — what's blocked is the
-_move_. Reconciliation may well have found it finished. **Do not write `Active`
-over a status Step 2b just confirmed as `Completed`**, and don't add a note
-implying work remains. Keep what the reconciliation found, report the collision
-as the reason nothing moved, and stop. The rest of this step's status guidance
-applies only to a genuinely unfinished project.
+**Carve-out: a run that reached 5a only because the move was blocked, not
+because the work is unfinished** — a destination collision (Step 0), or an
+`active` cycle holding the folder in place (Step 4). Nothing about that project
+is incomplete — what's blocked is the _move_. Reconciliation may well have found
+it finished. **Do not write `active` over a `lifecycle` Step 2b just confirmed
+as terminal**, or `Active` over a bold status it confirmed as `Completed`, and
+don't add a note implying work remains. Keep what the reconciliation found,
+report the blocker as the reason nothing moved, and stop. The rest of this
+step's status guidance applies only to a genuinely unfinished project. (The
+cycle case should reach Step 6 directly from Step 4; if you arrived here anyway,
+this carve-out is the safety net, not the intended route.)
 
 Add a short dated note explaining _why_ work remains **only when the reason
 isn't self-evident from the document's own structure.** "Phases 1 and 2 done,
@@ -497,6 +780,10 @@ on every run is worse than one that appends none.
 Nothing moves. Report and stop.
 
 ### Step 5b: Complete and Confirmed — Archive
+
+Reached only when the human chose the move at Step 4 **and** no `active` cycle
+lists this target in its `scope` (Step 4). Re-run that grep here if any time
+passed; it costs nothing and the alternative is a broken cycle.
 
 Move the target. `git mv` fails if the destination directory doesn't exist,
 which it may not in a freshly generated scaffold, so create it first:
@@ -541,26 +828,29 @@ This local transformation is correct at every depth. A single normalized form �
 rewriting everything to a repo-root-relative path — would break sibling links
 that are correct as relative paths.
 
-**One exception: a `../<name>/` link from a document that is _itself_ already
-under `_archive/`.** Such a link resolves to `docs/projects/_archive/<name>/`
-the moment the target moves — it fixes itself, and applying the rule anyway
-produces `_archive/_archive/<name>/`. Leave those untouched. (Real instance in
-this repo: `docs/projects/_archive/test-plan-doc-type/proposal.md` links to a
-sibling.) Step 3's exclusion only filters the target's own folder, so these hits
-do reach you — check whether the _referencing_ file is under `_archive/` before
-rewriting a `../` form.
+**Self-correcting hits are already classified — don't re-decide them here.**
+Step 3's question 3 sorts a `../<name>/` link from a document itself under
+`_archive/` into its own bucket, because it resolves correctly the moment the
+target moves and rewriting it would produce `_archive/_archive/<name>/`. Apply
+the rule to the Rewrite bucket and nothing else.
 
-Leave the Leave-bucket hits untouched. Present the Flag-bucket hits and act only
-on the human's answer.
+Leave the Leave-bucket and Self-correcting hits untouched. Present the
+Flag-bucket hits and act only on the human's answer.
 
 ### Step 6: Report
 
 State plainly:
 
 - What was reconciled, including any conflicting signals found
-- What moved, if anything
+- **What `lifecycle` was written, and to which files** — the value, the previous
+  value, and the rung-1 or rung-2 evidence that settled it. This is the finding;
+  bury it under the reference list and nobody reads it.
+- What moved, if anything — and if nothing moved, whether that was the human's
+  choice, an active cycle holding the folder in place, or unfinished work
 - Which references were rewritten
 - Which were **deliberately left** (and why — historical record)
+- Which were **self-correcting** (a count is enough) — these are not omissions,
+  and reporting them as "left" invites someone to come back and "fix" them
 - Which were **flagged** for the human, and what they decided
 - The scope limits: tracked `*.md` only, this repository only
 
@@ -570,16 +860,41 @@ silent no-op that reads like a failure.
 
 ## Acceptance Criteria
 
+**Every run:**
+
 - [ ] The document is more accurate than it was, whether or not anything moved
 - [ ] No tracking format was imposed on a document that didn't use it
 - [ ] No free-form status was silently normalized
+- [ ] Where the project has the frontmatter layer, `bun docs/lint.ts` exits 0
+      after the run (or reports only problems that were already there)
+
+**Project and backlog runs:**
+
+- [ ] `lifecycle` on disk matches what the reconciliation concluded
+- [ ] Nothing named in an `active` cycle's `scope` was moved — checked against
+      the `type/slug` entries, not against the file's text
 - [ ] Reference discovery ran **before** the move
-- [ ] Every discovered reference landed in exactly one of the four buckets, and
-      the Leave and Flag buckets appear in the report rather than vanishing
+- [ ] Every discovered reference landed in exactly one of the five buckets, and
+      received that bucket's action — no hit is classified one way and treated
+      another
+- [ ] The Leave, Flag and Self-correcting buckets appear in the report rather
+      than vanishing
 - [ ] `git status` shows the archival as a **rename**, not a delete plus an add
 - [ ] Nothing was archived without explicit confirmation
 
-**Correctness checks, in order of authority:**
+**Cycle runs:**
+
+- [ ] Every `scope` entry's `lifecycle` was read from the documents, and any
+      claim of `implemented` was checked against rung 1
+- [ ] `## Sessions` has no `(open)` line for a branch that landed
+- [ ] No cycle was closed without explicit confirmation
+- [ ] A closed cycle's `## Outcome` names at least one thing cut or learned that
+      appears nowhere in its `## Scope`
+- [ ] At most one cycle is `lifecycle: active`
+
+**Correctness checks, in order of authority.** Items 2 and 3 are about the
+archival move; on a cycle run they are vacuous, and the check that matters is
+item 4.
 
 1. `git diff` of the whole run — the primary check. Read it before accepting.
 2. `git status --short` — confirms rename detection held.
@@ -593,10 +908,21 @@ silent no-op that reads like a failure.
    # every rewritten reference now points at _archive/ — expect your rewrite count
    git -C "$ROOT" grep -nE "(projects/|\.\./|\./)_archive/${NAME}([/)\"'[:space:]]|$)" -- '*.md'
 
-   # nothing still points at the old location except Leave/Flag hits you kept
+   # nothing still points at the old location except the hits you deliberately
+   # kept: Leave, Flag, and Self-correcting. The last of those live under
+   # `_archive/` themselves, so the second filter drops them and what remains
+   # should be exactly your Leave and Flag lists — anything else is a rewrite
+   # you missed.
    git -C "$ROOT" grep -nE "(projects/|\.\./|\./)${NAME}([/)\"'[:space:]]|$)" -- '*.md' \
-     | grep -vE "^docs/projects/(_archive/)?${NAME}/"
+     | grep -vE "^docs/projects/(_archive/)?${NAME}/" \
+     | grep -vE "^docs/projects/_archive/"
    ```
+
+4. **The lint**, where the project has it — `bun docs/lint.ts`. It is the only
+   check that reads what you wrote into frontmatter, and the only one that runs
+   at all on a cycle. A rewrite that produced a link to nowhere, a `lifecycle`
+   outside its type's vocabulary, or a second `active` cycle surfaces here and
+   nowhere in the three checks above.
 
 ## Risks & Gotchas
 

@@ -1,8 +1,15 @@
-# Moodboard Element Extraction
-
-**Status:** Draft **Created:** 2026-05-23 **Author:** Cole
-
 ---
+type: proposal
+title: Moodboard Element Extraction
+description:
+  Extract every distinct element from an AI-generated moodboard as its own
+  image, discovered by a vision model rather than by hand.
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-05-23 }
+---
+
+# Moodboard Element Extraction
 
 ## Overview
 

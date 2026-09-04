@@ -1,9 +1,15 @@
-# Migration Steps Must Be Uniformly Specific
-
-**Date:** 2026-02-15 **Tags:** `#migrations` `#agent-execution` `#documentation`
-**Type:** Pattern
-
 ---
+type: lesson
+title: Migration Steps Must Be Uniformly Specific
+description:
+  In an agent-run guide, one underspecified step becomes the failure point — the
+  specificity has to be uniform, not average.
+tags: [migrations, agent-execution, documentation]
+status: stable
+generated: { by: unknown, at: 2026-02-15 }
+---
+
+# Migration Steps Must Be Uniformly Specific
 
 ## The Lesson
 
@@ -101,7 +107,7 @@ cookiecutter source of truth.
 
 ## Related Resources
 
-- [v2.3-to-v2.4 migration guide](../projects/test-plan-doc-type/sessions/2026-02-15-test-plan-implementation.md)
+- [v2.3-to-v2.4 migration guide](../projects/_archive/test-plan-doc-type/sessions/2026-02-15-test-plan-implementation.md)
   (session where this was discovered)
 - Migration file:
   `plugins/project-docs/skills/update-project-docs/migrations/v2.3-to-v2.4.md`

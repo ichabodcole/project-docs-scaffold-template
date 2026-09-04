@@ -10,6 +10,16 @@
         {
           "type": "generic",
           "path": "{{cookiecutter.project_slug}}/docs/README.md"
+        },
+        {
+          "type": "json",
+          "path": ".project-docs.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "{{cookiecutter.project_slug}}/.project-docs.json",
+          "jsonpath": "$.version"
         }
       ]
     }

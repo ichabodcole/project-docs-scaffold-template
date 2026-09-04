@@ -1,3 +1,13 @@
+---
+type: plan # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Feature Name] Implementation Plan"
+description: "[One sentence: the route from here to the proposed state.]"
+tags: [area, feature] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project folder as `plan.md`.
 
@@ -15,8 +25,7 @@ For more guidance on plans, see the projects README: ../README.md
 
 # [Feature Name] Implementation Plan
 
-**Created:** YYYY-MM-DD **Related Proposal:** [Link to proposal](./proposal.md)
-**Status:** Draft | Active | Completed | Superseded
+**Related Proposal:** [Link to proposal](./proposal.md)
 
 ---
 

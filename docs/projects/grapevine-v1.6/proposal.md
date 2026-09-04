@@ -1,8 +1,15 @@
-# Grapevine V1.6 — Triage Wins + Human Control Plane Direction
-
-**Status:** Draft **Created:** 2026-05-27 **Author:** Cole
-
 ---
+type: proposal
+title: "Grapevine V1.6 — Triage Wins + Human Control Plane Direction"
+description:
+  The CLI and notification papercuts from the first real two-agent session —
+  superseded by the V1.6.7 patch that shipped them.
+status: stable
+lifecycle: superseded
+generated: { by: unknown, at: 2026-05-27 }
+---
+
+# Grapevine V1.6 — Triage Wins + Human Control Plane Direction
 
 ## Overview
 

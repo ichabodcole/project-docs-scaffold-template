@@ -1,3 +1,13 @@
+---
+type: session
+title: "Add HTML Mockup Prototyping to Toolbox — 2026-03-26"
+description:
+  Duplicated html-mockup-prototyping into toolbox so it works in a project that
+  has no project-docs plugin.
+status: stable
+generated: { by: unknown, at: 2026-03-26 }
+---
+
 # Add HTML Mockup Prototyping to Toolbox — 2026-03-26
 
 ## Context

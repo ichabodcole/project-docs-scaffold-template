@@ -55,13 +55,27 @@ docs/projects/<name>/
 ```
 
 Read `docs/projects/TEMPLATES/PROPOSAL.template.md` and use it as the starting
-point for `proposal.md`. Fill in what you can:
+point for `proposal.md`. (The docs root is `docsRoot` in `.project-docs.json` at
+the repo root, default `docs/` — read it if the file exists.)
 
-- **Date**: Today's date
-- **Status**: Draft
-- **Project name** in the title
+**If the template opens with a frontmatter block, fill it — every field.** The
+bracketed values are placeholders, not defaults, and a placeholder left in place
+is what the lint fails on:
 
-Leave all other template sections as-is for the user to fill in.
+- `type: proposal` — already correct; the folder decides it. Don't change it.
+- `title` — the proposal's title, matching the H1 you write below it
+- `description` — one sentence saying what this proposes and why. Write it from
+  what the user actually told you. If they gave you a one-line idea, that line
+  _is_ the description; don't inflate it into a paragraph, and don't leave it
+  blank hoping to come back.
+- `tags` — 2–4 kebab-case keywords
+- `status: draft`
+- `lifecycle: draft` — its opening value. A proposal becomes `approved` when
+  someone approves it, not when it is written.
+- `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`
+
+Then fill the body's title and leave all other template sections as-is for the
+user to fill in.
 
 ### Step 4: Link to Investigation (if applicable)
 
@@ -72,10 +86,21 @@ If the user mentions an investigation or provides one as context:
 
 ### Step 5: Confirm Creation
 
+If the project has a documentation lint (`docs/lint.ts` at the repo root), run
+it before reporting:
+
+```bash
+bun docs/lint.ts
+```
+
+A new document is the cheapest possible moment to find a missing field. If it
+reports a problem in the file you just wrote, fix it now rather than mentioning
+it.
+
 Tell the user:
 
 - Project folder created at `docs/projects/<name>/`
-- Proposal scaffolded with template
+- Proposal scaffolded with template, frontmatter filled
 - Remind them of next steps:
   - Fill in the proposal (problem statement, proposed solution, scope)
   - When ready, use `/project-docs:generate-dev-plan <name>` to generate a plan
@@ -85,5 +110,7 @@ Tell the user:
 - **Don't create plan.md or sessions/ yet** — Those come later when
   implementation begins
 - **Don't fill in proposal content** beyond template defaults — The user or the
-  `generate-proposal` skill handles that
+  `generate-proposal` skill handles that. Frontmatter is the exception: it is
+  metadata about the document, not content in it, and every field above is
+  answerable from what you already know.
 - **Check conventions** at `docs/projects/README.md` if unsure about structure

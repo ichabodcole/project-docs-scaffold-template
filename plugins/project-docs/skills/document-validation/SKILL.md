@@ -25,6 +25,10 @@ rules based on what you're reviewing.
 
 These documents have a lifecycle that ends in archival.
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 **Project Pipeline Documents** (`docs/projects/<name>/`)
 
 Proposals, plans, and sessions live together in project folders. They share a

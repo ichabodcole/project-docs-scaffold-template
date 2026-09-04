@@ -1,6 +1,15 @@
-# Slimmed project-cli-toolkit Skill to Companion Doc
+---
+type: memory
+title: Slimmed project-cli-toolkit Skill to Companion Doc
+description:
+  The project-cli-toolkit recipe shrank from 1071 lines to 386 once an installer
+  owned the scaffold and the recipe kept only the rationale.
+tags: [recipes, cli, skill-design]
+status: stable
+generated: { by: unknown, at: 2026-04-19 }
+---
 
-**Date:** 2026-04-19
+# Slimmed project-cli-toolkit Skill to Companion Doc
 
 Rewrote the `project-cli-toolkit` recipe (1071 → 386 lines) as the companion doc
 for the new `create-project-cli` installer (`bunx create-project-cli`).

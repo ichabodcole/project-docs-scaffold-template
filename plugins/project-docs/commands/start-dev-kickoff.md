@@ -20,6 +20,10 @@ Check in order:
    ls DEV_KICKOFF.md 2>/dev/null
    ```
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 2. **Project folders** — use the Glob tool with pattern
    `docs/projects/*/DEV_KICKOFF.md`
 

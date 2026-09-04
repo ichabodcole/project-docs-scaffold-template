@@ -1,3 +1,13 @@
+---
+type: artifact
+title: "Agent UX Review — Tusk Board SKILL.md"
+description:
+  "Whether a fresh agent can set this up from the doc alone: mostly, except at
+  the most novel and error-prone step."
+status: stable
+generated: { by: unknown, at: 2026-05-24 }
+---
+
 # Agent UX Review — Tusk Board SKILL.md
 
 ## Verdict

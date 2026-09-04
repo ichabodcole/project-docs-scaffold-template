@@ -1,6 +1,15 @@
-# Added test plan document type to project lifecycle
+---
+type: memory
+title: Added test plan document type to project lifecycle
+description:
+  "Test plans became a document type: tiered verification scenarios written
+  before an agent implements, not after."
+tags: [documentation, document-types, testing]
+status: stable
+generated: { by: unknown, at: 2026-02-15 }
+---
 
-**Date:** 2026-02-15
+# Added test plan document type to project lifecycle
 
 New optional lifecycle stage between Plan and Sessions — tiered verification
 scenarios (Tier 1 smoke, Tier 2 critical path, Tier 3 edge cases) for
@@ -13,4 +22,4 @@ updated — deferred to migration dogfooding via `v2.3-to-v2.4` migration.
 `plugins/project-docs/agents/test-plan-generator.md`,
 `{{cookiecutter}}/docs/projects/TEMPLATES/TEST-PLAN.template.md`
 
-**Docs:** [Project folder](docs/projects/test-plan-doc-type/)
+**Docs:** [Project folder](../projects/_archive/test-plan-doc-type/proposal.md)

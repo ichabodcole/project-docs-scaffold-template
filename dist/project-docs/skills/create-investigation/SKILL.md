@@ -62,10 +62,25 @@ question.
 
 5. **Create the investigation document**
    - Choose an appropriate filename: `YYYY-MM-DD-topic-investigation.md`
-   - Write to `docs/investigations/[filename].md`
-   - Set Status: "Active" (investigation is starting, not concluded)
-   - Set Outcome: "In Progress"
+   - Write to `docs/investigations/[filename].md`. (The docs root is `docsRoot`
+     in `.project-docs.json` at the repo root, default `docs/` — read it if the
+     file exists.)
    - Use investigation template as scaffolding, not a mandatory form
+   - **If the template opens with a frontmatter block, fill it — every field.**
+     The bracketed values are placeholders, not defaults, and the lint fails on
+     a placeholder left in place:
+     - `type: investigation` — already correct; the folder decides it
+     - `title` — matching the H1
+     - `description` — one sentence stating the question this sets out to
+       answer. This is the line a reader scanning the folder sees; make it the
+       question, not the topic.
+     - `tags` — 2–4 kebab-case keywords
+     - `status: draft` — the investigation is in progress and its findings
+       aren't trustworthy yet. It becomes `stable` when it concludes.
+     - `lifecycle: active` — its opening value
+     - `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`
+   - On the older scaffold, with no frontmatter block: set Status "Active" and
+     Outcome "In Progress" in the body instead
    - Include relevant sections:
      - **Question/Motivation** (from parsed input)
      - **Current State Analysis** (from context search)
@@ -153,10 +168,14 @@ value vs. current implementation.
 
 **Output:**
 
+If the project has a documentation lint (`docs/lint.ts` at the repo root), run
+`bun docs/lint.ts` before reporting, and fix anything it says about the file you
+just wrote.
+
 Create an investigation document in `docs/investigations/` with:
 
 - Appropriate filename based on topic and current date
-- Status: "Active"
+- Frontmatter filled, `lifecycle: active`
 - Structured format following investigations README template
 - Clear research plan for continuing the investigation
 - Referenced context from codebase/docs

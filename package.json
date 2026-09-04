@@ -3,19 +3,29 @@
   "version": "6.3.0",
   "description": "Cookiecutter template for scaffolding project documentation structure",
   "private": true,
+  "packageManager": "pnpm@11.24.0",
   "scripts": {
     "build:dist": "./scripts/build-skills-dist.sh",
     "validate:skills": "uv run scripts/validate-skills-dist.py",
     "format": "prettier --write \"**/*.md\"",
     "format:check": "prettier --check \"**/*.md\"",
+    "docs:lint": "bun docs/lint.ts",
+    "docs:graph": "bun docs/lint.ts --json",
+    "docs:report": "bun docs/lint.ts --report",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "check": "npm run format:check && npm run docs:lint && npm run check:mirror && npm run test",
     "prepare": "husky",
-    "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d"
+    "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d",
+    "check:mirror": "./scripts/check-mirror.sh"
   },
   "devDependencies": {
     "@slidev/cli": "^52.14.1",
     "@slidev/theme-default": "^0.25.0",
+    "@types/bun": "^1.3.14",
     "husky": "^9.1.7",
-    "prettier": "^3.2.5"
+    "prettier": "^3.2.5",
+    "typescript": "^5.9.3"
   },
   "keywords": [
     "cookiecutter",

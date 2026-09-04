@@ -237,6 +237,28 @@ pnpm run check-types
 pnpm run test
 ```
 
+**If the project has a documentation lint** — `docs/lint.ts` exists at the repo
+root (the docs root is `docsRoot` in `.project-docs.json`, default `docs/`) —
+run it too, and treat it as part of the same gate:
+
+```bash
+bun docs/lint.ts
+```
+
+Run it **again in Step 7**, once the session document, the memory and any other
+new documentation are written but before they are committed. This run checks the
+code you are landing; that run checks the documents you are about to land, which
+don't exist yet.
+
+Two things it reports are not failures to fix here:
+
+- **`adopting: true`** — the project is still backfilling frontmatter and the
+  lint says so on every run while exiting 0. Don't turn it off to make the
+  output quieter; it turns off when the backfill finishes.
+- **Pre-existing problems in documents this branch never touched.** Report them
+  and carry on. A branch is not obliged to fix a tree it didn't break — but say
+  so out loud, rather than letting a red gate read as this branch's fault.
+
 ### Step 4: Create Session Document
 
 The document must include a **Review** paragraph carrying the Step 2 census —
@@ -250,6 +272,36 @@ Always create in the relevant project's `docs/projects/<project-name>/sessions/`
 folder. If no project folder exists for this work, create the session in a new
 or existing project folder. See `docs/projects/README.md` for conventions.
 
+**If the session template carries a frontmatter block**
+(`docs/projects/TEMPLATES/YYYY-MM-DD-SESSION.template.md` opens with `---`),
+fill every field. **The lint will not catch a placeholder** — it checks that
+each required key is present and non-empty, and `title: "[Topic] — YYYY-MM-DD"`
+satisfies that perfectly well. The only placeholder it rejects is the date,
+because `YYYY-MM-DD` isn't one. So this is on you, not on the gate:
+
+- `type: session` — pre-filled and correct; the folder decides it. Don't change
+  it.
+- `title` — the session's topic and its date, matching the H1
+- `description` — one sentence saying what this session did. Not a paraphrase of
+  the title; this is the line that has to earn a reader's click.
+- `tags` — 2–4 kebab-case keywords. The lint doesn't require them on workbench
+  documents (four keywords on forty session notes buys a tag cloud nobody
+  reads), but a session someone will search for later is worth tagging.
+- `status` — **the template ships `draft`; change it to `stable`.** A session is
+  a frozen record, complete the moment it is written; it is never a draft. This
+  is the one field where the template's own default is the wrong answer, and
+  nothing will tell you.
+- `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`
+
+**Don't write `related:`.** `docs/SCHEMA.md` resolves those edges against
+library pages only, and a session, a project and a cycle are all workbench. Link
+the cycle in the body instead — a line under the session's own heading,
+`Part of [<cycle title>](../../../cycles/<slug>.md)`, which is a real link the
+lint checks.
+
+A session carries **no `lifecycle`** — writing one is a lint error. See
+`docs/SCHEMA.md` for why frozen records don't have a pipeline state.
+
 ### Step 5: Create Memory
 
 Create a short memory in `docs/memories/` summarizing what was done. Use the
@@ -257,12 +309,40 @@ template at `docs/memories/TEMPLATE.md`. Name it
 `YYYY-MM-DD-short-description.md`. Skip for trivial changes where the commit
 message alone provides sufficient context.
 
+**A memory is a library page, not a workbench one**, in projects that keep the
+two tiers (`docs/SCHEMA.md` exists). That means two obligations a session
+document doesn't have:
+
+- Fill the frontmatter. A memory carries no `lifecycle`. `related:` is optional
+  and is **not** in the template — add the key yourself if the memory leans on a
+  playbook, a lesson, an architecture page or another memory, written as
+  `type/<basename-without-.md>`. **Edges resolve against library pages only**,
+  so there is no key for a project, a session or an investigation; link to those
+  in the body. Every entry must resolve or the lint reports `BAD related`.
+- **Add its line to `docs/index.md`**, under `## Memories`, in the form
+  `- [Title](./memories/<file>.md) — <description>`. Append under the existing
+  entries, not at the top; the section reads chronologically by filename date.
+  Let the formatter wrap it — the lint folds continuation lines back together
+  before matching, so a wrapped entry is fine and an unwrapped one will be
+  rewrapped in someone else's branch.
+
+  The hook after the dash is the memory's own `description`, **copied
+  verbatim**. The lint compares them and reports `STALE HOOK` on drift, and a
+  library page missing from the catalog entirely is reported as `ORPHAN`. Grep
+  the output for both names.
+
+  **In a project still `adopting`**, neither of those fails the build — the lint
+  reports and exits 0. Read its output rather than its exit code.
+
+Both are cheap to do now and annoying to reconstruct later, which is why they
+are here rather than in a sweep.
+
 ### Step 6: Assess Additional Documentation
 
 Present recommendations to user and get confirmation before creating new
-documents. **Plan reconciliation is the exception** — it edits a document that
-already exists, and it is an action to perform, not a recommendation to offer.
-Do it without asking.
+documents. **Plan reconciliation and the cycle's session line are the
+exceptions** — both edit a document that already exists, and both are actions to
+perform, not recommendations to offer. Do them without asking.
 
 - **Handoff** — Does this work require specific deployment steps beyond merging
   code? (DB migrations, service redeployments, environment config changes,
@@ -343,6 +423,58 @@ Do it without asking.
     stood _before_ Step 7's documentation commit, so neither the archival nor
     the reconciliation can veto the squash that carries them.
 
+- **The active cycle** — if the project keeps `docs/cycles/`, find the cycle
+  whose `lifecycle` is `active`:
+
+  ```bash
+  ROOT=$(git rev-parse --show-toplevel)
+  grep -l '^lifecycle: active' "$ROOT"/docs/cycles/*.md 2>/dev/null | grep -v TEMPLATE
+  ```
+
+  No cycles directory, or no active cycle, means there is nothing to do here —
+  say so once and move on. Two active cycles is a lint failure; report the
+  filenames and edit neither.
+
+  With one active cycle, do two things:
+  1. **Update this branch's line in the cycle's `## Sessions` section.**
+     `init-branch` Step 5 wrote it as `- <type>/<description> (open)`; rewrite
+     that line as `- <type>/<description> (landed YYYY-MM-DD)`, using today's
+     date. Change the marker in place — the section reads chronologically, so
+     don't relocate the line. If it isn't there at all (the branch predates the
+     cycle, or was created some other way), append it in the landed form rather
+     than pretending it was tracked all along. This is an edit to perform, not a
+     recommendation to offer.
+  2. **Ask whether the cycle is done**, but only once every entry in its
+     `scope:` has reached a terminal `lifecycle`.
+
+     A `scope:` entry is a `type/slug` reference, not a path: `project/<name>`
+     means the **folder** `docs/projects/<name>/`, which holds several documents
+     that each carry their own `lifecycle` — `proposal.md`, `plan.md`, and
+     sometimes `design-resolution.md` and `test-plan.md`. That entry is finished
+     when all of them are terminal, so a proposal at `implemented` beside a plan
+     still at `active` does **not** close it. `backlog/<item>` is a single file.
+
+     Which values count as terminal is in `docs/SCHEMA.md`'s **Lifecycle by
+     type** table. Read it there rather than from memory; `docs/lint.ts` parses
+     that table and fails if it disagrees, which makes it the one copy that
+     can't drift.
+
+     Read the states from the scoped documents' frontmatter, not from this
+     branch. If any entry is still open, the cycle is still open: say which
+     entries are holding it and stop there.
+
+     When they are all terminal, offer to invoke `sweep-project` with the cycle
+     file's path as its target — it takes a cycle as a target kind alongside a
+     project folder and a backlog item, and routes to its Cycle Path. Closing a
+     cycle means writing its `## Outcome`, setting `lifecycle: closed` and
+     `closed: <date>`, and moving any remaining `(open)` session lines; that
+     belongs where the rest of the closing logic lives, not inlined here.
+
+  **The cycle question is not the project question.** A cycle usually spans
+  several projects and a project usually spans several cycles, so answering one
+  tells you nothing about the other. Both prompts can fire on the same branch;
+  ask them separately.
+
 ### Step 7: Commit Documentation
 
 Stage and commit documentation changes under `docs/` — new files, and also edits
@@ -354,6 +486,19 @@ along.
 If Step 8 lands on a single-commit squash, this commit folds into it — that's
 expected. Committing here still matters: it keeps the documentation work
 recoverable and reviewable as its own step before any history rewriting.
+
+**Re-run the documentation lint before committing**, if the project has one
+(Step 3):
+
+```bash
+bun docs/lint.ts
+```
+
+This is the run that checks what you just wrote — the session document, the
+memory, the reconciled plan, the cycle edit. Step 3's run happened before any of
+them existed. A missing `description`, a `lifecycle` outside its type's
+vocabulary, or a link to a document that moved all surface here and nowhere
+else.
 
 ### Step 8: Determine Landing Policy and Execute
 

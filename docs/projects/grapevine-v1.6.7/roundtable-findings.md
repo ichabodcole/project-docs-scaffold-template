@@ -1,11 +1,14 @@
-# Grapevine V1.6 Multi-Channel Shakedown — Roundtable Findings
-
-**Date:** 2026-05-28 **Type:** Soak / friction-audit session **Facilitator:**
-Claude (alias `vintner`) **Participants:** `tannin`, `marconi`, `claret` (three
-independent Claude Code instances, each in a separate terminal) **Daemon:**
-toolbox 2.8.0 / grapevine V1.6.6
-
 ---
+type: artifact
+title: "Grapevine V1.6 Multi-Channel Shakedown — Roundtable Findings"
+description:
+  What the multi-channel two-agent session actually broke, recorded as it
+  happened rather than reconstructed after.
+status: stable
+generated: { by: unknown, at: 2026-05-28 }
+---
+
+# Grapevine V1.6 Multi-Channel Shakedown — Roundtable Findings
 
 ## Purpose
 

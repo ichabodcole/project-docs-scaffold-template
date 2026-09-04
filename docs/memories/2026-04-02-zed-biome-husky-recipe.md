@@ -1,6 +1,15 @@
-# Added zed-biome-husky-quality-gates recipe
+---
+type: memory
+title: Added zed-biome-husky-quality-gates recipe
+description:
+  A recipe making Biome the single formatting authority across editor, hook and
+  CI, and the three-config discipline that stops drift.
+tags: [recipes, tooling, quality-gates]
+status: stable
+generated: { by: unknown, at: 2026-04-02 }
+---
 
-**Date:** 2026-04-02
+# Added zed-biome-husky-quality-gates recipe
 
 Added a new recipe skill for setting up Biome as the single formatting/linting
 authority with Zed editor integration and Husky pre-commit enforcement. Covers

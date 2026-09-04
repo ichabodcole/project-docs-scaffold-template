@@ -1,3 +1,12 @@
+---
+type: architecture # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[System Name] Architecture"
+description: "[One sentence: what this system is and what it is for.]"
+tags: [subsystem, area] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create architecture docs and what to include.
@@ -16,20 +25,15 @@ If your doc feels exhausting to read, you've gone too deep - developers can read
 
 # [System/Component Name]
 
-**Created:** YYYY-MM-DD
-**Last Updated:** YYYY-MM-DD
-**Last Reviewed:** YYYY-MM-DD
-**Status:** Current | Deprecated
-
----
-
 ## Overview
 
-[1-2 paragraph description of what this system is, why it exists, and its role in the application]
+[1-2 paragraph description of what this system is, why it exists, and its role
+in the application]
 
 ## Purpose & Responsibilities
 
-What does this system do? What are its boundaries - what is it responsible for and what is it NOT responsible for?
+What does this system do? What are its boundaries - what is it responsible for
+and what is it NOT responsible for?
 
 **Responsibilities:**
 
@@ -44,7 +48,8 @@ What does this system do? What are its boundaries - what is it responsible for a
 
 ### High-Level Design
 
-[Describe the overall architecture - you can include diagrams (via text or mermaid), ASCII art, or just text descriptions]
+[Describe the overall architecture - you can include diagrams (via text or
+mermaid), ASCII art, or just text descriptions]
 
 ```
 ┌─────────────┐
@@ -65,9 +70,8 @@ What does this system do? What are its boundaries - what is it responsible for a
 
 #### [Component Name]
 
-**Location:** `src/path/to/component.ts`
-**Purpose:** [What it does]
-**Key APIs/Functions:** [Important functions or entry points]
+**Location:** `src/path/to/component.ts` **Purpose:** [What it does] **Key
+APIs/Functions:** [Important functions or entry points]
 
 [Add more components as needed - focus on major pieces, not every file]
 
@@ -87,8 +91,7 @@ Important patterns or conventions used in this system
 
 ### [Pattern Name]
 
-**When to use:** [Scenario]
-**Example:** [Code example or description]
+**When to use:** [Scenario] **Example:** [Code example or description]
 **Rationale:** [Why we use this pattern]
 
 [Add more patterns if relevant to understanding the system]
@@ -100,7 +103,8 @@ How this system connects to other parts of the application (system boundaries)
 - **[System/Component Name]:** [How they interact, what's exchanged]
 - **[External Service/API]:** [How they interact, what's exchanged]
 
-[Focus on boundaries and communication patterns - where does this system touch other systems?]
+[Focus on boundaries and communication patterns - where does this system touch
+other systems?]
 
 ## Important Gotchas & Considerations
 
@@ -110,11 +114,13 @@ Things to keep in mind when working with this system
 - [Gotcha or important consideration 2]
 - [Common mistakes or things that aren't obvious]
 
-[If there are specific gotchas around performance, security, state management, or error handling, call them out here]
+[If there are specific gotchas around performance, security, state management,
+or error handling, call them out here]
 
 ## Testing (Optional)
 
-[Only include if there's something specific worth noting about testing this system]
+[Only include if there's something specific worth noting about testing this
+system]
 
 - **Test location:** `tests/path/to/tests.spec.ts`
 - **Key scenarios to test:** [Important test cases]
@@ -129,9 +135,10 @@ Things to keep in mind when working with this system
 
 ## Related Documentation
 
-- [Playbook for augmenting this system](../playbooks/playbook-name.md) (if applicable)
+- [Playbook for augmenting this system](../playbooks/playbook-name.md) (if
+  applicable)
 - [Related architecture doc](./other-doc.md)
-- [Project that introduced this](../projects/project-name/proposal.md)
+- [Proposal that introduced this](../projects/project-name/proposal.md)
 - [External documentation](URL)
 
 ---

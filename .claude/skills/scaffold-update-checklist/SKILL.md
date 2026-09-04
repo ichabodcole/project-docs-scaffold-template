@@ -31,24 +31,52 @@ These files exist in both the project's own `docs/` and in the cookiecutter
 template at `{{cookiecutter.project_slug}}/docs/`. Changes to one MUST be
 reflected in the other.
 
+**`scripts/check-mirror.sh` (`npm run check:mirror`) is the enforcement**, and
+it runs inside `npm run check`. It compares every payload document against this
+repo's copy, normalized through Prettier — the payload is `.prettierignore`d, so
+wrapping differs and means nothing. The `.ts` files are compared byte for byte.
+The list below is what it walks; keep them in step and the check stays quiet.
+
 **Always mirrored:**
 
 - `docs/README.md`
 - `docs/AGENTS.md`
+- `docs/SCHEMA.md` — the frontmatter contract
 - `docs/projects/README.md`
 - All files in `docs/projects/TEMPLATES/`
 - Category READMEs: `docs/architecture/README.md`, `docs/backlog/README.md`,
-  `docs/briefs/README.md`, `docs/fragments/README.md`,
+  `docs/briefs/README.md`, `docs/cycles/README.md`, `docs/fragments/README.md`,
   `docs/interaction-design/README.md`, `docs/investigations/README.md`,
   `docs/lessons-learned/README.md`, `docs/memories/README.md`,
   `docs/playbooks/README.md`, `docs/reports/README.md`,
   `docs/specifications/README.md`
-- Category templates: all `TEMPLATE*.md` files within those directories
+- Category templates: all `TEMPLATE*.md` files within those directories,
+  including `docs/cycles/TEMPLATE.md`
+- **The lint, byte for byte:** `docs/lint.ts`, `scripts/docs-lint/index.ts`,
+  `scripts/docs-lint/config.ts`, `scripts/docs-lint/unlinted-links.ts`,
+  `scripts/docs-lint/index.test.ts`. It is copied into the payload rather than
+  shared as a package — deliberately, while three repositories are still
+  discovering what the tool should be. The mirror check is what makes copying
+  survivable.
 
-**Structurally mirrored but content differs:**
+**Payload-only (no counterpart here, and none wanted):**
+
+- `{{cookiecutter.project_slug}}/package.json` and `tsconfig.json` — a generated
+  project's, not this repo's. This repo has its own, with Prettier, husky and
+  Slidev in it.
+- `{{cookiecutter.project_slug}}/.project-docs.json` — same file name as this
+  repo's, different content: no `exclude` entries, and `skip` without this
+  repo's `superpowers`. Its `version` is tracked by release-please through
+  `release-please-config.json`, the same way `docs/README.md`'s is.
+
+**Structurally mirrored but content differs** — these two are exempted by name
+in `scripts/check-mirror.sh`, so nothing checks them. Adding a third is a
+decision, not a convenience:
 
 - `docs/PROJECT_MANIFESTO.md` — project version is populated; cookiecutter
   version is an empty template skeleton
+- `docs/index.md` — this repo's catalogues every library page; the payload's is
+  the same headings with `_No pages yet._` under each
 
 **Not mirrored (project-specific):**
 
@@ -74,6 +102,26 @@ subsection leaves the two disagreeing. See
 3. Apply the migration to this project's own `docs/` — follow the same steps end
    users would, to validate the guide works
 4. Run Prettier on changed files to prevent line-wrapping drift
+5. `npm run check:mirror` — it should say `mirror: clean`
+
+**"Cookiecutter is the source of truth" is about structure, not about which copy
+is newer.** Work that lands here first — a template gaining a frontmatter block,
+say — moves repo → payload, and that is not a violation of the rule. What the
+rule forbids is the two copies disagreeing at the end of the change. When you
+find them already disagreeing, decide which is actually newer, copy that one
+across, and say which direction you chose in the commit.
+
+**Verify the payload by generating from it**, not by reading it:
+
+```bash
+cookiecutter . --no-input --overwrite-if-exists -o /tmp/cc \
+  install_target="New project folder"
+cd /tmp/cc/my-project && bun docs/lint.ts && bun test
+```
+
+`--no-input` alone picks the **first** `install_target` choice, which is the
+current-directory install — that branch moves `docs/` to the parent and deletes
+the rest, so you get no project to inspect. Pass the target explicitly.
 
 ## Checklists by Change Type
 

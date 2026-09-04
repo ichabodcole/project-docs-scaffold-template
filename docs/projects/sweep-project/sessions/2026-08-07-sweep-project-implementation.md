@@ -1,3 +1,13 @@
+---
+type: session
+title: "Sweep Project — build, dogfood, and first production run — 2026-08-07"
+description:
+  Implemented the sweep-project skill and the finalize-branch touchpoint that
+  calls it, end to end.
+status: stable
+generated: { by: unknown, at: 2026-08-07 }
+---
+
 # Sweep Project — build, dogfood, and first production run — 2026-08-07
 
 ## Context

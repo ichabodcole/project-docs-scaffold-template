@@ -1,3 +1,13 @@
+---
+type: plan # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Feature Name] Implementation Plan"
+description: "[One sentence: the route from here to the proposed state.]"
+tags: [area, feature] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project folder as `plan.md`.
 
@@ -15,15 +25,14 @@ For more guidance on plans, see the projects README: ../README.md
 
 # [Feature Name] Implementation Plan
 
-**Created:** YYYY-MM-DD
 **Related Proposal:** [Link to proposal](./proposal.md)
-**Status:** Draft | Active | Completed | Superseded
 
 ---
 
 ## Overview
 
-[1-2 paragraph summary connecting back to the proposal and outlining what this plan covers. Reference current codebase state and the path to implementation.]
+[1-2 paragraph summary connecting back to the proposal and outlining what this
+plan covers. Reference current codebase state and the path to implementation.]
 
 ## Outcome & Success Criteria
 
@@ -40,13 +49,16 @@ For more guidance on plans, see the projects README: ../README.md
 
 ## Approach Summary
 
-High-level implementation strategy. What's the overall approach? What major architectural or design decisions guide this plan?
+High-level implementation strategy. What's the overall approach? What major
+architectural or design decisions guide this plan?
 
-[Describe the path from current state to proposed state. Reference key files or patterns in current codebase that will change.]
+[Describe the path from current state to proposed state. Reference key files or
+patterns in current codebase that will change.]
 
 ## Phases
 
-Break work into major, verifiable chunks focused on pivotal points (complex areas, migrations, significant transitions).
+Break work into major, verifiable chunks focused on pivotal points (complex
+areas, migrations, significant transitions).
 
 ### Phase 1: [Phase Name]
 
@@ -95,7 +107,8 @@ What could get complex or go wrong? How will we handle it?
 
 How will we validate this works?
 
-[Describe overall testing approach - what needs unit tests, what workflows need integration testing, what should be manually verified, what edge cases to cover]
+[Describe overall testing approach - what needs unit tests, what workflows need
+integration testing, what should be manually verified, what edge cases to cover]
 
 ## Assumptions & Constraints (Optional)
 
@@ -105,11 +118,13 @@ How will we validate this works?
 
 ## Rollback Plan (Optional)
 
-[Only needed for risky changes, data migrations, or production deployments. Most feature work won't need this.]
+[Only needed for risky changes, data migrations, or production deployments. Most
+feature work won't need this.]
 
 ## Observability (Optional)
 
-[Only needed if this requires monitoring, metrics, or alerts in production. Most feature work won't need this.]
+[Only needed if this requires monitoring, metrics, or alerts in production. Most
+feature work won't need this.]
 
 ## Open Questions (Optional)
 
@@ -127,4 +142,5 @@ How will we validate this works?
 
 ## Implementation Notes
 
-[Optional section for implementation-specific context, decisions made during development, or lessons learned]
+[Optional section for implementation-specific context, decisions made during
+development, or lessons learned]

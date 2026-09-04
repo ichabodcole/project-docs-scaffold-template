@@ -21,7 +21,17 @@ The template is organized with these key directories:
   Organized into permanent reference (architecture, specifications,
   interaction-design, playbooks, lessons-learned, fragments), discovery &
   assessment (reports, investigations), and work tracking (projects, backlog,
-  \_archive, memories)
+  cycles, \_archive, memories). Also carries the frontmatter layer:
+  `docs/SCHEMA.md` (the contract), `docs/index.md` (the catalog, seeded empty),
+  `docs/cycles/`, and `docs/lint.ts`
+- `{{cookiecutter.project_slug}}/scripts/docs-lint/` - The lint's portable core
+  (`index.ts`, `config.ts`, `unlinted-links.ts`, `index.test.ts`), copied rather
+  than shared as a package — three repositories are still discovering what this
+  tool should be, and a package would freeze that early
+- `{{cookiecutter.project_slug}}/.project-docs.json`, `package.json`,
+  `tsconfig.json` - Root config for a generated project. The `package.json` and
+  `tsconfig.json` ship only in the new-folder install; an existing project keeps
+  its own, and the hook prints the four scripts to add
 - `hooks/post_gen_project.py` - Python hook that runs after template generation
 - `cookiecutter.json` - Template configuration defining user prompts and
   variables
@@ -43,6 +53,41 @@ files. Key variables:
 The `hooks/post_gen_project.py` script provides user feedback about next steps,
 including plugin installation instructions.
 
+It has two branches. **New project folder** leaves the whole payload in place.
+**Current directory (existing project)** moves `docs/`, `scripts/docs-lint/` and
+`.project-docs.json` up into the existing repository and deletes the rest —
+deliberately including `package.json` and `tsconfig.json`, which an existing
+project already has and which are not worth overwriting to install a doc lint.
+Their four scripts get printed instead. Anything that would collide is left
+alone with a warning rather than replaced.
+
+Note that `--no-input` selects the **first** `install_target` choice, which is
+the current-directory branch. Generating a reference copy of the payload means
+passing `install_target="New project folder"` explicitly.
+
+`bun test` runs 6 files, one of which is the payload's own copy of
+`scripts/docs-lint/index.test.ts`. That is duplication — the mirror check
+guarantees it is byte-identical to this repo's copy — but it is the only thing
+that proves the shipped copy actually executes from where it will sit in a
+generated project, so it stays.
+
+### The Mirror Check
+
+`scripts/check-mirror.sh` (`npm run check:mirror`, part of `npm run check`)
+compares every payload document against this repository's own copy. It compares
+them **normalized** — both sides piped through Prettier — because
+`.prettierignore` excludes the payload by design, so `npm run format` reflows
+one side and not the other. Those wrapping differences are expected and mean
+nothing; a changed sentence means everything, and a byte comparison cannot tell
+them apart. The `.ts` files are compared byte for byte, since Prettier's scope
+here is `**/*.md` and code has no excuse to differ at all.
+
+Two files are exempt, listed in the script with their reasons:
+`docs/PROJECT_MANIFESTO.md` and `docs/index.md` are structurally mirrored but
+their content differs by design — this repository's are filled in, the payload's
+are the empty forms a new project fills. Adding to that list is a decision, not
+a convenience: every entry is a place the two copies can drift silently.
+
 ## Development Commands
 
 ### Formatting
@@ -52,9 +97,44 @@ npm run format        # Auto-format all markdown files with Prettier
 npm run format:check  # Check markdown formatting without changes
 ```
 
+### Documentation Lint
+
+Every document under `docs/` carries an OKF frontmatter block, and
+[docs/SCHEMA.md](./docs/SCHEMA.md) is the contract for it — which fields, which
+vocabularies per type, and what the two lint tiers check. Read it before
+creating or editing a document. [docs/index.md](./docs/index.md) is the catalog
+every library page must appear in; `.project-docs.json` at the root configures
+the lint.
+
+```bash
+npm run check         # The gate: format:check + docs:lint + check:mirror + test
+npm run check:mirror  # Payload and docs/ agree, normalized through Prettier
+npm run docs:lint     # Frontmatter, links, anchors and the document graph
+npm run docs:graph    # The same walk, emitted as JSON
+npm run docs:report   # Worklist of documents missing required fields
+npm run typecheck     # tsc --noEmit over docs/*.ts and scripts/*.ts
+npm test              # bun test
+```
+
+### Two Runtimes, One Gate
+
+This repo runs **Node (via pnpm)** for Prettier, Husky and Slidev, **Python (via
+uv)** for the skill-validation script, and **Bun** for the documentation lint
+under `docs/*.ts` and `scripts/docs-lint/`. The split is deliberate: the lint is
+zero-dependency TypeScript that Bun executes directly, with no build step and no
+Node type-stripping flags to keep current.
+
+`pnpm-lock.yaml` is the lockfile — `packageManager` in `package.json` pins the
+version, and `pnpm install --frozen-lockfile` is what CI runs. Do not
+`npm install` here; it produces a mixed `node_modules` that pnpm then refuses to
+install over. Bun is used only to _run_ `.ts` files, never to install.
+
+`npm run check` is the single entry point for both the pre-commit hook and CI,
+so there is one definition of "checked".
+
 ### Git Workflow
 
-- Pre-commit hook automatically runs `npm run format:check`
+- Pre-commit hook automatically runs `npm run check`
 - Release Please workflow on `main` branch handles automated releases
 - Use conventional commits (e.g., `feat:`, `fix:`, `chore:`) for automatic
   changelog generation
