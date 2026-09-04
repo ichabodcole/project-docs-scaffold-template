@@ -62,11 +62,24 @@ investigation document.
    - Read the projects README at `docs/projects/README.md` to understand
      conventions
    - Use the proposal template at `docs/projects/TEMPLATES/PROPOSAL.template.md`
-     as scaffolding
+     as scaffolding. (The docs root is `docsRoot` in `.project-docs.json` at the
+     repo root, default `docs/` — read it if the file exists.)
    - Write the proposal to `docs/projects/<project-name>/proposal.md`
+   - **Fill the template's frontmatter block, every field** — the bracketed
+     values are placeholders, not defaults, and the lint fails on a placeholder
+     left in place: `title` matching the H1; `description` as one sentence
+     saying what this proposes and why; 2–4 kebab-case `tags`; `status: draft`;
+     `lifecycle: draft` (a proposal becomes `approved` when someone approves it,
+     not when it is written);
+     `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`. Leave
+     `related` out unless the proposal genuinely leans on a library page (a
+     playbook, a lesson, an architecture doc) — those keys are
+     `type/<basename-without-.md>` and are the only ones that resolve. The
+     investigation goes in the body's Related Documents section as a link, per
+     step 7.
    - Focus on high to mid-level ("capitals not gas stations")
    - Include relevant sections:
-     - **Metadata:** Date, Status, Related investigation link
+     - **Metadata:** Related investigation link
      - **Problem Statement (The "Why"):** Why is action needed? (from
        investigation findings)
      - **Current State:** What exists today and what are the issues? (from

@@ -264,6 +264,10 @@ browser). No configuration needed.
 To add components to a project's slide deck, copy the `components/` folder
 alongside the slide `.md` file:
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 ```
 docs/projects/<name>/artifacts/
   slides.md

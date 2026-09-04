@@ -1,12 +1,13 @@
 ---
 description: "Initialize a new feature/fix/refactor/chore branch from develop"
-allowed_tools: ["Bash", "AskUserQuestion"]
+allowed_tools: ["Bash", "Read", "Edit", "AskUserQuestion"]
 ---
 
 You are tasked with initializing a new branch for development work.
 
-**Playbook reference:** Follow the workflow in
-`docs/playbooks/branch-initialization-playbook.md`
+**Playbook reference:** if the project has
+`docs/playbooks/branch-initialization-playbook.md`, follow the workflow there —
+it overrides this file. Most projects don't; the steps below stand on their own.
 
 ## Workflow Summary
 
@@ -14,6 +15,7 @@ You are tasked with initializing a new branch for development work.
 2. **Pull latest** - Ensure develop is up to date
 3. **Check for uncommitted changes** - Handle stashing/notification
 4. **Create branch** - With conventional naming
+5. **Attach it to the active cycle** - If the project keeps `docs/cycles/`
 
 ## Process
 
@@ -68,6 +70,39 @@ Create the branch:
 git checkout -b <type>/<description>
 ```
 
+`cycle` is **not** a branch type. A cycle spans branches — see the next step.
+
+### Step 5: Attach the Branch to the Active Cycle
+
+Only if the project has a `docs/cycles/` directory. (The docs root is `docsRoot`
+in `.project-docs.json` at the repo root, default `docs/` — read it if the file
+exists.) Projects on an older scaffold have no cycles; skip this step silently.
+
+Find the active cycle:
+
+```bash
+ROOT=$(git rev-parse --show-toplevel)
+grep -l '^lifecycle: active' "$ROOT"/docs/cycles/*.md 2>/dev/null | grep -v TEMPLATE
+```
+
+- **Exactly one match** — tell the user which cycle it is and its `title`, and
+  ask whether this branch belongs to it. On yes, append a line to that file's
+  `## Sessions` section:
+
+  ```markdown
+  - <type>/<description> (open)
+  ```
+
+  Append under the existing entries, not at the top; the section reads
+  chronologically. `finalize-branch` Step 6 changes `(open)` to
+  `(landed YYYY-MM-DD)` when the branch lands.
+
+- **No match** — say so and carry on. Work outside a cycle is normal; an
+  unattached branch is not an error, and this command does not create cycles.
+- **More than one match** — report the filenames and carry on without editing.
+  Two active cycles is a lint failure (`bun docs/lint.ts` catches it), and
+  guessing which one owns the branch would paper over it.
+
 ### Branch Naming Conventions
 
 - Use lowercase
@@ -88,6 +123,7 @@ Confirm to user:
 
 - Branch created and checked out
 - Base commit (latest develop)
+- The cycle it was attached to, or that there is no active cycle
 - Any stashed changes they should remember
 - Ready to begin work
 

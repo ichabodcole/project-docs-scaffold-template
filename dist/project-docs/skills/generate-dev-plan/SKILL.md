@@ -64,7 +64,17 @@ feature proposal.
    - Write the plan to `docs/projects/$1/plan.md` (same project folder as the
      proposal)
    - Use the plan template at `docs/projects/TEMPLATES/PLAN.template.md` as
-     scaffolding
+     scaffolding. (The docs root is `docsRoot` in `.project-docs.json` at the
+     repo root, default `docs/` — read it if the file exists.)
+   - **Fill the template's frontmatter block, every field** — the bracketed
+     values are placeholders, not defaults, and the lint fails on a placeholder
+     left in place: `title` matching the H1; `description` as one sentence
+     naming the route from here to the proposed state; 2–4 kebab-case `tags`;
+     `status: draft`; `lifecycle: draft` (it becomes `active` when
+     implementation starts, which is not now);
+     `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`. Leave
+     `related` out unless the plan leans on a library page — the proposal and
+     any design resolution sit in the same folder, which is the edge already.
    - Think "gas stations on a road trip" — highlight important stops, not
      turn-by-turn directions
    - Include relevant sections:

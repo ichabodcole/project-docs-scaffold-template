@@ -42,6 +42,10 @@ Identify the project:
 - Infer from current context (recent discussion, project folder open)
 - Or ask: "Which project proposal are we kicking off?"
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 Read:
 
 - `docs/projects/<name>/proposal.md` (required)

@@ -57,7 +57,9 @@ started, not a deadline — a cycle that runs into the next month keeps its name
 
 Frontmatter carries `scope` (what is in play), `after` (cycles or projects this
 one waits on), `appetite`, `started` and, at close, `closed`. The body is four
-sections: **Why now**, **Scope**, **Outcome**, and the sessions that landed.
+sections: **Why now**, **Scope**, **Outcome**, and **Sessions** — the branches
+worked under it, each marked `(open)` while in flight and `(landed <date>)`
+after.
 
 See [SCHEMA.md](../SCHEMA.md) for the frontmatter contract and the `lifecycle`
 vocabulary.

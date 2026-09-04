@@ -21,7 +21,20 @@ Activate when:
 
 ## How Versioning Works
 
-The docs structure version is tracked in `docs/README.md` frontmatter:
+The docs structure version is tracked in two places once a project is on v2.7 or
+later, and in one place before that.
+
+**`.project-docs.json` at the repo root** — present from v2.7. It also names the
+docs root, which every step below depends on:
+
+```json
+{
+  "docsRoot": "docs",
+  "version": "6.3.0"
+}
+```
+
+**`docs/README.md` frontmatter** — present in every version:
 
 ```yaml
 ---
@@ -38,6 +51,16 @@ to update this line automatically when a new version is released.
 
 - No `docs_version` frontmatter → **pre-2.0** (original flat structure)
 - `docs_version: "X.Y.Z"` → matches the scaffold template release version
+
+**The version number does not tell you which migrations have been applied.**
+release-please bumps these markers on every scaffold release, structural or not,
+so the number says which release the project last copied from — not what shape
+its `docs/` is in. The `vX-to-vY` names in `## Available Migrations` are labels
+in their own structural sequence and have long since diverged from it: a project
+reading `docs_version: "6.3.0"` may or may not have the v2.7 layer.
+
+So each migration row carries a **presence check** — a file or directory that
+exists only after that migration has run. Use it. Step 3 says how.
 
 **What triggers a version bump (with a migration guide):**
 
@@ -59,14 +82,26 @@ change structure won't have a migration file — only major structural changes d
 
 ### Step 1: Detect Current Version
 
-Check the project's `docs/README.md` for the version marker:
+Read `.project-docs.json` first, if it exists — it is the newer marker, and it
+also tells you the docs root, which everything after this depends on:
 
 ```bash
+[ -f .project-docs.json ] && cat .project-docs.json
 grep "docs_version" docs/README.md
 ```
 
-If no version marker exists, the project is on **v1** (the original flat
-structure with `proposals/`, `plans/`, `sessions/`).
+- `.project-docs.json` present → the project is on **v2.7 or later**. Its
+  `version` field is authoritative; `docs/README.md` should agree, and a
+  disagreement is worth reporting.
+- `.project-docs.json` absent, `docs_version` present → read the number from
+  `docs/README.md`.
+- Neither → the project is on **v1** (the original flat structure with
+  `proposals/`, `plans/`, `sessions/`).
+
+**Set the docs root here and use it for the rest of the run.** It is `docsRoot`
+in `.project-docs.json`, and `docs` when that file is absent. Every path in this
+skill and in the migration guides is written as `docs/...` for readability; if
+the project's root is something else, substitute it.
 
 ### Step 2: Identify Target Version
 
@@ -86,6 +121,12 @@ Example: upgrading from pre-2.0 to 2.3 requires:
 1. `migrations/v1-to-v2.md`
 2. `migrations/v2.0-to-v2.3.md`
 
+**Then run each candidate's presence check** from the `Applies If` column of the
+`## Available Migrations` table, and drop the ones that have already been
+applied. The version number narrows the list; the presence check settles it. A
+migration re-run against a tree that already has it is not always harmless — and
+for the ones that are, the check costs a single `ls`.
+
 ### Step 4: Execute Each Migration
 
 For each migration file:
@@ -94,14 +135,22 @@ For each migration file:
 2. Follow its steps in order — most migrations have a companion script in
    `migrations/scripts/` that handles mechanical steps. Run `--dry-run` first to
    preview, then run without the flag. Only content-editing steps (flowchart
-   updates, README prose) remain for the agent.
+   updates, README prose) remain for the agent. The `.sh` scripts run with
+   `bash`; `migrate-v2.6-to-v2.7.ts` runs with `bun`, and the guide's step 2
+   installs it.
 3. Verify the checklist at the end
 4. Move to the next migration
 
 ### Step 5: Update Version Marker
 
-After all migrations are applied, update the version comment in `docs/README.md`
-to reflect the new version.
+After all migrations are applied, write the new version to **both** markers, so
+they can't disagree:
+
+- `docs_version` in `docs/README.md` frontmatter
+- `version` in `.project-docs.json`, if the project has one (v2.7+)
+
+In the scaffold repo itself both are maintained by release-please. In a
+downstream project nothing maintains them but this step.
 
 ### Step 6: Ensure Root-Level Agent Context
 
@@ -136,13 +185,18 @@ Run a final check that no stale references to old structure remain:
 
 ## Available Migrations
 
-| Migration                                                | From    | To    | Summary                                                                                               |
-| -------------------------------------------------------- | ------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| [migrations/v1-to-v2.md](migrations/v1-to-v2.md)         | pre-2.0 | 2.0.0 | Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports |
-| [migrations/v2.0-to-v2.3.md](migrations/v2.0-to-v2.3.md) | 2.0–2.2 | 2.3.0 | Add design resolution and handoff templates, update READMEs with new pipeline stage                   |
-| [migrations/v2.3-to-v2.4.md](migrations/v2.3-to-v2.4.md) | 2.3     | 2.4.0 | Add test plan template, external dependencies in DR template, update lifecycle across docs            |
-| [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | Add briefs document type, update pipeline lifecycle to start with Brief                               |
-| [migrations/v2.5-to-v2.6.md](migrations/v2.5-to-v2.6.md) | 2.5     | 2.6.0 | Rename `archive/` → `_archive/` for consistent sort-to-top behavior                                   |
+The **Applies If** column is a shell test that is true when the migration is
+still needed. Run it before applying (Step 3) — the version number narrows the
+list, this settles it.
+
+| Migration                                                | From    | To    | Applies If                                                       | Summary                                                                                                                                                                      |
+| -------------------------------------------------------- | ------- | ----- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [migrations/v1-to-v2.md](migrations/v1-to-v2.md)         | pre-2.0 | 2.0.0 | `[ ! -d docs/projects ]`                                         | Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports                                                                        |
+| [migrations/v2.0-to-v2.3.md](migrations/v2.0-to-v2.3.md) | 2.0–2.2 | 2.3.0 | `[ ! -f docs/projects/TEMPLATES/DESIGN-RESOLUTION.template.md ]` | Add design resolution and handoff templates, update READMEs with new pipeline stage                                                                                          |
+| [migrations/v2.3-to-v2.4.md](migrations/v2.3-to-v2.4.md) | 2.3     | 2.4.0 | `[ ! -f docs/projects/TEMPLATES/TEST-PLAN.template.md ]`         | Add test plan template, external dependencies in DR template, update lifecycle across docs                                                                                   |
+| [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | `[ ! -d docs/briefs ]`                                           | Add briefs document type, update pipeline lifecycle to start with Brief                                                                                                      |
+| [migrations/v2.5-to-v2.6.md](migrations/v2.5-to-v2.6.md) | 2.5     | 2.6.0 | `ls -d docs/*/archive/ 2>/dev/null \| grep -q .`                 | Rename `archive/` → `_archive/` for consistent sort-to-top behavior                                                                                                          |
+| [migrations/v2.6-to-v2.7.md](migrations/v2.6-to-v2.7.md) | 2.6     | 2.7.0 | `[ ! -f docs/SCHEMA.md ]`                                        | Add the OKF frontmatter layer: frontmatter on every document, `SCHEMA.md`, `index.md`, a two-tier lint that gates commits and CI, the `cycle` type, and `.project-docs.json` |
 
 ## Root-Level Conventions
 
@@ -181,9 +235,21 @@ This project uses structured documentation in `docs/`. See
 [docs/README.md](./docs/README.md) for the full structure overview and document
 type guide.
 
+Every document carries a frontmatter block, and
+[docs/SCHEMA.md](./docs/SCHEMA.md) is the contract for it — which fields, which
+vocabularies, and what `bun docs/lint.ts` checks. Read it before creating or
+editing a document.
+
 For quick onboarding on recent work, start with
 [docs/memories/](./docs/memories/).
 ```
+
+**The `SCHEMA.md` paragraph applies from v2.7 on** — that file is what the
+frontmatter layer added. For a project that hasn't migrated yet, recommend the
+section without it; the paragraph would point at nothing. (The check in the
+table is unchanged: it looks for a pointer to `docs/` at all, and a project with
+the older two-paragraph version passes it. This subsection is the copy shown to
+someone who has none.)
 
 ### `## Branch Landing Policy`
 

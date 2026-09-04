@@ -3,7 +3,7 @@ type: session # REQUIRED (OKF §3). Do not change it — the folder decides it.
 title: "[Topic] — YYYY-MM-DD"
 description: "[One sentence: what this session did.]"
 tags: [area, feature] # 2-4 kebab-case keywords
-status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+status: stable # A session is frozen the moment it is written; it is never a draft.
 generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 

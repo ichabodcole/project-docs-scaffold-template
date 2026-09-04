@@ -26,6 +26,10 @@ the user for approval, then create project folders for accepted groups.
 
 ### Step 1: Inventory Active Backlog Items
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 Read all files in `docs/backlog/` (excluding `_archive/`). For each item,
 extract:
 

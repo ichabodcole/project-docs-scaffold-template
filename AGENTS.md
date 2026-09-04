@@ -54,6 +54,13 @@ npm run format:check  # Check markdown formatting without changes
 
 ### Documentation Lint
 
+Every document under `docs/` carries an OKF frontmatter block, and
+[docs/SCHEMA.md](./docs/SCHEMA.md) is the contract for it — which fields, which
+vocabularies per type, and what the two lint tiers check. Read it before
+creating or editing a document. [docs/index.md](./docs/index.md) is the catalog
+every library page must appear in; `.project-docs.json` at the root configures
+the lint.
+
 ```bash
 npm run check         # The gate: format:check + docs:lint
 npm run docs:lint     # Frontmatter, links, anchors and the document graph

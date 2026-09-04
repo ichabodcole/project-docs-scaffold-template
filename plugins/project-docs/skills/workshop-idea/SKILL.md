@@ -118,6 +118,10 @@ is/isn't. Get explicit confirmation before proceeding to write.
 
 ### Output — Write the Brief
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 1. **Choose a name.** Kebab-case, descriptive. Ask the user if unsure.
 2. **Write the brief** to `docs/briefs/YYYY-MM-DD-<name>.md` using the template
    at `docs/briefs/TEMPLATES/BRIEF.template.md` as scaffolding.

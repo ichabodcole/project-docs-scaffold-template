@@ -5,7 +5,13 @@
 // them, and derives the rest of its cases from the same tables.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -26,6 +32,8 @@ import {
   derive,
   frontmatterFor,
   lifecycleOf,
+  UNKNOWN_VERSION,
+  docsVersionOf,
   main,
   stripConsumedMetadata,
   titleOf,
@@ -71,14 +79,15 @@ describe("the copied tables equal the ones the lint enforces", () => {
 
   test("folder → type, for the workbench", () => {
     const fromLint = Object.fromEntries(
-      Object.entries(SPEC).map(([folder, spec]) => [folder, spec.type]),
+      Object.entries(SPEC).map(([folder, spec]) => [folder, spec.type])
     );
     expect(WORKBENCH_TYPE).toEqual(fromLint);
   });
 
   test("every lifecycle vocabulary", () => {
     const fromLint: Record<string, string[]> = {};
-    for (const spec of Object.values(SPEC)) if (spec.lifecycle) fromLint[spec.type] = spec.lifecycle;
+    for (const spec of Object.values(SPEC))
+      if (spec.lifecycle) fromLint[spec.type] = spec.lifecycle;
     for (const [type, spec] of Object.entries(PROJECT_SPEC))
       if (spec.lifecycle) fromLint[type] = spec.lifecycle;
     expect(LIFECYCLE).toEqual(fromLint);
@@ -89,7 +98,8 @@ describe("the copied tables equal the ones the lint enforces", () => {
       ...Object.values(LINT_DURABLE),
       ...Object.values(LINT_ROOT_PAGE),
     ]);
-    for (const spec of Object.values(SPEC)) if (spec.lifecycle === null) fromLint.add(spec.type);
+    for (const spec of Object.values(SPEC))
+      if (spec.lifecycle === null) fromLint.add(spec.type);
     for (const [type, spec] of Object.entries(PROJECT_SPEC))
       if (spec.lifecycle === null) fromLint.add(type);
     expect([...NO_LIFECYCLE].sort()).toEqual([...fromLint].sort());
@@ -101,7 +111,12 @@ describe("the copied tables equal the ones the lint enforces", () => {
   test("every mapped status lands inside its type's vocabulary", () => {
     for (const [type, map] of Object.entries(STATUS_MAP))
       for (const [raw, mapped] of Object.entries(map))
-        expect({ type, raw, mapped, ok: LIFECYCLE[type]?.includes(mapped) }).toEqual({
+        expect({
+          type,
+          raw,
+          mapped,
+          ok: LIFECYCLE[type]?.includes(mapped),
+        }).toEqual({
           type,
           raw,
           mapped,
@@ -141,19 +156,21 @@ describe("typeOf — position declares the type", () => {
 
 describe("titleOf — the H1, minus a label the type already carries", () => {
   test("strips a leading label that repeats the type", () => {
-    expect(titleOf("# Investigation: Wiki tooling boundary\n", "investigation")).toBe(
-      "Wiki tooling boundary",
-    );
+    expect(
+      titleOf("# Investigation: Wiki tooling boundary\n", "investigation")
+    ).toBe("Wiki tooling boundary");
   });
 
   test("keeps a subject that merely looks like a label", () => {
     expect(titleOf("# Investigation tooling boundary\n", "proposal")).toBe(
-      "Investigation tooling boundary",
+      "Investigation tooling boundary"
     );
   });
 
   test("handles the hyphenated types", () => {
-    expect(titleOf("# Design Resolution: Sync model\n", "design-resolution")).toBe("Sync model");
+    expect(
+      titleOf("# Design Resolution: Sync model\n", "design-resolution")
+    ).toBe("Sync model");
   });
 
   test("no H1, no title", () => {
@@ -163,15 +180,25 @@ describe("titleOf — the H1, minus a label the type already carries", () => {
 
 describe("lifecycleOf — the bold status line it is about to remove", () => {
   test("the same word means different things in different folders", () => {
-    expect(lifecycleOf("**Status:** Completed\n", "proposal").value).toBe("implemented");
-    expect(lifecycleOf("**Status:** Completed\n", "plan").value).toBe("completed");
-    expect(lifecycleOf("**Status:** Completed\n", "investigation").value).toBe("concluded");
+    expect(lifecycleOf("**Status:** Completed\n", "proposal").value).toBe(
+      "implemented"
+    );
+    expect(lifecycleOf("**Status:** Completed\n", "plan").value).toBe(
+      "completed"
+    );
+    expect(lifecycleOf("**Status:** Completed\n", "investigation").value).toBe(
+      "concluded"
+    );
   });
 
   // Invented by hand in three proposals because the vocabulary had no word.
   test("the hand-invented values the tree actually contains", () => {
-    expect(lifecycleOf("**Status:** Approved (in flight)\n", "proposal").value).toBe("approved");
-    expect(lifecycleOf("**Status:** Approved (shipped)\n", "proposal").value).toBe("implemented");
+    expect(
+      lifecycleOf("**Status:** Approved (in flight)\n", "proposal").value
+    ).toBe("approved");
+    expect(
+      lifecycleOf("**Status:** Approved (shipped)\n", "proposal").value
+    ).toBe("implemented");
   });
 
   // A wrong lifecycle is worse than a missing one: the missing one shows up in
@@ -183,7 +210,9 @@ describe("lifecycleOf — the bold status line it is about to remove", () => {
   });
 
   test("an unfilled template pick-list is not a status", () => {
-    expect(lifecycleOf("**Status:** Draft | Active | Completed\n", "plan").value).toBe("draft");
+    expect(
+      lifecycleOf("**Status:** Draft | Active | Completed\n", "plan").value
+    ).toBe("draft");
   });
 
   test("no status line at all opens at the type's first value", () => {
@@ -200,7 +229,9 @@ describe("stripConsumedMetadata — say it once", () => {
   test("removes a Prettier-wrapped bold paragraph and its trailing rule", () => {
     const body =
       "# A Proposal\n\n**Status:** Approved **Created:**\n2026-01-01 **Author:** Someone\n\n---\n\n## Overview\n\nText.\n";
-    expect(stripConsumedMetadata(body)).toBe("# A Proposal\n\n## Overview\n\nText.\n");
+    expect(stripConsumedMetadata(body)).toBe(
+      "# A Proposal\n\n## Overview\n\nText.\n"
+    );
   });
 
   test("leaves bold prose that is not metadata alone", () => {
@@ -216,7 +247,9 @@ describe("the whole script, on a fixture repository", () => {
   test("--dry-run changes nothing", () => {
     const root = fixture({ "docs/projects/x/proposal.md": proposal });
     expect(run(root, ["--dry-run"])).toBe(0);
-    expect(readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")).toBe(proposal);
+    expect(
+      readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")
+    ).toBe(proposal);
   });
 
   test("without it, the derived block is written and the old line removed", () => {
@@ -237,17 +270,22 @@ describe("the whole script, on a fixture repository", () => {
   test("`description` is never written", () => {
     const root = fixture({ "docs/projects/x/proposal.md": proposal });
     run(root);
-    expect(readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")).not.toContain(
-      "description:",
-    );
+    expect(
+      readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")
+    ).not.toContain("description:");
   });
 
   test("running it twice changes nothing the second time", () => {
     const root = fixture({ "docs/projects/x/proposal.md": proposal });
     run(root);
-    const once = readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8");
+    const once = readFileSync(
+      join(root, "docs/projects/x/proposal.md"),
+      "utf8"
+    );
     run(root);
-    expect(readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")).toBe(once);
+    expect(
+      readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")
+    ).toBe(once);
   });
 
   test("READMEs, templates and contract pages are left alone", () => {
@@ -258,7 +296,9 @@ describe("the whole script, on a fixture repository", () => {
       "docs/README.md": readme,
     });
     run(root);
-    expect(readFileSync(join(root, "docs/memories/README.md"), "utf8")).toBe(readme);
+    expect(readFileSync(join(root, "docs/memories/README.md"), "utf8")).toBe(
+      readme
+    );
     expect(readFileSync(join(root, "docs/README.md"), "utf8")).toBe(readme);
   });
 
@@ -266,14 +306,18 @@ describe("the whole script, on a fixture repository", () => {
     const old = "# Old thing\n\n**Status:** Completed\n";
     const root = fixture({ "docs/projects/_archive/y/proposal.md": old });
     run(root);
-    expect(readFileSync(join(root, "docs/projects/_archive/y/proposal.md"), "utf8")).toBe(old);
+    expect(
+      readFileSync(join(root, "docs/projects/_archive/y/proposal.md"), "utf8")
+    ).toBe(old);
   });
 
   test("a file that already has frontmatter is skipped, not rewritten", () => {
     const marked = "---\ntype: proposal\ntitle: Already\n---\n\n# Already\n";
     const root = fixture({ "docs/projects/x/proposal.md": marked });
     run(root);
-    expect(readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")).toBe(marked);
+    expect(
+      readFileSync(join(root, "docs/projects/x/proposal.md"), "utf8")
+    ).toBe(marked);
   });
 
   // The config's own backfill: a project that has never seen the file gets one,
@@ -281,7 +325,9 @@ describe("the whole script, on a fixture repository", () => {
   test("it creates .project-docs.json when there is none", () => {
     const root = fixture({ "docs/memories/a.md": "# A\n" });
     run(root);
-    const cfg = JSON.parse(readFileSync(join(root, ".project-docs.json"), "utf8"));
+    const cfg = JSON.parse(
+      readFileSync(join(root, ".project-docs.json"), "utf8")
+    );
     expect(cfg.docsRoot).toBe("docs");
     expect(cfg.lint.adopting).toBe(true);
     expect(cfg.lint.durable).toEqual(Object.keys(DURABLE_TYPE));
@@ -293,7 +339,9 @@ describe("the whole script, on a fixture repository", () => {
       "documentation/memories/a.md": "# A\n",
     });
     expect(run(root)).toBe(0);
-    expect(readFileSync(join(root, "documentation/memories/a.md"), "utf8")).toContain("type: memory");
+    expect(
+      readFileSync(join(root, "documentation/memories/a.md"), "utf8")
+    ).toContain("type: memory");
   });
 
   test("and lint.exclude, so one list governs both tools", () => {
@@ -302,13 +350,17 @@ describe("the whole script, on a fixture repository", () => {
         docsRoot: "docs",
         lint: { exclude: ["docs/**/*-prototype.md"] },
       }),
-      "docs/projects/x/artifacts/marp-prototype.md": "---\nmarp: true\n---\n\n# Deck\n",
+      "docs/projects/x/artifacts/marp-prototype.md":
+        "---\nmarp: true\n---\n\n# Deck\n",
       "docs/memories/a.md": "# A\n",
     });
     run(root);
-    expect(readFileSync(join(root, "docs/projects/x/artifacts/marp-prototype.md"), "utf8")).toBe(
-      "---\nmarp: true\n---\n\n# Deck\n",
-    );
+    expect(
+      readFileSync(
+        join(root, "docs/projects/x/artifacts/marp-prototype.md"),
+        "utf8"
+      )
+    ).toBe("---\nmarp: true\n---\n\n# Deck\n");
   });
 
   test("no docs root is an error, not a silent success", () => {
@@ -326,7 +378,9 @@ describe("frontmatterFor", () => {
       date: "2026-01-01",
       tags: [],
     });
-    expect(block).toBe("---\ntype: memory\nstatus: stable\ngenerated: { by: unknown, at: 2026-01-01 }\n---\n\n");
+    expect(block).toBe(
+      "---\ntype: memory\nstatus: stable\ngenerated: { by: unknown, at: 2026-01-01 }\n---\n\n"
+    );
   });
 
   test("quotes a title that would not survive as a bare scalar", () => {
@@ -350,5 +404,37 @@ describe("frontmatterFor", () => {
     const out = readFileSync(join(root, "docs/lessons-learned/a.md"), "utf8");
     expect(out).toContain("tags: [migrations, agent-execution]");
     expect(out).toContain("at: 2026-02-15");
+  });
+});
+
+describe("the version marker is carried forward, never invented", () => {
+  test("reads `docs_version` out of the docs README", () => {
+    const root = fixture({
+      "docs/README.md":
+        '---\ndocs_version: "6.3.0" # x-release-please-version\n---\n\n# Documentation\n',
+    });
+    expect(docsVersionOf(root, "docs")).toBe("6.3.0");
+  });
+
+  test("an unmarked project gets a placeholder, not this migration's own name", () => {
+    const root = fixture({ "docs/README.md": "# Documentation\n" });
+    expect(docsVersionOf(root, "docs")).toBe(UNKNOWN_VERSION);
+    expect(UNKNOWN_VERSION).not.toBe("2.7.0");
+  });
+
+  // Two version numbers in one project is the failure this prevents: the config
+  // saying 2.7.0 while `docs/README.md` says 6.3.0, with nothing to say which is
+  // the project's actual version.
+  test("the config it writes agrees with the README it read", () => {
+    const root = fixture({
+      "docs/README.md": '---\ndocs_version: "6.3.0"\n---\n\n# Documentation\n',
+      "docs/memories/a.md": "# A memory\n\nBody.\n",
+    });
+    run(root);
+    const config = JSON.parse(
+      readFileSync(join(root, ".project-docs.json"), "utf8")
+    );
+    expect(config.version).toBe("6.3.0");
+    expect(config.lint.adopting).toBe(true);
   });
 });

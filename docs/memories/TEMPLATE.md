@@ -3,6 +3,7 @@ type: memory # REQUIRED (OKF §3). Do not change it — the folder decides it.
 title: "[Short description of what was done]"
 description: "[One sentence: what was done and what changed as a result.]"
 tags: [project, area] # 2-4 kebab-case keywords
+# related: [playbook/some-playbook, lesson/some-lesson] # optional; library pages only
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
 generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---

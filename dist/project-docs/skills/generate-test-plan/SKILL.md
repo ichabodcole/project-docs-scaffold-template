@@ -48,6 +48,10 @@ The template defines point B. This skill is the methodology for getting there.
 
 ### Phase 1: Read & Analyze
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 1. Read the development plan at `docs/projects/$1/plan.md`
 2. Read the proposal at `docs/projects/$1/proposal.md`
 3. Check if a design resolution exists at

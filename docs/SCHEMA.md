@@ -146,6 +146,20 @@ generated: { by: claude-opus-5, at: 2026-09-03 } # OKF §5.2, replaces `timestam
   a document whose producer was never captured. `at` is `YYYY-MM-DD`.
 - **`description` doubles as the catalog hook**, verbatim. If it does not earn a
   click, tighten it. The lint compares the two.
+- **`related:` is `type/slug`, and `slug` is the filename without `.md`** — so a
+  page can move between folders without every edge pointing at it having to be
+  rewritten. Edges are resolved **against library pages only**, because those
+  are the pages the graph tier walks; there is no key for a proposal, a session
+  or an investigation, and writing one produces `BAD related`. Two library pages
+  with the same basename and type would make a key ambiguous, so the lint
+  reports that as `DUPLICATE KEY` rather than silently picking one. Link to
+  workbench documents in the body.
+
+  The thin tier does not resolve `related:` at all — it isn't walking the graph
+  — so a bad edge on a workbench document is silently accepted rather than
+  reported. That is a reason not to write one there, not permission to. Write
+  the link in the body, where it is checked.
+
 - **Computed, never authored:** backlinks, orphan status, tag adjacency. The
   lint derives them from links and `related:`; hand-maintaining them guarantees
   they go stale.
