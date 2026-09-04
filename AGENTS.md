@@ -52,9 +52,36 @@ npm run format        # Auto-format all markdown files with Prettier
 npm run format:check  # Check markdown formatting without changes
 ```
 
+### Documentation Lint
+
+```bash
+npm run check         # The gate: format:check + docs:lint
+npm run docs:lint     # Frontmatter, links, anchors and the document graph
+npm run docs:graph    # The same walk, emitted as JSON
+npm run docs:report   # Worklist of documents missing required fields
+npm run typecheck     # tsc --noEmit over docs/*.ts and scripts/*.ts
+npm test              # bun test
+```
+
+### Two Runtimes, One Gate
+
+This repo runs **Node (via pnpm)** for Prettier, Husky and Slidev, **Python (via
+uv)** for the skill-validation script, and **Bun** for the documentation lint
+under `docs/*.ts` and `scripts/docs-lint/`. The split is deliberate: the lint is
+zero-dependency TypeScript that Bun executes directly, with no build step and no
+Node type-stripping flags to keep current.
+
+`pnpm-lock.yaml` is the lockfile — `packageManager` in `package.json` pins the
+version, and `pnpm install --frozen-lockfile` is what CI runs. Do not
+`npm install` here; it produces a mixed `node_modules` that pnpm then refuses to
+install over. Bun is used only to _run_ `.ts` files, never to install.
+
+`npm run check` is the single entry point for both the pre-commit hook and CI,
+so there is one definition of "checked".
+
 ### Git Workflow
 
-- Pre-commit hook automatically runs `npm run format:check`
+- Pre-commit hook automatically runs `npm run check`
 - Release Please workflow on `main` branch handles automated releases
 - Use conventional commits (e.g., `feat:`, `fix:`, `chore:`) for automatic
   changelog generation

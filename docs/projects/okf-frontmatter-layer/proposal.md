@@ -58,7 +58,7 @@ metadata layer. Fix that once and both halves become tractable.
 
 ## Proposed Solution
 
-Five parts, all additive.
+Six parts, all additive.
 
 ### 1. One schema, OKF 0.2, governed by `docs/SCHEMA.md`
 
@@ -203,6 +203,18 @@ which every surveyed precedent keeps as the topical home of a feature.
 - The manifesto's "not a project management tool — no sprints" line is reworded
   to "records scope and state, not people or dates."
 
+### 6. A root config file: `.project-docs.json`
+
+The first tooling the scaffold ships has to find the docs and know which folders
+belong to which tier. Rather than hardcode `docs/` and the folder lists in
+`lint.ts` and in every skill, a small root config holds them: `docsRoot` (so a
+project can name the folder differently), `version` (the scaffold version,
+bumped by release-please beside the existing `docs/README.md` marker), and
+`lint` (the durable / workbench / skip folder lists). Nothing else until a
+consumer exists. The lint, the migration script and `update-project-docs` read
+it; the migration creates it when absent. Added 2026-09-03 after the plan was
+drafted.
+
 ## Scope
 
 **In Scope (MVP):**
@@ -217,6 +229,8 @@ which every surveyed precedent keeps as the topical home of a feature.
   [scaffold-update-checklist](../../../.claude/skills/scaffold-update-checklist/SKILL.md)
 - Skill touchpoints in `init-branch`, `finalize-branch`, `sweep-project`, and
   the scaffolding skills; manifesto wording
+- `.project-docs.json` with `docsRoot`, `version`, `lint`; skills read the docs
+  root from it
 
 **Out of Scope:**
 
