@@ -1,8 +1,12 @@
-# Document Versioning UI References
-
-**Status:** Draft **Created:** 2026-03-11 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Document Versioning UI References
+status: stable
+lifecycle: draft
+generated: { by: unknown, at: 2026-03-11 }
+---
+
+# Document Versioning UI References
 
 ## Overview
 

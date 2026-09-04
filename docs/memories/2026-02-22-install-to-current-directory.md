@@ -1,6 +1,11 @@
-# Cookiecutter install-to-current-directory option
+---
+type: memory
+title: Cookiecutter install-to-current-directory option
+status: stable
+generated: { by: unknown, at: 2026-02-22 }
+---
 
-**Date:** 2026-02-22
+# Cookiecutter install-to-current-directory option
 
 Added an `install_target` choice to the cookiecutter template so users can
 install `docs/` directly into their existing project directory. A

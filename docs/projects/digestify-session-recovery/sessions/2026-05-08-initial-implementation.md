@@ -1,3 +1,10 @@
+---
+type: session
+title: "Digestify Session Recovery — Initial Implementation — 2026-05-08"
+status: stable
+generated: { by: unknown, at: 2026-05-08 }
+---
+
 # Digestify Session Recovery — Initial Implementation — 2026-05-08
 
 ## Context

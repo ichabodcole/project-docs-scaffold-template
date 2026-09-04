@@ -1,8 +1,11 @@
-# MCP OAuth Remote Connector (Claude Desktop) Playbook
-
-**Created:** 2026-04-16 **Last Updated:** 2026-04-16 **Status:** Active
-
 ---
+type: artifact
+title: MCP OAuth Remote Connector (Claude Desktop) Playbook
+status: stable
+generated: { by: unknown, at: 2026-04-16 }
+---
+
+# MCP OAuth Remote Connector (Claude Desktop) Playbook
 
 ## Context
 

@@ -1,8 +1,12 @@
-# Digestify
-
-**Status:** Approved (in flight) **Created:** 2026-05-07 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Digestify
+status: stable
+lifecycle: approved
+generated: { by: unknown, at: 2026-05-07 }
+---
+
+# Digestify
 
 ## Overview
 

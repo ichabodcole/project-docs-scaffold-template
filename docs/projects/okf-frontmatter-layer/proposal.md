@@ -1,8 +1,14 @@
-# OKF Frontmatter Layer — machine-readable metadata, lint, and cycles on the existing docs/ structure
-
-**Status:** Approved **Created:** 2026-09-03 **Author:** Cole Reed
-
 ---
+type: proposal
+title:
+  "OKF Frontmatter Layer — machine-readable metadata, lint, and cycles on the
+  existing docs/ structure"
+status: stable
+lifecycle: approved
+generated: { by: unknown, at: 2026-09-03 }
+---
+
+# OKF Frontmatter Layer — machine-readable metadata, lint, and cycles on the existing docs/ structure
 
 ## Overview
 

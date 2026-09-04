@@ -1,3 +1,10 @@
+---
+type: session
+title: "Tooling Investigation and Skill — 2026-03-13"
+status: stable
+generated: { by: unknown, at: 2026-03-13 }
+---
+
 # Tooling Investigation and Skill — 2026-03-13
 
 ## Context

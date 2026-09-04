@@ -1,8 +1,12 @@
-# Markdown Slide Decks — Proposal
-
-**Status:** Draft **Created:** 2026-03-13 **Author:** Cole Reed
-
 ---
+type: proposal
+title: "Markdown Slide Decks — Proposal"
+status: stable
+lifecycle: draft
+generated: { by: unknown, at: 2026-03-13 }
+---
+
+# Markdown Slide Decks — Proposal
 
 ## Overview
 

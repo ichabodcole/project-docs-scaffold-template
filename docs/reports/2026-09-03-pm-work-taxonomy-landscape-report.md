@@ -1,12 +1,11 @@
-# PM Work-Taxonomy Landscape: intent, grouping, and in-play units
-
-**Date:** 2026-09-03 **Author:** Research pass (web-researcher agent, 21 tool
-uses, 37 sources) **Scope:** Shape Up, Linear, Scrum/Jira, Kanban, GitHub
-Projects, GitLab, Basecamp product, Notion, Plane. Height not found. **Status:**
-Complete. **Feeds:**
-[Work-cycle taxonomy investigation](../investigations/2026-09-03-work-cycle-taxonomy-landscape-investigation.md)
-
 ---
+type: report
+title: "PM Work-Taxonomy Landscape: intent, grouping, and in-play units"
+status: stable
+generated: { by: unknown, at: 2026-09-03 }
+---
+
+# PM Work-Taxonomy Landscape: intent, grouping, and in-play units
 
 Context: solo developer + AI coding agents, markdown-in-git planning
 (`docs/projects/<name>/proposal.md`, `plan.md`, `sessions/`, `docs/backlog/`).

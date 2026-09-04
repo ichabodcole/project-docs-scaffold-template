@@ -1,8 +1,12 @@
-# Grapevine V1.6 — Triage Wins + Human Control Plane Direction
-
-**Status:** Draft **Created:** 2026-05-27 **Author:** Cole
-
 ---
+type: proposal
+title: "Grapevine V1.6 — Triage Wins + Human Control Plane Direction"
+status: stable
+lifecycle: draft
+generated: { by: unknown, at: 2026-05-27 }
+---
+
+# Grapevine V1.6 — Triage Wins + Human Control Plane Direction
 
 ## Overview
 

@@ -1,6 +1,14 @@
-# `Root-Level Conventions`: "if the check finds nothing" is ambiguous across the two rows
+---
+type: backlog
+title:
+  '`Root-Level Conventions`: "if the check finds nothing" is ambiguous across
+  the two rows'
+status: stable
+lifecycle: open
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Added:** 2026-09-02
+# `Root-Level Conventions`: "if the check finds nothing" is ambiguous across the two rows
 
 A looseness bug in `update-project-docs`, in the Step 6 / Root-Level Conventions
 machinery rather than in any one convention's content. Not new; surfaced by the

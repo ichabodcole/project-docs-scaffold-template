@@ -1,3 +1,11 @@
+---
+type: brief
+title: "HiveMind Playbook Catalog & Apply Vocabulary"
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-07-10 }
+---
+
 <!--
 USAGE: Copy this file to docs/briefs/ as `YYYY-MM-DD-<name>.md`.
 
@@ -12,11 +20,6 @@ For more guidance, see: ../README.md
 -->
 
 # HiveMind Playbook Catalog & Apply Vocabulary
-
-**Created:** 2026-07-10\
-**Status:** Active
-
----
 
 ## The Spark
 

@@ -1,3 +1,10 @@
+---
+type: session
+title: "Finalize — 2026-05-24"
+status: stable
+generated: { by: unknown, at: 2026-05-24 }
+---
+
 # Finalize — 2026-05-24
 
 ## Context

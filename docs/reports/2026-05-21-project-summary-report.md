@@ -1,3 +1,10 @@
+---
+type: report
+title: Project Summary Report
+status: stable
+generated: { by: unknown, at: 2026-05-21 }
+---
+
 # Project Summary Report
 
 **Report Date:** 2026-05-21 **Report Type:** Project Summary Discovery

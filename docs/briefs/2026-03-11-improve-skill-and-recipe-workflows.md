@@ -1,9 +1,12 @@
-# Improve Skill & Improve Recipe Workflows
-
-**Created:** 2026-03-11\
-**Status:** Active
-
 ---
+type: brief
+title: "Improve Skill & Improve Recipe Workflows"
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-03-11 }
+---
+
+# Improve Skill & Improve Recipe Workflows
 
 ## The Spark
 

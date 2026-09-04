@@ -1,3 +1,10 @@
+---
+type: artifact
+title: "Code Quality Review — Tusk Board"
+status: stable
+generated: { by: unknown, at: 2026-05-24 }
+---
+
 # Code Quality Review — Tusk Board
 
 ## Verdict

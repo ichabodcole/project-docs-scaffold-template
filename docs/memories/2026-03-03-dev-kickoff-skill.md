@@ -1,6 +1,11 @@
-# dev-kickoff skill replaces parallel-worktree-dev
+---
+type: memory
+title: dev-kickoff skill replaces parallel-worktree-dev
+status: stable
+generated: { by: unknown, at: 2026-03-03 }
+---
 
-**Date:** 2026-03-03
+# dev-kickoff skill replaces parallel-worktree-dev
 
 Added the `dev-kickoff` skill — a unified orchestrator for the full
 proposal-to-implementation workflow that handles both worktree and main-repo

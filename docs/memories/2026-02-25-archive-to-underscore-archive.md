@@ -1,6 +1,11 @@
-# Renamed archive/ to \_archive/ across scaffold
+---
+type: memory
+title: "Renamed archive/ to \\_archive/ across scaffold"
+status: stable
+generated: { by: unknown, at: 2026-02-25 }
+---
 
-**Date:** 2026-02-25
+# Renamed archive/ to \_archive/ across scaffold
 
 Renamed all `archive/` directories to `_archive/` so they sort to the top of
 directory listings. Updated path references across docs, cookiecutter template,

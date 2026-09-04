@@ -1,6 +1,11 @@
-# Tuskboard skill shipped
+---
+type: memory
+title: Tuskboard skill shipped
+status: stable
+generated: { by: unknown, at: 2026-05-24 }
+---
 
-**Date:** 2026-05-24
+# Tuskboard skill shipped
 
 Closed out the Tusk Board branch — `toolbox:tuskboard`, a duplex agent↔user
 task board in the browser (static + monitored host modes, multi-agent join,

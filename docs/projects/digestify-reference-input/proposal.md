@@ -1,8 +1,12 @@
-# Digestify — Reference Input
-
-**Status:** Approved (in flight) **Created:** 2026-05-07 **Author:** Cole Reed
-
 ---
+type: proposal
+title: "Digestify — Reference Input"
+status: stable
+lifecycle: approved
+generated: { by: unknown, at: 2026-05-07 }
+---
+
+# Digestify — Reference Input
 
 ## Overview
 

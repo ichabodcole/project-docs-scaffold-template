@@ -1,10 +1,14 @@
-# Investigation: Missing project-closure and archive touchpoint in the finalize-branch lifecycle
-
-**Date Started:** 2026-08-07 **Investigator:** Claude Code **Status:** Concluded
-**Outcome:** Proposal Recommended **Proposal created:**
-[docs/projects/sweep-project/proposal.md](../projects/sweep-project/proposal.md)
-
 ---
+type: investigation
+title:
+  Missing project-closure and archive touchpoint in the finalize-branch
+  lifecycle
+status: stable
+lifecycle: concluded
+generated: { by: unknown, at: 2026-08-07 }
+---
+
+# Investigation: Missing project-closure and archive touchpoint in the finalize-branch lifecycle
 
 ## Question / Motivation
 

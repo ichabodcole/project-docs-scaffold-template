@@ -1,7 +1,11 @@
-# Session — Slim the project-cli-toolkit Skill
+---
+type: session
+title: "Session — Slim the project-cli-toolkit Skill"
+status: stable
+generated: { by: unknown, at: 2026-04-19 }
+---
 
-**Date:** 2026-04-19 **Branch:** `recipe/project-cli-toolkit-slim` **Base:**
-`develop`
+# Session — Slim the project-cli-toolkit Skill
 
 ## Summary
 

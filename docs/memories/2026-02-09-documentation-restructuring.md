@@ -1,6 +1,11 @@
-# Documentation restructured to project folders
+---
+type: memory
+title: Documentation restructured to project folders
+status: stable
+generated: { by: unknown, at: 2026-02-09 }
+---
 
-**Date:** 2026-02-09
+# Documentation restructured to project folders
 
 Replaced flat `proposals/`, `plans/`, `sessions/` directories with co-located
 `projects/<name>/` folders. Each project folder holds its proposal, plan,

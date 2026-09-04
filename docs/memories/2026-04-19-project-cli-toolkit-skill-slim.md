@@ -1,6 +1,11 @@
-# Slimmed project-cli-toolkit Skill to Companion Doc
+---
+type: memory
+title: Slimmed project-cli-toolkit Skill to Companion Doc
+status: stable
+generated: { by: unknown, at: 2026-04-19 }
+---
 
-**Date:** 2026-04-19
+# Slimmed project-cli-toolkit Skill to Companion Doc
 
 Rewrote the `project-cli-toolkit` recipe (1071 → 386 lines) as the companion doc
 for the new `create-project-cli` installer (`bunx create-project-cli`).

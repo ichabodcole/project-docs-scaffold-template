@@ -1,6 +1,11 @@
-# Sweep-project closure touchpoint added; first two projects archived
+---
+type: memory
+title: "Sweep-project closure touchpoint added; first two projects archived"
+status: stable
+generated: { by: unknown, at: 2026-08-07 }
+---
 
-**Date:** 2026-08-07
+# Sweep-project closure touchpoint added; first two projects archived
 
 Added the `sweep-project` skill (project-docs 3.2.0) — reconciles a project
 folder or backlog item against what was actually built, then either records the

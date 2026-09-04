@@ -1,6 +1,11 @@
-# Digestify skill shipped in toolbox plugin
+---
+type: memory
+title: Digestify skill shipped in toolbox plugin
+status: stable
+generated: { by: unknown, at: 2026-05-07 }
+---
 
-**Date:** 2026-05-07
+# Digestify skill shipped in toolbox plugin
 
 Built and shipped `digestify` — a one-shot browser-based markdown review tool
 for terminal agents. Agent writes markdown with `:::question id=foo` fences,

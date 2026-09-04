@@ -1,9 +1,12 @@
-# UI Experimentation Framework
-
-**Created:** 2026-03-11\
-**Status:** Active
-
 ---
+type: brief
+title: UI Experimentation Framework
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-03-11 }
+---
+
+# UI Experimentation Framework
 
 ## The Spark
 

@@ -1,8 +1,11 @@
-# Project Manifesto
-
-**Last Updated:** 2026-05-21
-
 ---
+type: manifesto
+title: Project Manifesto
+status: stable
+generated: { by: unknown, at: 2026-05-21 }
+---
+
+# Project Manifesto
 
 ## What Is This?
 

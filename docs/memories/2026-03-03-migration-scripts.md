@@ -1,6 +1,11 @@
-# Migration scripts added to update-project-docs skill
+---
+type: memory
+title: Migration scripts added to update-project-docs skill
+status: stable
+generated: { by: unknown, at: 2026-03-03 }
+---
 
-**Date:** 2026-03-03
+# Migration scripts added to update-project-docs skill
 
 Four shell scripts now automate the mechanical steps in migration guides
 (`migrations/scripts/`). All support `--dry-run` and `--scaffold-dir`; the

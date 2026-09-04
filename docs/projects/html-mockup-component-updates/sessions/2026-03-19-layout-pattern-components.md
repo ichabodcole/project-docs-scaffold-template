@@ -1,3 +1,10 @@
+---
+type: session
+title: "Layout Pattern Components — 2026-03-19"
+status: stable
+generated: { by: unknown, at: 2026-03-19 }
+---
+
 # Layout Pattern Components — 2026-03-19
 
 ## Context

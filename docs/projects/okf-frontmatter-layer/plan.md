@@ -1,9 +1,13 @@
-# OKF Frontmatter Layer Implementation Plan
-
-**Created:** 2026-09-03 **Related Proposal:** [Proposal](./proposal.md)
-**Status:** Active
-
 ---
+type: plan
+title: OKF Frontmatter Layer Implementation Plan
+tags: [line, if, present]
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-09-03 }
+---
+
+# OKF Frontmatter Layer Implementation Plan
 
 ## Overview
 

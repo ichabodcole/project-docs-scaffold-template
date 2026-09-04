@@ -1,3 +1,10 @@
+---
+type: session
+title: "Reviewer Capability Check and Project-Owned Landing Policy — 2026-08-07"
+status: stable
+generated: { by: unknown, at: 2026-08-07 }
+---
+
 # Reviewer Capability Check and Project-Owned Landing Policy — 2026-08-07
 
 ## Context

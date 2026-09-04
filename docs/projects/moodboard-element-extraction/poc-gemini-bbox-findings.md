@@ -1,7 +1,11 @@
-# PoC Findings — Gemini 3.5 Flash bbox via OpenRouter
+---
+type: artifact
+title: "PoC Findings — Gemini 3.5 Flash bbox via OpenRouter"
+status: stable
+generated: { by: unknown, at: 2026-05-23 }
+---
 
-**Date:** 2026-05-23 **Source image:** `artifacts/tuskboard-brand-id_v02.jpg`
-(1408×768) **Model:** `google/gemini-3.5-flash` via OpenRouter
+# PoC Findings — Gemini 3.5 Flash bbox via OpenRouter
 
 ## Hypothesis Under Test
 

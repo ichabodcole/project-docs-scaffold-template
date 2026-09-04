@@ -1,9 +1,12 @@
-# Markdown Slide Decks
-
-**Created:** 2026-03-13\
-**Status:** Active
-
 ---
+type: brief
+title: Markdown Slide Decks
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-03-13 }
+---
+
+# Markdown Slide Decks
 
 ## The Spark
 

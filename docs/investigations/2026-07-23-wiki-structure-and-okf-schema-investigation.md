@@ -1,3 +1,12 @@
+---
+type: investigation
+title: "Wiki structure & OKF schema for durable _development_ knowledge"
+tags: [migrations, agent-execution]
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-07-23 }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create investigations and when NOT to create them.
@@ -12,11 +21,6 @@ Focus on: What did you investigate? What did you find? What should happen next?
 -->
 
 # Investigation: Wiki structure & OKF schema for durable _development_ knowledge
-
-**Date Started:** 2026-07-23 **Investigator:** Claude Code\
-**Status:** Active **Outcome:** In Progress
-
----
 
 ## Question / Motivation
 
@@ -202,12 +206,8 @@ updated: 2026-02-15 # OKF timestamp; when the CONTENT last changed
 Today (`lessons-learned/migration-steps-uniform-specificity.md`), metadata lives
 in the body:
 
-```markdown
+````markdown
 # Migration Steps Must Be Uniformly Specific
-
-**Date:** 2026-02-15 **Tags:** `#migrations` `#agent-execution` `#documentation`
-**Type:** Pattern
-```
 
 As a wiki page, that same metadata lifts into frontmatter and the body becomes
 pure content:
@@ -229,6 +229,7 @@ updated: 2026-02-15
 
 ...
 ```
+````
 
 The port is mechanical — nothing about the lesson's content resists it — which
 is the evidence the schema is sound. The `memory` type ports the same way

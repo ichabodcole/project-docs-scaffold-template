@@ -1,8 +1,12 @@
-# API MCP Server — Desktop Client Gotcha
-
-**Status:** Draft **Created:** 2026-04-16 **Author:** Cole Reed
-
 ---
+type: proposal
+title: "API MCP Server — Desktop Client Gotcha"
+status: stable
+lifecycle: draft
+generated: { by: unknown, at: 2026-04-16 }
+---
+
+# API MCP Server — Desktop Client Gotcha
 
 ## Overview
 

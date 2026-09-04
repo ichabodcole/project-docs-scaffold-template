@@ -1,8 +1,12 @@
-# Spellbook Extraction — Toolbox Cleanup
-
-**Status:** Approved **Created:** 2026-06-11 **Author:** Cole Reed
-
 ---
+type: proposal
+title: "Spellbook Extraction — Toolbox Cleanup"
+status: stable
+lifecycle: approved
+generated: { by: unknown, at: 2026-06-11 }
+---
+
+# Spellbook Extraction — Toolbox Cleanup
 
 ## Overview
 

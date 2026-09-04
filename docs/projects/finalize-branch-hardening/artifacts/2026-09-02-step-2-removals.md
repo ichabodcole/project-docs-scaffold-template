@@ -1,7 +1,11 @@
-# Step 2 density pass — removals, verbatim
+---
+type: artifact
+title: "Step 2 density pass — removals, verbatim"
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Date:** 2026-09-02 **Section:** `finalize-branch/SKILL.md` Step 2 **Before:**
-149 lines **After:** 133 lines
+# Step 2 density pass — removals, verbatim
 
 Working record for the `guidance-not-argument` pass. Every passage removed is
 reproduced verbatim with its original line numbers and classification, so the

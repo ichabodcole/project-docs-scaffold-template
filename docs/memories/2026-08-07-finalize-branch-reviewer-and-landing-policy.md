@@ -1,6 +1,12 @@
-# finalize-branch: reviewer capability check + project-owned landing policy
+---
+type: memory
+title:
+  "finalize-branch: reviewer capability check + project-owned landing policy"
+status: stable
+generated: { by: unknown, at: 2026-08-07 }
+---
 
-**Date:** 2026-08-07
+# finalize-branch: reviewer capability check + project-owned landing policy
 
 Fixed two GitHub issues (#148, #149) where `finalize-branch` made unverified
 assumptions — Step 2 defaulted to a reviewer agent with no `Bash` tool, and Step

@@ -1,9 +1,12 @@
-# Investigation: Cross-Agent Skill Portability and Distribution
-
-**Date Started:** 2026-02-25 **Investigator:** Claude Code **Status:** Active
-**Outcome:** In Progress
-
 ---
+type: investigation
+title: Cross-Agent Skill Portability and Distribution
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-02-25 }
+---
+
+# Investigation: Cross-Agent Skill Portability and Distribution
 
 ## Question / Motivation
 

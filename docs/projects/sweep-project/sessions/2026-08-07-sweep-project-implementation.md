@@ -1,3 +1,10 @@
+---
+type: session
+title: "Sweep Project — build, dogfood, and first production run — 2026-08-07"
+status: stable
+generated: { by: unknown, at: 2026-08-07 }
+---
+
 # Sweep Project — build, dogfood, and first production run — 2026-08-07
 
 ## Context

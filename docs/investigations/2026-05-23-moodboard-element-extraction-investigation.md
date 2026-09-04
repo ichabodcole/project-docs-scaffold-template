@@ -1,10 +1,12 @@
-# Investigation: Agentic Moodboard / Branding-Board Element Extraction
-
-**Date Started:** 2026-05-23 **Investigator:** Claude Code (Opus 4.7, 1M
-context) **Status:** Concluded **Outcome:** Proposal Recommended (with a
-mandatory proof-of-concept gate)
-
 ---
+type: investigation
+title: Agentic Moodboard / Branding-Board Element Extraction
+status: stable
+lifecycle: concluded
+generated: { by: unknown, at: 2026-05-23 }
+---
+
+# Investigation: Agentic Moodboard / Branding-Board Element Extraction
 
 ## Question / Motivation
 

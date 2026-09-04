@@ -1,8 +1,11 @@
-# Consolidating a Long Branch Playbook
-
-**Created:** 2026-04-12 **Last Updated:** 2026-04-12 **Status:** Active
-
 ---
+type: artifact
+title: Consolidating a Long Branch Playbook
+status: stable
+generated: { by: unknown, at: 2026-04-12 }
+---
+
+# Consolidating a Long Branch Playbook
 
 ## Context
 

@@ -1,8 +1,12 @@
-# Consolidate Long Branch Skill
-
-**Status:** Draft **Created:** 2026-04-13 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Consolidate Long Branch Skill
+status: stable
+lifecycle: draft
+generated: { by: unknown, at: 2026-04-13 }
+---
+
+# Consolidate Long Branch Skill
 
 ## Overview
 

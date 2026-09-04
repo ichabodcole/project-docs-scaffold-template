@@ -1,6 +1,11 @@
-# Brief: `project-docs:report-issue` skill
+---
+type: brief
+title: "`project-docs:report-issue` skill"
+status: stable
+generated: { by: unknown, at: 2026-04-13 }
+---
 
-**Date:** 2026-04-13 **Status:** Approved for implementation
+# Brief: `project-docs:report-issue` skill
 
 ## Problem
 

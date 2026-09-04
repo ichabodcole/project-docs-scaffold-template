@@ -1,3 +1,10 @@
+---
+type: session
+title: "Toolbox Skill Removal — 2026-06-11"
+status: stable
+generated: { by: unknown, at: 2026-06-11 }
+---
+
 # Toolbox Skill Removal — 2026-06-11
 
 ## Context

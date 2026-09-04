@@ -1,3 +1,12 @@
+---
+type: investigation
+title:
+  "Wiki tooling boundary — reusable vs app-coupled, and the navigation home"
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-07-23 }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create investigations and when NOT to create them.
@@ -12,11 +21,6 @@ Focus on: What did you investigate? What did you find? What should happen next?
 -->
 
 # Investigation: Wiki tooling boundary — reusable vs app-coupled, and the navigation home
-
-**Date Started:** 2026-07-23 **Investigator:** Claude Code\
-**Status:** Active **Outcome:** In Progress
-
----
 
 ## Question / Motivation
 

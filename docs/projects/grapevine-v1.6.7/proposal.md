@@ -1,8 +1,12 @@
-# Grapevine V1.6.7 — Liveness, Grounding & Multi-Channel Paper Cuts
-
-**Status:** Completed **Created:** 2026-05-28 **Author:** Cole
-
 ---
+type: proposal
+title: "Grapevine V1.6.7 — Liveness, Grounding & Multi-Channel Paper Cuts"
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-05-28 }
+---
+
+# Grapevine V1.6.7 — Liveness, Grounding & Multi-Channel Paper Cuts
 
 ## Overview
 

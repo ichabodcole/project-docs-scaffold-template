@@ -1,3 +1,10 @@
+---
+type: artifact
+title: "Agent UX Review — Tusk Board SKILL.md"
+status: stable
+generated: { by: unknown, at: 2026-05-24 }
+---
+
 # Agent UX Review — Tusk Board SKILL.md
 
 ## Verdict

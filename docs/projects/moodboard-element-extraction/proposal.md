@@ -1,8 +1,12 @@
-# Moodboard Element Extraction
-
-**Status:** Draft **Created:** 2026-05-23 **Author:** Cole
-
 ---
+type: proposal
+title: Moodboard Element Extraction
+status: stable
+lifecycle: draft
+generated: { by: unknown, at: 2026-05-23 }
+---
+
+# Moodboard Element Extraction
 
 ## Overview
 

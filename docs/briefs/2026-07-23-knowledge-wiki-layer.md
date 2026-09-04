@@ -1,3 +1,11 @@
+---
+type: brief
+title: "Knowledge Wiki Layer — a durable, graph-shaped documentation surface"
+status: stable
+lifecycle: active
+generated: { by: unknown, at: 2026-07-23 }
+---
+
 <!--
 USAGE: Copy this file to docs/briefs/ as `YYYY-MM-DD-<name>.md`.
 
@@ -12,11 +20,6 @@ For more guidance, see: ../README.md
 -->
 
 # Knowledge Wiki Layer — a durable, graph-shaped documentation surface
-
-**Created:** 2026-07-23\
-**Status:** Active
-
----
 
 ## The Spark
 

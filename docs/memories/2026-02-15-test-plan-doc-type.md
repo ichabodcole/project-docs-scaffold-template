@@ -1,6 +1,11 @@
-# Added test plan document type to project lifecycle
+---
+type: memory
+title: Added test plan document type to project lifecycle
+status: stable
+generated: { by: unknown, at: 2026-02-15 }
+---
 
-**Date:** 2026-02-15
+# Added test plan document type to project lifecycle
 
 New optional lifecycle stage between Plan and Sessions — tiered verification
 scenarios (Tier 1 smoke, Tier 2 critical path, Tier 3 edge cases) for

@@ -1,10 +1,13 @@
-# Investigation: What are the right primitives for "work in play" in a file-based docs system?
-
-**Date Started:** 2026-09-03 **Investigator:** Claude Code\
-**Status:** Concluded **Outcome:** Proposal Recommended (fold into the phase-one
-frontmatter schema; see Recommendation)
-
 ---
+type: investigation
+title:
+  'What are the right primitives for "work in play" in a file-based docs system?'
+status: stable
+lifecycle: concluded
+generated: { by: unknown, at: 2026-09-03 }
+---
+
+# Investigation: What are the right primitives for "work in play" in a file-based docs system?
 
 ## Question / Motivation
 

@@ -1,6 +1,12 @@
-# `Task` vs `Agent`: stale dispatch-tool name across skills and agents
+---
+type: backlog
+title: "`Task` vs `Agent`: stale dispatch-tool name across skills and agents"
+status: stable
+lifecycle: open
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Added:** 2026-09-02
+# `Task` vs `Agent`: stale dispatch-tool name across skills and agents
 
 The subagent dispatch tool is named **`Agent`** in current environments. `Task`
 is the historical name and is not present. Several project-docs files still

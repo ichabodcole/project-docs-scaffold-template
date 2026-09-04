@@ -1,9 +1,12 @@
-# Grapevine V1.6.7 Implementation Plan
-
-**Created:** 2026-05-28 **Related Proposal:** [proposal.md](./proposal.md)
-**Status:** Completed
-
 ---
+type: plan
+title: Grapevine V1.6.7 Implementation Plan
+status: stable
+lifecycle: completed
+generated: { by: unknown, at: 2026-05-28 }
+---
+
+# Grapevine V1.6.7 Implementation Plan
 
 ## Overview
 
@@ -162,8 +165,6 @@ restart-safety number trustworthy.
       `GET /presence` endpoint (in-memory map of loaded channels) — no new
       bookkeeping, so it stayed in V1.6.7.
 
-**Status:** DONE. Full suite 49/49.
-
 **Dependencies:** Phase 1 (the presence fields + endpoint shape).
 
 ---
@@ -208,8 +209,6 @@ receives truncation hints.
       (test: `"tail does not emit truncation hint below the raised threshold"`).
 - [x] Keepalive: `2>&1` consumer sees `: grapevine-keepalive` while idle (test:
       `"tail emits a keepalive sentinel on stderr while idle"`).
-
-**Status:** DONE. Daemon `subscribed` event gained `latest_id`; suite 52/52.
 
 **Dependencies:** Phase 1 (reused the `subscribed`-event `latest_id` addition).
 
@@ -265,8 +264,6 @@ receives truncation hints.
 - [x] `plugin.json` 2.8.0 → 2.9.0 (the test harness spawns a 2.9.0 daemon; a
       live `info`/`doctor` 2.9.0 check is part of the Phase 6 smoke test).
 
-**Status:** DONE.
-
 **Dependencies:** Phases 1–4 (docs describe shipped behavior).
 
 ---
@@ -296,10 +293,6 @@ real HOME daemon rolled to branch 2.9.0 (vintner facilitating).
 - [x] `send` echoed `# → smoke-v167 · N recipient(s)` on stderr.
 - [x] `2>&1` probe saw `: grapevine-keepalive` ~every 3s; the plain stdout tail
       never surfaced one (off the message stream, by design).
-
-**Status:** DONE. Both of tesla's pre-release observations resolved (stream
-routing = working-as-designed, source-confirmed at `cli.ts:499`; per-connect
-hint recompute = correct/live). No regressions. Build clean to cut.
 
 **Dependencies:** Phases 1–5 complete; suite green.
 

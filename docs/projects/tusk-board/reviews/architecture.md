@@ -1,3 +1,10 @@
+---
+type: artifact
+title: "Architectural Review — Tusk Board"
+status: stable
+generated: { by: unknown, at: 2026-05-24 }
+---
+
 # Architectural Review — Tusk Board
 
 ## Verdict

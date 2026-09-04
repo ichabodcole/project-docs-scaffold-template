@@ -1,6 +1,11 @@
-# A self-report can't be made verifiable by constraining its wording
+---
+type: memory
+title: A self-report can't be made verifiable by constraining its wording
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Date:** 2026-09-02
+# A self-report can't be made verifiable by constraining its wording
 
 Shipped project-docs 3.4.0, hardening `finalize-branch` Step 2's
 reviewer-capability check. The durable lesson is the failure path, not the

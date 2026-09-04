@@ -132,7 +132,12 @@ export const SPEC: Record<
   string,
   { type: string; lifecycle: string[] | null; extra?: string[] }
 > = {
-  backlog: { type: "backlog", lifecycle: ["open", "promoted", "dropped"] },
+  // `done` is not in the proposal's vocabulary and should have been. The
+  // backlog README describes the real path as open → work it → archive, and
+  // "promoted" is the rarer outcome where an item turns out to need a project.
+  // Without `done` the common case had no word, which is the same failure that
+  // produced `Approved (in flight)` on the proposals.
+  backlog: { type: "backlog", lifecycle: ["open", "done", "promoted", "dropped"] },
   fragments: { type: "fragment", lifecycle: ["open", "promoted", "dropped"] },
   briefs: { type: "brief", lifecycle: ["active", "spent"] },
   investigations: { type: "investigation", lifecycle: ["active", "concluded"] },

@@ -1,3 +1,10 @@
+---
+type: session
+title: "Create Toolbox Plugin — 2026-03-22"
+status: stable
+generated: { by: unknown, at: 2026-03-22 }
+---
+
 # Create Toolbox Plugin — 2026-03-22
 
 ## Context

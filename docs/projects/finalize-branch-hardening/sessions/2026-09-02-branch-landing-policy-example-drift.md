@@ -1,3 +1,12 @@
+---
+type: session
+title:
+  "Branch Landing Policy: the shipped example had drifted from its
+  implementation — 2026-09-02"
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
+
 # Branch Landing Policy: the shipped example had drifted from its implementation — 2026-09-02
 
 ## Context

@@ -1,6 +1,13 @@
-# `_archive`-internal link exception escapes `sweep-project`'s own invariants
+---
+type: backlog
+title:
+  "`_archive`-internal link exception escapes `sweep-project`'s own invariants"
+status: stable
+lifecycle: open
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Added:** 2026-09-02
+# `_archive`-internal link exception escapes `sweep-project`'s own invariants
 
 Step 5b carves out one case from the rewrite: a `../<name>/` link in a document
 that is _itself_ already under `docs/projects/_archive/`. Such a link is already

@@ -1,3 +1,10 @@
+---
+type: session
+title: "Skill update for Claude Desktop DCR gotcha — 2026-04-16"
+status: stable
+generated: { by: unknown, at: 2026-04-16 }
+---
+
 # Skill update for Claude Desktop DCR gotcha — 2026-04-16
 
 ## Context

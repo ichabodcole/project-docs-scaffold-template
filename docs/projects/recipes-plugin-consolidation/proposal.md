@@ -1,8 +1,12 @@
-# Recipes Plugin Consolidation
-
-**Status:** Approved (shipped) **Created:** 2026-05-07 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Recipes Plugin Consolidation
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-05-07 }
+---
+
+# Recipes Plugin Consolidation
 
 ## Overview
 

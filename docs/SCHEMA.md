@@ -169,7 +169,7 @@ gate — which is the way round that drift always goes.
 | `manifesto`         | —                                                                              | graph | `PROJECT_MANIFESTO.md`            |
 | `summary`           | —                                                                              | graph | `PROJECT-SUMMARY.md`              |
 | `index`             | —                                                                              | graph | `index.md`                        |
-| `backlog`           | `open` · `promoted` · `dropped`                                                | thin  | `backlog/`                        |
+| `backlog`           | `open` · `done` · `promoted` · `dropped`                                       | thin  | `backlog/`                        |
 | `fragment`          | `open` · `promoted` · `dropped`                                                | thin  | `fragments/`                      |
 | `brief`             | `active` · `spent`                                                             | thin  | `briefs/`                         |
 | `investigation`     | `active` · `concluded`                                                         | thin  | `investigations/`                 |
@@ -198,6 +198,10 @@ start.
 open until it is answered and a list of scenarios is written before it is run.
 `ready` on a test plan means the scenarios exist and nothing has been executed
 against them yet.
+
+**A backlog item can just be `done`.** `promoted` is for the rarer case where an
+item turns out to need a project and the work moves there; a `fragment`, which
+is an observation rather than a task, has no `done` for that reason.
 
 **`approved` is not `implemented`.** Every mature file-based process — KEPs,
 PEPs, RFDs — has that intermediate state, and its absence here is why three

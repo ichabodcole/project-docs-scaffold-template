@@ -1,11 +1,13 @@
-# File-Based Work-Tracking Landscape: repo-native units, status vocabularies, and closure
+---
+type: report
+title:
+  "File-Based Work-Tracking Landscape: repo-native units, status vocabularies,
+  and closure"
+status: stable
+generated: { by: unknown, at: 2026-09-03 }
+---
 
-**Date:** 2026-09-03 **Author:** Research pass (web-researcher agent, 30 tool
-uses) **Scope:** RFC/KEP/PEP/Ember/Go/TC39 processes, ADRs, git-native issue
-trackers (git-bug, ticgit, Radicle, beads), Oxide RFDs, GitLab handbook, PARA,
-Johnny.Decimal, Keep a Changelog, /now, agent plan-file conventions, OKF.
-**Status:** Complete. **Feeds:**
-[Work-cycle taxonomy investigation](../investigations/2026-09-03-work-cycle-taxonomy-landscape-investigation.md)
+# File-Based Work-Tracking Landscape: repo-native units, status vocabularies, and closure
 
 > Correction (2026-09-03, verified against
 > [okf/SPEC.md](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)):

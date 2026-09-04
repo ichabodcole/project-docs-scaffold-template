@@ -1,6 +1,11 @@
-# Added agent-feedback-reporting recipe
+---
+type: memory
+title: Added agent-feedback-reporting recipe
+status: stable
+generated: { by: unknown, at: 2026-03-08 }
+---
 
-**Date:** 2026-03-08
+# Added agent-feedback-reporting recipe
 
 New recipe implementing a pattern for giving AI agents a structured feedback
 tool to report difficulties during execution, with an in-memory registry,

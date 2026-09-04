@@ -1,7 +1,11 @@
-# Session — Project CLI Toolkit Recipe Review & Finalize
+---
+type: session
+title: "Session — Project CLI Toolkit Recipe Review & Finalize"
+status: stable
+generated: { by: unknown, at: 2026-04-19 }
+---
 
-**Date:** 2026-04-19 **Branch:** `recipe/project-cli-toolkit` **Base:**
-`develop`
+# Session — Project CLI Toolkit Recipe Review & Finalize
 
 ## Summary
 

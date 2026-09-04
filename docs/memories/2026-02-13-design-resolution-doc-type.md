@@ -1,6 +1,11 @@
-# Added Design Resolution document type
+---
+type: memory
+title: Added Design Resolution document type
+status: stable
+generated: { by: unknown, at: 2026-02-13 }
+---
 
-**Date:** 2026-02-13
+# Added Design Resolution document type
 
 Added an optional "Design Resolution" stage between Proposal and Plan in the
 documentation pipeline. Includes a template, interactive Q&A skill, slash

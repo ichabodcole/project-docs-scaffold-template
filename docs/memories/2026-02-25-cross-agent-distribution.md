@@ -1,6 +1,11 @@
-# Cross-agent skill distribution pipeline
+---
+type: memory
+title: Cross-agent skill distribution pipeline
+status: stable
+generated: { by: unknown, at: 2026-02-25 }
+---
 
-**Date:** 2026-02-25
+# Cross-agent skill distribution pipeline
 
 Added a build script that packages plugin skills, agents, and commands into
 `dist/<plugin>/` with OpenPackage manifests and per-plugin READMEs. All 38

@@ -1,6 +1,11 @@
-# Project CLI Toolkit Recipe Added
+---
+type: memory
+title: Project CLI Toolkit Recipe Added
+status: stable
+generated: { by: unknown, at: 2026-04-19 }
+---
 
-**Date:** 2026-04-19
+# Project CLI Toolkit Recipe Added
 
 Added `project-cli-toolkit` recipe skill capturing Story Loom's dual-audience
 CLI pattern (humans get TTY-aware text, agents get `{ok, data, meta}` JSON

@@ -1,6 +1,11 @@
-# Digestify session-recovery features shipped
+---
+type: memory
+title: Digestify session-recovery features shipped
+status: stable
+generated: { by: unknown, at: 2026-05-08 }
+---
 
-**Date:** 2026-05-08
+# Digestify session-recovery features shipped
 
 Added a visible idle countdown, sliding-window heartbeat keep-alive
 (`/heartbeat`), manual reset (click the timer pill), and localStorage-backed

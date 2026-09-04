@@ -1,11 +1,12 @@
-# Test Plan: Grapevine V1.6.7
-
-**Status:** Results Recorded\
-**Created:** 2026-05-28\
-**Related Plan:** [Development Plan](./plan.md)\
-**Related Proposal:** [Proposal](./proposal.md)
-
 ---
+type: test-plan
+title: Grapevine V1.6.7
+status: stable
+lifecycle: completed
+generated: { by: unknown, at: 2026-05-28 }
+---
+
+# Test Plan: Grapevine V1.6.7
 
 ## Overview
 

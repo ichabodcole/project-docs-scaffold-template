@@ -1,3 +1,10 @@
+---
+type: session
+title: "Digestify — Initial Implementation — 2026-05-07"
+status: stable
+generated: { by: unknown, at: 2026-05-07 }
+---
+
 # Digestify — Initial Implementation — 2026-05-07
 
 ## Context

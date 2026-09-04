@@ -1,3 +1,10 @@
+---
+type: session
+title: "Completion marks generalization and cold-read hardening — 2026-09-02"
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
+
 # Completion marks generalization and cold-read hardening — 2026-09-02
 
 ## Context

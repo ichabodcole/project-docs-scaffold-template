@@ -1,3 +1,12 @@
+---
+type: artifact
+title:
+  "Removals: guidance-not-argument pass on the 3.6.0 root-convention work —
+  2026-09-02"
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
+
 # Removals: guidance-not-argument pass on the 3.6.0 root-convention work — 2026-09-02
 
 Working record for the `guidance-not-argument` pass over the passages added in

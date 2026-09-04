@@ -1,8 +1,12 @@
-# Tusk Board
-
-**Status:** Draft **Created:** 2026-05-21 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Tusk Board
+status: stable
+lifecycle: draft
+generated: { by: unknown, at: 2026-05-21 }
+---
+
+# Tusk Board
 
 ## Overview
 

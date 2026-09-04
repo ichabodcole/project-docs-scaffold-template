@@ -1,9 +1,12 @@
-# Migration Steps Must Be Uniformly Specific
-
-**Date:** 2026-02-15 **Tags:** `#migrations` `#agent-execution` `#documentation`
-**Type:** Pattern
-
 ---
+type: lesson
+title: Migration Steps Must Be Uniformly Specific
+tags: [migrations, agent-execution, documentation]
+status: stable
+generated: { by: unknown, at: 2026-02-15 }
+---
+
+# Migration Steps Must Be Uniformly Specific
 
 ## The Lesson
 

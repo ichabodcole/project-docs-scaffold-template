@@ -1,6 +1,11 @@
-# Generalized worktree scripts and bundled with skill
+---
+type: memory
+title: Generalized worktree scripts and bundled with skill
+status: stable
+generated: { by: unknown, at: 2026-02-14 }
+---
 
-**Date:** 2026-02-14
+# Generalized worktree scripts and bundled with skill
 
 Moved project-specific worktree management scripts into the
 `parallel-worktree-dev` skill as bundled, generic scripts. They auto-discover

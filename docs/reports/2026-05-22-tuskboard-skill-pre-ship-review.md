@@ -1,3 +1,10 @@
+---
+type: report
+title: "UX Review: Tusk Board (tuskboard) skill pre-ship assessment"
+status: stable
+generated: { by: unknown, at: 2026-05-22 }
+---
+
 # UX Review: Tusk Board (tuskboard) skill pre-ship assessment
 
 ## Metadata

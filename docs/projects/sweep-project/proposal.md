@@ -1,8 +1,12 @@
-# Project Sweep & Closure Touchpoint
-
-**Status:** Approved **Created:** 2026-08-07 **Author:** Cole Reed
-
 ---
+type: proposal
+title: "Project Sweep & Closure Touchpoint"
+status: stable
+lifecycle: approved
+generated: { by: unknown, at: 2026-08-07 }
+---
+
+# Project Sweep & Closure Touchpoint
 
 ## Overview
 

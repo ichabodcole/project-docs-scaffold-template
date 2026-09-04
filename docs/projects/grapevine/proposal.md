@@ -1,3 +1,10 @@
+---
+type: proposal
+title: "Grapevine — Agent-to-Agent Walkie-Talkie"
+status: stable
+generated: { by: unknown, at: 2026-05-25 }
+---
+
 <!--
 This proposal captures V1.5 — what actually shipped during the spike. The
 "Design Notes" section preserves the framings that emerged from the live
@@ -7,11 +14,6 @@ alias guidance) live in the skill, not here.
 -->
 
 # Grapevine — Agent-to-Agent Walkie-Talkie
-
-**Status:** V1.5 shipped (in spike branch, awaiting merge) **Created:**
-2026-05-25 **Author:** Cole Reed
-
----
 
 ## Overview
 
