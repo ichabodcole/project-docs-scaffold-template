@@ -6,7 +6,7 @@ description:
   How solid a frontmatter standard has to be before tooling can be built on it,
   and where that tooling should live.
 status: stable
-lifecycle: active
+lifecycle: concluded
 generated: { by: unknown, at: 2026-07-23 }
 ---
 
@@ -164,3 +164,21 @@ CLI/graph UI** — should be confirmed cheaply before it shapes a proposal.
 - Reference tooling: `dreamwood/dream-flute/docs/wiki/lint.ts`; Operator MCP
   (`mcp__operator-cloud__get_links` / `list_relationships` /
   `list_dangling_links` / `list_orphan_documents`)
+
+---
+
+## Outcome
+
+**Concluded 2026-09-04.** Answered by
+[project/okf-frontmatter-layer](../projects/okf-frontmatter-layer/proposal.md).
+The boundary it set out to find was drawn in the most boring available place:
+the lint is **copied** into the cookiecutter payload rather than extracted into
+a package, with `scripts/check-mirror.sh` making the duplication survivable.
+Three repositories are still discovering what the tool should be, and a package
+would have frozen that early.
+
+The navigation home stayed a question. `docs/index.md` is a hand-maintained
+catalog whose entries the lint checks against each page's own `description`, and
+`--json` emits the graph for anything that wants to render it. Neither a
+standalone CLI nor Operator MCP was needed to get this far, which is itself the
+finding.

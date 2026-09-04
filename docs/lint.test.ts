@@ -8,7 +8,15 @@
 // `docs/lint.ts` takes a `Ctx` for exactly this reason.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { loadConfig } from "../scripts/docs-lint/config.ts";
@@ -23,7 +31,7 @@ import {
   graphTier,
   hookChecks,
   isTemplate,
-  libraryFieldProblems,
+  libraryFieldChecks,
   reportLines,
   schemaLifecycles,
   schemaTableChecks,
@@ -39,12 +47,19 @@ afterAll(() => {
 });
 
 /** A fixture repository: `.project-docs.json`, a docs root, and the files given. */
-function fixture(files: Record<string, string>, config?: Record<string, unknown>): Ctx {
+function fixture(
+  files: Record<string, string>,
+  config?: Record<string, unknown>
+): Ctx {
   const root = mkdtempSync(join(tmpdir(), "docs-lint-"));
   roots.push(root);
   writeFileSync(
     join(root, ".project-docs.json"),
-    JSON.stringify({ docsRoot: "docs", version: "1.0.0", lint: { adopting: false, ...config } }),
+    JSON.stringify({
+      docsRoot: "docs",
+      version: "1.0.0",
+      lint: { adopting: false, ...config },
+    })
   );
   for (const [rel, body] of Object.entries(files)) {
     const abs = join(root, rel);
@@ -160,9 +175,11 @@ describe("the thin tier — presence and vocabulary", () => {
           reviewer: "someone",
         }) + "# A\n",
     });
-    expect(thinTier(ctx).some((p) => p.includes('UNKNOWN FIELD') && p.includes('"reviewer"'))).toBe(
-      true,
-    );
+    expect(
+      thinTier(ctx).some(
+        (p) => p.includes("UNKNOWN FIELD") && p.includes('"reviewer"')
+      )
+    ).toBe(true);
   });
 
   // `updated` means "when the content last changed", which is the one thing a
@@ -198,13 +215,16 @@ describe("the thin tier — presence and vocabulary", () => {
   });
 
   test("a README carries no frontmatter and is not asked for any", () => {
-    const ctx = fixture({ "docs/reports/README.md": "# Reports\n\nWhat goes here.\n" });
+    const ctx = fixture({
+      "docs/reports/README.md": "# Reports\n\nWhat goes here.\n",
+    });
     expect(thinTier(ctx)).toEqual([]);
   });
 
   test("a template is skipped entirely, placeholder links and all", () => {
     const ctx = fixture({
-      "docs/reports/TEMPLATE.md": "# [Title]\n\nSee [the plan](../projects/<name>/plan.md).\n",
+      "docs/reports/TEMPLATE.md":
+        "# [Title]\n\nSee [the plan](../projects/<name>/plan.md).\n",
     });
     expect(thinTier(ctx)).toEqual([]);
     expect(isTemplate("YYYY-MM-DD-TEMPLATE-investigation.md")).toBe(true);
@@ -231,13 +251,15 @@ describe("lint.exclude — files that are not documentation", () => {
   test("an excluded file is invisible to the thin tier", () => {
     const ctx = fixture(
       { "docs/projects/x/artifacts/marp-prototype.md": deck },
-      { exclude: ["docs/projects/*/artifacts/*-prototype.md"] },
+      { exclude: ["docs/projects/*/artifacts/*-prototype.md"] }
     );
     expect(thinTier(ctx)).toEqual([]);
   });
 
   test("without the exclusion the same file is a wall of unknown fields", () => {
-    const ctx = fixture({ "docs/projects/x/artifacts/marp-prototype.md": deck });
+    const ctx = fixture({
+      "docs/projects/x/artifacts/marp-prototype.md": deck,
+    });
     const problems = thinTier(ctx);
     expect(problems.some((p) => p.startsWith("UNKNOWN FIELD"))).toBe(true);
     expect(problems.some((p) => p.startsWith("MISSING type"))).toBe(true);
@@ -258,7 +280,7 @@ describe("lint.exclude — files that are not documentation", () => {
         "docs/memories/deck.md": deck,
         "docs/SCHEMA.md": "# Contract\n",
       },
-      { exclude: ["docs/memories/deck.md"] },
+      { exclude: ["docs/memories/deck.md"] }
     );
     expect(graphTier(ctx)).toBe(0);
   });
@@ -266,9 +288,9 @@ describe("lint.exclude — files that are not documentation", () => {
   test("and to --report, which must agree with the tiers about what exists", () => {
     const ctx = fixture(
       { "docs/memories/deck.md": deck, "docs/briefs/2026-09-03-a.md": "# A\n" },
-      { exclude: ["docs/memories/**"] },
+      { exclude: ["docs/memories/**"] }
     );
-    expect(libraryFieldProblems(ctx)).toEqual([]);
+    expect(libraryFieldChecks(ctx)).toEqual([]);
     expect(reportLines(ctx).join("\n")).toContain("1 missing field(s)");
   });
 
@@ -279,7 +301,9 @@ describe("lint.exclude — files that are not documentation", () => {
     };
     expect(thinTier(fixture(files, { exclude: ["docs/**"] }))).toEqual([]);
     // One segment deep only: the session two levels down is still walked.
-    expect(thinTier(fixture(files, { exclude: ["docs/*/*.md"] }))).toHaveLength(1);
+    expect(thinTier(fixture(files, { exclude: ["docs/*/*.md"] }))).toHaveLength(
+      1
+    );
   });
 
   test("no exclusions is the default, and costs nothing", () => {
@@ -307,7 +331,7 @@ describe("lint.exclude — files that are not documentation", () => {
     const config = loadConfig(REPO_ROOT);
     expect(config.lint.exclude).toContain("dist/**");
     expect(config.lint.exclude).toContain(
-      "\\{\\{cookiecutter.project_slug\\}\\}/**",
+      "\\{\\{cookiecutter.project_slug\\}\\}/**"
     );
   });
 });
@@ -320,7 +344,9 @@ describe("frontmatter a real YAML parser would reject", () => {
   // as a string, so the document passes the gate and breaks in the next tool.
   test("an unquoted value containing a colon-space", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md": doc("finalize-branch stopped assuming: it verifies capability."),
+      "docs/reports/2026-09-03-a.md": doc(
+        "finalize-branch stopped assuming: it verifies capability."
+      ),
     });
     const problems = frontmatterSyntaxProblems(ctx);
     expect(problems).toHaveLength(1);
@@ -330,18 +356,24 @@ describe("frontmatter a real YAML parser would reject", () => {
 
   test("the same value, quoted, is fine", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md": doc('"finalize-branch stopped assuming: it verifies capability."'),
+      "docs/reports/2026-09-03-a.md": doc(
+        '"finalize-branch stopped assuming: it verifies capability."'
+      ),
     });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 
   test("a colon with no space after it is not a mapping", () => {
-    const ctx = fixture({ "docs/reports/2026-09-03-a.md": doc("Ratios of 3:1 and up.") });
+    const ctx = fixture({
+      "docs/reports/2026-09-03-a.md": doc("Ratios of 3:1 and up."),
+    });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 
   test("`generated: { by, at }` is a flow mapping, not a loose scalar", () => {
-    const ctx = fixture({ "docs/reports/2026-09-03-a.md": doc("A plain sentence.") });
+    const ctx = fixture({
+      "docs/reports/2026-09-03-a.md": doc("A plain sentence."),
+    });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 
@@ -442,7 +474,7 @@ describe("the graph tier — reachability and the catalog", () => {
   test("everything catalogued is clean", () => {
     const ctx = fixture({
       "docs/index.md": index(
-        "- [A](./memories/a.md) — The A memory.\n- [B](./memories/b.md) — The B memory.",
+        "- [A](./memories/a.md) — The A memory.\n- [B](./memories/b.md) — The B memory."
       ),
       "docs/memories/a.md": page("A", "The A memory."),
       "docs/memories/b.md": page("B", "The B memory."),
@@ -455,7 +487,9 @@ describe("the graph tier — reachability and the catalog", () => {
   // describes survives every review of the page itself.
   test("a catalog hook that no longer says what the page says", () => {
     const ctx = fixture({
-      "docs/index.md": index("- [A](./memories/a.md) — Something else entirely."),
+      "docs/index.md": index(
+        "- [A](./memories/a.md) — Something else entirely."
+      ),
       "docs/memories/a.md": page("A", "The A memory."),
       "docs/SCHEMA.md": "# Contract\n",
     });
@@ -476,7 +510,8 @@ describe("the graph tier — reachability and the catalog", () => {
     const ctx = fixture({
       "docs/index.md": index("- [A](./memories/a.md) — The A memory."),
       "docs/memories/a.md": page("A", "The A memory."),
-      "docs/memories/TEMPLATE.md": "# [Title]\n\nSee [x](./does-not-exist.md).\n",
+      "docs/memories/TEMPLATE.md":
+        "# [Title]\n\nSee [x](./does-not-exist.md).\n",
       "docs/SCHEMA.md": "# Contract\n",
     });
     expect(graphTier(ctx)).toBe(0);
@@ -493,19 +528,27 @@ describe("catalogEntries", () => {
   // Prettier is free to break a long entry across lines, and a matcher reading
   // one physical line at a time silently skips exactly the longest entries.
   test("folds a Prettier-wrapped continuation into the entry above it", () => {
-    const wrapped = "- [A page with a long name](./memories/a.md) — A hook that\n  wrapped.";
+    const wrapped =
+      "- [A page with a long name](./memories/a.md) — A hook that\n  wrapped.";
     expect(catalogEntries(wrapped)).toEqual([
       { target: "memories/a.md", hook: "A hook that wrapped." },
     ]);
   });
 
   test("ignores table rows and inline links", () => {
-    expect(catalogEntries("| a | [b](./c.md) |\n\nSee [d](./e.md).")).toEqual([]);
+    expect(catalogEntries("| a | [b](./c.md) |\n\nSee [d](./e.md).")).toEqual(
+      []
+    );
   });
 
   test("a page with no description is not compared", () => {
     const pages = [
-      { path: "", rel: "index.md", fields: new Map(), body: "- [A](./a.md) — Anything." },
+      {
+        path: "",
+        rel: "index.md",
+        fields: new Map(),
+        body: "- [A](./a.md) — Anything.",
+      },
       { path: "", rel: "a.md", fields: new Map<string, string>(), body: "" },
     ];
     expect(hookChecks(pages)).toEqual([]);
@@ -531,15 +574,22 @@ describe("the contract and the code agree", () => {
   });
 
   test("a table that disagrees is caught", () => {
-    const broken = SCHEMA.replace("| `active` · `spent`", "| `active` · `finished`");
-    expect(schemaTableChecks(broken).some((p) => p.startsWith("SCHEMA DISAGREES"))).toBe(true);
+    const broken = SCHEMA.replace(
+      "| `active` · `spent`",
+      "| `active` · `finished`"
+    );
+    expect(
+      schemaTableChecks(broken).some((p) => p.startsWith("SCHEMA DISAGREES"))
+    ).toBe(true);
   });
 
   test("a table that omits a type the lint enforces is caught", () => {
     const broken = SCHEMA.split("\n")
       .filter((l) => !l.startsWith("| `brief`"))
       .join("\n");
-    expect(schemaTableChecks(broken).some((p) => p.startsWith("SCHEMA MISSING TYPE"))).toBe(true);
+    expect(
+      schemaTableChecks(broken).some((p) => p.startsWith("SCHEMA MISSING TYPE"))
+    ).toBe(true);
   });
 
   test("no table at all is a problem, not silence", () => {
@@ -553,13 +603,23 @@ describe("--report", () => {
       "docs/briefs/2026-09-03-a.md": "# A\n\nNo frontmatter.\n",
       "docs/briefs/2026-09-03-b.md": "# B\n\nNo frontmatter either.\n",
       "docs/reports/2026-09-03-c.md":
-        fm({ type: "report", title: "C", status: "stable", generated: GENERATED }) + "# C\n",
+        fm({
+          type: "report",
+          title: "C",
+          status: "stable",
+          generated: GENERATED,
+        }) + "# C\n",
     });
     const out = reportLines(ctx).join("\n");
-    expect(out).toContain("3 missing field(s) across 3 document(s)");
+    expect(out).toContain("3 missing field(s) across 3 of 3 document(s)");
     expect(out).toContain("frontmatter  (2)");
     expect(out).toContain("docs/briefs/");
     expect(out).toContain("description  (1)");
+    // Named, not just counted. A worklist that says "two files somewhere under
+    // docs/briefs/ are missing frontmatter" is not a worklist — you had to
+    // re-implement the check to find them.
+    expect(out).toContain("2026-09-03-a.md");
+    expect(out).toContain("2026-09-03-b.md");
   });
 
   // A broken link is a defect to fix, not a blank to fill. Listing it in the
@@ -580,7 +640,9 @@ describe("--report", () => {
 
   test("the library's missing fields are reported too, not just the workbench's", () => {
     const ctx = fixture({ "docs/memories/a.md": "# A\n\nNo frontmatter.\n" });
-    expect(libraryFieldProblems(ctx).some((p) => p.startsWith("NO FRONTMATTER"))).toBe(true);
+    expect(
+      libraryFieldChecks(ctx).some((p) => p.startsWith("NO FRONTMATTER"))
+    ).toBe(true);
   });
 });
 
@@ -650,7 +712,8 @@ describe("every template renders into a document that passes", () => {
       const durable = Object.values(DURABLE_TYPE).includes(type as string);
 
       if (durable) {
-        const description = /^description:\s*"([^"]*)"/m.exec(rendered)?.[1] ?? "";
+        const description =
+          /^description:\s*"([^"]*)"/m.exec(rendered)?.[1] ?? "";
         const ctx = fixture({
           [target]: rendered,
           "docs/index.md":
@@ -661,7 +724,8 @@ describe("every template renders into a document that passes", () => {
               tags: "[catalog]",
               status: "stable",
               generated: GENERATED,
-            }) + `# Catalog\n\n- [Page](./${target.slice("docs/".length)}) — ${description}\n`,
+            }) +
+            `# Catalog\n\n- [Page](./${target.slice("docs/".length)}) — ${description}\n`,
           "docs/SCHEMA.md": "# Contract\n",
         });
         // The library tier prints and returns a count, so a template whose body
@@ -674,8 +738,108 @@ describe("every template renders into a document that passes", () => {
       }
 
       const ctx = fixture({ [target]: rendered });
-      const problems = thinTier(ctx).filter((p) => !/^MISSING (FILE|ANCHOR)/.test(p));
+      const problems = thinTier(ctx).filter(
+        (p) => !/^MISSING (FILE|ANCHOR)/.test(p)
+      );
       expect(problems).toEqual([]);
-    },
+    }
   );
+});
+
+/**
+ * The library went six phases without any of these, and nothing said so:
+ * `SCHEMA.md` claimed the graph tier checked "everything Thin checks, plus" the
+ * graph obligations, and `thinTier` was the only thing that checked any of it.
+ * A cold-read agent found the gap by trying `status: approved` on a memory —
+ * the exact hand-invented value the whole layer exists to make impossible — and
+ * getting `docs-lint: clean`.
+ *
+ * Every case below is one that passed before the fix.
+ */
+describe("the library gets the same field rules as the workbench", () => {
+  const memory = (frontmatter: string) => ({
+    "docs/index.md":
+      "---\ntype: index\ntitle: C\ndescription: The catalog.\ntags: [c]\n" +
+      "status: stable\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n" +
+      "# C\n\n## Memories\n\n- [A](./memories/a.md) — The A memory.\n",
+    "docs/memories/a.md": `---\n${frontmatter}\n---\n\n# A\n`,
+  });
+  const good =
+    "type: memory\ntitle: A\ndescription: The A memory.\ntags: [a]\n" +
+    "status: stable\ngenerated: { by: t, at: 2026-09-03 }";
+
+  test("the baseline is clean, so every failure below is the change", () => {
+    expect(libraryFieldChecks(fixture(memory(good)))).toEqual([]);
+  });
+
+  test.each([
+    [
+      "status outside OKF's three",
+      good.replace("status: stable", "status: approved"),
+      "BAD STATUS",
+    ],
+    [
+      "status absent entirely",
+      good.replace("status: stable\n", ""),
+      "MISSING status",
+    ],
+    [
+      "a lifecycle on a type that carries none",
+      `${good}\nlifecycle: completed`,
+      "LIFECYCLE",
+    ],
+    [
+      "a type that disagrees with the folder",
+      good.replace("type: memory", "type: lesson"),
+      "WRONG TYPE",
+    ],
+    [
+      "a tag that is not kebab-case",
+      good.replace("tags: [a]", "tags: [Bad_Tag]"),
+      "BAD TAG",
+    ],
+    ["a field nobody declared", `${good}\nowner: someone`, "UNKNOWN FIELD"],
+    ["a legacy date field", `${good}\ndate: 2026-01-01`, "LEGACY FIELD"],
+    [
+      "a malformed generated.at",
+      good.replace("at: 2026-09-03", "at: 09/03/2026"),
+      "BAD generated",
+    ],
+    [
+      "no tags at all — required here, unlike the workbench",
+      good.replace("tags: [a]\n", ""),
+      "MISSING tags",
+    ],
+  ])("catches %s", (_label, frontmatter, expected) => {
+    const problems = libraryFieldChecks(fixture(memory(frontmatter)));
+    expect(problems.join("\n")).toContain(expected);
+  });
+
+  // The one rule the two tiers genuinely disagree about, and the reason
+  // `documentProblems` takes a flag rather than reading the tier from the path.
+  test("tags are required in the library and optional on the workbench", () => {
+    const noTags = good.replace("tags: [a]\n", "");
+    expect(libraryFieldChecks(fixture(memory(noTags))).join("\n")).toContain(
+      "MISSING tags"
+    );
+    const session = fixture({
+      "docs/projects/x/sessions/2026-09-03-a.md":
+        "---\ntype: session\ntitle: A\ndescription: A session.\n" +
+        "status: stable\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
+    });
+    expect(thinTier(session)).toEqual([]);
+  });
+});
+
+describe("what the modes tell you", () => {
+  // "0 missing across 0 documents" was indistinguishable from having scanned
+  // nothing at all.
+  test("--report says how many documents it looked at", () => {
+    const ctx = fixture({
+      "docs/briefs/2026-09-03-a.md":
+        "---\ntype: brief\ntitle: A\ndescription: A brief.\nstatus: stable\n" +
+        "lifecycle: active\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
+    });
+    expect(reportLines(ctx)[0]).toMatch(/across 0 of \d+ document\(s\)/);
+  });
 });

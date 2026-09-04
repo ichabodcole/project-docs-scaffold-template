@@ -622,7 +622,7 @@ Three asymmetries with the project variant, all deliberate:
   items — the same silent-zero-references failure this step exists to prevent.
   On the recovery path, exclude `^docs/backlog/_archive/${NAME}\.md:` instead.
 
-**Classify every hit into one of four buckets:**
+**Classify every hit into one of five buckets:**
 
 Classify on **three questions, in this order**, so no hit can land in two
 buckets:
@@ -636,18 +636,36 @@ buckets:
    account of a moment rather than a description of the present. Dated filenames
    are the usual tell, but the test is the document's _voice_, not its folder: a
    lesson-learned is retrospective by nature even when undated. → **Leave.**
-3. **If neither an example nor historical: is the path a link target, or is it
-   prose?** A markdown link destination or a bare path being used as a pointer →
+3. **Is the referencing document itself under `_archive/`, and is the hit a
+   sibling-relative `../<name>/` form?** Such a link resolves to
+   `docs/projects/_archive/<name>/` the moment the target moves — it corrects
+   itself, and applying the rewrite anyway produces `_archive/_archive/<name>/`.
+   → **Self-correcting.** (Real instance in this repository:
+   `docs/projects/_archive/test-plan-doc-type/proposal.md` links to a sibling
+   that is also archived.) Only the `../` form self-corrects; a
+   `projects/<name>` or `./<name>/` hit in the same file does not, and falls
+   through to question 4.
+4. **If none of the above: is the path a link target, or is it prose?** A
+   markdown link destination or a bare path being used as a pointer →
    **Rewrite.** A path embedded in a sentence that asserts something about the
    project ("the `docs/projects/foo/` folder contains a proposal and plan") →
    **Flag.**
 
-| Bucket      | Action                                                                   |
-| ----------- | ------------------------------------------------------------------------ |
-| **Rewrite** | Rewrite to the `_archive/` path                                          |
-| **Leave**   | Leave it. Report it as deliberately left, so the omission is visible     |
-| **Flag**    | **Do not rewrite.** Show the surrounding sentence and ask how to proceed |
-| **Example** | Leave it. Report the count only, not each hit                            |
+| Bucket              | Action                                                                            |
+| ------------------- | --------------------------------------------------------------------------------- |
+| **Rewrite**         | Rewrite to the `_archive/` path                                                   |
+| **Leave**           | Leave it. Report it as deliberately left, so the omission is visible              |
+| **Flag**            | **Do not rewrite.** Show the surrounding sentence and ask how to proceed          |
+| **Example**         | Leave it. Report the count only, not each hit                                     |
+| **Self-correcting** | Leave it, and say why — it is correct after the move, not an omission. Count only |
+
+**Why `Self-correcting` is its own bucket rather than a footnote on `Leave`.**
+It was one, and the footnote escaped both of this step's invariants: the
+three-question test classified the hit as **Rewrite**, Step 5b then declined to
+rewrite it, and correctness grep 2 reported it as a reference still pointing at
+the old location — so a correct run looked like a failed one, and an executor
+"fixing" it produced `_archive/_archive/`. A rule that one case is exempt from
+is a rule with a hole in it; a fifth bucket has no hole.
 
 **Earlier questions win outright.** A link inside a dated session note is still
 Leave (question 2 settles it before question 3 can call it a Rewrite). A prose
@@ -810,17 +828,14 @@ This local transformation is correct at every depth. A single normalized form �
 rewriting everything to a repo-root-relative path — would break sibling links
 that are correct as relative paths.
 
-**One exception: a `../<name>/` link from a document that is _itself_ already
-under `_archive/`.** Such a link resolves to `docs/projects/_archive/<name>/`
-the moment the target moves — it fixes itself, and applying the rule anyway
-produces `_archive/_archive/<name>/`. Leave those untouched. (Real instance in
-this repo: `docs/projects/_archive/test-plan-doc-type/proposal.md` links to a
-sibling.) Step 3's exclusion only filters the target's own folder, so these hits
-do reach you — check whether the _referencing_ file is under `_archive/` before
-rewriting a `../` form.
+**Self-correcting hits are already classified — don't re-decide them here.**
+Step 3's question 3 sorts a `../<name>/` link from a document itself under
+`_archive/` into its own bucket, because it resolves correctly the moment the
+target moves and rewriting it would produce `_archive/_archive/<name>/`. Apply
+the rule to the Rewrite bucket and nothing else.
 
-Leave the Leave-bucket hits untouched. Present the Flag-bucket hits and act only
-on the human's answer.
+Leave the Leave-bucket and Self-correcting hits untouched. Present the
+Flag-bucket hits and act only on the human's answer.
 
 ### Step 6: Report
 
@@ -834,6 +849,8 @@ State plainly:
   choice, an active cycle holding the folder in place, or unfinished work
 - Which references were rewritten
 - Which were **deliberately left** (and why — historical record)
+- Which were **self-correcting** (a count is enough) — these are not omissions,
+  and reporting them as "left" invites someone to come back and "fix" them
 - Which were **flagged** for the human, and what they decided
 - The scope limits: tracked `*.md` only, this repository only
 
@@ -857,8 +874,11 @@ silent no-op that reads like a failure.
 - [ ] Nothing named in an `active` cycle's `scope` was moved — checked against
       the `type/slug` entries, not against the file's text
 - [ ] Reference discovery ran **before** the move
-- [ ] Every discovered reference landed in exactly one of the four buckets, and
-      the Leave and Flag buckets appear in the report rather than vanishing
+- [ ] Every discovered reference landed in exactly one of the five buckets, and
+      received that bucket's action — no hit is classified one way and treated
+      another
+- [ ] The Leave, Flag and Self-correcting buckets appear in the report rather
+      than vanishing
 - [ ] `git status` shows the archival as a **rename**, not a delete plus an add
 - [ ] Nothing was archived without explicit confirmation
 
@@ -888,9 +908,14 @@ item 4.
    # every rewritten reference now points at _archive/ — expect your rewrite count
    git -C "$ROOT" grep -nE "(projects/|\.\./|\./)_archive/${NAME}([/)\"'[:space:]]|$)" -- '*.md'
 
-   # nothing still points at the old location except Leave/Flag hits you kept
+   # nothing still points at the old location except the hits you deliberately
+   # kept: Leave, Flag, and Self-correcting. The last of those live under
+   # `_archive/` themselves, so the second filter drops them and what remains
+   # should be exactly your Leave and Flag lists — anything else is a rewrite
+   # you missed.
    git -C "$ROOT" grep -nE "(projects/|\.\./|\./)${NAME}([/)\"'[:space:]]|$)" -- '*.md' \
-     | grep -vE "^docs/projects/(_archive/)?${NAME}/"
+     | grep -vE "^docs/projects/(_archive/)?${NAME}/" \
+     | grep -vE "^docs/projects/_archive/"
    ```
 
 4. **The lint**, where the project has it — `bun docs/lint.ts`. It is the only

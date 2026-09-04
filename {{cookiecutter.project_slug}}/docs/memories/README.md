@@ -1,14 +1,19 @@
 # Memories
 
-Quick-reference summaries of recent work for agent and developer onboarding. Read this folder at the start of a new session to understand what's been happening lately.
+Quick-reference summaries of recent work for agent and developer onboarding.
+Read this folder at the start of a new session to understand what's been
+happening lately.
 
 ---
 
 ## Purpose
 
-Memories bridge the gap between git logs and full project documentation. They answer "what have we been working on?" without requiring someone to scan commits or explore file trees.
+Memories bridge the gap between git logs and full project documentation. They
+answer "what have we been working on?" without requiring someone to scan commits
+or explore file trees.
 
-- **For agents:** Eliminates cold-start orientation work at the beginning of fresh sessions
+- **For agents:** Eliminates cold-start orientation work at the beginning of
+  fresh sessions
 - **For developers:** Quick catch-up after time away from the project
 
 ## When to Create a Memory
@@ -19,7 +24,9 @@ Create a memory when a scope of work is completed:
 - A body of work reaches a natural stopping point
 - A significant decision is made or direction changes
 
-**Don't create memories for:** trivial changes, mid-work progress (use session docs for that), or work that's already well-described by its commit messages alone.
+**Don't create memories for:** trivial changes, mid-work progress (use session
+docs for that), or work that's already well-described by its commit messages
+alone.
 
 ## File Naming
 
@@ -37,15 +44,33 @@ Examples:
 
 A ready-to-use template is available: **[TEMPLATE.md](./TEMPLATE.md)**
 
-Each memory should be short — a heading, a few sentences, key files, and a link to deeper docs. If you're writing more than a short paragraph, the detail probably belongs in a session doc or project folder instead.
+Each memory should be short — a heading, a few sentences, key files, and a link
+to deeper docs. If you're writing more than a short paragraph, the detail
+probably belongs in a session doc or project folder instead.
+
+**Ship it `status: stable`.** The template opens at `draft` because most
+document types are drafted before they are trusted, but a memory records
+something that already happened — there is no later review that would promote
+it. A memory is `draft` only while you are still writing it, and `deprecated`
+when what it describes is no longer how the project works.
+
+A memory is a **library page**, so it also needs a line in
+[../index.md](../index.md) under `## Memories`, with its own `description`
+copied across as the hook. Without one the lint reports it as an orphan.
 
 ## Pruning
 
-Remove old memories when they're no longer relevant for onboarding context. A good rule of thumb: keep roughly the last few weeks to a month of work. Move stale memories to `memories/_archive/` or simply delete them — the information lives on in project docs and git history.
+Remove old memories when they're no longer relevant for onboarding context. A
+good rule of thumb: keep roughly the last few weeks to a month of work. Move
+stale memories to `memories/_archive/` or simply delete them — the information
+lives on in project docs and git history.
 
 ## Tips
 
 - **Keep it short** — A memory is a signpost, not a narrative
-- **Link generously** — Point to project folders, architecture docs, or specific files for depth
-- **One memory per scope of work** — Don't combine unrelated work into a single file
-- **Write for a stranger** — Assume the reader has zero context about what happened
+- **Link generously** — Point to project folders, architecture docs, or specific
+  files for depth
+- **One memory per scope of work** — Don't combine unrelated work into a single
+  file
+- **Write for a stranger** — Assume the reader has zero context about what
+  happened

@@ -6,7 +6,7 @@ description:
   durable docs were pulled out of the flat list.
 tags: [migrations, agent-execution]
 status: stable
-lifecycle: active
+lifecycle: concluded
 generated: { by: unknown, at: 2026-07-23 }
 ---
 
@@ -322,3 +322,19 @@ sibling investigation. A proposal should wait for both.
 - Durable folders under review: `../architecture/`, `../specifications/`,
   `../interaction-design/`, `../playbooks/`, `../lessons-learned/`,
   `../memories/`
+
+---
+
+## Outcome
+
+**Concluded 2026-09-04.** Its questions were answered by
+[project/okf-frontmatter-layer](../projects/okf-frontmatter-layer/proposal.md),
+which shipped the schema this investigation was scoping — with one finding
+reversed. The premise here was that the durable docs would be **pulled out of
+the flat list** into a wiki root. They were not: the layer went on the existing
+folders, and the tiers are keyed to the folder a document is in rather than to
+where it sits. Structure and schema turned out to be separable, and doing the
+schema alone was enough to answer both.
+
+The open question about HiveMind is unresolved and stays that way; it was
+cross-project scope when this was written and it still is.

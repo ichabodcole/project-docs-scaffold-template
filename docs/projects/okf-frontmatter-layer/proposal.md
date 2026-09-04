@@ -7,7 +7,7 @@ description:
   OKF frontmatter on every document, a two-tier lint that gates commits and CI,
   and one new type for the work in play.
 status: stable
-lifecycle: approved
+lifecycle: implemented
 generated: { by: unknown, at: 2026-09-03 }
 ---
 

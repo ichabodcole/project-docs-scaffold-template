@@ -33,10 +33,10 @@ to be usable, and it never will.
 The library/workbench split is a property of the **folder**, not of a document's
 location — nothing is nested under a `wiki/` root to earn it.
 
-| Tier      | Applies to                                                                                                                                | Checks                                                                                                                                                                         |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Thin**  | the workbench: `backlog/` `briefs/` `investigations/` `projects/` `reports/` `fragments/` `cycles/`                                       | frontmatter present · `type` matches the folder · `status` and `lifecycle` in vocabulary · `generated` well-formed · links and anchors resolve                                 |
-| **Graph** | the library: `architecture/` `specifications/` `interaction-design/` `playbooks/` `lessons-learned/` `memories/`, plus the two root pages | everything Thin checks, plus: every page reachable from `index.md` · its catalog line states the page's own `description` · `related:` keys resolve · `--json` emits the graph |
+| Tier      | Applies to                                                                                                                            | Checks                                                                                                                                                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Thin**  | the workbench: `backlog/` `briefs/` `investigations/` `projects/` `reports/` `fragments/` `cycles/`                                   | frontmatter present · `type` matches the folder · `status` and `lifecycle` in vocabulary · `generated` well-formed · links and anchors resolve                                                                         |
+| **Graph** | the library: `architecture/` `specifications/` `interaction-design/` `playbooks/` `lessons-learned/` `memories/`, plus the root pages | everything Thin checks — `tags` required rather than optional — plus: every page reachable from `index.md` · its catalog line states the page's own `description` · `related:` keys resolve · `--json` emits the graph |
 
 The difference is **reachability**. A library page that nothing links to is
 lost, so the catalog is a hard requirement. A workbench document is found by its
@@ -51,7 +51,8 @@ docs/
   index.md             ← the catalog: ONE line per library page
   README.md            ← how to choose a document type (contract page)
   PROJECT_MANIFESTO.md ← type: manifesto   (graph tier)
-  PROJECT-SUMMARY.md   ← type: summary     (graph tier; generated)
+  PROJECT-SUMMARY.md   ← type: summary     (graph tier; written by a command,
+                         and absent until you run it)
 
   architecture/        ← type: architecture   ┐
   specifications/      ← type: specification  │
@@ -68,18 +69,26 @@ docs/
   cycles/              ← type: cycle          │
   projects/            ← type by filename     ┘
 
-  superpowers/         ← another tool's tree; not ours, not checked
+  <foreign>/           ← another tool's tree, if you have one; name it in
+                         `lint.skip` and no tier walks it
   */_archive/          ← closed work; frozen, not checked
 ```
+
+Not every row is present in every project. `PROJECT-SUMMARY.md` and the
+`<foreign>/` row in particular are optional — the first appears when someone
+runs the summary command, and the second only if some other tool keeps a
+directory under your docs root.
 
 `README.md`, `AGENTS.md` and `CLAUDE.md` are **contract pages**: meta-documents
 about the tree rather than entries in its type system. They carry no
 frontmatter, and the lint checks only their links. So does this file.
 
 A `TEMPLATE` is a form, not a document. Its links are placeholders by
-construction, so the lint skips it entirely — and a test in `docs/lint.test.ts`
-renders each one with its placeholders filled and asserts the result passes.
-That is what keeps a template honest without gating on a file that cannot pass.
+construction, so the lint skips it entirely. In the repository that maintains
+this scaffold, a test renders every template with its placeholders filled and
+asserts the result passes — that is what keeps a template honest without gating
+on a file that cannot itself pass. That test does not ship with the payload; if
+you edit a template here, render a copy and lint it.
 
 ### Files that are not documentation
 
@@ -94,12 +103,13 @@ repository root. A matched file is invisible to every tier — no frontmatter, n
 links, no graph:
 
 ```json
-"exclude": ["docs/projects/markdown-slide-decks/artifacts/*-prototype.md"]
+"exclude": ["docs/projects/*/artifacts/*-prototype.md"]
 ```
 
-This repository excludes exactly that: two slide-deck prototypes produced during
-the `markdown-slide-decks` project, kept because they are part of that project's
-record and are still runnable.
+A fresh project excludes nothing, and `exclude` starts empty. The example above
+is the shape the entry takes when a project does have such a file — a runnable
+deck kept inside a project's `artifacts/` because it is part of that project's
+record.
 
 Glob syntax is `Bun.Glob` — `*` within a path segment, `**` across segments, `?`
 for one character, `{a,b}` for alternation. A literal brace in a path must be
@@ -145,7 +155,9 @@ generated: { by: claude-opus-5, at: 2026-09-03 } # OKF §5.2, replaces `timestam
   committed the file. `unknown` is a legal actor and is the honest encoding for
   a document whose producer was never captured. `at` is `YYYY-MM-DD`.
 - **`description` doubles as the catalog hook**, verbatim. If it does not earn a
-  click, tighten it. The lint compares the two.
+  click, tighten it. The lint compares the two after collapsing whitespace and
+  undoing Prettier's markdown escapes, so the two copies may be wrapped
+  differently — "verbatim" is about the words, not the line breaks.
 - **`related:` is `type/slug`, and `slug` is the filename without `.md`** — so a
   page can move between folders without every edge pointing at it having to be
   rewritten. Edges are resolved **against library pages only**, because those
@@ -263,7 +275,11 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 3. **Frontmatter on every document.** `type` is mandatory; the rest is the table
    above.
 4. **A library page gets one line in `index.md`** — link plus its `description`,
-   verbatim, never content — under its type's heading.
+   verbatim, never content — under its type's heading, below the entries already
+   there. If the heading still says `_No pages yet._`, that line is a
+   placeholder: replace it with your entry rather than adding beneath it.
+   Nothing checks this — an orphaned "No pages yet" above a list of pages is a
+   lie the lint cannot see.
 5. **No library page is an orphan.** Reachable from `index.md`, transitively.
 6. **Truth comes from the code, not from prior prose.** Names, ranges and
    behaviour are verified against the source at writing time. A stale document
@@ -277,9 +293,11 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 - **A new library page earns its place** when a subject is real (system pages)
   or when an insight recurs and a second page needs it (practice pages).
   Otherwise it is a tag or a paragraph on a page that already exists.
-- **The lint has teeth.** `npm run check` runs it, `.husky/pre-commit` runs
-  `check`, and `.github/workflows/docs-check.yml` runs it where a hook cannot be
-  skipped.
+- **Give the lint teeth, and check that you did.** Run `bun docs/lint.ts` from a
+  pre-commit hook and from CI. A scaffolded project arrives with the lint and
+  **without** the wiring — there is no hook and no workflow until you add them,
+  so this bullet is a thing to do, not a description of what you have. Until it
+  is done, the lint is a command someone has to remember.
 
 ## Verification bar
 
@@ -293,10 +311,14 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 ## Running the lint
 
 ```bash
-npm run docs:lint     # the gate
-npm run docs:report   # what is missing, grouped by field — the backfill worklist
-npm run docs:graph    # the whole graph as JSON
+bun docs/lint.ts            # the gate
+bun docs/lint.ts --report   # what is missing — the backfill worklist
+bun docs/lint.ts --json     # the whole graph as JSON
 ```
+
+If the project defines them, `npm run docs:lint`, `docs:report` and `docs:graph`
+are the same three commands. The direct form always works; the scripts exist
+only where someone added them.
 
 While `lint.adopting` is `true` in `.project-docs.json`, the gate **reports and
 exits 0**: a project adopting this layer has a corpus that predates it, and a

@@ -16,6 +16,10 @@ grow — gets exactly one line here: a link and its own `description`, verbatim.
 Nothing else. This is the reachability root, so a page missing from it is an
 orphan and the lint says so.
 
+Add entries under their heading, below the ones already there; the sections read
+in the order the pages were written. A heading reading `_No pages yet._` is
+holding the place for the first entry — replace that line, don't add beneath it.
+
 The workbench (`backlog/`, `briefs/`, `investigations/`, `projects/`,
 `reports/`, `fragments/`, `cycles/`) is deliberately **not** catalogued. Those
 documents are found by their date and their folder README, they close, and

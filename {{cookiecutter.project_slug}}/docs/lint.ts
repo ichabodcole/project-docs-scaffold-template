@@ -238,17 +238,172 @@ function projectType(path: string): string {
   return PROJECT_FILE_TYPE[basename(path)] ?? "artifact";
 }
 
+/**
+ * Every library file, paired with the `type` its position says it must carry —
+ * the mirror of `workbenchFiles`, and it exists for the same reason.
+ *
+ * The frontmatter rules are about the DOCUMENT, not about the tier. The tier
+ * decides what graph obligations a page has; it has never decided whether
+ * `status: approved` is a legal value. Keeping the vocabulary checks inside
+ * `thinTier` made it decide exactly that, silently, for forty pages.
+ */
+export function libraryFiles(ctx: Ctx): Array<{
+  path: string;
+  rel: string;
+  type: string;
+}> {
+  const skip = new Set([
+    ...ctx.config.lint.workbench,
+    ...ctx.config.lint.skip,
+    "TEMPLATES",
+  ]);
+  const excluded = excluder(ctx);
+  const out: Array<{ path: string; rel: string; type: string }> = [];
+
+  for (const path of walkMarkdown(ctx.docsRoot, skip)) {
+    const name = basename(path);
+    // A root-level page is a library page only if it is one of the three named
+    // ones; anything else loose at the docs root is not ours to type.
+    if (dirname(path) === ctx.docsRoot && !(name in ROOT_PAGE_TYPE)) continue;
+    const rel = relative(ctx.repoRoot, path);
+    if (excluded(rel)) continue;
+    const folder = relative(ctx.docsRoot, dirname(path)).split("/")[0] ?? "";
+    out.push({
+      path,
+      rel,
+      type: ROOT_PAGE_TYPE[name] ?? DURABLE_TYPE[folder] ?? "",
+    });
+  }
+  return out;
+}
+
 function vocabularyFor(type: string): string[] | null {
   if (type in PROJECT_SPEC) return PROJECT_SPEC[type]?.lifecycle ?? null;
   const spec = Object.values(SPEC).find((s) => s.type === type);
   return spec ? spec.lifecycle : null;
 }
 
+/**
+ * Presence, vocabulary and field hygiene for ONE document. Pure over its inputs
+ * so both tiers can call it, which is the whole point: these rules are about
+ * the document, not about which folder it lives in.
+ *
+ * `requireTags` is the only thing the two tiers actually disagree about. A
+ * library page is found by tag; a workbench document is found by its date and
+ * its folder README, and requiring four keywords on forty session notes buys a
+ * tag cloud nobody reads.
+ *
+ * Returns the active-cycle path separately, because "at most one" is a fact
+ * about the corpus and cannot be decided one file at a time.
+ */
+export function documentProblems(
+  file: { path: string; rel: string; type: string },
+  raw: string,
+  docsRoot: string,
+  requireTags: boolean
+): { problems: string[]; activeCycle: boolean } {
+  const { rel, type } = file;
+  const problems: string[] = [];
+
+  const m = /^---\n([\s\S]*?)\n---/.exec(raw);
+  if (!m) {
+    problems.push(`NO FRONTMATTER ${rel}  (see ${docsRoot}/SCHEMA.md)`);
+    return { problems, activeCycle: false };
+  }
+
+  const fields = parseFrontmatter(m[1] as string);
+  const lifecycle = vocabularyFor(type);
+  const required = requireTags ? [...REQUIRED, "tags"] : REQUIRED;
+  const allowed = new Set([
+    ...REQUIRED,
+    ...OPTIONAL,
+    ...(lifecycle ? ["lifecycle"] : []),
+    ...(Object.values(SPEC).find((s) => s.type === type)?.extra ?? []),
+  ]);
+
+  for (const key of required)
+    if (!fields.get(key)) problems.push(`MISSING ${key}   ${rel}`);
+  if (lifecycle && !fields.get("lifecycle"))
+    problems.push(`MISSING lifecycle   ${rel}`);
+  for (const key of fields.keys())
+    if (!allowed.has(key)) problems.push(`UNKNOWN FIELD  ${rel}: "${key}"`);
+
+  const declared = fields.get("type");
+  if (declared && declared !== type)
+    problems.push(
+      `WRONG TYPE     ${rel}: "${declared}" (its position says "${type}")`
+    );
+
+  const status = fields.get("status");
+  if (status && !OKF_STATUS.includes(status))
+    problems.push(
+      `BAD STATUS     ${rel}: "${status}"  (OKF 0.2: ${OKF_STATUS.join(" | ")})`
+    );
+
+  let activeCycle = false;
+  const value = fields.get("lifecycle");
+  if (value) {
+    if (lifecycle === null)
+      problems.push(
+        `LIFECYCLE      ${rel}: a ${type} is a frozen record and carries no lifecycle`
+      );
+    else if (!lifecycle.includes(value))
+      problems.push(
+        `BAD LIFECYCLE  ${rel}: "${value}"  (${type}: ${lifecycle.join(" | ")})`
+      );
+    else if (type === "cycle" && value === "active") activeCycle = true;
+  }
+
+  problems.push(...generatedProblems(rel, fields.get("generated")));
+
+  // Superseded by `generated.at` in OKF 0.2, and rejected rather than ignored
+  // so a document cannot carry two disagreeing dates.
+  for (const legacy of ["date", "timestamp", "updated"])
+    if (fields.has(legacy))
+      problems.push(
+        `LEGACY FIELD   ${rel}: \`${legacy}\` is superseded by \`generated.at\` (OKF 0.2 §13.1)`
+      );
+
+  for (const tag of yamlList(fields.get("tags")))
+    if (!TAG_RE.test(tag))
+      problems.push(`BAD TAG        ${rel}: "${tag}"  (kebab-case)`);
+
+  return { problems, activeCycle };
+}
+
+/**
+ * The same field rules, applied to the library.
+ *
+ * This did not exist for the first six phases of the work, and the gap was
+ * invisible: `SCHEMA.md` claimed the graph tier checked "everything Thin
+ * checks, plus" the graph obligations, and it checked none of it. A library
+ * page could carry `status: approved` — the exact hand-invented value this
+ * whole layer was built to make impossible — and the gate said `clean`. A
+ * cold-read agent found it by trying the thing the contract forbids.
+ */
+export function libraryFieldChecks(ctx: Ctx): string[] {
+  const problems: string[] = [];
+  for (const file of libraryFiles(ctx)) {
+    const name = basename(file.path);
+    if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
+    problems.push(
+      ...documentProblems(
+        file,
+        readFileSync(file.path, "utf8"),
+        ctx.config.docsRoot,
+        true
+      ).problems
+    );
+  }
+  return problems;
+}
+
 export function thinTier(ctx: Ctx): string[] {
   const problems: string[] = [];
-  let activeCycles: string[] = [];
+  const activeCycles: string[] = [];
 
-  for (const { path, rel, type } of workbenchFiles(ctx)) {
+  for (const file of workbenchFiles(ctx)) {
+    const { path, rel } = file;
     const raw = readFileSync(path, "utf8");
     const name = basename(path);
 
@@ -267,67 +422,9 @@ export function thinTier(ctx: Ctx): string[] {
 
     if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
 
-    const m = /^---\n([\s\S]*?)\n---/.exec(raw);
-    if (!m) {
-      problems.push(
-        `NO FRONTMATTER ${rel}  (see ${ctx.config.docsRoot}/SCHEMA.md)`
-      );
-      continue;
-    }
-    const fields = parseFrontmatter(m[1] as string);
-    const lifecycle = vocabularyFor(type);
-    const allowed = new Set([
-      ...REQUIRED,
-      ...OPTIONAL,
-      ...(lifecycle ? ["lifecycle"] : []),
-      ...(Object.values(SPEC).find((s) => s.type === type)?.extra ?? []),
-    ]);
-
-    for (const key of REQUIRED)
-      if (!fields.get(key)) problems.push(`MISSING ${key}   ${rel}`);
-    if (lifecycle && !fields.get("lifecycle"))
-      problems.push(`MISSING lifecycle   ${rel}`);
-    for (const key of fields.keys())
-      if (!allowed.has(key)) problems.push(`UNKNOWN FIELD  ${rel}: "${key}"`);
-
-    const declared = fields.get("type");
-    if (declared && declared !== type)
-      problems.push(
-        `WRONG TYPE     ${rel}: "${declared}" (its position says "${type}")`
-      );
-
-    const status = fields.get("status");
-    if (status && !OKF_STATUS.includes(status))
-      problems.push(
-        `BAD STATUS     ${rel}: "${status}"  (OKF 0.2: ${OKF_STATUS.join(" | ")})`
-      );
-
-    const value = fields.get("lifecycle");
-    if (value) {
-      if (lifecycle === null)
-        problems.push(
-          `LIFECYCLE      ${rel}: a ${type} is a frozen record and carries no lifecycle`
-        );
-      else if (!lifecycle.includes(value))
-        problems.push(
-          `BAD LIFECYCLE  ${rel}: "${value}"  (${type}: ${lifecycle.join(" | ")})`
-        );
-      else if (type === "cycle" && value === "active") activeCycles.push(rel);
-    }
-
-    problems.push(...generatedProblems(rel, fields.get("generated")));
-
-    // Superseded by `generated.at` in OKF 0.2, and rejected rather than ignored
-    // so a document cannot carry two disagreeing dates.
-    for (const legacy of ["date", "timestamp", "updated"])
-      if (fields.has(legacy))
-        problems.push(
-          `LEGACY FIELD   ${rel}: \`${legacy}\` is superseded by \`generated.at\` (OKF 0.2 §13.1)`
-        );
-
-    for (const tag of yamlList(fields.get("tags")))
-      if (!TAG_RE.test(tag))
-        problems.push(`BAD TAG        ${rel}: "${tag}"  (kebab-case)`);
+    const r = documentProblems(file, raw, ctx.config.docsRoot, false);
+    problems.push(...r.problems);
+    if (r.activeCycle) activeCycles.push(rel);
   }
 
   // The rule a cycle exists for: two answers to "what are we doing" is the
@@ -600,7 +697,7 @@ export function reportLines(ctx: Ctx): string[] {
   const note = (field: string, rel: string) =>
     missing.set(field, [...(missing.get(field) ?? []), rel]);
 
-  for (const problem of [...thinTier(ctx), ...libraryFieldProblems(ctx)]) {
+  for (const problem of [...thinTier(ctx), ...libraryFieldChecks(ctx)]) {
     // `MISSING FILE` and `MISSING ANCHOR` share the prefix and are not fields: a
     // broken link is a defect to fix, not a blank to fill, and listing it here
     // would put it in the one report that never fails.
@@ -614,21 +711,36 @@ export function reportLines(ctx: Ctx): string[] {
 
   const lines: string[] = [];
   const total = [...missing.values()].reduce((n, v) => n + v.length, 0);
+  const scanned = workbenchFiles(ctx).length + libraryFiles(ctx).length;
   lines.push(
-    `${total} missing field(s) across ${new Set([...missing.values()].flat()).size} document(s)\n`
+    `${total} missing field(s) across ${new Set([...missing.values()].flat()).size} of ${scanned} document(s)\n`
   );
 
+  // Grouped by field, then by folder, then NAMED. The folder rollup is the
+  // right shape at scale — a hundred sessions missing `description` is one
+  // fact, not a hundred — but it used to be the whole output, and "one file
+  // somewhere under docs/memories/ is missing `status`" is not a worklist. You
+  // had to re-implement the check to find the file. Ten per folder is enough to
+  // start; the count still tells you how much is behind them.
+  const SHOWN = 10;
   for (const [field, rels] of [...missing].sort(
     (a, b) => b[1].length - a[1].length
   )) {
     lines.push(`${field}  (${rels.length})`);
-    const byFolder = new Map<string, number>();
+    const byFolder = new Map<string, string[]>();
     for (const rel of rels.sort()) {
       const folder = dirname(rel);
-      byFolder.set(folder, (byFolder.get(folder) ?? 0) + 1);
+      byFolder.set(folder, [...(byFolder.get(folder) ?? []), rel]);
     }
-    for (const [folder, n] of [...byFolder].sort((a, b) => b[1] - a[1]))
-      lines.push(`    ${String(n).padStart(4)}  ${folder}/`);
+    for (const [folder, paths] of [...byFolder].sort(
+      (a, b) => b[1].length - a[1].length
+    )) {
+      lines.push(`    ${String(paths.length).padStart(4)}  ${folder}/`);
+      for (const rel of paths.slice(0, SHOWN))
+        lines.push(`          ${basename(rel)}`);
+      if (paths.length > SHOWN)
+        lines.push(`          … and ${paths.length - SHOWN} more`);
+    }
     lines.push("");
   }
   return lines;
@@ -639,41 +751,6 @@ export function reportLines(ctx: Ctx): string[] {
  * `runDocsLint` — which prints and returns a count, by design, because a gate
  * has no reason to hand its findings to anyone.
  */
-export function libraryFieldProblems(ctx: Ctx): string[] {
-  const skip = new Set([
-    ...ctx.config.lint.workbench,
-    ...ctx.config.lint.skip,
-    "TEMPLATES",
-  ]);
-  const excluded = excluder(ctx);
-  const problems: string[] = [];
-  const required = [
-    "type",
-    "title",
-    "description",
-    "tags",
-    "status",
-    "generated",
-  ];
-
-  for (const path of walkMarkdown(ctx.docsRoot, skip)) {
-    const name = basename(path);
-    if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
-    if (dirname(path) === ctx.docsRoot && !(name in ROOT_PAGE_TYPE)) continue;
-    const rel = relative(ctx.repoRoot, path);
-    if (excluded(rel)) continue;
-    const raw = readFileSync(path, "utf8");
-    const m = /^---\n([\s\S]*?)\n---/.exec(raw);
-    if (!m) {
-      problems.push(`NO FRONTMATTER ${rel}`);
-      continue;
-    }
-    const fields = parseFrontmatter(m[1] as string);
-    for (const key of required)
-      if (!fields.get(key)) problems.push(`MISSING ${key}   ${rel}`);
-  }
-  return problems;
-}
 
 // ---------------------------------------------------------------------------------------
 
@@ -692,7 +769,19 @@ function main(): void {
   }
 
   console.log(`── library (graph tier) ────────────────────────────────`);
-  const libraryCount = graphTier(ctx);
+  // Two passes, because they answer different questions. `graphTier` walks the
+  // links, the catalog and the `related` edges — the obligations a page has
+  // BECAUSE it is in the library. `libraryFieldChecks` reads the frontmatter of
+  // each page on its own terms, which is what the workbench gets too and what
+  // the library went without until a cold read tried `status: approved` on a
+  // memory and the gate said `clean`.
+  const fieldProblems = libraryFieldChecks(ctx);
+  for (const p of fieldProblems) console.log(p);
+  const libraryCount = graphTier(ctx) + fieldProblems.length;
+  if (fieldProblems.length)
+    console.log(
+      `\n${fieldProblems.length} frontmatter problem(s) in the library.`
+    );
 
   console.log(`\n── workbench (thin tier) ───────────────────────────────`);
   const rest = [

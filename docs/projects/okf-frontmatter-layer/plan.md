@@ -6,7 +6,7 @@ description:
   where the lint gates every commit.
 tags: [line, if, present]
 status: stable
-lifecycle: active
+lifecycle: completed
 generated: { by: unknown, at: 2026-09-03 }
 ---
 
@@ -52,34 +52,34 @@ Two facts from the codebase analysis shape the whole plan:
 
 **Definition of Done** (from the proposal's Success Criteria, made checkable):
 
-- [ ] `bun docs/lint.ts` exits 0 on this repo; `bun test` passes; both run in
+- [x] `bun docs/lint.ts` exits 0 on this repo; `bun test` passes; both run in
       `.husky/pre-commit` and in a `.github/workflows/docs-check.yml` job.
-- [ ] Deliberately breaking a link, an anchor, a `lifecycle` value, and a
+- [x] Deliberately breaking a link, an anchor, a `lifecycle` value, and a
       `status` value each produce a non-zero exit with a file:line message.
-- [ ] Every `.md` under `docs/` except `README.md`, `*TEMPLATE*`, `_archive/`,
+- [x] Every `.md` under `docs/` except `README.md`, `*TEMPLATE*`, `_archive/`,
       and `docs/superpowers/` has frontmatter with `type`; zero bold inline
       `**Status:**` lines remain.
-- [ ] `bun docs/lint.ts --json` emits a graph in which every page in the six
+- [x] `bun docs/lint.ts --json` emits a graph in which every page in the six
       durable folders is reachable from `docs/index.md`.
-- [ ] `bun docs/lint.ts --report` prints zero missing required fields.
-- [ ] `docs/cycles/` contains exactly one `lifecycle: active` cycle at any time
+- [x] `bun docs/lint.ts --report` prints zero missing required fields.
+- [x] `docs/cycles/` contains exactly one `lifecycle: active` cycle at any time
       during the work, and at the end the cycle that delivered this plan is
       `closed` with an Outcome section.
-- [ ] Fewer than eight proposals carry `lifecycle: approved`; the remainder are
+- [x] Fewer than eight proposals carry `lifecycle: approved`; the remainder are
       `deferred`, `implemented`, `withdrawn`, `superseded`, or archived.
-- [ ] `cookiecutter . --no-input` into a temp dir yields a project whose
+- [x] `cookiecutter . --no-input` into a temp dir yields a project whose
       `bun docs/lint.ts` exits 0 on first run.
-- [ ] `init-branch`, `finalize-branch`, `sweep-project`, `create-project`,
+- [x] `init-branch`, `finalize-branch`, `sweep-project`, `create-project`,
       `create-investigation`, `generate-proposal`, `generate-dev-plan` and
       `update-project-docs` reference `lifecycle` and cycles;
       `plugins/project-docs/.claude-plugin/plugin.json` is `3.7.0`; `dist/` is
       rebuilt.
-- [ ] `docs/PROJECT_MANIFESTO.md` no longer says "no sprints".
-- [ ] `.project-docs.json` exists at the repo root with `docsRoot`, `version`,
+- [x] `docs/PROJECT_MANIFESTO.md` no longer says "no sprints".
+- [x] `.project-docs.json` exists at the repo root with `docsRoot`, `version`,
       and `lint` keys; `docs/lint.ts`, the migration script, and
       `update-project-docs` read it; renaming `docs/` to `documentation/` and
       updating `docsRoot` keeps the lint green.
-- [ ] `migrations/v2.6-to-v2.7.md` exists with a row in
+- [x] `migrations/v2.6-to-v2.7.md` exists with a row in
       `## Available     Migrations`, and
       `migrations/scripts/migrate-v2.6-to-v2.7.ts --dry-run` run against a copy
       of this repo at f4a6ab0 reports the 117 files it would mark and changes
@@ -179,9 +179,9 @@ hook and a CI job will run them, before any lint code exists.
 
 **Validation:**
 
-- [ ] `bun --version` ≥ 1.4; `npm run check` exits 0 with the placeholder.
-- [ ] A commit triggers the hook and it completes in < 5 s.
-- [ ] The workflow file is valid YAML (`act -n` or a push to the branch).
+- [x] `bun --version` ≥ 1.4; `npm run check` exits 0 with the placeholder.
+- [x] A commit triggers the hook and it completes in < 5 s.
+- [x] The workflow file is valid YAML (`act -n` or a push to the branch).
 
 **Dependencies:** none. Commit: `chore: add Bun toolchain for docs lint`.
 
@@ -213,9 +213,9 @@ hook and a CI job will run them, before any lint code exists.
 
 **Validation:**
 
-- [ ] `bun test` passes: `index.test.ts` and `unlinted-links.test.ts` green,
+- [x] `bun test` passes: `index.test.ts` and `unlinted-links.test.ts` green,
       zero edits to `index.ts`.
-- [ ] `bun docs/lint.ts` reports the real broken links in `plugins/**` and root
+- [x] `bun docs/lint.ts` reports the real broken links in `plugins/**` and root
       files (expect a handful; fix them in the same commit or record them in
       `docs/backlog/`).
 
@@ -314,11 +314,11 @@ hook and a CI job will run them, before any lint code exists.
 
 **Validation:**
 
-- [ ] `bun test` green including `docs/lint.test.ts`.
-- [ ] `bun docs/lint.ts` on the real tree fails with exactly the expected class
+- [x] `bun test` green including `docs/lint.test.ts`.
+- [x] `bun docs/lint.ts` on the real tree fails with exactly the expected class
       of problems: `MISSING FRONTMATTER` on ~117 files and nothing else (no
       false positives on READMEs, templates, `_archive/`, `superpowers/`).
-- [ ] `bun docs/lint.ts --report` prints the 117 grouped by folder.
+- [x] `bun docs/lint.ts --report` prints the 117 grouped by folder.
 
 **Settled during the phase, differing from the sketch above:**
 
@@ -401,10 +401,10 @@ type exists; the cycle for this work is open.
 
 **Validation:**
 
-- [ ] Template test green for all 18 templates (17 + cycle).
-- [ ] `bun docs/lint.ts` reports the active cycle as valid; adding a second
+- [x] Template test green for all 18 templates (17 + cycle).
+- [x] `bun docs/lint.ts` reports the active cycle as valid; adding a second
       `lifecycle: active` cycle fails.
-- [ ] `docs/README.md` flowchart mentions cycles once and points to `SCHEMA.md`
+- [x] `docs/README.md` flowchart mentions cycles once and points to `SCHEMA.md`
       once.
 
 **Dependencies:** Phase 2. Commit:
@@ -486,14 +486,14 @@ script with tests; the human part is worked from `--report`.
 
 **Validation:**
 
-- [ ] `bun test` green for the backfill.
-- [ ] After `--write`: `git diff --stat` touches only `.md` files under `docs/`;
+- [x] `bun test` green for the backfill.
+- [x] After `--write`: `git diff --stat` touches only `.md` files under `docs/`;
       `bun docs/lint.ts --report` shows only `description`, `lifecycle` (for
       unmapped statuses) and `related` as missing.
-- [ ] After batches: `bun docs/lint.ts` exits 0; `--report` prints zero;
+- [x] After batches: `bun docs/lint.ts` exits 0; `--report` prints zero;
       `grep -rl '^\*\*Status:\*\*' docs --include='*.md' | grep -v TEMPLATE`
       returns nothing.
-- [ ] `--json` shows every durable page `reachable: true`.
+- [x] `--json` shows every durable page `reachable: true`.
 
 **Dependencies:** Phase 3. Commits:
 `chore(docs): mechanical frontmatter backfill`, then
@@ -578,14 +578,14 @@ Plugin Skill"):
 
 **Validation:**
 
-- [ ] `ls plugins/project-docs/skills/ | wc -l` unchanged (27);
+- [x] `ls plugins/project-docs/skills/ | wc -l` unchanged (27);
       `diff -r     plugins/project-docs/skills dist/project-docs/skills` shows
       only the documented frontmatter normalizations.
-- [ ] Dry-run each modified skill against this repo by reading it cold and
+- [x] Dry-run each modified skill against this repo by reading it cold and
       following it once (the checklist's cold-read verification), on a scratch
       branch: `init-branch` finds the active cycle; `finalize-branch` writes a
       session with frontmatter and moves the branch line in the cycle.
-- [ ] `npm run check` green.
+- [x] `npm run check` green.
 
 **Dependencies:** Phase 4 (skills must be written against real, linted
 documents). Commit:
@@ -628,11 +628,11 @@ makes the payload match what Phases 2–4 settled):
 
 **Validation:**
 
-- [ ] `cookiecutter . --no-input -o /tmp/cc-test && cd /tmp/cc-test/* && bun     install && bun docs/lint.ts`
+- [x] `cookiecutter . --no-input -o /tmp/cc-test && cd /tmp/cc-test/* && bun     install && bun docs/lint.ts`
       exits 0; `bun test` (if shipped) green.
-- [ ] In that scaffold: create a proposal from the template, fill it, run the
+- [x] In that scaffold: create a proposal from the template, fill it, run the
       lint → passes; remove `lifecycle` → fails.
-- [ ] `diff <(prettier --stdin-filepath x.md < docs/README.md) <(prettier     --stdin-filepath x.md < "{{cookiecutter.project_slug}}/docs/README.md")`
+- [x] `diff <(prettier --stdin-filepath x.md < docs/README.md) <(prettier     --stdin-filepath x.md < "{{cookiecutter.project_slug}}/docs/README.md")`
       is empty for every mirrored file — a normalized mirror check; add it as
       `scripts/check-mirror.sh` and to `npm run check`.
 
@@ -663,8 +663,8 @@ makes the payload match what Phases 2–4 settled):
 
 **Validation:**
 
-- [ ] Definition of Done, every box.
-- [ ] `git branch --list 'feat/knowledge-wiki-layer'` empty.
+- [x] Definition of Done, every box.
+- [x] `git branch --list 'feat/knowledge-wiki-layer'` empty.
 
 **Dependencies:** Phases 0–6.
 
@@ -779,6 +779,32 @@ makes the payload match what Phases 2–4 settled):
 - Sessions: `./sessions/` (created during implementation)
 
 ---
+
+## Reconciliation — 2026-09-04
+
+Every phase shipped, and every box above is ticked against something that was
+actually run rather than against the plan's own claim. Four things went
+differently enough to be worth naming:
+
+- **The codemod's flags are inverted from the spec.** The plan said dry-run by
+  default with `--write`; the four sibling migration scripts are
+  apply-by-default with `--dry-run`, so the house convention won and a
+  git-cleanliness guard was added instead. A codemod that rewrites a hundred
+  files should leave a diff someone can review on its own.
+- **`sweep-project`'s cycle handling is not "Step 2b".** That name was taken by
+  a half of Step 2. It became **The Cycle Path**, unnumbered, because it
+  replaces Steps 1 through 5b rather than sitting between two of them.
+- **`finalize-branch` kept its project-completion prompt.** The plan moved that
+  question to `sweep-project`, but `sweep-project` only runs when someone
+  already suspects completion — `finalize-branch` is what notices. Both prompts
+  fire now, explicitly separated.
+- **The Definition of Done's "fewer than eight proposals carry
+  `lifecycle: approved`" came out at zero.** Not by being strict: the honesty
+  pass found that every live proposal had actually reached a terminal state.
+
+The plan's own risk list was accurate about the mirror (Phase 6 needed it) and
+about `{{` in shipped TypeScript (there was exactly one file). It did not
+anticipate the defect that mattered most — see the session note.
 
 ## Implementation Notes
 

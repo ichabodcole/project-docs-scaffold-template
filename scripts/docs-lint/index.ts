@@ -21,7 +21,6 @@
 //    this scaffold generates — cannot express itself through two filenames.
 //    Both default to the source's behaviour.
 
-
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
@@ -100,7 +99,10 @@ export interface DocsLintConfig {
 }
 
 /** Collect `.md` files under `dir`, skipping any directory named in `skipDirs`. */
-export function walkMarkdown(dir: string, skipDirs: Set<string> = new Set()): string[] {
+export function walkMarkdown(
+  dir: string,
+  skipDirs: Set<string> = new Set()
+): string[] {
   const out: string[] = [];
   for (const e of readdirSync(dir)) {
     if (skipDirs.has(e)) continue;
@@ -158,7 +160,7 @@ export function stripFences(md: string): string {
   //
   // Newlines survive so line-oriented callers (`headingSlugsOf`) still see line starts.
   return md.replace(/^[ \t]*(`{3,})[^\n]*$[\s\S]*?^[ \t]*\1`*[ \t]*$/gm, (m) =>
-    m.replace(/[^\n]/g, " "),
+    m.replace(/[^\n]/g, " ")
   );
 }
 
@@ -169,7 +171,9 @@ export function stripFences(md: string): string {
  * false positive on exactly the pages that explain link conventions (i.e. SCHEMA.md).
  */
 export function stripCode(md: string): string {
-  return stripFences(md).replace(/(?<!`)`[^`\n]+`(?!`)/g, (m) => " ".repeat(m.length));
+  return stripFences(md).replace(/(?<!`)`[^`\n]+`(?!`)/g, (m) =>
+    " ".repeat(m.length)
+  );
 }
 
 /**
@@ -191,7 +195,13 @@ export function stripInlineComment(v: string): string {
     if (c === "\\" && inDouble) i++;
     else if (c === "'" && !inDouble) inSingle = !inSingle;
     else if (c === '"' && !inSingle) inDouble = !inDouble;
-    else if (c === "#" && !inSingle && !inDouble && i > 0 && /\s/.test(v[i - 1])) {
+    else if (
+      c === "#" &&
+      !inSingle &&
+      !inDouble &&
+      i > 0 &&
+      /\s/.test(v[i - 1])
+    ) {
       return v.slice(0, i);
     }
   }
@@ -228,7 +238,7 @@ export function unsupportedEscapes(fm: string): string[] {
       [...fm.matchAll(/\\(.|$)/gs)]
         .map((m) => m[1] ?? "")
         .filter((c) => !(c in DOUBLE_QUOTED_ESCAPES))
-        .map((c) => `\\${c}`),
+        .map((c) => `\\${c}`)
     ),
   ];
 }
@@ -253,7 +263,10 @@ export function unquoteScalar(v: string): string {
     // `n`, rather than to a newline: the match consumes both characters of the pair.
     return t
       .slice(1, -1)
-      .replace(/\\(.|$)/gs, (whole, c: string) => DOUBLE_QUOTED_ESCAPES[c] ?? whole);
+      .replace(
+        /\\(.|$)/gs,
+        (whole, c: string) => DOUBLE_QUOTED_ESCAPES[c] ?? whole
+      );
   }
   if (first === "'" && last === "'") return t.slice(1, -1).replace(/''/g, "'");
   return t;
@@ -270,7 +283,11 @@ export function parseFrontmatter(fm: string): Map<string, string> {
   let key: string | null = null;
   let buf: string[] = [];
   const flush = () => {
-    if (key) out.set(key, unquoteScalar(stripInlineComment(buf.join(" ").trim()).trim()));
+    if (key)
+      out.set(
+        key,
+        unquoteScalar(stripInlineComment(buf.join(" ").trim()).trim())
+      );
   };
   for (const line of fm.split("\n")) {
     const m = /^([A-Za-z_][\w-]*):\s*(.*)$/.exec(line);
@@ -307,10 +324,16 @@ export function parseFrontmatter(fm: string): Map<string, string> {
  * the spec documents, and supporting block mappings too would mean carrying a YAML engine into
  * a linter whose whole point is having no dependencies.
  */
-export function parseGenerated(raw: string | undefined): { by: string; at: string } | null {
+export function parseGenerated(
+  raw: string | undefined
+): { by: string; at: string } | null {
   if (!raw) return null;
-  const m = /^\{\s*by:\s*([^,}]+?)\s*,\s*at:\s*([^,}]+?)\s*\}$/.exec(raw.trim());
-  return m ? { by: (m[1] as string).trim(), at: (m[2] as string).trim() } : null;
+  const m = /^\{\s*by:\s*([^,}]+?)\s*,\s*at:\s*([^,}]+?)\s*\}$/.exec(
+    raw.trim()
+  );
+  return m
+    ? { by: (m[1] as string).trim(), at: (m[2] as string).trim() }
+    : null;
 }
 
 export function yamlList(raw: string | undefined): string[] {
@@ -350,7 +373,7 @@ export function checkLinks(
     anchorCache?: Map<string, Set<string>>;
     /** Prefer an already-read body; falls back to disk for a target outside the corpus. */
     bodyOf?: (path: string) => string;
-  } = {},
+  } = {}
 ): { outbound: string[]; problems: BrokenLink[] } {
   const anchorCache = opts.anchorCache ?? new Map<string, Set<string>>();
   const bodyOf = opts.bodyOf ?? ((p: string) => readFileSync(p, "utf8"));
@@ -386,7 +409,8 @@ export function checkLinks(
         anchors = headingSlugsOf(bodyOf(filePath));
         anchorCache.set(filePath, anchors);
       }
-      if (!anchors.has(anchor)) problems.push({ kind: "MISSING ANCHOR", target, anchor });
+      if (!anchors.has(anchor))
+        problems.push({ kind: "MISSING ANCHOR", target, anchor });
     }
   }
   return { outbound, problems };
@@ -398,10 +422,14 @@ export function runDocsLint(config: DocsLintConfig): number {
   const NON_PAGE_DIRS = new Set<string>(config.nonPageDirs ?? []);
   const OKF_TYPES = new Set<string>(config.types);
   const DATE_FIELD = config.dateField ?? "timestamp";
-  const DATE_RE = config.allowDateOnly ? /^\d{4}-\d{2}-\d{2}(T|$)/ : /^\d{4}-\d{2}-\d{2}T/;
+  const DATE_RE = config.allowDateOnly
+    ? /^\d{4}-\d{2}-\d{2}(T|$)/
+    : /^\d{4}-\d{2}-\d{2}T/;
 
   const SKIP_FILE = config.skipFiles ?? (() => false);
-  const files = walkMarkdown(ROOT, NON_PAGE_DIRS).filter((f) => !SKIP_FILE(relative(ROOT, f)));
+  const files = walkMarkdown(ROOT, NON_PAGE_DIRS).filter(
+    (f) => !SKIP_FILE(relative(ROOT, f))
+  );
   const INDEX = join(ROOT, "index.md");
   const problems: string[] = [];
   const say = (m: string) => {
@@ -434,7 +462,8 @@ export function runDocsLint(config: DocsLintConfig): number {
   const CONTRACT_PAGES = ["SCHEMA.md", "STYLE.md"];
   const isContract =
     config.isContractPage !== undefined
-      ? (f: string) => (config.isContractPage as (rel: string) => boolean)(relative(ROOT, f))
+      ? (f: string) =>
+          (config.isContractPage as (rel: string) => boolean)(relative(ROOT, f))
       : (f: string) => CONTRACT_PAGES.some((c) => f.endsWith(c));
 
   // --- OKF frontmatter conformance ------------------------------------------------------
@@ -446,9 +475,12 @@ export function runDocsLint(config: DocsLintConfig): number {
     }
     const fields = fieldsOf(file);
     const type = fields.get("type");
-    if (!type) say(`MISSING type   ${rel(file)}  (OKF requires a \`type\` field)`);
+    if (!type)
+      say(`MISSING type   ${rel(file)}  (OKF requires a \`type\` field)`);
     else if (!OKF_TYPES.has(type))
-      say(`BAD type       ${rel(file)}: "${type}" not in {${[...OKF_TYPES].join(", ")}}`);
+      say(
+        `BAD type       ${rel(file)}: "${type}" not in {${[...OKF_TYPES].join(", ")}}`
+      );
 
     // Accept flow style (`[a, b]`) and YAML block sequence (`- a`): Prettier rewraps long
     // flow lists, and lint-staged runs it on every staged .md.
@@ -463,13 +495,16 @@ export function runDocsLint(config: DocsLintConfig): number {
       const g = parseGenerated(fields.get("generated"));
       if (!g)
         say(
-          `MISSING generated  ${rel(file)}  (expected \`generated: { by: <actor>, at: YYYY-MM-DD }\`)`,
+          `MISSING generated  ${rel(file)}  (expected \`generated: { by: <actor>, at: YYYY-MM-DD }\`)`
         );
       else if (!DATE_RE.test(g.at))
         say(`BAD generated.at  ${rel(file)}: "${g.at}"  (expected YYYY-MM-DD)`);
-      else if (!g.by) say(`MISSING generated.by  ${rel(file)}  (OKF requires an actor)`);
+      else if (!g.by)
+        say(`MISSING generated.by  ${rel(file)}  (OKF requires an actor)`);
     } else if (!DATE_RE.test(fields.get(DATE_FIELD) ?? "")) {
-      say(`MISSING ${DATE_FIELD}  ${rel(file)}  (expected \`${DATE_FIELD}: YYYY-MM-DD\`)`);
+      say(
+        `MISSING ${DATE_FIELD}  ${rel(file)}  (expected \`${DATE_FIELD}: YYYY-MM-DD\`)`
+      );
     }
 
     // Frontmatter values are user-facing output downstream (`acc show` prints title and
@@ -478,7 +513,7 @@ export function runDocsLint(config: DocsLintConfig): number {
     const escapes = unsupportedEscapes(frontmatter.get(file) ?? "");
     if (escapes.length)
       say(
-        `BAD ESCAPE     ${rel(file)}: ${escapes.join(", ")}  (frontmatter decodes only \\" \\\\ \\/ \\n \\t \\r)`,
+        `BAD ESCAPE     ${rel(file)}: ${escapes.join(", ")}  (frontmatter decodes only \\" \\\\ \\/ \\n \\t \\r)`
       );
   }
 
@@ -494,7 +529,7 @@ export function runDocsLint(config: DocsLintConfig): number {
       say(
         p.kind === "MISSING FILE"
           ? `MISSING FILE   ${rel(file)}: ${p.target}`
-          : `MISSING ANCHOR ${rel(file)}: ${p.target}  (#${p.anchor} not a heading)`,
+          : `MISSING ANCHOR ${rel(file)}: ${p.target}  (#${p.anchor} not a heading)`
       );
     }
   }
@@ -503,7 +538,9 @@ export function runDocsLint(config: DocsLintConfig): number {
   // Transitive: a page linked only from a cataloged sibling still counts as reachable.
   const reached = new Set<string>();
   if (!existsSync(INDEX)) {
-    say(`NO CATALOG     ${rel(INDEX)} is missing — every page is an orphan without it.`);
+    say(
+      `NO CATALOG     ${rel(INDEX)} is missing — every page is an orphan without it.`
+    );
   } else {
     reached.add(INDEX);
     const queue = [INDEX];
@@ -520,7 +557,9 @@ export function runDocsLint(config: DocsLintConfig): number {
     for (const file of files) {
       if (file === INDEX || isContract(file)) continue;
       if (!reached.has(file))
-        say(`ORPHAN         ${rel(file)}  (unreachable from index.md — add its catalog line)`);
+        say(
+          `ORPHAN         ${rel(file)}  (unreachable from index.md — add its catalog line)`
+        );
     }
   }
 
@@ -538,13 +577,18 @@ export function runDocsLint(config: DocsLintConfig): number {
     if (!t) continue;
     const key = `${t}/${file.slice(file.lastIndexOf("/") + 1, -3)}`;
     const first = byTypeSlug.get(key);
-    if (first) say(`DUPLICATE KEY  ${rel(file)}: "${key}" already used by ${rel(first)}`);
+    if (first)
+      say(
+        `DUPLICATE KEY  ${rel(file)}: "${key}" already used by ${rel(first)}`
+      );
     else byTypeSlug.set(key, file);
   }
   for (const file of files) {
     for (const entry of yamlList(fieldsOf(file).get("related"))) {
       if (!byTypeSlug.has(entry))
-        say(`BAD related    ${rel(file)}: "${entry}" matches no page (expected \`type/slug\`)`);
+        say(
+          `BAD related    ${rel(file)}: "${entry}" matches no page (expected \`type/slug\`)`
+        );
     }
   }
 
@@ -563,7 +607,8 @@ export function runDocsLint(config: DocsLintConfig): number {
   if (JSON_MODE) {
     const linksIn = new Map<string, string[]>();
     for (const [from, tos] of outbound)
-      for (const to of tos) linksIn.set(to, [...(linksIn.get(to) ?? []), rel(from)]);
+      for (const to of tos)
+        linksIn.set(to, [...(linksIn.get(to) ?? []), rel(from)]);
 
     const tagIndex: Record<string, string[]> = {};
     const typeIndex: Record<string, string[]> = {};
@@ -588,7 +633,9 @@ export function runDocsLint(config: DocsLintConfig): number {
       // Pages sharing >=1 tag. Without this the graph shows the atomic pages as
       // disconnected, which is a misread — tags ARE their adjacency.
       const tagNeighbors = [
-        ...new Set(tags.flatMap((t) => tagIndex[t] ?? []).filter((p) => p !== rel(file))),
+        ...new Set(
+          tags.flatMap((t) => tagIndex[t] ?? []).filter((p) => p !== rel(file))
+        ),
       ];
       return {
         path: rel(file),
@@ -597,7 +644,15 @@ export function runDocsLint(config: DocsLintConfig): number {
         description: f.get("description") ?? null,
         tags,
         status: f.get("status") ?? null,
-        [DATE_FIELD]: f.get(DATE_FIELD) ?? null,
+        // `generated` is a mapping, so emit it as one. It used to go out as the
+        // raw inline-flow YAML text — `"{ by: x, at: 2026-09-04 }"` — while
+        // `tags` beside it was a proper array, so a consumer wanting to sort by
+        // date had to re-parse YAML out of a JSON string. The gate already
+        // parses it; only the serialization lagged.
+        [DATE_FIELD]:
+          DATE_FIELD === "generated"
+            ? (parseGenerated(f.get("generated")) ?? null)
+            : (f.get(DATE_FIELD) ?? null),
         linksOut: [...(outbound.get(file) ?? [])].map(rel),
         linksIn: linksIn.get(file) ?? [],
         related: yamlList(f.get("related")),
@@ -613,7 +668,11 @@ export function runDocsLint(config: DocsLintConfig): number {
       .filter((n) => n.path !== "index.md")
       .sort((a, b) => b.linksIn.length - a.linksIn.length)
       .slice(0, 10)
-      .map((n) => ({ path: n.path, linksIn: n.linksIn.length, title: n.title }));
+      .map((n) => ({
+        path: n.path,
+        linksIn: n.linksIn.length,
+        title: n.title,
+      }));
 
     console.log(
       JSON.stringify(
@@ -628,7 +687,8 @@ export function runDocsLint(config: DocsLintConfig): number {
             tags: Object.keys(tagIndex).length,
             // Must mirror the lint's own exemption above: SCHEMA.md is the contract, not a
             // page, so it is never an orphan even when nothing links to it.
-            orphans: nodes.filter((n) => !n.reachable && !n.contractExempt).length,
+            orphans: nodes.filter((n) => !n.reachable && !n.contractExempt)
+              .length,
           },
           hubs,
           typeIndex,
@@ -637,14 +697,14 @@ export function runDocsLint(config: DocsLintConfig): number {
           problems,
         },
         null,
-        2,
-      ),
+        2
+      )
     );
   } else {
     console.log(
       problems.length === 0
         ? `OK — links, anchors, OKF frontmatter, catalog reachability and \`related\` edges all valid across ${files.length} files.`
-        : `\n${problems.length} problem(s).`,
+        : `\n${problems.length} problem(s).`
     );
   }
   return problems.length;

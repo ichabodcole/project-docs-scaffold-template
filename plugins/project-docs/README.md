@@ -310,6 +310,34 @@ the same ones `docs/SCHEMA.md` defines. `approved` is explicitly not
 `implemented`: a proposal left at `approved` when the thing shipped is the drift
 the step exists to correct.
 
+**The library tier was not checking frontmatter at all, and now is.** For the
+first six phases of this work, `SCHEMA.md` said the graph tier checks
+"everything Thin checks, plus" the graph obligations, and it checked none of it:
+the vocabulary rules lived inside `thinTier`, which only ever walks the
+workbench folders. A library page could carry `status: approved` — the exact
+hand-invented value this whole layer exists to make impossible — and the gate
+printed `docs-lint: clean`. So could a `lifecycle` on a type that forbids one, a
+`type` disagreeing with its folder, a non-kebab tag, an unknown field and a
+legacy `date`. The one library-side check that did exist tested presence only
+and was reached solely from `--report`, which always exits 0.
+
+Found by a cold-read agent asked to add a memory page to a freshly scaffolded
+project and then break it — it tried the thing the contract forbids, in the
+first place a reader would try it. The per-document rules are now
+`documentProblems`, called by both tiers, with `tags` the single field they
+disagree about. Nine regression tests, one per break that used to pass.
+
+**Reference classification gained a fifth bucket.** `sweep-project` Step 3 now
+sorts on four questions, and an `_archive`-internal `../<name>/` link — one that
+resolves correctly the moment the target moves, and would become
+`_archive/_archive/<name>/` if rewritten — lands in **Self-correcting** rather
+than being a footnote exempting one case from the Rewrite rule. As a footnote it
+escaped both of that step's invariants: the classification said Rewrite, Step 5b
+declined to rewrite, and correctness grep 2 reported the hit as an unfinished
+rewrite, so a correct run read as a failed one. A rule that one case is exempt
+from is a rule with a hole in it. (Closes
+`backlog/2026-09-02-sweep-project-archive-internal-link-exception`.)
+
 **Archival became optional.** A terminal `lifecycle` is what records that work
 closed; moving the folder to `_archive/` is housekeeping on top of it. And a
 project named in an `active` cycle's `scope` is not moved at all — the move
@@ -358,6 +386,14 @@ true when that migration is still needed, and Step 3 runs it.
 [docs structure pointer](skills/update-project-docs/SKILL.md#docs-structure-pointer)
 now recommends pointing at `docs/SCHEMA.md` as the frontmatter contract, for
 projects on v2.7 or later.
+
+**Output that answers the question asked.** `--report` names the files it found
+rather than rolling them up into a folder and a count — "one file somewhere
+under `docs/memories/` is missing `status`" is not a worklist — and says how
+many documents it scanned, so an empty report is distinguishable from a report
+that looked at nothing. `--json` emits `generated` as `{ by, at }` instead of
+the raw inline-flow YAML as a string, which is what `tags` beside it already
+did.
 
 **Docs root** — eighteen skills and commands gained one sentence saying that
 `docs/` is `docsRoot` in `.project-docs.json` and only defaults to `docs/`. No
