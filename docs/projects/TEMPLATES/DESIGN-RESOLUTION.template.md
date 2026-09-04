@@ -1,3 +1,13 @@
+---
+type: design-resolution # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Feature Name] Design Resolution"
+description: "[One sentence: the question this resolves and how.]"
+tags: [area, decision] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project folder as `design-resolution.md`.
 
@@ -24,10 +34,7 @@ For more guidance on design resolutions, see the projects README: ../README.md
 
 # [Design Resolution Title]
 
-**Status:** Draft | Under Review | Resolved | Superseded\
-**Created:** YYYY-MM-DD\
-**Related Proposal:** [Link to proposal](./proposal.md)\
-**Author:** [Name]
+**Related Proposal:** [Link to proposal](./proposal.md)
 
 ---
 

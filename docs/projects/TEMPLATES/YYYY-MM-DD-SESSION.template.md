@@ -1,3 +1,12 @@
+---
+type: session # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Topic] — YYYY-MM-DD"
+description: "[One sentence: what this session did.]"
+tags: [area, feature] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project's `sessions/` folder, replacing YYYY-MM-DD with the current date
 and renaming to describe the session topic (e.g., 2026-02-09-initial-implementation.md).

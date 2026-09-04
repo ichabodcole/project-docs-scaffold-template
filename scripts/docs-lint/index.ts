@@ -8,10 +8,18 @@
 // is a move, not a merge: project-specific behaviour goes in `docs/lint.ts`
 // through the `extraChecks` seam, never in here.
 //
-// ONE DIVERGENCE: `stripFences` here pairs fences of three OR MORE backticks.
-// The source pairs exactly three, which mis-pairs every fence after a
-// ````-fence — see the comment on the function. This is a fix to the source,
-// not an adaptation to this repo, and belongs back in agent-cli-conformance.
+// DIVERGENCES, both of them generalizations rather than adaptations, and both
+// belonging back in agent-cli-conformance:
+//
+// 1. `stripFences` pairs fences of three OR MORE backticks. The source pairs
+//    exactly three, which mis-pairs every fence after a ````-fence — see the
+//    comment on the function.
+// 2. `skipFiles` and `isContractPage` are configurable. The source hardcodes
+//    `CONTRACT_PAGES = ["SCHEMA.md", "STYLE.md"]` in a file whose own header
+//    says root, type vocabulary and date field are per-library PARAMETERS. A
+//    library where every folder carries a README and a TEMPLATE — which is what
+//    this scaffold generates — cannot express itself through two filenames.
+//    Both default to the source's behaviour.
 
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -67,6 +75,26 @@ export interface DocsLintConfig {
    * cross-artifact checks (docs <-> code) here, never in the core.
    */
   extraChecks?: (pages: LintPage[]) => string[];
+  /**
+   * Files excluded from the walk entirely, by path relative to `root`.
+   *
+   * A TEMPLATE is the one page whose links are SUPPOSED not to resolve —
+   * `../projects/project-name/proposal.md` is what a template is for — so it
+   * cannot be exempted by the contract-page rule below, which still checks
+   * links. Default: nothing is skipped.
+   */
+  skipFiles?: (rel: string) => boolean;
+  /**
+   * Maintainer meta-documents about the library rather than entries in its type
+   * system: exempt from the frontmatter rules and from the orphan rule, but
+   * their links ARE checked, because a folder contract with a dead pointer
+   * misroutes the next document written.
+   *
+   * Default: any file whose name ends in SCHEMA.md or STYLE.md — the two the
+   * source repo has. A repo whose every folder carries a README passes its own
+   * predicate.
+   */
+  isContractPage?: (rel: string) => boolean;
   /** Emit the graph as JSON instead of human lint output. */
   json?: boolean;
 }
@@ -372,7 +400,8 @@ export function runDocsLint(config: DocsLintConfig): number {
   const DATE_FIELD = config.dateField ?? "timestamp";
   const DATE_RE = config.allowDateOnly ? /^\d{4}-\d{2}-\d{2}(T|$)/ : /^\d{4}-\d{2}-\d{2}T/;
 
-  const files = walkMarkdown(ROOT, NON_PAGE_DIRS);
+  const SKIP_FILE = config.skipFiles ?? (() => false);
+  const files = walkMarkdown(ROOT, NON_PAGE_DIRS).filter((f) => !SKIP_FILE(relative(ROOT, f)));
   const INDEX = join(ROOT, "index.md");
   const problems: string[] = [];
   const say = (m: string) => {
@@ -403,7 +432,10 @@ export function runDocsLint(config: DocsLintConfig): number {
   // Matching stays a SUFFIX test, which a test pins deliberately — tightening it here would have
   // changed a documented behaviour as a side effect of adding a file.
   const CONTRACT_PAGES = ["SCHEMA.md", "STYLE.md"];
-  const isContract = (f: string) => CONTRACT_PAGES.some((c) => f.endsWith(c));
+  const isContract =
+    config.isContractPage !== undefined
+      ? (f: string) => (config.isContractPage as (rel: string) => boolean)(relative(ROOT, f))
+      : (f: string) => CONTRACT_PAGES.some((c) => f.endsWith(c));
 
   // --- OKF frontmatter conformance ------------------------------------------------------
   for (const file of files) {

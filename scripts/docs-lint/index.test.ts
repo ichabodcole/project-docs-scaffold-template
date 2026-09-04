@@ -9,8 +9,12 @@
 // through the `extraChecks` seam, never in here.
 //
 // ONE ADDITION: four cases in `stripCode` covering multi-backtick fences, the
-// single divergence in `index.ts`. They belong back in agent-cli-conformance
+// first divergence in `index.ts`. They belong back in agent-cli-conformance
 // with the fix.
+//
+// The second divergence — `skipFiles` and `isContractPage` — is covered from
+// the entry point in `docs/lint.test.ts`, where the fixtures are the shapes
+// that motivated it: a library folder holding a README and a TEMPLATE.
 
 // Tests for the portable docs-lint core.
 //

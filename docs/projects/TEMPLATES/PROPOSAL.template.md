@@ -1,3 +1,13 @@
+---
+type: proposal # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Proposal Title]"
+description: "[One sentence: what this proposes and why.]"
+tags: [area, feature] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project folder as `proposal.md`.
 
@@ -12,11 +22,6 @@ For more guidance on proposals, see the projects README: ../README.md
 -->
 
 # [Proposal Title]
-
-**Status:** Draft | Under Review | Approved | Rejected | Superseded **Created:**
-YYYY-MM-DD **Author:** [Name]
-
----
 
 ## Overview
 

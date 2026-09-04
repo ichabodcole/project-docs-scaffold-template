@@ -1,7 +1,16 @@
+---
+type: fragment # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "Fragment: [Brief Description]"
+description: "[One sentence: what did not feel right.]"
+tags: [area] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: open # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 # Fragment: [Brief Description]
 
-**Date**: YYYY-MM-DD **Context**: [Where/when this observation came up -
-session, feature work, etc.]
+**Context:** [Where/when this observation came up - session, feature work, etc.]
 
 ## Observation
 

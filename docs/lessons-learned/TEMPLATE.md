@@ -1,3 +1,12 @@
+---
+type: lesson # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Brief Lesson Title]"
+description: "[One sentence: the lesson itself, stated so it transfers.]"
+tags: [area, cause] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create lessons learned and what makes a good lesson.
@@ -17,8 +26,7 @@ Keep it concise and actionable. Lead with the takeaway - don't bury the lesson i
 
 # [Brief Lesson Title]
 
-**Date:** YYYY-MM-DD **Tags:** `#tag1` `#tag2` `#tag3` **Type:** [Pattern |
-Bug/Issue | Configuration | Integration]
+**Kind:** [Pattern | Bug/Issue | Configuration | Integration]
 
 ---
 

@@ -313,6 +313,38 @@ hook and a CI job will run them, before any lint code exists.
       false positives on READMEs, templates, `_archive/`, `superpowers/`).
 - [ ] `bun docs/lint.ts --report` prints the 117 grouped by folder.
 
+**Settled during the phase, differing from the sketch above:**
+
+- **`lint.adopting`** joins the config. The graph tier cannot pass until Phase 4
+  catalogs the corpus, so enforcing from Phase 2 would leave the pre-commit hook
+  red for three phases and train the `--no-verify` habit that removes it. The
+  flag reports and exits 0, says so on every run, and is what every adopting
+  project needs for the length of its own backfill — not a hack for this branch.
+- **Two seams in the ported core**, both generalizations rather than
+  adaptations, both flagged for upstream: `skipFiles` (a TEMPLATE's links are
+  placeholders by construction, so it cannot be exempted by a rule that still
+  checks links) and `isContractPage` (the source hardcodes
+  `SCHEMA.md`/`STYLE.md` in a file whose header calls root and vocabulary
+  per-library parameters; a scaffold where every folder carries a README cannot
+  express itself in two filenames).
+- **`--json` emits the library graph only.** The plan wanted a `workbench` array
+  appended; `runDocsLint` prints its JSON directly, and capturing its stdout to
+  add a key is worse than not having the key. Workbench state is what `--report`
+  is for.
+- **The thin tier does not require `tags`.** A library page is found by tag; a
+  workbench document by its date and its folder README. Requiring four keywords
+  on forty-four session notes buys a tag cloud nobody reads.
+- **`PROJECT_MANIFESTO.md` and `PROJECT-SUMMARY.md` are graph-tier pages**
+  (`type: manifesto`, `type: summary`), catalogued in `index.md`. `README.md`,
+  `AGENTS.md` and `CLAUDE.md` are contract pages: links checked, no frontmatter.
+  This closes the plan's open question about the summary.
+- **`lint.exclude`** joins the config: path globs for `.md` files that are not
+  documentation. The first run found the case — two slide-deck prototypes whose
+  frontmatter belongs to Slidev and Marp.
+- **Every tier function takes a `Ctx`** rather than closing over this repo's
+  paths, which is what makes the fixture tests possible and what lets the same
+  file ship in the payload.
+
 **Dependencies:** Phase 1. Commit:
 `feat(docs-lint): schema contract, graph and thin tiers`.
 
@@ -413,7 +445,17 @@ script with tests; the human part is worked from `--report`.
 - **Run it** from this repo's root:
   `bun plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.6-to-v2.7.ts --write && npm run format`;
   commit as one mechanical commit so the human edits are reviewable separately.
-- **Batches** from `bun docs/lint.ts --report`, one commit per batch:
+- **Batches** from `bun docs/lint.ts --report`, one commit per batch: 0. **The
+  32 broken links Phase 2's first run found**, which `--report` does not track
+  (a broken link is a defect to fix, not a blank to fill). Three classes:
+  targets that moved into `_archive/` when their project was archived — the
+  failure
+  `docs/backlog/2026-09-02-sweep-project-archive-internal-link-exception.md`
+  already describes; links to
+  `plugins/toolbox/skills/{grapevine,tuskboard,digestify}/SKILL.md`, extracted
+  to the spellbook repo; and wrong-depth paths written as `docs/projects/…` or
+  `./docs/projects/…` from inside `docs/memories/`. Plus four missing
+  `preview_00N.png` in the moodboard investigation.
   1. `description` for the 26 memories and 1 lesson (graph tier needs the
      catalog hook) — the `MEMORY.md`-style one-liners already exist in
      `docs/memories/README.md` or the file's first sentence; lift them.
@@ -702,11 +744,19 @@ makes the payload match what Phases 2–4 settled):
 - **When does the `docs/README.md` version marker go away?** Plan: keep it for
   this release; remove in the next migration once every consumer reads
   `.project-docs.json`.
+- ~~**An artifact whose frontmatter belongs to another tool.**~~ Resolved
+  2026-09-03 (Cole): `lint.exclude` in `.project-docs.json` takes path globs for
+  `.md` files that are not documentation, and this repo excludes the two
+  slide-deck prototypes. A Slidev deck is a program that happens to be Markdown;
+  widening the schema until its `theme` and `paginate` fit would be describing
+  it wrongly to keep a gate quiet. Kept distinct from `lint.skip`, which names
+  directories and prunes subtrees. A per-file `<!-- docs-lint: skip -->` marker
+  would be self-documenting where a root-level list is not, but two mechanisms
+  for one problem is one too many until a case needs it.
 - **Ship tests in the payload?** Lean: `index.test.ts` only, so a scaffolded
   project's `bun test` is meaningful without carrying this repo's fixtures.
-- **Does `docs/PROJECT-SUMMARY.md` get frontmatter?** It is a generated
-  top-level file; plan: `type: summary`, thin tier, no lifecycle — decide in
-  Phase 4 batch 3.
+- ~~**Does `docs/PROJECT-SUMMARY.md` get frontmatter?**~~ Resolved in Phase 2:
+  `type: summary`, graph tier, no lifecycle, catalogued beside the manifesto.
 
 ---
 
@@ -719,7 +769,7 @@ makes the payload match what Phases 2–4 settled):
 - [scaffold-update-checklist](../../../.claude/skills/scaffold-update-checklist/SKILL.md)
 - [update-project-docs migrations](../../../plugins/project-docs/skills/update-project-docs/migrations/)
 - [OKF 0.2 specification](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
-- Sessions: [./sessions/](./sessions/) (created during implementation)
+- Sessions: `./sessions/` (created during implementation)
 
 ---
 

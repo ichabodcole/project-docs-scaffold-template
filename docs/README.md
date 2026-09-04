@@ -119,6 +119,16 @@ tasks that don't warrant a full project folder. Individual files per item,
 archived when complete. See [backlog/README.md](./backlog/README.md) for format
 and conventions.
 
+#### `/cycles`
+
+What is being worked on **right now**. A cycle is a thin index over the projects
+and backlog items in play — never a container for their documents, which stay in
+the project folder. At most one cycle is `active` at a time, and the lint
+enforces it. See [cycles/README.md](./cycles/README.md).
+
+Every other folder here answers a different question: an idea, a question, an
+argument, a route, a record. None of them says which of those things is live.
+
 ## Specifications: A Living Application Description
 
 Specifications live outside the per-feature lifecycle below. They describe the
@@ -243,12 +253,12 @@ Not sure what to create? Use this decision flowchart:
                 [Deployment    [Reusable      [System docs]  [Assessment]
                  steps?]        pattern]           ↓              ↓
                       ↓             ↓      ┌──────┴──────┐   REPORT
-                  HANDOFF      PLAYBOOK    ↓             ↓  (triggers next
-                  (in project)         ARCHITECTURE  INTERACTION  cycle)
+                  HANDOFF      PLAYBOOK    ↓             ↓  (triggers the
+                  (in project)         ARCHITECTURE  INTERACTION  next round)
                                        (technical)   DESIGN (UX)
 ```
 
-**The documentation cycle:**
+**The documentation pipeline:**
 
 ```
 Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) → Report → ...
@@ -256,6 +266,11 @@ Brief → Investigation → Project (proposal → [design-resolution] → plan �
 
 Reports and investigations are the connective tissue between projects. They
 trigger new work and assess completed work, but live outside any single project.
+
+**Cycles sit across this, not inside it.** The flowchart picks the right
+document for one piece of work; a cycle names which pieces are in play at all.
+Open one when a body of work will span more than one branch — a single branch
+needs no cycle — and close it when its scope has shipped or been cut.
 
 The bracketed final stage is a **check-in, not an automatic step**. Sweeping a
 project reconciles its plan against what was actually built; archival only
@@ -275,6 +290,8 @@ end with "not yet" — that's a normal outcome, not a failed one.
   place." (co-located body of work)
 - **Backlog:** "Here's a small task that just needs doing." (lightweight work
   item)
+- **Cycle:** "Here's what we're working on right now." (a thin index over work
+  in play; one active at a time)
 - **Playbook:** "Here's how to do X repeatedly." (reusable pattern)
 - **Specification:** "Here's what the application does, described so anyone
   could rebuild it." (technology-agnostic behavior)
@@ -307,6 +324,32 @@ end with "not yet" — that's a normal outcome, not a failed one.
   after planning
 - **Something feels off but can't investigate now?** → Fragment (revisit later)
 - **Want to assess current state?** → Report
+
+## Frontmatter
+
+Every document here carries OKF frontmatter, and `bun docs/lint.ts` checks it.
+The whole contract — the fields, the two tiers of strictness, and the per-type
+`lifecycle` vocabularies — is [SCHEMA.md](./SCHEMA.md). Read it once before
+adding a document; the templates already carry the right block.
+
+Two things worth knowing before you look:
+
+- **`status` and `lifecycle` are different questions.** `status` is OKF's field
+  and OKF's vocabulary — `draft`, `stable`, `deprecated` — and says whether a
+  document can be relied on. `lifecycle` is ours and says where the work has got
+  to: a proposal can be `approved` without being `implemented`, which is the
+  distinction the old `**Status:**` lines had no word for.
+- **The library is catalogued; the workbench is not.** Pages in `architecture/`,
+  `specifications/`, `interaction-design/`, `playbooks/`, `lessons-learned/` and
+  `memories/` each get one line in [index.md](./index.md), and the lint fails if
+  one is missing or if its line has drifted from the page's own `description`.
+  Working documents are found by their date and their folder README instead.
+
+```bash
+npm run docs:lint     # the gate
+npm run docs:report   # what is still missing, grouped by field
+npm run docs:graph    # the whole graph as JSON
+```
 
 ## Usage
 
