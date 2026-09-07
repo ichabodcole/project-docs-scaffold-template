@@ -5,8 +5,9 @@
 // Copied, not shared. There is no package behind this yet and three repos is
 // too few to abstract across; the copy is the honest state until a fourth one
 // wants it. Keep this file byte-identical to its source so a future extraction
-// is a move, not a merge: project-specific behaviour goes in `docs/lint.ts`
-// through the `extraChecks` seam, never in here.
+// is a move, not a merge: project-specific behaviour goes in the consuming
+// repo's rules layer — `scripts/pdocs/lint/rules.ts` here — through the
+// `extraChecks` seam, never in here.
 //
 // ONE ADDITION: four cases in `stripCode` covering multi-backtick fences, the
 // first divergence in `index.ts`. They belong back in agent-cli-conformance

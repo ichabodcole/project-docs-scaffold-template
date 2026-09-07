@@ -91,11 +91,14 @@ good playbook usually includes:
 ## File Naming
 
 - `short-topic-playbook.md`
+- The `-playbook` suffix is part of the name, not a hint: every file in this
+  folder carries it, so a link to one is recognisable as a playbook without
+  opening it.
 - Examples:
   - `feature-flag-rollout-playbook.md`
   - `db-migration-playbook.md`
   - `api-integration-playbook.md`
-  - `adding-and-consuming-a-new-db-entity.md`
+  - `adding-and-consuming-a-new-db-entity-playbook.md`
 
 ## Template
 

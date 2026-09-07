@@ -158,30 +158,112 @@ Some plugin skills expect specific content in a project's root `AGENTS.md` /
 `CLAUDE.md` — conventions that live outside `docs/` structure entirely, so
 they're never covered by the version-tracked migration system above. For each
 row in the `## Root-Level Conventions` table below, run its check against root
-`AGENTS.md`/`CLAUDE.md`. If the check finds nothing, present that row's
-documented example content (in the matching subsection below the table) and ask
-where they'd like it added.
+`AGENTS.md`/`CLAUDE.md`. **From the repository root** — every check uses
+relative paths.
+
+For each row, in order:
+
+1. **If the row states a precondition, test it first.** A precondition that is
+   false means the row does not apply to this project — skip the row entirely,
+   and do not run its check. (Today only `Documentation CLI pointer` has one:
+   the CLI must be installed, or the blurb points at a file that isn't there.)
+2. **Run the check. It exits 0 when the convention is already satisfied**, and
+   the row is done.
+3. **A non-zero exit is the signal.** Present that row's documented example
+   content (in the matching subsection below the table) and ask where they'd
+   like it added.
+
+Note the polarity, because the `## Available Migrations` table ten lines further
+down uses the **opposite** one: an `Applies If` there is true when work is still
+needed; a `Check` here is true when no work is needed.
 
 All of these are recommendations, not required steps — the user may prefer to
 word it differently or place it in a different file. Present the blurb, don't
 apply it unasked.
 
-Checking every row unconditionally is intentional — there's no reliable way for
-this skill to detect exactly which version of a plugin is installed in the
-current environment, and it isn't needed for correctness: recommending a
-convention to someone who hasn't yet upgraded to the plugin version that uses it
-is harmless (inert until they do), while failing to recommend it to someone who
-needs it is the real risk. The table's "Introduced In" column is informational
-only, for humans reading it — not something this step branches on.
+Checking every row regardless of **plugin version** is intentional — there's no
+reliable way for this skill to detect exactly which version of a plugin is
+installed in the current environment, and it isn't needed for correctness:
+recommending a convention to someone who hasn't yet upgraded to the plugin
+version that uses it is harmless (inert until they do), while failing to
+recommend it to someone who needs it is the real risk. The table's "Introduced
+In" column is informational only, for humans reading it — not something this
+step branches on. A **precondition** is a different thing and does gate a row:
+it tests the project's own state, not which plugin version is installed.
 
 ### Step 7: Verify
 
-Run a final check that no stale references to old structure remain:
+Each migration file carries its own Verification section, and Step 4 ran it.
+This step is the part **every** upgrade path ends with, whichever migrations
+applied: the tooling is installed, the gate runs through it, and the two version
+markers agree. Run it from the repository root.
 
 ```bash
-# Check for references specific to the migration
-# (each migration file lists what to grep for)
+# 1. The CLI is installed and runnable
+ls scripts/pdocs/cli.ts && bun scripts/pdocs/cli.ts --version
+
+# 2. The gate runs through it, and is clean
+bun scripts/pdocs/cli.ts check --format text
+
+# 3. The `docs:*` scripts resolve to the CLI, with the format pinned.
+#    Guarded, because a project with no package.json is fine — the direct
+#    form above is the gate, and these scripts are a convenience over it.
+if [ -f package.json ]; then
+  grep -q 'pdocs/cli.ts check --format text' package.json  && echo "docs:lint pinned"
+  grep -q 'pdocs/cli.ts report --format text' package.json && echo "docs:report pinned"
+  grep -q 'pdocs/cli.ts graph --format json' package.json  && echo "docs:graph pinned"
+  npm run docs:lint --silent
+fi
+
+# 4. The two version markers agree
+grep docs_version docs/README.md
+[ -f .project-docs.json ] && grep '"version"' .project-docs.json
 ```
+
+Expect a version string from `--version`, `docs-lint: clean` twice (once
+directly, once through `npm run docs:lint`), three `pinned` lines, and one
+version value in both markers. A missing `pinned` line is a script body that was
+not rewritten, or was rewritten without its `--format` — which is invisible
+until CI hands somebody a JSON blob.
+
+**Stale-reference greps are not here on purpose.** Each migration names the
+strings it made stale and greps for them in its own Verification section — those
+are per-migration and Step 4 ran them. What is common to every path is that the
+tool exists, answers, and agrees with the markers.
+
+**If check 1 fails and `docs/SCHEMA.md` exists, no migration claimed this
+project.** `v2.6-to-v2.7`'s presence check is `[ ! -f docs/SCHEMA.md ]` and
+`v2.7-to-v2.8`'s is `[ -f docs/lint.ts ]` — both false for a tree that has the
+frontmatter layer but never got the tooling, so Step 3 dropped every candidate
+and Step 4 did nothing. It arises from a partial adoption rather than from a
+version step: `docs/` copied across from a generated project without `scripts/`,
+or the current-directory cookiecutter install interrupted before it moved
+`scripts/` up, or `docs/lint.ts` deleted in a cleanup with nothing put in its
+place.
+
+There is no migration row for it, because the repair is a subset of one that
+exists: [v2.7-to-v2.8](migrations/v2.7-to-v2.8.md). Run exactly these steps of
+it, and no others:
+
+| Step | Do                                                   | Note                                                                                                                        |
+| ---- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 2    | Install Bun and cookiecutter                         | Bun is what runs the CLI at all                                                                                             |
+| 3    | Generate the scaffold, resolve `$SCAFFOLD`           | Re-derive it in every shell — see that step's note                                                                          |
+| 4    | Copy `scripts/pdocs/`, refresh `scripts/docs-lint/`  | The actual repair                                                                                                           |
+| 6    | Rewrite the `docs:*` scripts                         | Skip if there is no `package.json`                                                                                          |
+| 7    | Add `scripts/**/*.ts` to `tsconfig.json`'s `include` | Skip if there is no `tsconfig.json`                                                                                         |
+| 8    | Add the `kickoff` row to `docs/SCHEMA.md`            | **Check first:** `grep -q kickoff docs/SCHEMA.md`. A `docs/` copied from a current scaffold already has the row; skip if so |
+| 9    | Refresh the templates **and `docs/AGENTS.md`**       | Both halves. The second is what makes the docs tree's entry point name the CLI                                              |
+| 12   | `pdocs check` and `bun test`                         | The repair's own gate                                                                                                       |
+
+Steps **1, 5, 10, 11 and 13 do not apply**: 1 and 11 are hygiene you can do
+anyway, 5 has no `docs/lint.ts` to delete, 10 has no reference to it to
+re-point, and 13's version markers are already whatever they were — this is a
+repair, not a version step, so do not move them.
+
+Then **re-run this step, and Step 6**. Step 6 ran before the CLI existed, so its
+`Documentation CLI pointer` row was skipped by its own precondition and root
+`AGENTS.md` has not been looked at.
 
 ## Available Migrations
 
@@ -197,6 +279,7 @@ list, this settles it.
 | [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | `[ ! -d docs/briefs ]`                                           | Add briefs document type, update pipeline lifecycle to start with Brief                                                                                                      |
 | [migrations/v2.5-to-v2.6.md](migrations/v2.5-to-v2.6.md) | 2.5     | 2.6.0 | `ls -d docs/*/archive/ 2>/dev/null \| grep -q .`                 | Rename `archive/` → `_archive/` for consistent sort-to-top behavior                                                                                                          |
 | [migrations/v2.6-to-v2.7.md](migrations/v2.6-to-v2.7.md) | 2.6     | 2.7.0 | `[ ! -f docs/SCHEMA.md ]`                                        | Add the OKF frontmatter layer: frontmatter on every document, `SCHEMA.md`, `index.md`, a two-tier lint that gates commits and CI, the `cycle` type, and `.project-docs.json` |
+| [migrations/v2.7-to-v2.8.md](migrations/v2.7-to-v2.8.md) | 2.7     | 2.8.0 | `[ -f docs/lint.ts ]`                                            | Replace the single-file `docs/lint.ts` with the `pdocs` CLI under `scripts/pdocs/`; re-point the `docs:*` scripts, `tsconfig`, templates and every reference to it           |
 
 ## Root-Level Conventions
 
@@ -210,16 +293,28 @@ content a specific **plugin** (e.g. `project-docs`, `recipes`) expects in root
 above. Checked unconditionally by Step 6 regardless of installed plugin version
 (see Step 6 for why).
 
-A check's exit status is what matters, not its stderr — if only one of
-`AGENTS.md`/`CLAUDE.md` exists (common; e.g. this repo's own `CLAUDE.md` is just
-a one-line pointer to `AGENTS.md`), grep prints a harmless "no such file"
-warning for the missing one and still succeeds on the file that exists. Redirect
-stderr (`2>/dev/null`) if that noise is distracting; don't read it as a failure.
+**Every check below reads one concatenated stream —
+`grep -q PATTERN <(cat AGENTS.md CLAUDE.md 2>/dev/null)` — and that shape is
+load-bearing.** Most projects have only one of the two files (this repo's own
+`CLAUDE.md` is a one-line pointer to `AGENTS.md`; plenty of projects have no
+`CLAUDE.md` at all), and handing grep a filename that does not exist is an
+**error**, not a non-match. What grep does with that varies by implementation
+and it is not safe to assume: measured on the same machine, on a file that
+matches with the second file missing, BSD `grep -q` exits 0 while the `ugrep -G`
+wrapper Claude Code puts on `grep` exits **2** — so the same check passes for a
+human at a terminal and reports "recommend it" for the agent running this skill.
+`grep -l` exits 2 in both, having printed the matching filename, which is worse:
+it looks like it worked.
 
-| Convention                 | Introduced In               | Check                                                                                        |
-| -------------------------- | --------------------------- | -------------------------------------------------------------------------------------------- |
-| Docs structure pointer     | project-docs (all versions) | `grep -l "docs/README\|docs/memories\|documentation.*docs/" AGENTS.md CLAUDE.md 2>/dev/null` |
-| `## Branch Landing Policy` | project-docs 3.1.0          | `grep -q '^## Branch Landing Policy' AGENTS.md CLAUDE.md 2>/dev/null`                        |
+`cat` absorbs the missing file, grep sees one stream and one file that exists,
+and the exit status is 0 or 1 with no third state. Verified identical under both
+greps. Keep new rows on this shape; do not pass two filenames to grep.
+
+| Convention                 | Introduced In               | Check                                                                                                                                                                                          |
+| -------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Docs structure pointer     | project-docs (all versions) | `grep -q "docs/README\|docs/memories\|documentation.*docs/" <(cat AGENTS.md CLAUDE.md 2>/dev/null)`                                                                                            |
+| `## Branch Landing Policy` | project-docs 3.1.0          | `grep -q '^## Branch Landing Policy' <(cat AGENTS.md CLAUDE.md 2>/dev/null)`                                                                                                                   |
+| Documentation CLI pointer  | project-docs 3.8.0          | `grep -qE 'pdocs(/cli\.ts)? new' <(cat AGENTS.md CLAUDE.md 2>/dev/null) && ! grep -q 'docs/lint\.ts' <(cat AGENTS.md CLAUDE.md 2>/dev/null)` — **precondition:** `[ -f scripts/pdocs/cli.ts ]` |
 
 ### Docs structure pointer
 
@@ -237,8 +332,8 @@ type guide.
 
 Every document carries a frontmatter block, and
 [docs/SCHEMA.md](./docs/SCHEMA.md) is the contract for it — which fields, which
-vocabularies, and what `bun docs/lint.ts` checks. Read it before creating or
-editing a document.
+vocabularies, and what the lint (`bun scripts/pdocs/cli.ts check`) checks. Read
+it before creating or editing a document.
 
 For quick onboarding on recent work, start with
 [docs/memories/](./docs/memories/).
@@ -317,6 +412,54 @@ Run this before deciding a strategy:
 ```
 ````
 
+### Documentation CLI pointer
+
+**Precondition — test this before the row's check:**
+
+```bash
+[ -f scripts/pdocs/cli.ts ] && echo "row applies" || echo "skip this row"
+```
+
+A project without the CLI is not one to recommend this to; the blurb would name
+a file it does not have. That project's problem is the missing tooling, which is
+Step 7's check 1 — and once Step 7's repair installs it, **come back and run
+this row**, because a root `AGENTS.md` written against v2.7 will both lack the
+section and still name `bun docs/lint.ts`.
+
+From v2.8 the scaffold ships a CLI at `scripts/pdocs/cli.ts`, and `pdocs new` —
+not a text editor — is how a document gets created: it owns the folder, the
+filename shape, the frontmatter and, for a library page, its catalog line in
+`docs/index.md`. An agent that never learns this writes the file by hand and
+fails the gate on frontmatter it had no way to know about.
+
+The docs-structure-pointer blurb above does not cover it — it names the gate,
+not the writer — so a project can pass that check and still have nothing
+anywhere that says a CLI exists. Hence a separate row. If the check exits
+non-zero, recommend a section like this:
+
+````markdown
+## Documentation CLI
+
+Documents under `docs/` are created with the `pdocs` CLI, not by hand:
+
+```bash
+bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
+```
+
+The type decides the folder, the filename shape and the template, and the CLI
+fills the frontmatter — for a library page it also writes the catalog line in
+`docs/index.md`. The same CLI reads the tree: `check` (the gate), `find`,
+`backlinks`, `orphans`.
+
+`bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
+`docs/SCHEMA.md` is the frontmatter contract the gate enforces.
+````
+
+The check's second clause is there for the other half of the problem: a project
+whose `AGENTS.md` was written against v2.7 still names `bun docs/lint.ts`, a
+file that no longer exists, and a check that only asked "is the CLI mentioned?"
+would call that satisfied.
+
 ## Creating New Migration Guides
 
 When the scaffold template releases structural changes:
@@ -376,7 +519,18 @@ When a plugin skill starts depending on new content in root
 through the migration path above):
 
 1. Add a row to the `## Root-Level Conventions` table above: convention name,
-   introducing plugin@version, the exact check command.
+   introducing plugin@version, the exact check command. **The check must exit
+   non-zero on a _stale_ copy of the convention, not only on an absent one** —
+   an `AGENTS.md` written against the previous version, still naming a command
+   or a path that no longer exists, needs the recommendation as much as one that
+   never had the section. A single `grep -q` for the new content usually is not
+   that check; the `Documentation CLI pointer` row shows the two-clause form.
+   Use the `grep -q PATTERN <(cat AGENTS.md CLAUDE.md 2>/dev/null)` shape, never
+   two filenames, for the reason given above the table. Construct the cases —
+   absent, stale, correct, **and one project that has only `AGENTS.md`** — and
+   run the candidate check against each **in this environment's shell**, not
+   from memory of what grep does. If the convention names a tool or a file a
+   project might not have, give the row a **precondition** too.
 2. Add a matching subsection below the table: what the convention is for, and
    its example content (worked example, plus any alternate forms — a
    file-pointer, a runnable check — the way `## Branch Landing Policy` does

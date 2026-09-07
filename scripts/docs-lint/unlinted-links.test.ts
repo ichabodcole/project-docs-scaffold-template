@@ -5,8 +5,9 @@
 // Copied, not shared. There is no package behind this yet and three repos is
 // too few to abstract across; the copy is the honest state until a fourth one
 // wants it. Keep this file byte-identical to its source so a future extraction
-// is a move, not a merge: project-specific behaviour goes in `docs/lint.ts`
-// through the `extraChecks` seam, never in here.
+// is a move, not a merge: project-specific behaviour goes in the consuming
+// repo's rules layer — `scripts/pdocs/lint/rules.ts` here — through the
+// `extraChecks` seam, never in here.
 //
 // EXCEPTION: the `what it is exempt from` cases name this repo's prefixes,
 // because that is what the module under test now excludes. Everything else is
@@ -68,7 +69,7 @@ describe("what it is exempt from, and why each exemption has to hold", () => {
     expect(linkProblemsFor(ROOT, [p])).toEqual([]);
   });
 
-  // docs/lint.ts already resolves links across the whole of docs/. Reporting them here would
+  // The rules layer already resolves links across the whole of docs/. Reporting them here would
   // print every finding twice and make the count meaningless.
   test("docs/ is left to the lint that already walks it", () => {
     const p = put("docs/projects/x/proposal.md", "See [x](./nowhere.md).\n");

@@ -10,13 +10,13 @@ a document is checked**, not in where it lives.
 ## What this layer is
 
 Every document under `docs/` carries [OKF](https://openknowledgeformat.org)
-frontmatter, and `docs/lint.ts` checks it. That gives two things nothing else
+frontmatter, and `scripts/pdocs/` checks it. That gives two things nothing else
 here gives:
 
 - **A graph.** Links, `related:` keys and tags are edges.
-  `bun docs/lint.ts --json` emits the whole thing — backlinks, hubs, orphans —
-  so a reader arriving cold can find what relates to what without reading
-  everything.
+  `bun scripts/pdocs/cli.ts graph --format json` emits the whole thing —
+  backlinks, hubs, tags — so a reader arriving cold can find what relates to
+  what without reading everything.
 - **A contract that is enforced.** Each folder's README states how its documents
   work. A contract nothing checks is a comment that lies, and this tree has had
   several: `**Status:** Approved (in flight)` was invented by hand in three
@@ -178,8 +178,8 @@ generated: { by: claude-opus-5, at: 2026-09-03 } # OKF §5.2, replaces `timestam
 
 ## Lifecycle by type
 
-This table is the source of truth for both vocabularies. `docs/lint.ts` parses
-it and fails if its own `SPEC` disagrees, so the prose cannot drift from the
+This table is the source of truth for both vocabularies. The lint parses it and
+fails if the registry it enforces disagrees, so the prose cannot drift from the
 gate — which is the way round that drift always goes.
 
 `—` means the type carries no `lifecycle` at all, and writing one is an error.
@@ -204,7 +204,8 @@ gate — which is the way round that drift always goes.
 | `plan`              | `draft` · `active` · `completed` · `abandoned`                                 | thin  | `projects/*/plan.md`              |
 | `design-resolution` | `draft` · `resolved` · `superseded`                                            | thin  | `projects/*/design-resolution.md` |
 | `test-plan`         | `draft` · `ready` · `active` · `completed`                                     | thin  | `projects/*/test-plan.md`         |
-| `handoff`           | —                                                                              | thin  | `projects/*/DEV_KICKOFF.md`       |
+| `kickoff`           | —                                                                              | thin  | `projects/*/DEV_KICKOFF.md`       |
+| `handoff`           | —                                                                              | thin  | `projects/*/handoff.md`           |
 | `report`            | —                                                                              | thin  | `reports/`                        |
 | `session`           | —                                                                              | thin  | `projects/*/sessions/`            |
 | `artifact`          | —                                                                              | thin  | anything else in a project folder |
@@ -217,8 +218,9 @@ playbook can be.
 **Why sessions, reports and artifacts carry none.** They are frozen records of a
 moment. `generated.at` is their only date, and they are never brought up to date
 — a `lifecycle` on a session invites an edit that destroys what the document is
-for. A `handoff` is the same: a kickoff briefing, written once and read at the
-start.
+for. A `kickoff` is the same: a briefing written once and read at the start of
+implementation. A `handoff` is its bookend — what shipping the work requires
+once it is built, written at finalization and read at deploy.
 
 `design-resolution` and `test-plan` do hold state, because a design question is
 open until it is answered and a list of scenarios is written before it is run.
@@ -293,15 +295,16 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 - **A new library page earns its place** when a subject is real (system pages)
   or when an insight recurs and a second page needs it (practice pages).
   Otherwise it is a tag or a paragraph on a page that already exists.
-- **Give the lint teeth, and check that you did.** Run `bun docs/lint.ts` from a
-  pre-commit hook and from CI. A scaffolded project arrives with the lint and
-  **without** the wiring — there is no hook and no workflow until you add them,
-  so this bullet is a thing to do, not a description of what you have. Until it
-  is done, the lint is a command someone has to remember.
+- **Give the lint teeth, and check that you did.** Run
+  `bun scripts/pdocs/cli.ts check` from a pre-commit hook and from CI. A
+  scaffolded project arrives with the lint and **without** the wiring — there is
+  no hook and no workflow until you add them, so this bullet is a thing to do,
+  not a description of what you have. Until it is done, the lint is a command
+  someone has to remember.
 
 ## Verification bar
 
-- `bun docs/lint.ts` exits 0.
+- `bun scripts/pdocs/cli.ts check` exits 0.
 - A blank-context reader can find the page from `index.md` and follow its links
   without hitting a 404. The lint enforces the links; reachability past that is
   a read.
@@ -311,9 +314,9 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 ## Running the lint
 
 ```bash
-bun docs/lint.ts            # the gate
-bun docs/lint.ts --report   # what is missing — the backfill worklist
-bun docs/lint.ts --json     # the whole graph as JSON
+bun scripts/pdocs/cli.ts check                # the gate
+bun scripts/pdocs/cli.ts report               # what is missing — the backfill worklist
+bun scripts/pdocs/cli.ts graph --format json  # the whole graph as JSON
 ```
 
 If the project defines them, `npm run docs:lint`, `docs:report` and `docs:graph`

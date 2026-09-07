@@ -200,9 +200,9 @@ grep -H '^lifecycle:' "$ROOT/docs/backlog/$ITEM.md"
 ```
 
 `docs/SCHEMA.md`'s **Lifecycle by type** table is the source of truth for which
-values exist — `docs/lint.ts` parses that table and fails if it disagrees, so it
-is the copy that cannot drift. Read it rather than trusting the summary here.
-The terminal values, as of writing:
+values exist — the lint parses that table and fails if it disagrees, so it is
+the copy that cannot drift. Read it rather than trusting the summary here. The
+terminal values, as of writing:
 
 | Type                | Terminal `lifecycle`                                    |
 | ------------------- | ------------------------------------------------------- |
@@ -282,7 +282,7 @@ name at least one thing that was cut, or learned, that appears nowhere in
 **5. Verify, then rejoin at Step 6.**
 
 ```bash
-bun docs/lint.ts && echo "cycle accepted"
+bun scripts/pdocs/cli.ts check && echo "cycle accepted"
 grep -c '^lifecycle: active' "$ROOT"/docs/cycles/*.md | grep -v ':0$'
 ```
 
@@ -859,8 +859,9 @@ silent no-op that reads like a failure.
 - [ ] The document is more accurate than it was, whether or not anything moved
 - [ ] No tracking format was imposed on a document that didn't use it
 - [ ] No free-form status was silently normalized
-- [ ] Where the project has the frontmatter layer, `bun docs/lint.ts` exits 0
-      after the run (or reports only problems that were already there)
+- [ ] Where the project has the frontmatter layer,
+      `bun scripts/pdocs/cli.ts check` exits 0 after the run (or reports only
+      problems that were already there)
 
 **Project and backlog runs:**
 
@@ -912,11 +913,11 @@ item 4.
      | grep -vE "^docs/projects/_archive/"
    ```
 
-4. **The lint**, where the project has it — `bun docs/lint.ts`. It is the only
-   check that reads what you wrote into frontmatter, and the only one that runs
-   at all on a cycle. A rewrite that produced a link to nowhere, a `lifecycle`
-   outside its type's vocabulary, or a second `active` cycle surfaces here and
-   nowhere in the three checks above.
+4. **The lint**, where the project has it — `bun scripts/pdocs/cli.ts check`. It
+   is the only check that reads what you wrote into frontmatter, and the only
+   one that runs at all on a cycle. A rewrite that produced a link to nowhere, a
+   `lifecycle` outside its type's vocabulary, or a second `active` cycle
+   surfaces here and nowhere in the three checks above.
 
 ## Risks & Gotchas
 

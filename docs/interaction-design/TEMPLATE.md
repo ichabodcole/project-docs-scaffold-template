@@ -78,9 +78,9 @@ considered]
 
 ## Related Documentation
 
-- [Related flow](./other-flow.md)
-- [Technical architecture](../architecture/feature-architecture.md)
-- [Original proposal](../projects/project-name/proposal.md)
+- `[Related flow](./other-flow.md)`
+- `[Technical architecture](../architecture/feature-architecture.md)`
+- `[Original proposal](../projects/project-name/proposal.md)`
 
 ---
 

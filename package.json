@@ -9,15 +9,16 @@
     "validate:skills": "uv run scripts/validate-skills-dist.py",
     "format": "prettier --write \"**/*.md\"",
     "format:check": "prettier --check \"**/*.md\"",
-    "docs:lint": "bun docs/lint.ts",
-    "docs:graph": "bun docs/lint.ts --json",
-    "docs:report": "bun docs/lint.ts --report",
+    "docs:lint": "bun scripts/pdocs/cli.ts check --format text",
+    "docs:graph": "bun scripts/pdocs/cli.ts graph --format json",
+    "docs:report": "bun scripts/pdocs/cli.ts report --format text",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check": "npm run format:check && npm run docs:lint && npm run check:mirror && npm run test",
+    "check": "npm run format:check && npm run docs:lint && npm run check:mirror && npm run check:dist && npm run test",
     "prepare": "husky",
     "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d",
-    "check:mirror": "./scripts/check-mirror.sh"
+    "check:mirror": "./scripts/check-mirror.sh",
+    "check:dist": "./scripts/check-dist.sh"
   },
   "devDependencies": {
     "@slidev/cli": "^52.14.1",

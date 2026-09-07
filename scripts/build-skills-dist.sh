@@ -6,11 +6,17 @@
 # with OpenPackage-compatible directory structure and generated manifests.
 #
 # Usage: ./scripts/build-skills-dist.sh
+#
+# `DIST_DIR` overrides the output location. It exists so `scripts/check-dist.sh`
+# can build a second copy somewhere disposable and diff it against the committed
+# one; nothing else should set it. The build is otherwise location-independent —
+# see the `--config` note on the Prettier run below, which is what makes that
+# true.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DIST_DIR="$REPO_ROOT/dist"
+DIST_DIR="${DIST_DIR:-$REPO_ROOT/dist}"
 PLUGINS_DIR="$REPO_ROOT/plugins"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -273,7 +279,13 @@ fi
 # ── Format ───────────────────────────────────────────────────────────────────
 
 if command -v npx &> /dev/null; then
-    npx prettier --write "$DIST_DIR"/**/*.md > /dev/null 2>&1
+    # `--config` is REQUIRED, not tidiness. Prettier resolves its config from
+    # each FILE's directory, so a build into a temp dir (see `DIST_DIR` above)
+    # finds no `.prettierrc`, falls back to `proseWrap: preserve`, and reflows
+    # the generated READMEs differently from the committed ones — which would
+    # make `check:dist` report drift on every run and never on a real one.
+    npx prettier --write --config "$REPO_ROOT/.prettierrc" \
+        "$DIST_DIR"/**/*.md > /dev/null 2>&1
     info "Formatted markdown files with Prettier"
 fi
 

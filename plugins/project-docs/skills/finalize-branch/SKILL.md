@@ -239,12 +239,12 @@ pnpm run check-types
 pnpm run test
 ```
 
-**If the project has a documentation lint** — `docs/lint.ts` exists at the repo
-root (the docs root is `docsRoot` in `.project-docs.json`, default `docs/`) —
-run it too, and treat it as part of the same gate:
+**If the project has a documentation lint** — `scripts/pdocs/cli.ts` exists at
+the repo root (the docs root is `docsRoot` in `.project-docs.json`, default
+`docs/`) — run it too, and treat it as part of the same gate:
 
 ```bash
-bun docs/lint.ts
+bun scripts/pdocs/cli.ts check
 ```
 
 Run it **again in Step 7**, once the session document, the memory and any other
@@ -457,9 +457,9 @@ perform, not recommendations to offer. Do them without asking.
      still at `active` does **not** close it. `backlog/<item>` is a single file.
 
      Which values count as terminal is in `docs/SCHEMA.md`'s **Lifecycle by
-     type** table. Read it there rather than from memory; `docs/lint.ts` parses
-     that table and fails if it disagrees, which makes it the one copy that
-     can't drift.
+     type** table. Read it there rather than from memory; the lint parses that
+     table and fails if it disagrees, which makes it the one copy that can't
+     drift.
 
      Read the states from the scoped documents' frontmatter, not from this
      branch. If any entry is still open, the cycle is still open: say which
@@ -493,7 +493,7 @@ recoverable and reviewable as its own step before any history rewriting.
 (Step 3):
 
 ```bash
-bun docs/lint.ts
+bun scripts/pdocs/cli.ts check
 ```
 
 This is the run that checks what you just wrote — the session document, the

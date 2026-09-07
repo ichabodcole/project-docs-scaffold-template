@@ -157,9 +157,9 @@ approach]
 
 Links to related playbooks, architecture docs, or best practices
 
-- [Related playbook 1](./other-playbook.md)
-- [Architecture doc](../architecture/doc-name.md)
-- [External resource](URL)
+- `[Related playbook 1](./other-playbook.md)`
+- `[Architecture doc](../architecture/doc-name.md)`
+- `[External resource](URL)`
 
 ---
 

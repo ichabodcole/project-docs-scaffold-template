@@ -5,8 +5,9 @@
 // Copied, not shared. There is no package behind this yet and three repos is
 // too few to abstract across; the copy is the honest state until a fourth one
 // wants it. Keep this file byte-identical to its source so a future extraction
-// is a move, not a merge: project-specific behaviour goes in `docs/lint.ts`
-// through the `extraChecks` seam, never in here.
+// is a move, not a merge: project-specific behaviour goes in the consuming
+// repo's rules layer — `scripts/pdocs/lint/rules.ts` here — through the
+// `extraChecks` seam, never in here.
 //
 // EXCEPTION: `ALREADY_LINTED`, `GENERATED`, and the module comment
 // that describes them are this repo's layout rather than the source's. The code
@@ -15,7 +16,7 @@
 
 // Link and anchor resolution for the authored Markdown no other lint reads.
 //
-// `docs/lint.ts` walks all of `docs/`. This reads EVERYTHING ELSE git tracks — not a named list
+// The rules layer walks all of `docs/`. This reads EVERYTHING ELSE git tracks — not a named list
 // of root documents. The corpus is `git ls-files -- '*.md'` minus that prefix, the build product
 // and the scaffold payload (below) and the generated CHANGELOG.md, so README.md, AGENTS.md,
 // CLAUDE.md, every page under `plugins/project-docs/` — skills, commands, agents, migration

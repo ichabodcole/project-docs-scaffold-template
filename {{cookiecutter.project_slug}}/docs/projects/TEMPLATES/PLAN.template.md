@@ -135,8 +135,8 @@ feature work won't need this.]
 **Related Documents:**
 
 - [Proposal](./proposal.md)
-- [Architecture docs](../../architecture/doc-name.md)
-- [Sessions](./sessions/) (created during implementation)
+- `[Architecture docs](../../architecture/doc-name.md)`
+- `[Sessions](./sessions/)` (created during implementation)
 
 ---
 

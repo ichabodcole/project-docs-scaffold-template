@@ -327,7 +327,7 @@ end with "not yet" — that's a normal outcome, not a failed one.
 
 ## Frontmatter
 
-Every document here carries OKF frontmatter, and `bun docs/lint.ts` checks it.
+Every document here carries OKF frontmatter, and `npm run docs:lint` checks it.
 The whole contract — the fields, the two tiers of strictness, and the per-type
 `lifecycle` vocabularies — is [SCHEMA.md](./SCHEMA.md). Read it once before
 adding a document; the templates already carry the right block.
@@ -350,6 +350,19 @@ npm run docs:lint     # the gate
 npm run docs:report   # what is still missing, grouped by field
 npm run docs:graph    # the whole graph as JSON
 ```
+
+Those three are wrappers over the `pdocs` CLI, which is also what **creates** a
+document — folder, filename, frontmatter and, for a library page, its
+[index.md](./index.md) line:
+
+```bash
+bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
+bun scripts/pdocs/cli.ts help          # every command, flag and exit code
+```
+
+The direct `bun scripts/pdocs/cli.ts …` form always works; the `npm run` scripts
+exist only where someone added them. [AGENTS.md](./AGENTS.md) has the short
+version for an agent entering this tree.
 
 ## Usage
 

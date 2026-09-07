@@ -1,42 +1,48 @@
-#!/usr/bin/env bun
-// The documentation gate.
+// The rules the documentation gate enforces.
 //
-//   bun docs/lint.ts            lint everything; non-zero exit on any problem
-//   bun docs/lint.ts --report   what is missing, grouped by field; always exits 0
-//   bun docs/lint.ts --json     the library's knowledge graph
+// Every check lives here as a function over a `Ctx`, returning problems as
+// strings; `collect.ts` assembles them into a report and the CLI prints it.
+// Nothing in this file writes to stdout — a rule that prints cannot be reused
+// by a command that owns its own output envelope.
 //
 // Two tiers, keyed to folders rather than to location — see docs/SCHEMA.md.
 // The LIBRARY (architecture, specifications, interaction-design, playbooks,
-// lessons-learned, memories, and the two root pages) is checked by the ported
+// lessons-learned, memories, and the three root pages) is checked by the ported
 // core, which additionally enforces catalog reachability, `related` resolution
 // and the graph. The WORKBENCH (backlog, briefs, investigations, projects,
 // reports, fragments, cycles) is checked by `thinTier` below: presence and
 // vocabulary, and links, and nothing about reachability — those documents are
 // written once, they close, and nobody returns to them.
 //
-// Everything project-specific lives in this file. `scripts/docs-lint/` is a
-// copy of a portable core and stays that way.
+// Everything project-specific lives in this file and in `registry.ts`, which
+// holds the type system as data and which every check below reads rather than
+// carrying its own copy. `scripts/docs-lint/` is a copy of a portable core and
+// stays that way.
 
 import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { basename, dirname, join, relative } from "node:path";
+import { type ProjectDocsConfig, loadConfig } from "../../docs-lint/config.ts";
 import {
-  type ProjectDocsConfig,
-  loadConfig,
-} from "../scripts/docs-lint/config.ts";
-import {
+  type DocsLintReport,
   type LintPage,
   checkLinks,
+  collectDocsLint,
   parseFrontmatter,
-  runDocsLint,
   stripInlineComment,
   walkMarkdown,
   yamlList,
-} from "../scripts/docs-lint/index.ts";
+} from "../../docs-lint/index.ts";
 import {
-  linkProblemsFor,
-  trackedMarkdown,
-} from "../scripts/docs-lint/unlinted-links.ts";
+  DURABLE_TYPE,
+  PROJECT_FILE_TYPE,
+  PROJECT_SPEC,
+  type RegistryRow,
+  ROOT_PAGE_TYPE,
+  SPEC,
+  buildRegistry,
+  defaultRegistryIndex,
+  registryIndex,
+} from "./registry.ts";
 
 /**
  * Where to lint, and by what rules.
@@ -65,8 +71,12 @@ export function context(repoRoot: string): Ctx {
  * Meta-documents ABOUT the tree rather than entries in its type system. They
  * carry no frontmatter; only their links are checked, because a folder contract
  * with a dead pointer misroutes the next document written.
+ *
+ * Exported because `pages.ts` has to skip exactly these, and a second list of
+ * meta-document names would drift from this one the first time a fifth is
+ * added.
  */
-const CONTRACT_BASENAMES = new Set([
+export const CONTRACT_BASENAMES = new Set([
   "README.md",
   "AGENTS.md",
   "CLAUDE.md",
@@ -90,93 +100,22 @@ export function excluder(ctx: Ctx): (repoRelative: string) => boolean {
   return (repoRelative) => globs.some((g) => g.match(repoRelative));
 }
 
-/** Library folders, and the `type` each one's pages carry.
- *  Exported: the template test and the v2.6-to-v2.7 codemod read the same map. */
-export const DURABLE_TYPE: Record<string, string> = {
-  architecture: "architecture",
-  specifications: "specification",
-  "interaction-design": "interaction",
-  playbooks: "playbook",
-  "lessons-learned": "lesson",
-  memories: "memory",
-};
-
-/** Library pages that live at the docs root rather than in a folder. */
-export const ROOT_PAGE_TYPE: Record<string, string> = {
-  "PROJECT_MANIFESTO.md": "manifesto",
-  "PROJECT-SUMMARY.md": "summary",
-  "index.md": "index",
-};
-
 /**
- * A project folder's type is decided by FILENAME, because a project is one
- * feature's whole record and its documents are of different kinds.
- * Anything unrecognised is an `artifact` — a findings note, a review, a
- * prototype writeup — which is what those files are.
- */
-export const PROJECT_FILE_TYPE: Record<string, string> = {
-  "proposal.md": "proposal",
-  "plan.md": "plan",
-  "design-resolution.md": "design-resolution",
-  "test-plan.md": "test-plan",
-  "DEV_KICKOFF.md": "handoff",
-};
-
-/**
- * The workbench contract, folder by folder.
+ * The type system's source tables, and the registry that unifies them, live in
+ * `registry.ts`.
  *
- * `lifecycle: null` means the type carries no lifecycle and writing one is an
- * error — a frozen record whose only date is `generated.at`. See SCHEMA.md's
- * "Lifecycle by type" table, which `schemaTableChecks` proves equal to this.
+ * They are re-exported here because this is the path that imports them: the
+ * v2.6-to-v2.7 codemod's test reads all five from `rules.ts` to prove its own
+ * copies are equal, and a moved export would have broken a test whose whole
+ * purpose is to notice drift. See `registry.ts` for why the dependency runs the
+ * way it does rather than the other way.
  */
-export const SPEC: Record<
-  string,
-  { type: string; lifecycle: string[] | null; extra?: string[] }
-> = {
-  // `done` is not in the proposal's vocabulary and should have been. The
-  // backlog README describes the real path as open → work it → archive, and
-  // "promoted" is the rarer outcome where an item turns out to need a project.
-  // Without `done` the common case had no word, which is the same failure that
-  // produced `Approved (in flight)` on the proposals.
-  backlog: {
-    type: "backlog",
-    lifecycle: ["open", "done", "promoted", "dropped"],
-  },
-  fragments: { type: "fragment", lifecycle: ["open", "promoted", "dropped"] },
-  briefs: { type: "brief", lifecycle: ["active", "spent"] },
-  investigations: { type: "investigation", lifecycle: ["active", "concluded"] },
-  cycles: {
-    type: "cycle",
-    lifecycle: ["planned", "active", "closed", "abandoned"],
-    extra: ["scope", "after", "appetite", "started", "closed"],
-  },
-  reports: { type: "report", lifecycle: null },
-};
-
-/** Types a project folder can hold, and their vocabularies. */
-export const PROJECT_SPEC: Record<string, { lifecycle: string[] | null }> = {
-  proposal: {
-    lifecycle: [
-      "draft",
-      "approved",
-      "deferred",
-      "implemented",
-      "withdrawn",
-      "superseded",
-    ],
-  },
-  plan: { lifecycle: ["draft", "active", "completed", "abandoned"] },
-  // Both of these were stateless in the first draft of SCHEMA.md, on the
-  // reasoning that they follow their proposal or plan. The templates they
-  // replace disagreed: each carried its own `**Status:**` line, because a
-  // design question is open until it is answered and a scenario list is
-  // written before it is run. Dropping those axes would have deleted
-  // information the tree already tracked.
-  "design-resolution": { lifecycle: ["draft", "resolved", "superseded"] },
-  "test-plan": { lifecycle: ["draft", "ready", "active", "completed"] },
-  handoff: { lifecycle: null },
-  session: { lifecycle: null },
-  artifact: { lifecycle: null },
+export {
+  DURABLE_TYPE,
+  PROJECT_FILE_TYPE,
+  PROJECT_SPEC,
+  ROOT_PAGE_TYPE,
+  SPEC,
 };
 
 /** Library types carry no lifecycle: a living page is current or it is not, and `status` says which. */
@@ -185,8 +124,10 @@ export const DURABLE_TYPES = [
   ...Object.values(ROOT_PAGE_TYPE),
 ];
 
-/** OKF 0.2 §5.4. Required explicitly so a reader never has to know the default. */
-const OKF_STATUS = ["draft", "stable", "deprecated"];
+/** OKF 0.2 §5.4. Required explicitly so a reader never has to know the default.
+ *  Exported because `pdocs new` validates `--status` against it before writing:
+ *  a second copy of three strings is a second thing to keep in step. */
+export const OKF_STATUS = ["draft", "stable", "deprecated"];
 
 /**
  * Required on every workbench document. `tags` is deliberately NOT here: a
@@ -277,12 +218,6 @@ export function libraryFiles(ctx: Ctx): Array<{
   return out;
 }
 
-function vocabularyFor(type: string): string[] | null {
-  if (type in PROJECT_SPEC) return PROJECT_SPEC[type]?.lifecycle ?? null;
-  const spec = Object.values(SPEC).find((s) => s.type === type);
-  return spec ? spec.lifecycle : null;
-}
-
 /**
  * Presence, vocabulary and field hygiene for ONE document. Pure over its inputs
  * so both tiers can call it, which is the whole point: these rules are about
@@ -295,12 +230,21 @@ function vocabularyFor(type: string): string[] | null {
  *
  * Returns the active-cycle path separately, because "at most one" is a fact
  * about the corpus and cannot be decided one file at a time.
+ *
+ * `lifecycle` and `extra` come from the REGISTRY, one lookup for every type.
+ * They used to come from two places that could not answer for the same set:
+ * `vocabularyFor` read `PROJECT_SPEC` then `SPEC`, while `extra` was read from
+ * `SPEC` alone — so an extra field was structurally unavailable to all eight
+ * project-scoped types, and nothing in the code said so. The registry is passed
+ * in rather than rebuilt per document; the default is exact, because neither
+ * field depends on configuration.
  */
 export function documentProblems(
   file: { path: string; rel: string; type: string },
   raw: string,
   docsRoot: string,
-  requireTags: boolean
+  requireTags: boolean,
+  registry: ReadonlyMap<string, RegistryRow> = defaultRegistryIndex()
 ): { problems: string[]; activeCycle: boolean } {
   const { rel, type } = file;
   const problems: string[] = [];
@@ -312,13 +256,14 @@ export function documentProblems(
   }
 
   const fields = parseFrontmatter(m[1] as string);
-  const lifecycle = vocabularyFor(type);
+  const row = registry.get(type);
+  const lifecycle = row?.lifecycle ?? null;
   const required = requireTags ? [...REQUIRED, "tags"] : REQUIRED;
   const allowed = new Set([
     ...REQUIRED,
     ...OPTIONAL,
     ...(lifecycle ? ["lifecycle"] : []),
-    ...(Object.values(SPEC).find((s) => s.type === type)?.extra ?? []),
+    ...(row?.extra ?? []),
   ]);
 
   for (const key of required)
@@ -382,6 +327,7 @@ export function documentProblems(
  * cold-read agent found it by trying the thing the contract forbids.
  */
 export function libraryFieldChecks(ctx: Ctx): string[] {
+  const registry = registryIndex(ctx.config);
   const problems: string[] = [];
   for (const file of libraryFiles(ctx)) {
     const name = basename(file.path);
@@ -391,7 +337,8 @@ export function libraryFieldChecks(ctx: Ctx): string[] {
         file,
         readFileSync(file.path, "utf8"),
         ctx.config.docsRoot,
-        true
+        true,
+        registry
       ).problems
     );
   }
@@ -399,6 +346,7 @@ export function libraryFieldChecks(ctx: Ctx): string[] {
 }
 
 export function thinTier(ctx: Ctx): string[] {
+  const registry = registryIndex(ctx.config);
   const problems: string[] = [];
   const activeCycles: string[] = [];
 
@@ -422,7 +370,7 @@ export function thinTier(ctx: Ctx): string[] {
 
     if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
 
-    const r = documentProblems(file, raw, ctx.config.docsRoot, false);
+    const r = documentProblems(file, raw, ctx.config.docsRoot, false, registry);
     problems.push(...r.problems);
     if (r.activeCycle) activeCycles.push(rel);
   }
@@ -576,12 +524,21 @@ export function hookChecks(pages: LintPage[]): string[] {
   return problems;
 }
 
-export function graphTier(ctx: Ctx, json = false): number {
+/**
+ * The library tier, as data: the ported core's problems and the graph it walked.
+ *
+ * It returned a count and printed as a side effect for as long as the only
+ * caller was a `main()` that printed too. `collect` needs the findings, and
+ * `pdocs graph` needs the graph, so the printing wrapper (`runDocsLint`) is no
+ * longer in the path — the report goes back to whoever asked and they decide
+ * what to render.
+ */
+export function graphTier(ctx: Ctx): DocsLintReport {
   // `skipFiles` is handed a path relative to the docs root; `exclude` globs are
   // written relative to the repository root, which is the only root a person
   // editing `.project-docs.json` can see.
   const excluded = excluder(ctx);
-  return runDocsLint({
+  return collectDocsLint({
     root: ctx.docsRoot,
     types: DURABLE_TYPES,
     nonPageDirs: [
@@ -595,7 +552,6 @@ export function graphTier(ctx: Ctx, json = false): number {
       isTemplate(rel) || excluded(join(ctx.config.docsRoot, rel)),
     isContractPage: (rel) => CONTRACT_BASENAMES.has(basename(rel)),
     extraChecks: hookChecks,
-    json,
   });
 }
 
@@ -648,12 +604,13 @@ export function schemaTableChecks(schema: string): string[] {
       'NO SCHEMA TABLE  SCHEMA.md: no parsable "## Lifecycle by type" section',
     ];
 
+  // One source, not three unioned inline. That union was the assembly the
+  // registry replaces, and it is the reason this check reads the registry
+  // rather than the tables: if `buildRegistry` drops a row, SCHEMA.md's table
+  // says so here instead of the row quietly ceasing to be enforced.
   const enforced = new Map<string, string[] | null>();
-  for (const type of DURABLE_TYPES) enforced.set(type, null);
-  for (const spec of Object.values(SPEC))
-    enforced.set(spec.type, spec.lifecycle);
-  for (const [type, spec] of Object.entries(PROJECT_SPEC))
-    enforced.set(type, spec.lifecycle);
+  for (const row of defaultRegistryIndex().values())
+    enforced.set(row.type, row.lifecycle);
 
   const problems: string[] = [];
   const show = (v: string[] | null) => (v === null ? "—" : v.join(" · "));
@@ -677,6 +634,35 @@ export function schemaTableChecks(schema: string): string[] {
         `SCHEMA EXTRA TYPE  SCHEMA.md documents \`${type}\`, which the lint knows nothing about`
       );
 
+  return problems;
+}
+
+/**
+ * Every template the registry declares is where it says it is.
+ *
+ * This checks the TOOLING'S OWN CONFIGURATION, not documents — which is why it
+ * sits here beside the SCHEMA.md check rather than in either tier. Declaring
+ * template paths created a way to be wrong that did not exist before: a
+ * renamed template used to break nothing until somebody tried to copy it, and
+ * `pdocs new` will now fail at the moment of writing instead. This is that
+ * guard, and it runs on every `pdocs check`.
+ *
+ * `null` (artifact and the three root pages) and arrays (specification's two
+ * variants) are both tolerated. `kickoff` is skipped: its template ships with
+ * the `dev-kickoff` plugin skill, outside the docs tree and outside the
+ * cookiecutter payload, so a generated project — which has no `plugins/`
+ * directory at all — would fail its own gate on the first run.
+ */
+export function templateProblems(ctx: Ctx): string[] {
+  const problems: string[] = [];
+  for (const row of buildRegistry(ctx.config)) {
+    if (row.template === null || row.externalTemplate) continue;
+    for (const template of [row.template].flat())
+      if (!existsSync(join(ctx.repoRoot, template)))
+        problems.push(
+          `TEMPLATE MISSING  ${template}  (the \`${row.type}\` registry row declares it; nothing is there)`
+        );
+  }
   return problems;
 }
 
@@ -711,7 +697,13 @@ export function reportLines(ctx: Ctx): string[] {
 
   const lines: string[] = [];
   const total = [...missing.values()].reduce((n, v) => n + v.length, 0);
-  const scanned = workbenchFiles(ctx).length + libraryFiles(ctx).length;
+  // Templates are excluded from the denominator because they are excluded from
+  // every check that could put something in the numerator: a form has no
+  // frontmatter to backfill, and counting nineteen of them as documents with
+  // nothing missing makes the ratio say less than it appears to.
+  const scanned = [...workbenchFiles(ctx), ...libraryFiles(ctx)].filter(
+    (f) => !isTemplate(f.path)
+  ).length;
   lines.push(
     `${total} missing field(s) across ${new Set([...missing.values()].flat()).size} of ${scanned} document(s)\n`
   );
@@ -745,82 +737,3 @@ export function reportLines(ctx: Ctx): string[] {
   }
   return lines;
 }
-
-/**
- * The library's missing fields, computed here rather than read back out of
- * `runDocsLint` — which prints and returns a count, by design, because a gate
- * has no reason to hand its findings to anyone.
- */
-
-// ---------------------------------------------------------------------------------------
-
-function main(): void {
-  const args = new Set(process.argv.slice(2));
-  const ctx = context(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
-
-  if (args.has("--json")) {
-    graphTier(ctx, true);
-    return;
-  }
-
-  if (args.has("--report")) {
-    for (const line of reportLines(ctx)) console.log(line);
-    return;
-  }
-
-  console.log(`── library (graph tier) ────────────────────────────────`);
-  // Two passes, because they answer different questions. `graphTier` walks the
-  // links, the catalog and the `related` edges — the obligations a page has
-  // BECAUSE it is in the library. `libraryFieldChecks` reads the frontmatter of
-  // each page on its own terms, which is what the workbench gets too and what
-  // the library went without until a cold read tried `status: approved` on a
-  // memory and the gate said `clean`.
-  const fieldProblems = libraryFieldChecks(ctx);
-  for (const p of fieldProblems) console.log(p);
-  const libraryCount = graphTier(ctx) + fieldProblems.length;
-  if (fieldProblems.length)
-    console.log(
-      `\n${fieldProblems.length} frontmatter problem(s) in the library.`
-    );
-
-  console.log(`\n── workbench (thin tier) ───────────────────────────────`);
-  const rest = [
-    ...thinTier(ctx),
-    ...frontmatterSyntaxProblems(ctx),
-    ...schemaTableChecks(readFileSync(join(ctx.docsRoot, "SCHEMA.md"), "utf8")),
-    // Everything git tracks outside the docs root: README, AGENTS, and the
-    // shipped plugin pages, where a link to a moved playbook is a broken
-    // instruction in someone else's repository.
-    ...linkProblemsFor(
-      ctx.repoRoot,
-      trackedMarkdown(ctx.repoRoot).filter(
-        (p) => !isTemplate(p) && !excluder(ctx)(p)
-      )
-    ),
-  ];
-  for (const p of rest) console.log(p);
-  console.log(
-    rest.length ? `\n${rest.length} problem(s).` : "OK — no problems."
-  );
-
-  const total = libraryCount + rest.length;
-  if (total === 0) {
-    console.log(`\ndocs-lint: clean`);
-    return;
-  }
-
-  if (ctx.config.lint.adopting) {
-    console.log(
-      `\ndocs-lint: ${total} problem(s), exiting 0 — \`lint.adopting\` is true in ` +
-        `.project-docs.json.\n` +
-        `           This project is mid-adoption. Work the list with \`npm run docs:report\`,\n` +
-        `           then set \`lint.adopting\` to false; it is not a permanent setting.`
-    );
-    return;
-  }
-
-  console.log(`\ndocs-lint: ${total} problem(s)`);
-  process.exit(1);
-}
-
-if (import.meta.main) main();

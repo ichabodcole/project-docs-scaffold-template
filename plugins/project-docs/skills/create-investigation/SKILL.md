@@ -163,9 +163,9 @@ value vs. current implementation.
 
 **Output:**
 
-If the project has a documentation lint (`docs/lint.ts` at the repo root), run
-`bun docs/lint.ts` before reporting, and fix anything it says about the file you
-just wrote.
+If the project has a documentation lint (`scripts/pdocs/cli.ts` at the repo
+root), run `bun scripts/pdocs/cli.ts check` before reporting, and fix anything
+it says about the file you just wrote.
 
 Create an investigation document in `docs/investigations/` with:
 

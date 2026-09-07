@@ -21,9 +21,9 @@ from the twenty that were parked.
 - **Scope-bound, not time-boxed.** A cycle closes when its scope ships or is
   cut, not on a date. Its `appetite` is a sentence saying when it would be right
   to stop — the thing a deadline is usually a proxy for.
-- **At most one is `active`.** `bun docs/lint.ts` enforces it. Two active cycles
-  mean the answer to "what are we doing" is a list, which is the state a cycle
-  exists to prevent. Others may sit `planned`.
+- **At most one is `active`.** `npm run docs:lint` enforces it. Two active
+  cycles mean the answer to "what are we doing" is a list, which is the state a
+  cycle exists to prevent. Others may sit `planned`.
 
 ## When to open one
 

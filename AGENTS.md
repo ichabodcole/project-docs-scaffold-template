@@ -23,7 +23,11 @@ The template is organized with these key directories:
   assessment (reports, investigations), and work tracking (projects, backlog,
   cycles, \_archive, memories). Also carries the frontmatter layer:
   `docs/SCHEMA.md` (the contract), `docs/index.md` (the catalog, seeded empty),
-  `docs/cycles/`, and `docs/lint.ts`
+  and `docs/cycles/`. No TypeScript: the gate moved out to `scripts/pdocs/`
+- `{{cookiecutter.project_slug}}/scripts/pdocs/` - The `pdocs` CLI: `cli.ts`
+  (dispatch), `envelope.ts` (format, envelope, exit codes), `commands/`, and
+  `lint/` (this schema's rules and the assembly that runs them). Zero
+  dependencies, so a generated project can run it with nothing installed
 - `{{cookiecutter.project_slug}}/scripts/docs-lint/` - The lint's portable core
   (`index.ts`, `config.ts`, `unlinted-links.ts`, `index.test.ts`), copied rather
   than shared as a package — three repositories are still discovering what this
@@ -31,7 +35,8 @@ The template is organized with these key directories:
 - `{{cookiecutter.project_slug}}/.project-docs.json`, `package.json`,
   `tsconfig.json` - Root config for a generated project. The `package.json` and
   `tsconfig.json` ship only in the new-folder install; an existing project keeps
-  its own, and the hook prints the four scripts to add
+  its own, and the hook prints the scripts to add — read out of the payload's
+  own `package.json` — along with the `include` entry to extend
 - `hooks/post_gen_project.py` - Python hook that runs after template generation
 - `cookiecutter.json` - Template configuration defining user prompts and
   variables
@@ -54,18 +59,28 @@ The `hooks/post_gen_project.py` script provides user feedback about next steps,
 including plugin installation instructions.
 
 It has two branches. **New project folder** leaves the whole payload in place.
-**Current directory (existing project)** moves `docs/`, `scripts/docs-lint/` and
-`.project-docs.json` up into the existing repository and deletes the rest —
-deliberately including `package.json` and `tsconfig.json`, which an existing
-project already has and which are not worth overwriting to install a doc lint.
-Their four scripts get printed instead. Anything that would collide is left
-alone with a warning rather than replaced.
+**Current directory (existing project)** moves `docs/`, `scripts/docs-lint/`,
+`scripts/pdocs/` and `.project-docs.json` up into the existing repository and
+deletes the rest — deliberately including `package.json` and `tsconfig.json`,
+which an existing project already has and which are not worth overwriting to
+install a doc lint. What those two would have carried is printed instead: the
+`docs:*` scripts, and the `scripts/**/*.ts` the project needs in its `include`.
+Anything that would collide is left alone with a warning rather than replaced.
+
+**The printed scripts are read from the payload's `package.json`, not written
+out in the hook.** They used to be a literal, and the literal drifted: the same
+scripts are stated in this repo's `package.json` and the payload's, and the
+hook's third copy missed the `--format text` that pins `pdocs` to human-readable
+output, so it spent a release telling people to install a lint that emits JSON
+into their CI log. `render_package_scripts` renders the payload's own file at
+print time. Only the script **names** are stated twice, and only to leave
+`typecheck` out — it needs a `tsconfig.json` this branch does not move.
 
 Note that `--no-input` selects the **first** `install_target` choice, which is
 the current-directory branch. Generating a reference copy of the payload means
 passing `install_target="New project folder"` explicitly.
 
-`bun test` runs 6 files, one of which is the payload's own copy of
+`bun test` runs 18 files, one of which is the payload's own copy of
 `scripts/docs-lint/index.test.ts`. That is duplication — the mirror check
 guarantees it is byte-identical to this repo's copy — but it is the only thing
 that proves the shipped copy actually executes from where it will sit in a
@@ -88,6 +103,39 @@ their content differs by design — this repository's are filled in, the payload
 are the empty forms a new project fills. Adding to that list is a decision, not
 a convenience: every entry is a place the two copies can drift silently.
 
+### The Dist Check
+
+`dist/` is a build product that is committed, and `scripts/build-skills-dist.sh`
+(`npm run build:dist`) is the only thing that produces it from `plugins/`. It is
+also what non-Claude-Code consumers actually install — OpenPackage, OpenCode,
+Crush and Codex all read `dist/<plugin>/skills/`, never `plugins/`.
+
+`scripts/check-dist.sh` (`npm run check:dist`, part of `npm run check`) builds a
+second copy into a temp directory and diffs it against the committed one. It
+exists because `build:dist` was wired into no hook, no `check` and no workflow,
+and `dist/` duly went stale for a full cycle carrying a superseded type table
+with nothing to say so.
+
+**It rebuilds and diffs rather than just rebuilding**, which is the whole design
+decision. Putting `build:dist` into `check` would be simpler, but `check` runs
+from `.husky/pre-commit`: the regenerated files would land unstaged under a
+commit whose files are already staged, and the stale copy would be committed
+anyway. In CI it would be worse than useless — a fresh checkout regenerates the
+files, reports nothing and discards them. A gate that mutates the tree it is
+checking cannot fail in the two places it needs to.
+
+Unlike the mirror check it normalizes nothing, because both sides come out of
+the same generator and any difference is a real one. What makes that safe is
+`build-skills-dist.sh` passing `--config` to its Prettier run: without it a
+build into `/tmp` finds no `.prettierrc`, falls back to `proseWrap: preserve`,
+and every generated README reports as drifted. The script's `DIST_DIR` override
+exists for this check and nothing else.
+
+`npm run validate:skills` stays out of `npm run check` deliberately — it needs
+Python and `uv`, which the `docs-check` workflow does not install. `build:dist`
+runs it when `uv` is present, as a warning rather than a gate, so `check:dist`
+picks it up locally and skips it in CI.
+
 ## Development Commands
 
 ### Formatting
@@ -107,22 +155,43 @@ every library page must appear in; `.project-docs.json` at the root configures
 the lint.
 
 ```bash
-npm run check         # The gate: format:check + docs:lint + check:mirror + test
+npm run check         # The gate: format:check + docs:lint + check:mirror + check:dist + test
 npm run check:mirror  # Payload and docs/ agree, normalized through Prettier
+npm run check:dist    # dist/ is what build:dist would produce from plugins/
+npm run build:dist    # Rebuild dist/ from plugins/ — run it when check:dist fails
 npm run docs:lint     # Frontmatter, links, anchors and the document graph
-npm run docs:graph    # The same walk, emitted as JSON
+npm run docs:graph    # Types, tags and edges across both tiers, as JSON
 npm run docs:report   # Worklist of documents missing required fields
-npm run typecheck     # tsc --noEmit over docs/*.ts and scripts/*.ts
+npm run typecheck     # tsc --noEmit over scripts/*.ts and plugins/*.ts
 npm test              # bun test
 ```
+
+### Documentation CLI
+
+Documents under `docs/` are created with the `pdocs` CLI, not by hand:
+
+```bash
+bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
+```
+
+The type decides the folder, the filename shape and the template, and the CLI
+fills the frontmatter — for a library page it also writes the catalog line in
+[docs/index.md](./docs/index.md). The same CLI reads the tree: `check` (the
+gate, which is what `npm run docs:lint` runs), `find`, `backlinks`, `orphans`.
+
+`bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
+[docs/SCHEMA.md](./docs/SCHEMA.md) is the frontmatter contract the gate
+enforces, and
+[the CLI reference](./plugins/project-docs/skills/create-project/references/pdocs.md)
+is the full page.
 
 ### Two Runtimes, One Gate
 
 This repo runs **Node (via pnpm)** for Prettier, Husky and Slidev, **Python (via
 uv)** for the skill-validation script, and **Bun** for the documentation lint
-under `docs/*.ts` and `scripts/docs-lint/`. The split is deliberate: the lint is
-zero-dependency TypeScript that Bun executes directly, with no build step and no
-Node type-stripping flags to keep current.
+under `scripts/pdocs/` and `scripts/docs-lint/`. The split is deliberate: the
+lint is zero-dependency TypeScript that Bun executes directly, with no build
+step and no Node type-stripping flags to keep current.
 
 `pnpm-lock.yaml` is the lockfile — `packageManager` in `package.json` pins the
 version, and `pnpm install --frozen-lockfile` is what CI runs. Do not

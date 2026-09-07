@@ -82,5 +82,5 @@ refactoring, etc.]
 
 - [Plan](../plan.md) (if implementing from a plan)
 - [Proposal](../proposal.md) (if relevant)
-- [Architecture](../../architecture/doc-name.md) (if relevant)
-- [Commit hash or PR](link) (if merged)
+- `[Architecture](../../architecture/doc-name.md)` (if relevant)
+- `[Commit hash or PR](link)` (if merged)

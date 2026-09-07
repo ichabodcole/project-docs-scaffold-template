@@ -1,0 +1,7 @@
+── library (graph tier) ────────────────────────────────
+OK — links, anchors, OKF frontmatter, catalog reachability and `related` edges all valid across 4 files.
+
+── workbench (thin tier) ───────────────────────────────
+OK — no problems.
+
+docs-lint: clean

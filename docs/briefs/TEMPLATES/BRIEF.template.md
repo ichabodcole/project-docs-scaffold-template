@@ -86,5 +86,5 @@ before moving forward.]
 
 **Origin:**
 
-- [Fragment](../fragments/fragment-name.md) (if applicable)
-- [Related brief](../briefs/brief-name.md) (if applicable)
+- `[Fragment](../fragments/fragment-name.md)` (if applicable)
+- `[Related brief](../briefs/brief-name.md)` (if applicable)

@@ -35,13 +35,30 @@ DIFFERS_BY_DESIGN=(
 
 # Code, not prose. Prettier's scope here is `**/*.md`, so these are compared
 # byte for byte — the lint has no excuse to differ between the two copies at all.
-CODE=(
-  "docs/lint.ts"
-  "scripts/docs-lint/index.ts"
-  "scripts/docs-lint/config.ts"
-  "scripts/docs-lint/unlinted-links.ts"
-  "scripts/docs-lint/index.test.ts"
-)
+#
+# DISCOVERED, NOT LISTED, and that is a fix rather than a style preference. This
+# used to be a hand-written array, and with twelve unmirrored files under
+# `scripts/pdocs/` it still reported `mirror: clean`: a list only checks what
+# somebody remembered to add to it. Worse, the obvious repair — a literal
+# `scripts/pdocs/**` entry — cannot work, because the loop below consumes each
+# entry as `diff -q "$ROOT/$rel"`, quoted, with no glob expansion; the entry
+# would resolve to a file that does not exist and report DRIFTED forever.
+#
+# So the payload's own `scripts/` tree is the list. Every file it carries must
+# have a byte-identical counterpart here.
+#
+# WHAT THIS CANNOT SEE: a file that exists HERE and not in the payload. That is
+# deliberate — `scripts/pdocs/lint/golden.test.ts` and `scripts/pdocs/__fixtures__/`
+# are this repository's own, and stay unmirrored on purpose: the transcripts
+# encode THIS repo's `SCHEMA.md`, so shipping them would hand every generated
+# project a test that fails the moment it edits its own contract. Adding a new
+# file under `scripts/` that SHOULD be mirrored is therefore still a thing a
+# human has to remember to copy across; the gate catches the drift afterwards,
+# not the omission.
+CODE=()
+while IFS= read -r payload_file; do
+  CODE+=("${payload_file#"$PAYLOAD"/}")
+done < <(find "$PAYLOAD/scripts" -type f | sort)
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -96,8 +113,26 @@ if [ "$docs_checked" -gt 0 ]; then
   fi
 fi
 
+# Cookiecutter renders EVERY payload file through Jinja, code included. A
+# mirrored source file that happens to contain `{{` or `{%` is therefore
+# rewritten on generation — silently, and only in the generated project, where
+# nothing here would ever see it. This was not hypothetical: mirroring the lint's
+# tests shipped a `Bun.Glob("{{cookiecutter.project_slug}}/**")` that came out
+# the other side as the project's own slug, and the assertion inverted.
+#
+# Payload PROSE uses those delimiters on purpose. Payload CODE has no reason to.
 for rel in "${CODE[@]}"; do
-  if ! diff -q "$ROOT/$rel" "$PAYLOAD/$rel" > /dev/null 2>&1; then
+  if grep -qE '\{\{|\{%' "$PAYLOAD/$rel"; then
+    echo "JINJA IN CODE  $rel  (cookiecutter will rewrite this on generation)"
+    fail=1
+  fi
+done
+
+for rel in "${CODE[@]}"; do
+  if [ ! -f "$ROOT/$rel" ]; then
+    echo "PAYLOAD ONLY   $rel  (code with no counterpart at $rel — should this be mirrored?)"
+    fail=1
+  elif ! diff -q "$ROOT/$rel" "$PAYLOAD/$rel" > /dev/null 2>&1; then
     echo "DRIFTED        $rel  (code, compared byte for byte)"
     fail=1
   fi

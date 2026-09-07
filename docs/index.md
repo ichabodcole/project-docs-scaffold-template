@@ -158,3 +158,7 @@ What has been happening lately, for a cold start. — see
 - [OKF frontmatter layer shipped; the gate that did not gate half the tree](./memories/2026-09-04-okf-frontmatter-layer.md)
   — A checked metadata layer on every document, and the lesson that a guardrail
   is only verified where you actually try to break it.
+- [What seven self-run phase gates missed](./memories/2026-09-06-self-review-blind-spots.md)
+  — Self-run verification cannot falsify its author's assumptions; an
+  independent review found six defects in an afternoon that seven phases had
+  passed.

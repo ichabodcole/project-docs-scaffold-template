@@ -52,12 +52,12 @@ The list below is what it walks; keep them in step and the check stays quiet.
   `docs/specifications/README.md`
 - Category templates: all `TEMPLATE*.md` files within those directories,
   including `docs/cycles/TEMPLATE.md`
-- **The lint, byte for byte:** `docs/lint.ts`, `scripts/docs-lint/index.ts`,
-  `scripts/docs-lint/config.ts`, `scripts/docs-lint/unlinted-links.ts`,
-  `scripts/docs-lint/index.test.ts`. It is copied into the payload rather than
-  shared as a package — deliberately, while three repositories are still
-  discovering what the tool should be. The mirror check is what makes copying
-  survivable.
+- **The lint, byte for byte:** everything under `scripts/pdocs/` and
+  `scripts/docs-lint/`. The mirror check does not keep a list of these — it
+  discovers them from the payload's own `scripts/` tree, so a new file there is
+  compared automatically. The lint is copied into the payload rather than shared
+  as a package — deliberately, while three repositories are still discovering
+  what the tool should be. The mirror check is what makes copying survivable.
 
 **Payload-only (no counterpart here, and none wanted):**
 
@@ -116,7 +116,7 @@ across, and say which direction you chose in the commit.
 ```bash
 cookiecutter . --no-input --overwrite-if-exists -o /tmp/cc \
   install_target="New project folder"
-cd /tmp/cc/my-project && bun docs/lint.ts && bun test
+cd /tmp/cc/my-project && bun scripts/pdocs/cli.ts check && bun test
 ```
 
 `--no-input` alone picks the **first** `install_target` choice, which is the

@@ -80,6 +80,6 @@ schedule follow-up, etc.]
 
 **Related Documents:**
 
-- [Code analyzed](../../src/path/to/code.ts)
-- [Related proposal](../projects/project-name/proposal.md) (if created)
-- [Related architecture](../architecture/architecture-name.md)
+- `[Code analyzed](../../src/path/to/code.ts)`
+- `[Related proposal](../projects/project-name/proposal.md)` (if created)
+- `[Related architecture](../architecture/architecture-name.md)`

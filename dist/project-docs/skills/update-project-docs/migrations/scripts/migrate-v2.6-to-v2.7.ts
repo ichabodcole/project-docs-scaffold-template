@@ -10,7 +10,8 @@
 // It does NOT write `description`. That is one sentence a person has to mean,
 // and a generated paraphrase of the first paragraph would be worse than the
 // blank — you would never know which ones had been thought about. After this
-// runs, `bun docs/lint.ts --report` is the worklist for the fields left.
+// runs, `bun scripts/pdocs/cli.ts report --format text` is the worklist for
+// the fields left.
 //
 // Usage:
 //   bun path/to/migrate-v2.6-to-v2.7.ts [--dry-run] [--force]
@@ -25,10 +26,10 @@
 //
 // SELF-CONTAINED BY DESIGN. This runs inside a repository that has not adopted
 // the layer yet, so it imports nothing from the project it is migrating and
-// carries its own copy of the folder → type table. The copy is not free: a test
-// in the scaffold repo (`scripts/docs-lint/migrate-v2.6-to-v2.7.test.ts`)
-// asserts it equals the one `docs/lint.ts` enforces, so the two cannot drift
-// without CI saying so.
+// carries its own copy of the folder → type table. The copy is not free: the
+// test beside this file (`migrate-v2.6-to-v2.7.test.ts`) asserts it equals the
+// one the scaffold repo's lint enforces (`scripts/pdocs/lint/rules.ts`), so the
+// two cannot drift without CI saying so.
 
 import {
   existsSync,
@@ -39,7 +40,7 @@ import {
 } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 
-// ─── The tables, copied from docs/lint.ts ─────────────────────────────────────
+// ─── The tables, copied from scripts/pdocs/lint/registry.ts ──────────────────
 
 export const DURABLE_TYPE: Record<string, string> = {
   architecture: "architecture",
@@ -70,7 +71,8 @@ export const PROJECT_FILE_TYPE: Record<string, string> = {
   "plan.md": "plan",
   "design-resolution.md": "design-resolution",
   "test-plan.md": "test-plan",
-  "DEV_KICKOFF.md": "handoff",
+  "DEV_KICKOFF.md": "kickoff",
+  "handoff.md": "handoff",
 };
 
 /** Types that carry no `lifecycle`: frozen records and living pages alike. */
@@ -78,6 +80,7 @@ export const NO_LIFECYCLE = new Set([
   ...Object.values(DURABLE_TYPE),
   ...Object.values(ROOT_PAGE_TYPE),
   "report",
+  "kickoff",
   "handoff",
   "session",
   "artifact",
@@ -591,8 +594,9 @@ export function main(argv: string[], repoRoot: string): number {
   console.log(
     `\n${C.yellow}Next${C.reset}\n` +
       `  1. ${dryRun ? "Re-run without --dry-run." : "Review the diff, then run your formatter."}\n` +
-      `  2. \`bun docs/lint.ts --report\` — the worklist for what is left. This script\n` +
-      `     never writes \`description\`; that is one sentence a person has to mean.\n` +
+      `  2. \`bun scripts/pdocs/cli.ts report --format text\` — the worklist for\n` +
+      `     what is left. This script never writes \`description\`; that is one\n` +
+      `     sentence a person has to mean.\n` +
       `  3. When --report is empty, set \`lint.adopting\` to false in .project-docs.json.\n`
   );
   return 0;

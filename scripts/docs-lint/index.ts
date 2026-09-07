@@ -5,11 +5,12 @@
 // Copied, not shared. There is no package behind this yet and three repos is
 // too few to abstract across; the copy is the honest state until a fourth one
 // wants it. Keep this file byte-identical to its source so a future extraction
-// is a move, not a merge: project-specific behaviour goes in `docs/lint.ts`
-// through the `extraChecks` seam, never in here.
+// is a move, not a merge: project-specific behaviour goes in the consuming
+// repo's rules layer — `scripts/pdocs/lint/rules.ts` here — through the
+// `extraChecks` seam, never in here.
 //
-// DIVERGENCES, both of them generalizations rather than adaptations, and both
-// belonging back in agent-cli-conformance:
+// DIVERGENCES, every one of them a generalization rather than an adaptation,
+// and every one belonging back in agent-cli-conformance:
 //
 // 1. `stripFences` pairs fences of three OR MORE backticks. The source pairs
 //    exactly three, which mis-pairs every fence after a ````-fence — see the
@@ -20,6 +21,10 @@
 //    library where every folder carries a README and a TEMPLATE — which is what
 //    this scaffold generates — cannot express itself through two filenames.
 //    Both default to the source's behaviour.
+// 3. `runDocsLint` is split: `collectDocsLint` computes the report and prints
+//    nothing, `runDocsLint` is the printing wrapper over it. The source can
+//    only print, so a CLI that owns its own output envelope has to re-implement
+//    the walk to get at the data. Anthill made the same split independently.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -104,7 +109,7 @@ export function walkMarkdown(
   skipDirs: Set<string> = new Set()
 ): string[] {
   const out: string[] = [];
-  for (const e of readdirSync(dir)) {
+  for (const e of readdirSync(dir).sort()) {
     if (skipDirs.has(e)) continue;
     const p = join(dir, e);
     if (statSync(p).isDirectory()) out.push(...walkMarkdown(p, skipDirs));
@@ -416,9 +421,52 @@ export function checkLinks(
   return { outbound, problems };
 }
 
-export function runDocsLint(config: DocsLintConfig): number {
+/** One page in the emitted knowledge graph. */
+export interface DocsLintNode {
+  path: string;
+  type: string | null;
+  title: string | null;
+  description: string | null;
+  tags: string[];
+  status: string | null;
+  /** Keyed by the configured `dateField` — `generated`, `timestamp`, `updated`… */
+  [dateField: string]: unknown;
+  linksOut: string[];
+  linksIn: string[];
+  related: string[];
+  tagNeighbors: string[];
+  reachable: boolean;
+  contractExempt: boolean;
+}
+
+/** What `collectDocsLint` returns: the problems, and the graph the lint walked to find them. */
+export interface DocsLintReport {
+  root: string;
+  contract: string;
+  catalog: string;
+  stats: {
+    pages: number;
+    linkEdges: number;
+    relatedEdges: number;
+    tags: number;
+    orphans: number;
+  };
+  hubs: Array<{ path: string; linksIn: number; title: string | null }>;
+  typeIndex: Record<string, string[]>;
+  tagIndex: Record<string, string[]>;
+  nodes: DocsLintNode[];
+  problems: string[];
+}
+
+/**
+ * The lint, as data. Walks the library, runs every universal check plus `extraChecks`, and
+ * returns the problems alongside the knowledge graph. Prints nothing — `runDocsLint` is the
+ * printing wrapper, and a CLI that owns its own output envelope calls this directly.
+ */
+export function collectDocsLint(
+  config: Omit<DocsLintConfig, "json">
+): DocsLintReport {
   const ROOT = config.root;
-  const JSON_MODE = config.json ?? false;
   const NON_PAGE_DIRS = new Set<string>(config.nonPageDirs ?? []);
   const OKF_TYPES = new Set<string>(config.types);
   const DATE_FIELD = config.dateField ?? "timestamp";
@@ -434,7 +482,6 @@ export function runDocsLint(config: DocsLintConfig): number {
   const problems: string[] = [];
   const say = (m: string) => {
     problems.push(m);
-    if (!JSON_MODE) console.log(m);
   };
 
   // --- read every file ONCE -------------------------------------------------------------
@@ -603,109 +650,113 @@ export function runDocsLint(config: DocsLintConfig): number {
     for (const p of config.extraChecks(pages)) say(p);
   }
 
-  // --- output ----------------------------------------------------------------------------
-  if (JSON_MODE) {
-    const linksIn = new Map<string, string[]>();
-    for (const [from, tos] of outbound)
-      for (const to of tos)
-        linksIn.set(to, [...(linksIn.get(to) ?? []), rel(from)]);
+  // --- the graph -------------------------------------------------------------------------
+  const linksIn = new Map<string, string[]>();
+  for (const [from, tos] of outbound)
+    for (const to of tos)
+      linksIn.set(to, [...(linksIn.get(to) ?? []), rel(from)]);
 
-    const tagIndex: Record<string, string[]> = {};
-    const typeIndex: Record<string, string[]> = {};
-    for (const file of files) {
-      const f = fieldsOf(file);
-      const t = f.get("type");
-      if (t) {
-        const list = typeIndex[t] ?? [];
-        list.push(rel(file));
-        typeIndex[t] = list;
-      }
-      for (const tag of yamlList(f.get("tags"))) {
-        const list = tagIndex[tag] ?? [];
-        list.push(rel(file));
-        tagIndex[tag] = list;
-      }
+  const tagIndex: Record<string, string[]> = {};
+  const typeIndex: Record<string, string[]> = {};
+  for (const file of files) {
+    const f = fieldsOf(file);
+    const t = f.get("type");
+    if (t) {
+      const list = typeIndex[t] ?? [];
+      list.push(rel(file));
+      typeIndex[t] = list;
     }
-
-    const nodes = files.map((file) => {
-      const f = fieldsOf(file);
-      const tags = yamlList(f.get("tags"));
-      // Pages sharing >=1 tag. Without this the graph shows the atomic pages as
-      // disconnected, which is a misread — tags ARE their adjacency.
-      const tagNeighbors = [
-        ...new Set(
-          tags.flatMap((t) => tagIndex[t] ?? []).filter((p) => p !== rel(file))
-        ),
-      ];
-      return {
-        path: rel(file),
-        type: f.get("type") ?? null,
-        title: f.get("title") ?? null,
-        description: f.get("description") ?? null,
-        tags,
-        status: f.get("status") ?? null,
-        // `generated` is a mapping, so emit it as one. It used to go out as the
-        // raw inline-flow YAML text — `"{ by: x, at: 2026-09-04 }"` — while
-        // `tags` beside it was a proper array, so a consumer wanting to sort by
-        // date had to re-parse YAML out of a JSON string. The gate already
-        // parses it; only the serialization lagged.
-        [DATE_FIELD]:
-          DATE_FIELD === "generated"
-            ? (parseGenerated(f.get("generated")) ?? null)
-            : (f.get(DATE_FIELD) ?? null),
-        linksOut: [...(outbound.get(file) ?? [])].map(rel),
-        linksIn: linksIn.get(file) ?? [],
-        related: yamlList(f.get("related")),
-        tagNeighbors,
-        reachable: reached.has(file) || file === INDEX,
-        // the contract is exempt from the orphan rule — flag it so `reachable:false` isn't
-        // read as a defect
-        contractExempt: isContract(file),
-      };
-    });
-
-    const hubs = [...nodes]
-      .filter((n) => n.path !== "index.md")
-      .sort((a, b) => b.linksIn.length - a.linksIn.length)
-      .slice(0, 10)
-      .map((n) => ({
-        path: n.path,
-        linksIn: n.linksIn.length,
-        title: n.title,
-      }));
-
-    console.log(
-      JSON.stringify(
-        {
-          root: rel(ROOT) || ".",
-          contract: "SCHEMA.md",
-          catalog: "index.md",
-          stats: {
-            pages: nodes.length,
-            linkEdges: [...outbound.values()].reduce((n, s) => n + s.size, 0),
-            relatedEdges: nodes.reduce((n, x) => n + x.related.length, 0),
-            tags: Object.keys(tagIndex).length,
-            // Must mirror the lint's own exemption above: SCHEMA.md is the contract, not a
-            // page, so it is never an orphan even when nothing links to it.
-            orphans: nodes.filter((n) => !n.reachable && !n.contractExempt)
-              .length,
-          },
-          hubs,
-          typeIndex,
-          tagIndex,
-          nodes,
-          problems,
-        },
-        null,
-        2
-      )
-    );
-  } else {
-    console.log(
-      problems.length === 0
-        ? `OK — links, anchors, OKF frontmatter, catalog reachability and \`related\` edges all valid across ${files.length} files.`
-        : `\n${problems.length} problem(s).`
-    );
+    for (const tag of yamlList(f.get("tags"))) {
+      const list = tagIndex[tag] ?? [];
+      list.push(rel(file));
+      tagIndex[tag] = list;
+    }
   }
-  return problems.length;
+
+  const nodes: DocsLintNode[] = files.map((file) => {
+    const f = fieldsOf(file);
+    const tags = yamlList(f.get("tags"));
+    // Pages sharing >=1 tag. Without this the graph shows the atomic pages as
+    // disconnected, which is a misread — tags ARE their adjacency.
+    const tagNeighbors = [
+      ...new Set(
+        tags.flatMap((t) => tagIndex[t] ?? []).filter((p) => p !== rel(file))
+      ),
+    ];
+    return {
+      path: rel(file),
+      type: f.get("type") ?? null,
+      title: f.get("title") ?? null,
+      description: f.get("description") ?? null,
+      tags,
+      status: f.get("status") ?? null,
+      // `generated` is a mapping, so emit it as one. It used to go out as the
+      // raw inline-flow YAML text — `"{ by: x, at: 2026-09-04 }"` — while
+      // `tags` beside it was a proper array, so a consumer wanting to sort by
+      // date had to re-parse YAML out of a JSON string. The gate already
+      // parses it; only the serialization lagged.
+      [DATE_FIELD]:
+        DATE_FIELD === "generated"
+          ? (parseGenerated(f.get("generated")) ?? null)
+          : (f.get(DATE_FIELD) ?? null),
+      linksOut: [...(outbound.get(file) ?? [])].map(rel),
+      linksIn: linksIn.get(file) ?? [],
+      related: yamlList(f.get("related")),
+      tagNeighbors,
+      reachable: reached.has(file) || file === INDEX,
+      // the contract is exempt from the orphan rule — flag it so `reachable:false` isn't
+      // read as a defect
+      contractExempt: isContract(file),
+    };
+  });
+
+  const hubs = [...nodes]
+    .filter((n) => n.path !== "index.md")
+    .sort((a, b) => b.linksIn.length - a.linksIn.length)
+    .slice(0, 10)
+    .map((n) => ({
+      path: n.path,
+      linksIn: n.linksIn.length,
+      title: n.title,
+    }));
+
+  return {
+    root: rel(ROOT) || ".",
+    contract: "SCHEMA.md",
+    catalog: "index.md",
+    stats: {
+      pages: nodes.length,
+      linkEdges: [...outbound.values()].reduce((n, s) => n + s.size, 0),
+      relatedEdges: nodes.reduce((n, x) => n + x.related.length, 0),
+      tags: Object.keys(tagIndex).length,
+      // Must mirror the lint's own exemption above: SCHEMA.md is the contract, not a
+      // page, so it is never an orphan even when nothing links to it.
+      orphans: nodes.filter((n) => !n.reachable && !n.contractExempt).length,
+    },
+    hubs,
+    typeIndex,
+    tagIndex,
+    nodes,
+    problems,
+  };
+}
+
+/** The human summary line `runDocsLint` prints when the lint is clean or not. */
+export function docsLintSummary(report: DocsLintReport): string {
+  return report.problems.length === 0
+    ? `OK — links, anchors, OKF frontmatter, catalog reachability and \`related\` edges all valid across ${report.stats.pages} files.`
+    : `\n${report.problems.length} problem(s).`;
+}
+
+/** The printing entry point — lint lines then a summary, or the graph as JSON. */
+export function runDocsLint(config: DocsLintConfig): number {
+  const { json, ...rest } = config;
+  const report = collectDocsLint(rest);
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    for (const p of report.problems) console.log(p);
+    console.log(docsLintSummary(report));
+  }
+  return report.problems.length;
 }

@@ -5,7 +5,7 @@
 // that against this repository's real corpus would mean rewriting the test
 // every time a document is added.
 //
-// `docs/lint.ts` takes a `Ctx` for exactly this reason.
+// Every rule takes a `Ctx` for exactly this reason.
 
 import { afterAll, describe, expect, test } from "bun:test";
 import {
@@ -18,8 +18,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { loadConfig } from "../scripts/docs-lint/config.ts";
+import { basename, dirname, join, resolve } from "node:path";
 import {
   type Ctx,
   DURABLE_TYPE,
@@ -36,9 +35,12 @@ import {
   schemaLifecycles,
   schemaTableChecks,
   thinTier,
-} from "./lint.ts";
+} from "./rules.ts";
+import { DEFAULT_CONFIG } from "../../docs-lint/config.ts";
+import { childEnv } from "../test-env.ts";
+import { buildRegistry } from "./registry.ts";
 
-const REPO_ROOT = resolve(import.meta.dir, "..");
+const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const SCHEMA = readFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), "utf8");
 
 const roots: string[] = [];
@@ -282,7 +284,7 @@ describe("lint.exclude — files that are not documentation", () => {
       },
       { exclude: ["docs/memories/deck.md"] }
     );
-    expect(graphTier(ctx)).toBe(0);
+    expect(graphTier(ctx).problems).toEqual([]);
   });
 
   test("and to --report, which must agree with the tiers about what exists", () => {
@@ -312,28 +314,18 @@ describe("lint.exclude — files that are not documentation", () => {
     expect(thinTier(ctx)).toHaveLength(1);
   });
 
-  // `{a,b}` is alternation in a glob, so a directory literally named
-  // `{{cookiecutter.project_slug}}` needs its braces escaped or the pattern matches
-  // nothing — silently, which is the bad way for an exclusion to fail. This repo's
-  // own config carries that pattern; the escaping is easy to lose in a JSON edit.
-  test("a literal-brace path needs escaped braces, and gets no warning without them", () => {
-    const escaped = new Bun.Glob("\\{\\{cookiecutter.project_slug\\}\\}/**");
-    const bare = new Bun.Glob("{{cookiecutter.project_slug}}/**");
-    const path = "{{cookiecutter.project_slug}}/docs/README.md";
-    expect(escaped.match(path)).toBe(true);
-    expect(bare.match(path)).toBe(false);
-  });
-
-  // These two trees used to be a constant inside `unlinted-links.ts`, which put one
-  // repository's directory names in a file shipped to every other one. They are
-  // config now, so this is what holds them in place.
-  test("this repository excludes its build output and its template payload", () => {
-    const config = loadConfig(REPO_ROOT);
-    expect(config.lint.exclude).toContain("dist/**");
-    expect(config.lint.exclude).toContain(
-      "\\{\\{cookiecutter.project_slug\\}\\}/**"
-    );
-  });
+  // The two cases about THIS repository's own exclusions — that its
+  // `.project-docs.json` carries them, and that the cookiecutter payload's
+  // literal braces are escaped — live in `repo-config.test.ts`, which is not
+  // mirrored. They are claims about one repository: a generated project has
+  // neither a `dist/` nor a payload directory to exclude.
+  //
+  // And the brace case CANNOT live here. Cookiecutter renders every payload
+  // file through Jinja, so a mirrored source file carrying Jinja's own
+  // double-brace delimiters is rewritten on generation: the literal this test
+  // needs came out the other side as the generated project's slug, and the
+  // assertion failed there while passing here. Nothing under `scripts/` in the
+  // payload may contain those delimiters, and `check-mirror.sh` now says so.
 });
 
 describe("frontmatter a real YAML parser would reject", () => {
@@ -468,7 +460,7 @@ describe("the graph tier — reachability and the catalog", () => {
       "docs/memories/b.md": page("B", "The B memory."),
       "docs/SCHEMA.md": "# Contract\n",
     });
-    expect(graphTier(ctx)).toBeGreaterThan(0);
+    expect(graphTier(ctx).problems.length).toBeGreaterThan(0);
   });
 
   test("everything catalogued is clean", () => {
@@ -480,7 +472,7 @@ describe("the graph tier — reachability and the catalog", () => {
       "docs/memories/b.md": page("B", "The B memory."),
       "docs/SCHEMA.md": "# Contract\n",
     });
-    expect(graphTier(ctx)).toBe(0);
+    expect(graphTier(ctx).problems).toEqual([]);
   });
 
   // Nobody re-reads the catalog, so a hook that has drifted from the page it
@@ -493,7 +485,7 @@ describe("the graph tier — reachability and the catalog", () => {
       "docs/memories/a.md": page("A", "The A memory."),
       "docs/SCHEMA.md": "# Contract\n",
     });
-    expect(graphTier(ctx)).toBeGreaterThan(0);
+    expect(graphTier(ctx).problems.length).toBeGreaterThan(0);
   });
 
   test("a README in a library folder is a contract page, not an orphan", () => {
@@ -503,7 +495,7 @@ describe("the graph tier — reachability and the catalog", () => {
       "docs/memories/README.md": "# Memories\n\nWhat goes here.\n",
       "docs/SCHEMA.md": "# Contract\n",
     });
-    expect(graphTier(ctx)).toBe(0);
+    expect(graphTier(ctx).problems).toEqual([]);
   });
 
   test("a template in a library folder is not walked at all", () => {
@@ -514,7 +506,7 @@ describe("the graph tier — reachability and the catalog", () => {
         "# [Title]\n\nSee [x](./does-not-exist.md).\n",
       "docs/SCHEMA.md": "# Contract\n",
     });
-    expect(graphTier(ctx)).toBe(0);
+    expect(graphTier(ctx).problems).toEqual([]);
   });
 });
 
@@ -728,12 +720,12 @@ describe("every template renders into a document that passes", () => {
             `# Catalog\n\n- [Page](./${target.slice("docs/".length)}) — ${description}\n`,
           "docs/SCHEMA.md": "# Contract\n",
         });
-        // The library tier prints and returns a count, so a template whose body
-        // links a placeholder would fail here for a reason that is not the
-        // template's fault. Give it a body with no links.
+        // The library tier checks links too, so a template whose body links a
+        // placeholder would fail here for a reason that is not the template's
+        // fault. Give it a body with no links.
         const noLinks = rendered.replace(/\]\([^)]*\)/g, "]");
         writeFileSync(join(ctx.repoRoot, target), noLinks);
-        expect(graphTier(ctx)).toBe(0);
+        expect(graphTier(ctx).problems).toEqual([]);
         return;
       }
 
@@ -841,5 +833,149 @@ describe("what the modes tell you", () => {
         "lifecycle: active\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
     });
     expect(reportLines(ctx)[0]).toMatch(/across 0 of \d+ document\(s\)/);
+  });
+});
+
+describe("--root", () => {
+  // The point of `--root` is what the PROCESS does — so these drive the real
+  // entry point and read its stdout, rather than reassembling the tiers inside
+  // the test and proving nothing about the thing anybody actually runs.
+  //
+  // `--format text` on every invocation that reads prose: a spawned child gets
+  // a pipe, and `resolveFormat` reads a non-TTY stdout as machine output.
+  const ENTRY = join(REPO_ROOT, "scripts/pdocs/cli.ts");
+
+  const run = (args: string[], cwd = REPO_ROOT) => {
+    const p = Bun.spawnSync(["bun", ENTRY, ...args], { cwd, env: childEnv() });
+    return {
+      code: p.exitCode,
+      stdout: p.stdout.toString(),
+      stderr: p.stderr.toString(),
+    };
+  };
+
+  /**
+   * The minimum tree the lint will run against: the real contract, a catalog,
+   * and the templates the registry declares.
+   *
+   * The templates are here and not in `fixture` because only these tests spawn
+   * the whole gate — `templateProblems` is part of `collect`, not of a tier, so
+   * a test calling `thinTier` directly never sees it. They are derived from the
+   * registry rather than listed, and inert on every tier: `isTemplate` skips
+   * them by name.
+   */
+  const templateStubs = (): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const row of buildRegistry(DEFAULT_CONFIG)) {
+      if (row.template === null || row.externalTemplate) continue;
+      for (const rel of [row.template].flat())
+        out[rel] = "# A Template\n\nA stub. Every tier skips it by name.\n";
+    }
+    return out;
+  };
+
+  const minimal = (extra: Record<string, string> = {}) =>
+    fixture({
+      ...templateStubs(),
+      "docs/SCHEMA.md": SCHEMA,
+      "docs/index.md":
+        fm({
+          type: "index",
+          title: "Index",
+          description: "The catalog.",
+          status: "stable",
+          tags: "[index]",
+          generated: GENERATED,
+        }) + "# Index\n",
+      ...extra,
+    }).repoRoot;
+
+  test("lints the tree it is given, not this repository", () => {
+    const root = minimal();
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(0);
+    // 2 files, not this repository's corpus — the count is the proof that the
+    // walk happened somewhere else.
+    expect(stdout).toContain("across 2 files");
+    expect(stdout).toContain("docs-lint: clean");
+    expect(stdout).not.toContain("PROJECT_MANIFESTO.md");
+  });
+
+  test("reports problems found in that tree", () => {
+    const root = minimal({
+      "docs/projects/x/proposal.md":
+        fm({
+          type: "proposal",
+          title: "X",
+          description: "A thing.",
+          status: "stable",
+          lifecycle: "shipped",
+          generated: GENERATED,
+        }) + "# X\n",
+    });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    // 9, not 1: the run SUCCEEDED and the answer was negative. See
+    // `Outcome.Dirty` in `scripts/pdocs/envelope.ts`.
+    expect(code).toBe(9);
+    expect(stdout).toContain("BAD LIFECYCLE");
+    expect(stdout).toContain("docs/projects/x/proposal.md");
+    expect(stdout).toContain("docs-lint: 1 problem(s)");
+  });
+
+  test("resolves a relative path against the working directory", () => {
+    const root = minimal();
+    const { code, stdout } = run(
+      ["check", "--format", "text", "--root", basename(root)],
+      dirname(root)
+    );
+    expect(code).toBe(0);
+    expect(stdout).toContain("across 2 files");
+  });
+
+  test("graph and report honour it too", () => {
+    const root = minimal();
+
+    const json = run(["graph", "--format", "json", "--root", root]);
+    expect(json.code).toBe(0);
+    // One, not two: `collectPages` skips contract pages, and `minimal()` is
+    // SCHEMA.md plus index.md. The lint's graph tier counted SCHEMA.md as a
+    // node; `pdocs graph` stopped inheriting that shape in Phase 5.
+    expect(JSON.parse(json.stdout).data.pages).toBe(1);
+
+    const report = run(["report", "--format", "text", "--root", root]);
+    expect(report.code).toBe(0);
+    expect(report.stdout).toContain("across 0 of 1 document(s)");
+  });
+
+  test("a root that does not exist exits 2 rather than falling back", () => {
+    const missing = join(tmpdir(), "docs-lint-no-such-root");
+    const { code, stdout, stderr } = run(["check", "--root", missing]);
+    expect(code).toBe(2);
+    expect(stderr).toContain("--root is not a directory");
+    expect(stderr).toContain(missing);
+    // The failure mode this guards: linting this repository and calling it clean.
+    expect(stdout).toBe("");
+  });
+
+  test("--root with no value exits 2", () => {
+    const { code, stdout, stderr } = run(["check", "--root"]);
+    expect(code).toBe(2);
+    expect(stderr).toContain("--root needs a path");
+    expect(stdout).toBe("");
+  });
+
+  test("--root followed by another flag is a missing value, not a path", () => {
+    const { code, stderr } = run(["check", "--root", "--json"]);
+    expect(code).toBe(2);
+    expect(stderr).toContain("--root needs a path");
+  });
+
+  // Not an assertion that this repository is clean — that is `npm run docs:lint`'s
+  // job, and duplicating it here would make the unit suite fail for a reason
+  // that has nothing to do with `--root`.
+  test("with no --root at all it still walks this repository", () => {
+    const { stdout } = run(["check", "--format", "text"]);
+    expect(stdout).toContain("library (graph tier)");
+    expect(stdout).not.toContain("across 2 files");
   });
 });

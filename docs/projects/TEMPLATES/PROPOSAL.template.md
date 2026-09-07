@@ -85,8 +85,8 @@ code - that belongs in implementation plans]
 
 **Related Documents:**
 
-- [Investigation](../../investigations/investigation-name.md) (if applicable)
-- [Architecture docs](../../architecture/doc-name.md) (if applicable)
+- `[Investigation](../../investigations/investigation-name.md)` (if applicable)
+- `[Architecture docs](../../architecture/doc-name.md)` (if applicable)
 
 ---
 

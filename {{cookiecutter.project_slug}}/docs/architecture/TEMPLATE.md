@@ -135,11 +135,11 @@ system]
 
 ## Related Documentation
 
-- [Playbook for augmenting this system](../playbooks/playbook-name.md) (if
+- `[Playbook for augmenting this system](../playbooks/playbook-name.md)` (if
   applicable)
-- [Related architecture doc](./other-doc.md)
-- [Proposal that introduced this](../projects/project-name/proposal.md)
-- [External documentation](URL)
+- `[Related architecture doc](./other-doc.md)`
+- `[Proposal that introduced this](../projects/project-name/proposal.md)`
+- `[External documentation](URL)`
 
 ---
 

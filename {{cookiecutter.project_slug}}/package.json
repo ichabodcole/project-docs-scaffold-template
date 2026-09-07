@@ -4,9 +4,9 @@
   "private": true,
   "description": "Documentation lint for {{ cookiecutter.project_name }}",
   "scripts": {
-    "docs:lint": "bun docs/lint.ts",
-    "docs:graph": "bun docs/lint.ts --json",
-    "docs:report": "bun docs/lint.ts --report",
+    "docs:lint": "bun scripts/pdocs/cli.ts check --format text",
+    "docs:graph": "bun scripts/pdocs/cli.ts graph --format json",
+    "docs:report": "bun scripts/pdocs/cli.ts report --format text",
     "test": "bun test",
     "typecheck": "tsc --noEmit"
   },

@@ -100,8 +100,8 @@ grep -l '^lifecycle: active' "$ROOT"/docs/cycles/*.md 2>/dev/null | grep -v TEMP
 - **No match** — say so and carry on. Work outside a cycle is normal; an
   unattached branch is not an error, and this command does not create cycles.
 - **More than one match** — report the filenames and carry on without editing.
-  Two active cycles is a lint failure (`bun docs/lint.ts` catches it), and
-  guessing which one owns the branch would paper over it.
+  Two active cycles is a lint failure (`bun scripts/pdocs/cli.ts check` catches
+  it), and guessing which one owns the branch would paper over it.
 
 ### Branch Naming Conventions
 

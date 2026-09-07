@@ -279,6 +279,72 @@ docs/
 
 ## Version History
 
+### 3.8.0 (2026-09-06)
+
+**`create-project` becomes a touchpoint.** The scaffold now ships a `pdocs` CLI
+(`scripts/pdocs/cli.ts`), and `pdocs new project <name>` does atomically what
+the skill used to describe as four manual steps: verify the folder is free,
+create it, copy `PROPOSAL.template.md`, fill the frontmatter, and — with
+`--from` — wire the originating investigation into Related Documents. The skill
+keeps the part a command cannot do (the naming judgement, when to use it at all,
+what happens after) and defers the file mechanics, dropping from 116 lines
+to 91.
+
+**A CLI reference the skills can point at** —
+[`create-project/references/pdocs.md`](skills/create-project/references/pdocs.md).
+Self-contained and verified by running every command in it: the seven commands
+with their JSON field names, format resolution and why the `docs:*` npm scripts
+pin `--format`, the exit-code bands (1–8 the invocation failed, 9 it succeeded
+and the tree is dirty), and the `pdocs new` grammar — 18 of 23 types creatable,
+the five that are not and why, filename shapes, and the catalog line a library
+page also gets. Other document-creating skills will point at it as they are
+converted; it lives under `create-project` because a directory under `skills/`
+without a `SKILL.md` fails `scripts/validate-skills-dist.py`.
+
+**A migration for projects still on the v2.7 lint** —
+[`v2.7-to-v2.8.md`](skills/update-project-docs/migrations/v2.7-to-v2.8.md).
+Installs `scripts/pdocs/`, deletes `docs/lint.ts`, rewrites the three `docs:*`
+script bodies with `--format text`, widens the `tsconfig` `include` to cover
+`scripts/`, and refreshes the templates — v2.7's carry bare example links, and
+`pdocs new` copies a template body verbatim, so a stale template produces a
+document that fails the gate the moment it is written. Its presence check is
+`docs/lint.ts` existing, which is also its done-signal.
+
+**One thing the gate does not do, now written down.** `pdocs check` accepts a
+template placeholder — a document created without `--description` keeps
+`"[One sentence: …]"` and lints clean on both tiers. The skill says so and tells
+the caller to pass the flag.
+
+**A new root-level convention: the Documentation CLI pointer.** A migrated
+project had the CLI and no way for an agent to find out — root `AGENTS.md`
+described the gate at most, never the writer. `update-project-docs` Step 6 now
+checks for it and recommends a blurb; see
+[Documentation CLI pointer](skills/update-project-docs/SKILL.md#documentation-cli-pointer)
+for the content. Its check has two clauses, because absence is not the only
+failure: an `AGENTS.md` written against v2.7 still names `bun docs/lint.ts`, and
+a check that only asked whether the CLI was mentioned would call that satisfied.
+It also carries a **precondition** — the CLI must actually be installed — and
+Step 6 now tests preconditions before checks.
+
+**Every Root-Level Conventions check was rewritten to survive a missing file.**
+They passed two filenames to `grep`, and a filename that does not exist is an
+_error_, not a non-match: `grep -l` exits 2 having printed the match, and
+`grep -q` exits 0 under BSD grep but **2** under the `ugrep` wrapper Claude Code
+puts on `grep` — so the checks passed for a human and said "recommend it" for
+the agent running the skill, on any project keeping only `AGENTS.md`. All three
+rows now read one concatenated stream,
+`grep -q PATTERN <(cat AGENTS.md CLAUDE.md 2>/dev/null)`, which is 0-or-1 under
+both.
+
+**Step 7 of `update-project-docs` verifies something.** It was a fenced block
+with two comments in it. It now runs the common tail of every upgrade path — the
+CLI is installed and runnable, the gate is clean through it, the `docs:*`
+scripts resolve with the format pinned, nothing still names `docs/lint.ts`, and
+the two version markers agree — and names the one population no migration
+claims: a project with `docs/SCHEMA.md` and no `scripts/pdocs/`, for which both
+presence checks are false. The repair is a subset of `v2.7-to-v2.8`, so it gets
+a paragraph there rather than a migration row of its own.
+
 ### 3.7.0 (2026-09-04)
 
 The plugin now emits and respects the **OKF frontmatter layer** that scaffold
@@ -347,9 +413,10 @@ would break the one document that still needs to point at it.
 `generate-proposal` and `generate-dev-plan` now fill the template's frontmatter
 rather than leaving the bracketed placeholders — including `description`, which
 is the catalog hook and the one field no tool can generate. Each runs
-`bun docs/lint.ts` before reporting. `finalize-branch` Step 4 fills the session
-block; Step 5 adds the memory's catalog line to `docs/index.md`, since a memory
-is a library page and an uncatalogued library page is an orphan.
+`bun scripts/pdocs/cli.ts check` before reporting. `finalize-branch` Step 4
+fills the session block; Step 5 adds the memory's catalog line to
+`docs/index.md`, since a memory is a library page and an uncatalogued library
+page is an orphan.
 
 These steps are explicit that **the lint does not catch a placeholder** — it
 checks that a key is present and non-empty, and `title: "[Topic]"` satisfies
@@ -363,10 +430,10 @@ template gained a commented `related:` key, which Step 5 asks for and the
 template didn't have.
 
 **The lint is part of the gate.** `finalize-branch` Step 3 runs
-`bun docs/lint.ts` with the other quality tools, and Step 7 runs it again after
-the session and memory are written — the first run cannot check documents that
-don't exist yet. `adopting: true` and pre-existing problems in untouched
-documents are reported, not treated as this branch's failures.
+`bun scripts/pdocs/cli.ts check` with the other quality tools, and Step 7 runs
+it again after the session and memory are written — the first run cannot check
+documents that don't exist yet. `adopting: true` and pre-existing problems in
+untouched documents are reported, not treated as this branch's failures.
 
 **Migration** — new
 [v2.6 → v2.7 guide](skills/update-project-docs/migrations/v2.6-to-v2.7.md),

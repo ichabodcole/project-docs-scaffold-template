@@ -75,9 +75,11 @@ different speeds.
 ## File Naming
 
 - `YYYY-MM-DD-topic-investigation.md`
+- The `-investigation` suffix is part of the name, not a hint: a document that
+  drops it reads as a report or a note in every list it appears in.
 - Examples:
   - `2025-10-14-ai-composable-refactoring-investigation.md`
-  - `2025-10-15-tauri-migration-feasibility.md`
+  - `2025-10-15-tauri-migration-feasibility-investigation.md`
   - `2025-10-20-document-search-performance-investigation.md`
 
 ---

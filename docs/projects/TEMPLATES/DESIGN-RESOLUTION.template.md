@@ -140,8 +140,8 @@ be resolved above.]
 **Related Documents:**
 
 - [Proposal](./proposal.md)
-- [Architecture docs](../../architecture/doc-name.md) (if applicable)
-- [Plan](./plan.md) (created after resolution)
+- `[Architecture docs](../../architecture/doc-name.md)` (if applicable)
+- `[Plan](./plan.md)` (created after resolution)
 
 ---
 
