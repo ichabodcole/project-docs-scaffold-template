@@ -73,8 +73,10 @@ declares are one list rather than three that agree today.
 An agent capturing stdout therefore gets JSON by default and does not need a
 flag. A person at a terminal gets prose.
 
-`help` is the one exception: it stays text unless explicitly asked for `--json`,
-because a human piping `pdocs --help` into `less` wants documentation, not data.
+`help` is the one exception: it resolves as if stdout were a terminal, so it
+stays text THROUGH A PIPE — a human sending `pdocs --help` into `less` wants
+documentation, not data. Rule 1 still wins over that: `--json` and
+`--format json` both return the manifest.
 
 Everything else follows the heuristic, **including the paths that are not
 commands**. `--version` is the bare string at a terminal and
@@ -154,10 +156,11 @@ In text format a diagnostic is `pdocs: <message>` on stderr, with the hint on a
 second indented line where there is one; the same enumeration appears in the
 prose.
 
-The shape is `agent-cli-conformance`'s canonical error envelope
-(`docs/wiki/concepts/error-envelope.md`). Machine mode holds on **every**
-outcome — including a parser error and a bare invocation, both of which answer
-with this envelope when stdout is not a terminal.
+The shape is `agent-cli-conformance`'s canonical error envelope — a page in THAT
+repository's wiki, not a file this scaffold ships or that your project has.
+Everything needed to read one is above. Machine mode holds on **every** outcome
+— including a parser error and a bare invocation, both of which answer with this
+envelope when stdout is not a terminal.
 
 That is a claim a repository can make checkable, by declaring
 `{ "defaultOutput": "json" }` in an `acc.config.json` at its root. The scaffold
@@ -215,8 +218,10 @@ Exits **0** clean, **9** dirty. Under `lint.adopting: true` in
 bun scripts/pdocs/cli.ts report [--root <path>] [--format text|json]
 ```
 
-`data`: `lines[]` — rendered report lines. **Always exits 0**; it is a summary,
-not a gate.
+`data`: `lines[]` — rendered report lines. **Exits 0 however long the report
+is** — it is a summary, not a gate, so a backlog of missing fields is never a
+failure. The INVOCATION can still fail like any other: a `--root` that is not a
+directory exits 2, and a directory that is not a project-docs tree exits 5.
 
 ### `graph` — the knowledge graph
 
@@ -227,7 +232,12 @@ bun scripts/pdocs/cli.ts graph [--root <path>] [--format text|json]
 `data`: `pages` (int), `byTier` (`{ library, workbench }`), `byType`
 (`{ <type>: count }`), `tags` (`{ <tag>: [path, …] }`), `hubs[]`
 (`{ path, title, linksIn }`), `nodes[]`
-(`{ path, tier, type, title, tags[], related[], linksOut[], linksIn }`).
+(`{ path, tier, type, title, tags[], related[], linksOut[], linksIn[] }`).
+
+**`linksIn` is two different types and its name does not say so.** On `hubs[]`
+it is a COUNT (`8`); on `nodes[]` it is the ARRAY of citing paths
+(`["docs/index.md"]`). Use `nodes[].linksIn.length` when you want a number —
+comparing the array itself against an integer fails silently.
 
 ### `find` — query the tree
 
@@ -461,7 +471,10 @@ Workbench documents are not catalogued and get no such line.
   stderr; through a pipe it prints the error envelope, whose `choices` are the
   commands.
 - **A `--root` that is not a directory exits 2 rather than falling back**, so a
-  `clean` is never reported for a tree nobody checked.
+  `clean` is never reported for a tree nobody checked. That holds for every
+  command that reads the tree — `check`, `report`, `graph`, `find`, `orphans`.
+  `schema` is the exception: it reads no tree, so it accepts `--root`, ignores
+  it, and exits 0.
 - **Flags follow the command, and a misplaced one says so.**
   `pdocs --format json check` exits 2 with
   `` `--format` must follow a command `` and `error.choices` holding the command
