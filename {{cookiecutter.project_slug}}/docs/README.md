@@ -327,7 +327,7 @@ end with "not yet" — that's a normal outcome, not a failed one.
 
 ## Frontmatter
 
-Every document here carries OKF frontmatter, and `npm run docs:lint` checks it.
+Every document here carries OKF frontmatter, and `pdocs check` checks it.
 The whole contract — the fields, the two tiers of strictness, and the per-type
 `lifecycle` vocabularies — is [SCHEMA.md](./SCHEMA.md). Read it once before
 adding a document; the templates already carry the right block.
@@ -346,23 +346,24 @@ Two things worth knowing before you look:
   Working documents are found by their date and their folder README instead.
 
 ```bash
-npm run docs:lint     # the gate
-npm run docs:report   # what is still missing, grouped by field
-npm run docs:graph    # the whole graph as JSON
+bun scripts/pdocs/cli.ts check    # the gate
+bun scripts/pdocs/cli.ts report   # what is still missing, grouped by field
+bun scripts/pdocs/cli.ts graph    # the whole graph
 ```
 
-Those three are wrappers over the `pdocs` CLI, which is also what **creates** a
-document — folder, filename, frontmatter and, for a library page, its
-[index.md](./index.md) line:
+The same CLI is what **creates** a document — folder, filename, frontmatter
+and, for a library page, its [index.md](./index.md) line:
 
 ```bash
 bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
 bun scripts/pdocs/cli.ts help          # every command, flag and exit code
 ```
 
-The direct `bun scripts/pdocs/cli.ts …` form always works; the `npm run` scripts
-exist only where someone added them. [AGENTS.md](./AGENTS.md) has the short
-version for an agent entering this tree.
+It has no dependencies and needs no install step. It renders text at a terminal
+and JSON everywhere else, so a pipeline gets a parseable answer without asking
+for one. Nothing wraps it here — add `package.json` shortcuts if you want them,
+but the CLI is the interface, and `help` is how you find the rest of it.
+[AGENTS.md](./AGENTS.md) has the short version for an agent entering this tree.
 
 ## Usage
 

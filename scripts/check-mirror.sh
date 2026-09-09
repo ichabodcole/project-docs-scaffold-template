@@ -48,12 +48,15 @@ DIFFERS_BY_DESIGN=(
 # have a byte-identical counterpart here.
 #
 # WHAT THIS CANNOT SEE: a file that exists HERE and not in the payload. That is
-# deliberate — `scripts/pdocs/lint/golden.test.ts` and `scripts/pdocs/__fixtures__/`
-# are this repository's own, and stay unmirrored on purpose: the transcripts
-# encode THIS repo's `SCHEMA.md`, so shipping them would hand every generated
-# project a test that fails the moment it edits its own contract. Adding a new
-# file under `scripts/` that SHOULD be mirrored is therefore still a thing a
-# human has to remember to copy across; the gate catches the drift afterwards,
+# deliberate, and it is what makes the payload PRODUCTION-ONLY. Every `*.test.ts`
+# under `scripts/`, `scripts/pdocs/test-env.ts` and `scripts/pdocs/__fixtures__/`
+# are this repository's own and stay unmirrored on purpose: they test code the
+# consumer is delivered rather than owns, they would run inside their `bun test`,
+# and the golden transcripts encode THIS repo's `SCHEMA.md` — shipping those
+# would hand every generated project a test that fails the moment it edits its
+# own contract. Adding a new NON-TEST file under `scripts/` that SHOULD be
+# mirrored is therefore still a thing a human has to remember to copy across;
+# the gate catches the drift afterwards,
 # not the omission.
 CODE=()
 while IFS= read -r payload_file; do

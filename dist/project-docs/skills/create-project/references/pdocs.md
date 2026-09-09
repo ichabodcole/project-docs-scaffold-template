@@ -83,20 +83,18 @@ so a caller never has to regex a version out of prose; a bare `pdocs` prints
 help to stderr at a terminal and the error envelope through a pipe. Machine mode
 holds on every outcome, not only the ones a command reached.
 
-**Why the `docs:*` npm scripts pin a format.** Measured under a real pty,
-`npm run` inherits the parent's stdio, so stdout **is** a TTY and the heuristic
-resolves to text; in CI there is no TTY and the same script resolves to JSON.
-The pin is what makes one command produce one output in both places:
+**Nothing wraps this CLI, and that is deliberate.** The scaffold ships no
+`package.json` — `pdocs` has no dependencies, so there is nothing to install,
+and a shorthand covering three of its verbs teaches a partial interface. Invoke
+it directly, and use `help` to find the rest.
 
-```json
-"docs:lint": "bun scripts/pdocs/cli.ts check --format text",
-"docs:graph": "bun scripts/pdocs/cli.ts graph --format json",
-"docs:report": "bun scripts/pdocs/cli.ts report --format text"
-```
-
-`docs:lint` and `docs:report` want readable output in a CI log; `docs:graph`
-wants machine output even when a human runs it. Any script or hook that wraps
-`pdocs` should pin the format for the same reason.
+**If a project adds its own shortcuts, they must pin `--format`.** Measured
+under a real pty, `npm run` inherits the parent's stdio, so stdout **is** a TTY
+and the heuristic resolves to text; in CI there is no TTY and the same script
+resolves to JSON. Pinning is what makes one command produce one output in both
+places — and that a shorthand has to defeat the CLI's own resolution to be
+useful is most of the reason the scaffold does not ship one. The same applies to
+any hook that wraps `pdocs`.
 
 ## The envelope
 

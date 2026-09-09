@@ -1,6 +1,6 @@
 // `pdocs check` — the gate.
 //
-// This is the command `npm run docs:lint`, the pre-commit hook and CI all run,
+// This is the command the pre-commit hook and CI run,
 // and its TEXT rendering is a byte-for-byte inheritance from `docs/lint.ts`'s
 // `main()`. That is not sentiment: `scripts/pdocs/lint/golden.test.ts` asserts
 // the whole of stdout against transcripts recorded before this file existed, so
@@ -88,7 +88,7 @@ function renderText(report: LintReport): void {
     console.log(
       `\ndocs-lint: ${report.total} problem(s), exiting 0 — \`lint.adopting\` is true in ` +
         `.project-docs.json.\n` +
-        `           This project is mid-adoption. Work the list with \`npm run docs:report\`,\n` +
+        `           This project is mid-adoption. Work the list with \`pdocs report\`,\n` +
         `           then set \`lint.adopting\` to false; it is not a permanent setting.`
     );
     return;

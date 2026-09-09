@@ -61,9 +61,13 @@ The list below is what it walks; keep them in step and the check stays quiet.
 
 **Payload-only (no counterpart here, and none wanted):**
 
-- `{{cookiecutter.project_slug}}/package.json` and `tsconfig.json` — a generated
-  project's, not this repo's. This repo has its own, with Prettier, husky and
-  Slidev in it.
+- _(none any more.)_ The payload used to carry a `package.json` wrapping the CLI
+  in `docs:*` scripts and a `tsconfig.json` to typecheck it. Both are gone: the
+  payload is **production-only**, and a consumer is delivered a tool rather than
+  handed a development setup for code they do not own. This repo keeps its own
+  of each, with Prettier, husky and Slidev in it. **Do not add a payload
+  counterpart for either** — nor for any `*.test.ts`, which stay this
+  repository's own for the same reason (`scripts/check-mirror.sh` says why).
 - `{{cookiecutter.project_slug}}/.project-docs.json` — same file name as this
   repo's, different content: no `exclude` entries, and `skip` without this
   repo's `superpowers`. Its `version` is tracked by release-please through

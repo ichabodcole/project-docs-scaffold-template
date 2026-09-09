@@ -319,14 +319,14 @@ bun scripts/pdocs/cli.ts report               # what is missing — the backfill
 bun scripts/pdocs/cli.ts graph --format json  # the whole graph as JSON
 ```
 
-If the project defines them, `npm run docs:lint`, `docs:report` and `docs:graph`
-are the same three commands. The direct form always works; the scripts exist
-only where someone added them.
+The scaffold ships no `package.json` wrapping these. A project that wants
+`npm run docs:lint` can add it, but the CLI is the interface and the form above
+always works.
 
 While `lint.adopting` is `true` in `.project-docs.json`, the gate **reports and
 exits 0**: a project adopting this layer has a corpus that predates it, and a
 gate that fails on day one fails on every commit of the work that fixes it. Set
-it to `false` the moment `docs:report` is empty. The lint says so on every run.
+it to `false` the moment `report` is empty. The lint says so on every run.
 
 ---
 

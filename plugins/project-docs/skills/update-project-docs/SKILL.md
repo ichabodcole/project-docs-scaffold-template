@@ -205,26 +205,29 @@ ls scripts/pdocs/cli.ts && bun scripts/pdocs/cli.ts --version --format text
 # 2. The gate runs through it, and is clean
 bun scripts/pdocs/cli.ts check --format text
 
-# 3. The `docs:*` scripts resolve to the CLI, with the format pinned.
-#    Guarded, because a project with no package.json is fine — the direct
-#    form above is the gate, and these scripts are a convenience over it.
-if [ -f package.json ]; then
-  grep -q 'pdocs/cli.ts check --format text' package.json  && echo "docs:lint pinned"
-  grep -q 'pdocs/cli.ts report --format text' package.json && echo "docs:report pinned"
-  grep -q 'pdocs/cli.ts graph --format json' package.json  && echo "docs:graph pinned"
-  npm run docs:lint --silent
-fi
+# 3. No delivered code is being treated as the project's own. The CLI ships
+#    production files only; tests or a tsconfig covering scripts/ mean an
+#    older build left artefacts behind.
+ls scripts/pdocs/*.test.ts scripts/pdocs/test-env.ts 2>/dev/null \
+  && echo "FAIL — the CLI's tests are installed" || echo "no shipped tests"
+grep -q 'scripts/\*\*/\*\.ts' tsconfig.json 2>/dev/null \
+  && echo "FAIL — tsconfig typechecks delivered code" || echo "tsconfig is the project's own"
 
 # 4. The two version markers agree
 grep docs_version docs/README.md
 [ -f .project-docs.json ] && grep '"version"' .project-docs.json
 ```
 
-Expect a version string from `--version`, `docs-lint: clean` twice (once
-directly, once through `npm run docs:lint`), three `pinned` lines, and one
-version value in both markers. A missing `pinned` line is a script body that was
-not rewritten, or was rewritten without its `--format` — which is invisible
-until CI hands somebody a JSON blob.
+Expect a version string from `--version`, `docs-lint: clean`, both artefact
+lines reporting clean, and one version value in both markers. A `FAIL` on either
+artefact line means an older scaffold's development setup is still installed:
+the CLI's own tests running in the project's suite, or its files being
+typechecked under a `tsconfig` they were never written for. The migration
+guide's step 6 removes both.
+
+Shortcut scripts are deliberately not checked. The scaffold ships no
+`package.json`, so `docs:*` entries are the project's own business — if it has
+them they should pin `--format`, and if it does not, the CLI is the interface.
 
 **Stale-reference greps are not here on purpose.** Each migration names the
 strings it made stale and greps for them in its own Verification section — those
@@ -245,21 +248,20 @@ There is no migration row for it, because the repair is a subset of one that
 exists: [v2.7-to-v2.8](migrations/v2.7-to-v2.8.md). Run exactly these steps of
 it, and no others:
 
-| Step | Do                                                   | Note                                                                                                                        |
-| ---- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 2    | Install Bun and cookiecutter                         | Bun is what runs the CLI at all                                                                                             |
-| 3    | Generate the scaffold, resolve `$SCAFFOLD`           | Re-derive it in every shell — see that step's note                                                                          |
-| 4    | Copy `scripts/pdocs/`, refresh `scripts/docs-lint/`  | The actual repair                                                                                                           |
-| 6    | Rewrite the `docs:*` scripts                         | Skip if there is no `package.json`                                                                                          |
-| 7    | Add `scripts/**/*.ts` to `tsconfig.json`'s `include` | Skip if there is no `tsconfig.json`                                                                                         |
-| 8    | Add the `kickoff` row to `docs/SCHEMA.md`            | **Check first:** `grep -q kickoff docs/SCHEMA.md`. A `docs/` copied from a current scaffold already has the row; skip if so |
-| 9    | Refresh the templates **and `docs/AGENTS.md`**       | Both halves. The second is what makes the docs tree's entry point name the CLI                                              |
-| 12   | `pdocs check` and `bun test`                         | The repair's own gate                                                                                                       |
+| Step | Do                                                          | Note                                                                                                                        |
+| ---- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 2    | Install Bun and cookiecutter                                | Bun is what runs the CLI at all                                                                                             |
+| 3    | Generate the scaffold, resolve `$SCAFFOLD`                  | Re-derive it in every shell — see that step's note                                                                          |
+| 4    | Copy `scripts/pdocs/`, refresh `scripts/docs-lint/`         | The actual repair                                                                                                           |
+| 6    | Remove the development artefacts an earlier build installed | The CLI's tests and a `tsconfig` covering `scripts/` — skip whichever is not there                                          |
+| 7    | Add the `kickoff` row to `docs/SCHEMA.md`                   | **Check first:** `grep -q kickoff docs/SCHEMA.md`. A `docs/` copied from a current scaffold already has the row; skip if so |
+| 8    | Refresh the templates **and `docs/AGENTS.md`**              | Both halves. The second is what makes the docs tree's entry point name the CLI                                              |
+| 11   | `pdocs check`                                               | The repair's own gate                                                                                                       |
 
-Steps **1, 5, 10, 11 and 13 do not apply**: 1 and 11 are hygiene you can do
-anyway, 5 has no `docs/lint.ts` to delete, 10 has no reference to it to
-re-point, and 13's version markers are already whatever they were — this is a
-repair, not a version step, so do not move them.
+Steps **1, 5, 9, 10 and 12 do not apply**: 1 and 10 are hygiene you can do
+anyway, 5 has no `docs/lint.ts` to delete, 9 has no reference to it to re-point,
+and 12's version markers are already whatever they were — this is a repair, not
+a version step, so do not move them.
 
 Then **re-run this step, and Step 6**. Step 6 ran before the CLI existed, so its
 `Documentation CLI pointer` row was skipped by its own precondition and root

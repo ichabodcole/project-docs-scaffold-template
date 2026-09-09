@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Post-generation hook for project-docs-scaffold-template."""
 
-import json
 import os
 import shutil
 
@@ -12,64 +11,23 @@ LAYER_NOTE = """     ───────────────────�
      See [docs/README.md](./docs/README.md) for the full
      structure overview and document type guide.
 
+     `bun scripts/pdocs/cli.ts` is the tool for this tree.
+     `check` gates it; `new <type>` creates a document in the
+     right folder, with the right filename and frontmatter;
+     `find`, `backlinks` and `orphans` query it. Run
+     `bun scripts/pdocs/cli.ts help` for the whole surface —
+     it answers in JSON whenever its output is not a
+     terminal. Prefer it over writing documents by hand.
+
      Every document carries a frontmatter block, and
      [docs/SCHEMA.md](./docs/SCHEMA.md) is the contract for
-     it — which fields, which vocabularies, and what
-     `bun scripts/pdocs/cli.ts check` checks. Read it before
-     creating or editing a document.
+     it — which fields, which vocabularies, and what `check`
+     enforces. Read it before creating or editing a document.
 
      For quick onboarding on recent work, start with
      [docs/memories/](./docs/memories/).
      ─────────────────────────────────────────────────────
 """
-
-# The current-directory branch does not write a `package.json`, so it prints
-# the scripts for a human to paste into theirs. Those bodies are NOT written
-# out here: they are READ from the payload's own `package.json` at print time.
-#
-# This used to be a literal, and it is exactly the kind of literal that rots.
-# The same four scripts were stated in three places — the repo's own
-# `package.json`, the payload's, and this constant — and the third copy drifted:
-# `--format text` was added to `docs:lint` and `docs:report` in the first two
-# and not here, so this hook spent a release telling people to install a script
-# that emits JSON into their CI log. `pdocs` prints text on a TTY and JSON
-# everywhere else, which is why the flag is load-bearing rather than cosmetic.
-#
-# One statement, one place. The payload's `package.json` is the contract; this
-# renders it.
-#
-# Only the NAMES below are stated twice, and only to leave one out. `typecheck`
-# is `tsc --noEmit`, which needs a `tsconfig.json` — and this branch
-# deliberately does not move ours (see `install_to_current_directory`). Printing
-# it would recommend a script that cannot run. The `tsconfig` `include` an
-# existing project does need is step 3 of the printed instructions instead.
-UNINSTALLABLE_SCRIPTS = ("typecheck",)
-
-
-def render_package_scripts(project_dir):
-    """Render the payload's own docs scripts as pasteable `package.json` lines.
-
-    Read before the payload directory is deleted — `install_to_current_directory`
-    calls this at entry, and `shutil.rmtree`s `project_dir` well after.
-
-    A missing or malformed `package.json` raises. That can only mean a broken
-    payload, and a broken payload should fail generation loudly rather than
-    print a quietly shorter list.
-    """
-    with open(os.path.join(project_dir, "package.json")) as handle:
-        scripts = json.load(handle)["scripts"]
-
-    entries = [(k, v) for k, v in scripts.items() if k not in UNINSTALLABLE_SCRIPTS]
-
-    # Align the values the way a hand-written block would be — this is pasted
-    # into a file a person reads.
-    width = max(len(k) for k, _ in entries) + 3  # quotes and the colon
-    lines = []
-    for index, (name, body) in enumerate(entries):
-        key = f'"{name}":'.ljust(width)
-        comma = "," if index < len(entries) - 1 else ""
-        lines.append(f'     {key} "{body}"{comma}')
-    return "\n".join(lines) + "\n"
 
 
 def _move(source, target, label):
@@ -89,11 +47,6 @@ def install_to_current_directory():
     parent_dir = os.path.dirname(project_dir)
     docs_target = os.path.join(parent_dir, "docs")
 
-    # Read the scripts NOW, while the payload still exists. Everything below
-    # moves pieces of it out and then deletes what is left, and the block is
-    # printed after that.
-    package_scripts = render_package_scripts(project_dir)
-
     # docs/ is the whole point; if it collides there is nothing safe to do.
     if os.path.exists(docs_target):
         print("\n⚠️  A docs/ directory already exists in the current directory.")
@@ -106,19 +59,22 @@ def install_to_current_directory():
     shutil.move(os.path.join(project_dir, "docs"), docs_target)
 
     # The lint's portable core, the `pdocs` CLI that drives it, and its config
-    # travel with docs/. `package.json`, `tsconfig.json` and `.gitignore`
-    # deliberately do NOT: an existing project has its own of each, and
-    # overwriting them to install a doc lint would be a poor trade.
+    # travel with docs/. `.gitignore` deliberately does not: an existing
+    # project has its own, and overwriting it to install a doc lint would be a
+    # poor trade.
     #
-    # What those two files would have carried gets PRINTED instead, and the
-    # print is derived rather than restated — the package scripts come out of
-    # the payload's own `package.json` (see `render_package_scripts`), and the
-    # `tsconfig` `include` is step 3. Neither is optional: without the scripts
-    # there is no `npm run docs:lint`, and without `scripts/**/*.ts` in
-    # `include` the project's `tsc` never sees the CLI it just installed.
+    # NOTHING ELSE IS INSTALLED, and that is the design rather than an
+    # omission. This scaffold used to ship a `package.json` wrapping the CLI in
+    # `docs:lint` / `docs:graph` / `docs:report`, a `tsconfig.json`, and the
+    # CLI's own test suite — a development setup for code the consumer does not
+    # own. The wrapper covered three of the CLI's eight verbs and had to pin
+    # `--format` to defeat the CLI's own resolution, so it taught a partial
+    # interface badly. `pdocs` has no dependencies, so there is nothing to
+    # install and nothing to configure: run it, or wrap it yourself if you want
+    # a shorthand in your own `package.json`.
     #
     # `scripts/pdocs/` is not optional. It holds every rule the gate enforces
-    # and the entry point the printed scripts name; without it `docs/` arrives
+    # and the entry point everything below names; without it `docs/` arrives
     # with a contract and nothing that checks it.
     _move(
         os.path.join(project_dir, "scripts", "docs-lint"),
@@ -143,24 +99,23 @@ def install_to_current_directory():
     print("📁 Project: {{ cookiecutter.project_name }}")
     print("📂 Location: ./docs/\n")
     print("Next steps:")
-    print("  1. Install the project-docs plugin for Claude Code:")
+    print("  1. Check the tree — no install step, `pdocs` has no dependencies:\n")
+    print("       bun scripts/pdocs/cli.ts check\n")
+    print("     It should print `docs-lint: clean` on a fresh scaffold, and")
+    print("     `bun scripts/pdocs/cli.ts help` prints the whole surface.")
+    print("     Your package.json and tsconfig.json were left untouched.")
+    print("     scripts/pdocs/ is delivered, not handed over: it is versioned")
+    print("     with the scaffold and /project-docs:update-project-docs")
+    print("     replaces it. Nothing in it is yours to edit or typecheck.\n")
+    print("  2. Install the project-docs plugin for Claude Code:")
     print("     /plugin marketplace add ichabodcole/project-docs-scaffold-template")
     print("     /plugin install project-docs")
-    print("  2. Add these scripts to your package.json (they were not written,")
-    print("     so your own package.json is untouched):\n")
-    print(package_scripts)
-    print("     Then check the tree:  bun install && bun scripts/pdocs/cli.ts check")
-    print("     It should print `docs-lint: clean` on a fresh scaffold.\n")
-    print("  3. Add scripts/**/*.ts to your tsconfig.json `include` — the CLI")
-    print("     landed in scripts/pdocs/ and your tsconfig was left untouched,")
-    print("     so nothing typechecks it until you do:\n")
-    print('       "include": ["docs/**/*.ts", "scripts/**/*.ts"]\n')
-    print("  4. Review and customize docs/PROJECT_MANIFESTO.md")
-    print("  5. Read docs/SCHEMA.md — the frontmatter contract the lint enforces")
-    print("  6. Add this to your CLAUDE.md or AGENTS.md so AI agents")
-    print("     discover the docs structure automatically:\n")
+    print("  3. Review and customize docs/PROJECT_MANIFESTO.md")
+    print("  4. Read docs/SCHEMA.md — the frontmatter contract the lint enforces")
+    print("  5. Add this to your CLAUDE.md or AGENTS.md so AI agents")
+    print("     discover the docs structure and reach for the CLI:\n")
     print(LAYER_NOTE)
-    print("  7. Start documenting! 📝\n")
+    print("  6. Start documenting! 📝\n")
     print("If this directory ALREADY had a docs/ tree from an older scaffold, the")
     print("install aborted above — that upgrade path is a migration, not a copy.")
     print("Run /project-docs:update-project-docs and it will find the right one.\n")
@@ -173,15 +128,16 @@ def install_to_new_folder():
     print("📂 Location: ./{{ cookiecutter.project_slug }}\n")
     print("Next steps:")
     print("  1. cd {{ cookiecutter.project_slug }}")
-    print("  2. bun install && bun scripts/pdocs/cli.ts check")
-    print("     It should print `docs-lint: clean` on a fresh scaffold.")
+    print("  2. bun scripts/pdocs/cli.ts check   (no install — no dependencies)")
+    print("     It should print `docs-lint: clean` on a fresh scaffold, and")
+    print("     `bun scripts/pdocs/cli.ts help` prints the whole surface.")
     print("  3. Install the project-docs plugin for Claude Code:")
     print("     /plugin marketplace add ichabodcole/project-docs-scaffold-template")
     print("     /plugin install project-docs")
     print("  4. Review and customize docs/README.md if needed")
     print("  5. Read docs/SCHEMA.md — the frontmatter contract the lint enforces")
     print("  6. Add this to your CLAUDE.md or AGENTS.md so AI agents")
-    print("     discover the docs structure automatically:\n")
+    print("     discover the docs structure and reach for the CLI:\n")
     print(LAYER_NOTE)
     print("  7. Start documenting! 📝\n")
 

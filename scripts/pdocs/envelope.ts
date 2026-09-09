@@ -281,10 +281,12 @@ export function readFlag(
  * — an agent, a CI step, a `$(...)` — gets JSON, because that is who is on the
  * other end when stdout is not a TTY.
  *
- * The heuristic is NOT sufficient on its own, and `package.json` proves it:
+ * The heuristic is NOT sufficient on its own, and an `npm` script proves it:
  * measured under a real pty, `npm run` inherits the parent's stdio and stdout
- * IS a TTY, so `npm run docs:graph` would render text unless the script says
- * `--format json`. A resolver that guesses needs a way to be told.
+ * IS a TTY, so a `docs:graph` script would render text unless it says
+ * `--format json`. A resolver that guesses needs a way to be told. That the
+ * shorthand has to defeat the resolution to be useful is half the argument for
+ * not shipping one.
  *
  * THAT LAST BRANCH IS DECLARABLE, not an implementation detail. An
  * `acc.config.json` carrying `{ "defaultOutput": "json" }` tells

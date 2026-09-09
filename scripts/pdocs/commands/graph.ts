@@ -9,9 +9,9 @@
 //
 // The shape it used to emit was `DocsLintReport` raw and unenveloped, kept
 // byte-identical for a consumer of `bun docs/lint.ts --json`. There is no such
-// consumer: `npm run docs:graph` is the only caller and nothing parses its
-// output. A compatibility constraint with no beneficiary is not a constraint,
-// it is a shape nobody chose.
+// consumer: nothing in the scaffold or its fleet parses that output. A
+// compatibility constraint with no beneficiary is not a constraint, it is a
+// shape nobody chose.
 //
 // And `DocsLintReport` is a LINT artefact. It carries `problems`, `reachable`,
 // `contractExempt`, `tagNeighbors` — fields that exist because a gate needed
