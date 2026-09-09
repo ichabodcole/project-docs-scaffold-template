@@ -71,7 +71,18 @@ The list below is what it walks; keep them in step and the check stays quiet.
 - `{{cookiecutter.project_slug}}/.project-docs.json` — same file name as this
   repo's, different content: no `exclude` entries, and `skip` without this
   repo's `superpowers`. Its `version` is tracked by release-please through
-  `release-please-config.json`, the same way `docs/README.md`'s is.
+  `release-please-config.json`, the same way `docs/README.md`'s and the
+  `VERSION` literal in both copies of `scripts/pdocs/cli.ts` are.
+
+**Adding a file that carries the version?** Put it in
+`release-please-config.json`'s `extra-files` and nowhere else.
+`npm run check:version` reads that list and asserts every marker equals
+`package.json`'s version, so a new entry is checked without anyone adding it
+here — and a path that goes stale because a file moved fails the gate instead of
+being silently skipped at release time. A `generic` entry needs the
+`x-release-please-version` comment on the line holding the version; the check
+fails loudly if it is missing, because release-please would leave that file
+alone for ever.
 
 **Structurally mirrored but content differs** — these two are exempted by name
 in `scripts/check-mirror.sh`, so nothing checks them. Adding a third is a

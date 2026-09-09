@@ -155,7 +155,8 @@ every library page must appear in; `.project-docs.json` at the root configures
 the lint.
 
 ```bash
-npm run check         # The gate: format:check + docs:lint + check:mirror + check:dist + test
+npm run check         # The gate: format:check + docs:lint + check:version + check:mirror + check:dist + test
+npm run check:version # Every release-please marker agrees with package.json
 npm run check:mirror  # Payload and docs/ agree, normalized through Prettier
 npm run check:dist    # dist/ is what build:dist would produce from plugins/
 npm run build:dist    # Rebuild dist/ from plugins/ — run it when check:dist fails
