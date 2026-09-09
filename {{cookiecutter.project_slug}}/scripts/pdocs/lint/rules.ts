@@ -16,8 +16,8 @@
 //
 // Everything project-specific lives in this file and in `registry.ts`, which
 // holds the type system as data and which every check below reads rather than
-// carrying its own copy. `scripts/docs-lint/` is a copy of a portable core and
-// stays that way.
+// carrying its own copy. `scripts/pdocs/docs-lint/` is a copy of a portable
+// core and stays that way.
 
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";

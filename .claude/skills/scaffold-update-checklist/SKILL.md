@@ -132,12 +132,26 @@ across, and say which direction you chose in the commit.
 ```bash
 cookiecutter . --no-input --overwrite-if-exists -o /tmp/cc \
   install_target="New project folder"
-cd /tmp/cc/my-project && bun scripts/pdocs/cli.ts check && bun test
+cd /tmp/cc/my-project
+bun scripts/pdocs/cli.ts check                  # the gate, on a fresh tree
+ls -A                                           # expect: .project-docs.json docs scripts
+find . -name '*.test.ts' -o -name 'test-env.ts' | grep . \
+  && echo "FAIL — the payload shipped tests" || echo "no tests shipped"
+ls package.json tsconfig.json acc.config.json 2>/dev/null \
+  && echo "FAIL — the payload shipped a development setup" || echo "production only"
 ```
 
 `--no-input` alone picks the **first** `install_target` choice, which is the
 current-directory install — that branch moves `docs/` to the parent and deletes
 the rest, so you get no project to inspect. Pass the target explicitly.
+
+**Do not end this with `bun test`.** It used to, and the payload shipped a copy
+of the lint's test file for it to run. The payload is production-only now, so
+`bun test` in a correct generated project exits **1** with
+`0 test files matching` — a green payload reported as a failure, which is the
+worst direction for a verification step to be wrong in. The `find` above asserts
+the opposite and is the check that means something: a `*.test.ts` in the payload
+is the defect, not its absence.
 
 ## Checklists by Change Type
 

@@ -380,8 +380,8 @@ generated: { by: golden-test, at: 2026-01-01 }
 `,
 
   // BAD related. Must be a DURABLE folder: `related` resolution is library-tier
-  // only (`scripts/docs-lint/index.ts:587`), so the same frontmatter on a
-  // workbench document exercises nothing.
+  // only (`scripts/pdocs/docs-lint/index.ts`, its `related:` edges section), so
+  // the same frontmatter on a workbench document exercises nothing.
   "docs/playbooks/dangling-related.md": `---
 type: playbook
 title: Dangling Related
