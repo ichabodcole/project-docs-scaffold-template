@@ -1,5 +1,41 @@
 # Changelog
 
+## [7.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.3.0...project-docs-scaffold-template-v7.0.0) (2026-09-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **template:** the lint's portable core moved from `scripts/docs-lint/` to `scripts/pdocs/docs-lint/`, and the payload no longer ships a `.gitignore`. A project that installed an earlier build must delete `scripts/docs-lint/` after copying the new tree; the v2.7→v2.8 migration does this and verifies it. An install that would overwrite an existing `scripts/pdocs/` or `docs/` now aborts and rolls back instead of proceeding.
+* **template:** the cookiecutter payload no longer ships `package.json`, `tsconfig.json`, `acc.config.json` or any `*.test.ts`. A generated project runs the CLI directly as `bun scripts/pdocs/cli.ts <command>`; the `docs:lint`, `docs:graph` and `docs:report` npm scripts are gone and are not replaced. A project that wants shortcuts adds its own, and must pin `--format` in them.
+
+### Features
+
+* **docs-lint:** the frontmatter contract, two tiers, and the cycle type ([2bb3cfe](https://github.com/ichabodcole/project-docs-scaffold-template/commit/2bb3cfeb89b76cf285fbbde204e49d2faa91b76d))
+* **gate:** check every version marker against package.json ([d987b48](https://github.com/ichabodcole/project-docs-scaffold-template/commit/d987b48623791738ee3aacb04e0728e0596b4515))
+* **pdocs:** rejections that name their set, both flag spellings, no fault on a closed pipe ([817c6a4](https://github.com/ichabodcole/project-docs-scaffold-template/commit/817c6a4b5fa052b34149f1873e850dea5c7a1575))
+* **pdocs:** turn the documentation lint into an agent-facing CLI ([1dde782](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1dde7824864ff0e473510e4e4553770fb83e8e76))
+* **project-docs:** frontmatter-aware skills, cycle touchpoints (3.7.0) ([26081c3](https://github.com/ichabodcole/project-docs-scaffold-template/commit/26081c3c9d3a3404a5136c3f96138da4bc883447))
+* **template:** ship a tool, not a development setup ([afb19c4](https://github.com/ichabodcole/project-docs-scaffold-template/commit/afb19c49516efdb17f15ff7c9581851317d097b2))
+* **template:** ship the OKF frontmatter layer in the scaffold ([1eb2d9e](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1eb2d9e5bc32b354461ec7fb21d1c6f87b70aa67))
+* **update-project-docs:** the frontmatter codemod, and the diff it wrote ([3238eb0](https://github.com/ichabodcole/project-docs-scaffold-template/commit/3238eb0e6c2205e5da1d599ad5aa004aab5d926c))
+
+
+### Bug Fixes
+
+* **build:** a build step that changes what ships was optional ([537c073](https://github.com/ichabodcole/project-docs-scaffold-template/commit/537c0730106a728f84683310204f23b7f7b75779))
+* **create-project:** five false claims in the pdocs reference ([afe1388](https://github.com/ichabodcole/project-docs-scaffold-template/commit/afe1388d1897eb0b4f9e5319e0ce985f775bbd4e))
+* **dist:** five skill files were tracked lowercase while the builder emits SKILL.md ([a0fcf51](https://github.com/ichabodcole/project-docs-scaffold-template/commit/a0fcf515f5629c8e57c586c097700d626502e962))
+* **docs-lint:** the library tier was not checking frontmatter at all ([60fbc34](https://github.com/ichabodcole/project-docs-scaffold-template/commit/60fbc348a892620333b748139da192b212d608fc))
+* **scaffold:** three references the docs-lint move left pointing at nothing ([4c2fb82](https://github.com/ichabodcole/project-docs-scaffold-template/commit/4c2fb82df8198594b6315d012da2f632e5af54d3))
+* the gate never ran in CI, and the rollback put the CLI in the wrong place ([26808eb](https://github.com/ichabodcole/project-docs-scaffold-template/commit/26808eb846d5ec3b0cf2762c7cb64018a6444207))
+* **update-project-docs:** a stale-reference check with a blind spot, and the plan reconciliation ([1faeed5](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1faeed57430c3643f3e7189739ac0e92bb8af9f8))
+* **update-project-docs:** verifications that could not fail ([27a77b6](https://github.com/ichabodcole/project-docs-scaffold-template/commit/27a77b6bfefc533f2e16db9f2e69f07c6182a284))
+
+
+### Code Refactoring
+
+* **template:** one directory in the consumer's scripts/, and a collision that stops ([c7f6f74](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c7f6f74d83be1c07ab737e0ff4efc046cec65ac2))
+
 ## [6.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.2.0...project-docs-scaffold-template-v6.3.0) (2026-09-03)
 
 
