@@ -208,7 +208,7 @@ describe("pdocs find", () => {
     expect(json.code).toBe(ExitCode.Success);
     const out = JSON.parse(json.stdout);
     expect(out.ok).toBe(true);
-    expect(out.command).toBe("find");
+    expect(out.meta.command).toBe("find");
     expect(out.data.count).toBe(2);
     expect(out.data.matches.map((m: { path: string }) => m.path)).toEqual([
       "docs/projects/alpha/proposal.md",
@@ -365,7 +365,7 @@ describe("pdocs backlinks", () => {
     ]);
     expect(code).toBe(ExitCode.Success);
     const out = JSON.parse(stdout);
-    expect(out.command).toBe("backlinks");
+    expect(out.meta.command).toBe("backlinks");
     expect(out.data.target.key).toBe("playbook/a-playbook");
     // `related:` on alpha's proposal — a frontmatter claim, addressed by key.
     expect(out.data.related.map((r: { path: string }) => r.path)).toEqual([
@@ -563,7 +563,7 @@ describe("pdocs orphans", () => {
     const json = run(["orphans", "--format", "json", "--root", ROOT]);
     expect(json.code).toBe(ExitCode.Success);
     const out = JSON.parse(json.stdout);
-    expect(out.command).toBe("orphans");
+    expect(out.meta.command).toBe("orphans");
     expect(out.data.tier).toBe("library");
     expect(out.data.catalog).toBe("docs/index.md");
     expect(out.data.count).toBe(1);
@@ -599,7 +599,7 @@ describe("pdocs graph", () => {
     const out = JSON.parse(stdout);
 
     expect(out.ok).toBe(true);
-    expect(out.command).toBe("graph");
+    expect(out.meta.command).toBe("graph");
     expect(Object.keys(out.data).sort()).toEqual([
       "byTier",
       "byType",

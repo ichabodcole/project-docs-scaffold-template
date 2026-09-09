@@ -213,20 +213,33 @@ export function resolveType(ctx: Ctx, typeArg: string): ResolvedType {
   const wanted = alias?.type ?? typeArg;
   const registry = registryIndex(ctx.config);
   const row = registry.get(wanted);
-
-  if (!row) {
-    const creatable = [
+  // The closed set, read off the registry rather than written beside it — the
+  // same list `check` enforces and `new` writes from. It is enumerated in prose
+  // AND as `choices`, and both refusals below hand it over: a caller who named
+  // a type pdocs will not create needs the set exactly as much as one who named
+  // a type that does not exist.
+  const creatable = (): string[] =>
+    [
       ...[...registry.values()].filter((r) => r.creatable).map((r) => r.type),
       ...Object.keys(TYPE_ALIAS),
     ].sort();
+
+  if (!row) {
+    const choices = creatable();
     throw new UsageError(
-      `unknown type \`${typeArg}\`. Creatable: ${creatable.join(", ")}.`
+      `unknown type \`${typeArg}\`. Creatable: ${choices.join(", ")}.`,
+      { token: typeArg, choices }
     );
   }
 
   if (!row.creatable)
     throw new UsageError(
-      `\`${row.type}\` is not created by pdocs — ${row.uncreatableReason}.`
+      `\`${row.type}\` is not created by pdocs — ${row.uncreatableReason}.`,
+      {
+        token: typeArg,
+        choices: creatable(),
+        hint: `Creatable: ${creatable().join(", ")}.`,
+      }
     );
 
   return { row, namesScope: alias?.namesScope === true };
@@ -364,15 +377,18 @@ export function resolveTemplate(
   }
 
   const choices = row.template.map((t) => [variantName(t), t] as const);
-  const list = choices.map(([v]) => v).join(", ");
+  const names = choices.map(([v]) => v);
+  const list = names.join(", ");
   if (variant === undefined)
     throw new UsageError(
-      `\`${row.type}\` has ${choices.length} templates — pass \`--variant <${list.replace(/, /g, "|")}>\`.`
+      `\`${row.type}\` has ${choices.length} templates — pass \`--variant <${list.replace(/, /g, "|")}>\`.`,
+      { choices: names }
     );
   const chosen = choices.find(([v]) => v === variant);
   if (!chosen)
     throw new UsageError(
-      `--variant: \`${variant}\` is not a ${row.type} template — expected one of ${list}.`
+      `--variant: \`${variant}\` is not a ${row.type} template — expected one of ${list}.`,
+      { token: variant, choices: names }
     );
   return chosen[1];
 }
@@ -666,7 +682,15 @@ export const newCommand: Command = {
   usage:
     "pdocs new <type> <name> [--title <t>] [--description <d>] [--project <slug>] " +
     "[--variant <v>] [--from <path>]",
-  positionals: ["<type>", "<name>"],
+  // `name` is NOT required and the two are not the same kind of optional: a
+  // type whose filename the registry fixes — `proposal.md`, `plan.md` — takes
+  // none, and a type that names a scope demands one. The parser enforces the
+  // maximum; which of the two applies is `resolveType`'s answer, so `required`
+  // here is the honest floor rather than a guess at the common case.
+  positionals: [
+    { name: "type", required: true },
+    { name: "name", required: false },
+  ],
   options: [
     { flag: "--title", metavar: "<text>", summary: "Title. Defaults to the name, title-cased." },
     {
@@ -783,11 +807,13 @@ export const newCommand: Command = {
         );
       if (key === "lifecycle" && row.lifecycle && !row.lifecycle.includes(value))
         throw new UsageError(
-          `--lifecycle: \`${value}\` is not a ${row.type} lifecycle — ${row.lifecycle.join(" | ")}.`
+          `--lifecycle: \`${value}\` is not a ${row.type} lifecycle — ${row.lifecycle.join(" | ")}.`,
+          { token: value, choices: [...row.lifecycle] }
         );
       if (key === "status" && !OKF_STATUS.includes(value))
         throw new UsageError(
-          `--status: \`${value}\` is not an OKF status — ${OKF_STATUS.join(" | ")}.`
+          `--status: \`${value}\` is not an OKF status — ${OKF_STATUS.join(" | ")}.`,
+          { token: value, choices: [...OKF_STATUS] }
         );
       fills.set(key, asWritten(key, value));
     }
@@ -799,7 +825,8 @@ export const newCommand: Command = {
         throw new UsageError(
           `--${key} is not a field of \`${row.type}\`${
             row.extra.length ? ` — it takes ${row.extra.map((e) => `--${e}`).join(", ")}` : ""
-          }.`
+          }.`,
+          { token: `--${key}`, choices: row.extra.map((e) => `--${e}`) }
         );
       fills.set(key, asWritten(key, value));
     }

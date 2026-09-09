@@ -32,13 +32,37 @@ Two globals every command takes:
 | `--root <path>`         | Work on another repository. Defaults to the CLI's own.                 |
 | `--format <text\|json>` | Override format resolution. `--json` is shorthand for `--format json`. |
 
+Either spelling of a value works — `--format json` and `--format=json` are the
+same request. A flag that takes no value refuses one: `--json=false` exits 2
+rather than being read as `--json`, which is the opposite of what it says.
+
 ```bash
 bun scripts/pdocs/cli.ts help          # command list and the exit-code table
 bun scripts/pdocs/cli.ts help --json   # the same thing as a machine manifest
 ```
 
-The manifest carries every command, every flag and every metavar, and is the
+The manifest carries every verb, every flag and every metavar, and is the
 authoritative source if this page and the tool ever disagree.
+
+```bash
+bun scripts/pdocs/cli.ts schema        # the same surface as an acc declaration
+```
+
+`schema` emits `agent-cli-conformance` declaration format v0 — `formatVersion`,
+`provenance: "emitted"`, `selfDescription`, and one `commands[]` row per path
+including the root as `path: []`. **It is the one command whose stdout is not
+the envelope**, because `acc check --declaration` reads that document at the top
+level and refuses unknown keys; wrapping it would produce a file the only
+consumer cannot read. Both format modes emit the same bytes, and it needs no
+docs tree — it describes the tool, not the tree:
+
+```bash
+bunx acc check scripts/pdocs/cli.ts --declaration <(bun scripts/pdocs/cli.ts schema)
+```
+
+Every field is walked out of the same tables the parser and the dispatcher use,
+so the flags a verb accepts, the flags its rejection enumerates and the flags it
+declares are one list rather than three that agree today.
 
 ## Format resolution
 
@@ -51,6 +75,13 @@ flag. A person at a terminal gets prose.
 
 `help` is the one exception: it stays text unless explicitly asked for `--json`,
 because a human piping `pdocs --help` into `less` wants documentation, not data.
+
+Everything else follows the heuristic, **including the paths that are not
+commands**. `--version` is the bare string at a terminal and
+`{ "ok": true, "data": { "name": "pdocs", "version": "…" }, … }` through a pipe,
+so a caller never has to regex a version out of prose; a bare `pdocs` prints
+help to stderr at a terminal and the error envelope through a pipe. Machine mode
+holds on every outcome, not only the ones a command reached.
 
 **Why the `docs:*` npm scripts pin a format.** Measured under a real pty,
 `npm run` inherits the parent's stdio, so stdout **is** a TTY and the heuristic
@@ -69,11 +100,12 @@ wants machine output even when a human runs it. Any script or hook that wraps
 
 ## The envelope
 
-Every command's JSON output is the same three-field envelope, pretty-printed to
-stdout:
+Every command's JSON output is the same envelope, pretty-printed to stdout.
+There are exactly **two** top-level shapes and no third — a discriminated union
+over `ok` is the whole algebra a consumer has to handle:
 
 ```json
-{ "ok": true, "command": "check", "data": { ... } }
+{ "ok": true, "data": { ... }, "meta": { "command": "check" } }
 ```
 
 **`ok` reports whether the INVOCATION succeeded, not whether the answer was
@@ -81,20 +113,59 @@ positive.** `pdocs check` on a dirty tree is `ok: true` with `data.clean: false`
 and exits 9 — it did its job perfectly and the news is bad. Conflating the two
 is the mistake the field exists to prevent.
 
-A failure is a different shape, and it goes to **stderr**, leaving stdout empty
-and parseable:
+A failure carries `error` instead of `data`, and goes to **stderr**, leaving
+stdout empty and parseable:
 
 ```json
 {
   "ok": false,
-  "command": "check",
-  "error": { "kind": "not_found", "message": "..." }
+  "error": {
+    "kind": "usage",
+    "exit_code": 2,
+    "retryable": false,
+    "message": "--format: unknown value `yaml` — expected one of: text, json.",
+    "choices": ["text", "json"],
+    "details": { "token": "yaml" }
+  },
+  "meta": { "command": "check" }
 }
 ```
 
 `kind` is the stable identifier, paired 1:1 with the exit code: `internal`,
-`usage`, `not_found`, `conflict`. In text format a diagnostic is one line on
-stderr, `pdocs: <message>`.
+`usage`, `not_found`, `conflict`. `exit_code` is the status the process exits
+with, so the envelope and the code can never disagree. `retryable` says whether
+running the SAME invocation again could succeed — always `false` here, because
+every failure `pdocs` raises is deterministic over a tree that did not move.
+
+`hint` (prose remediation), `choices` and `details` are optional and **omitted**
+rather than nulled when they do not apply.
+
+**`details.token` is the token you got wrong**, verbatim — the flag, the verb,
+the value, the type. It is a field rather than only a substring of `message`,
+because prose gets rewritten and a field is a contract.
+
+**`choices` is the closed set you got wrong.** Every rejection with a closed set
+of valid alternatives hands that set over — the commands for an unknown command,
+the flags a command takes for an unknown flag, `text`/`json` for `--format`, the
+creatable types for `pdocs new`, and the lifecycle, status and variant
+vocabularies underneath them. Each list is derived from the same registry the
+parser enforces, so an error can never advertise a surface the tool does not
+have. An agent that reads `choices` never has to go back and read help.
+
+In text format a diagnostic is `pdocs: <message>` on stderr, with the hint on a
+second indented line where there is one; the same enumeration appears in the
+prose.
+
+The shape is `agent-cli-conformance`'s canonical error envelope
+(`docs/wiki/concepts/error-envelope.md`). Machine mode holds on **every**
+outcome — including a parser error and a bare invocation, both of which answer
+with this envelope when stdout is not a terminal.
+
+That is a claim a repository can make checkable, by declaring
+`{ "defaultOutput": "json" }` in an `acc.config.json` at its root. The scaffold
+template's own repository does and gates on it. A generated project does not
+ship one: acc is not a dependency of this CLI or of anything it scaffolds, and
+adding the file is one line the day you point acc at `pdocs`.
 
 ## Exit codes
 
@@ -121,7 +192,12 @@ Codes 3, 4, 7 and 8 are deliberately unallocated — they belong to
 `agent-cli-conformance`'s bands (auth, permission, rate limit, confirmation) and
 are left there rather than reused.
 
-## The seven commands
+## The nine verbs
+
+Seven are dispatched through the command table and need a documentation tree.
+Two — `schema` and `help` — are answered before that table is consulted, take no
+tree, and describe the tool rather than the tree. All nine reject a flag they do
+not take, with exit 2 and the valid set in `choices`.
 
 ### `check` — the gate
 
@@ -205,6 +281,23 @@ bun scripts/pdocs/cli.ts orphans
 ### `new` — create a document
 
 See below.
+
+### `schema` — this CLI's own surface
+
+```bash
+bun scripts/pdocs/cli.ts schema
+```
+
+An acc declaration v0 document on stdout, not the envelope. See
+[Invoking it](#invoking-it).
+
+### `help` — the verb list, or one verb's
+
+```bash
+bun scripts/pdocs/cli.ts help [<verb>] [--json]
+```
+
+Prose on stdout, or the machine manifest under `--json`. Takes no tree.
 
 ## `pdocs new`
 
@@ -363,8 +456,17 @@ Workbench documents are not catalogued and get no such line.
 - **Exit 9 is not a failure.** See the bands above.
 - **`ok: true` does not mean the answer was yes.** See the envelope.
 - **An unknown flag is an error, and `pdocs` names the token.** `--formt json`
-  exits 2 rather than silently rendering text.
-- **A bare `pdocs` prints help to stderr and exits 2** — stdout stays empty for
-  whatever was going to parse it.
+  exits 2 rather than silently rendering text — and the rejection hands back the
+  flags that command does take, in `error.choices`. Read that instead of
+  guessing again.
+- **A bare `pdocs` exits 2 with stdout empty.** At a terminal it prints help to
+  stderr; through a pipe it prints the error envelope, whose `choices` are the
+  commands.
 - **A `--root` that is not a directory exits 2 rather than falling back**, so a
   `clean` is never reported for a tree nobody checked.
+- **Flags follow the command, and a misplaced one says so.**
+  `pdocs --format json check` exits 2 with
+  `` `--format` must follow a command `` and `error.choices` holding the command
+  list — the flag is fine, its position is not. If its value is also outside the
+  set, the value is what the rejection names, because that is wrong wherever the
+  flag sits.

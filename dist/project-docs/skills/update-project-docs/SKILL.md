@@ -200,7 +200,7 @@ markers agree. Run it from the repository root.
 
 ```bash
 # 1. The CLI is installed and runnable
-ls scripts/pdocs/cli.ts && bun scripts/pdocs/cli.ts --version
+ls scripts/pdocs/cli.ts && bun scripts/pdocs/cli.ts --version --format text
 
 # 2. The gate runs through it, and is clean
 bun scripts/pdocs/cli.ts check --format text

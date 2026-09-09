@@ -24,6 +24,7 @@
     "@slidev/cli": "^52.14.1",
     "@slidev/theme-default": "^0.25.0",
     "@types/bun": "^1.3.14",
+    "agent-cli-conformance": "git+https://github.com/ichabodcole/agent-cli-conformance.git#v0.1.13",
     "husky": "^9.1.7",
     "prettier": "^3.2.5",
     "typescript": "^5.9.3"

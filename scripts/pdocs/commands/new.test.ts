@@ -260,7 +260,7 @@ describe("pdocs new project — the alias", () => {
 
     const out = JSON.parse(created.stdout);
     expect(out.ok).toBe(true);
-    expect(out.command).toBe("new");
+    expect(out.meta.command).toBe("new");
     // The alias resolves to a row; the reported type is the row's, not the word
     // that was typed.
     expect(out.data.type).toBe("proposal");

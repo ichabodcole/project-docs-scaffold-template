@@ -220,7 +220,7 @@ export const backlinks: Command = {
     "What cites a document — `related:` edges and body links, kept apart.",
   usage: "pdocs backlinks <target> [--root <path>] [--format text|json]",
   options: [],
-  positionals: ["<target>"],
+  positionals: [{ name: "target", required: true }],
 
   run({ ctx, format, positionals }: Invocation): number {
     const target = positionals[0];

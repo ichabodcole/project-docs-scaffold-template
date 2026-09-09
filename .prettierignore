@@ -17,3 +17,9 @@ CHANGELOG.md
 .agents/
 .codex/
 .scratch/
+
+# Vendored skills — installed from an upstream kit and kept byte-identical to it,
+# so that re-installing does not churn a diff. `.claude/skills/acc/` comes from
+# `agent-cli-conformance`, which is pinned in devDependencies. Scoped to that one
+# directory: the other skills under `.claude/skills/` are this repo's own.
+.claude/skills/acc/

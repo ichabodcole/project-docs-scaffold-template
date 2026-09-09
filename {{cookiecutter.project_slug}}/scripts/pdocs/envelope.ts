@@ -82,31 +82,98 @@ export const ErrorKind = {
 
 export type ErrorKindValue = (typeof ErrorKind)[keyof typeof ErrorKind];
 
+/**
+ * Whether retrying the SAME invocation, unchanged, could succeed.
+ *
+ * Every failure `pdocs` raises is deterministic over a tree that did not move:
+ * a bad flag is bad twice, a missing docs root stays missing, and a document
+ * that already exists still does. Nothing here waits on a network, a lock or a
+ * quota, so the honest answer is `false` for all four kinds — and the field is
+ * emitted anyway, because a consumer branches on `retryable === false` and not
+ * on the absence of a key it never saw.
+ *
+ * A `conflict` is the one worth reading twice. It is not retryable and it IS
+ * resolvable: the caller changes the TREE — archives the document in the way —
+ * and the same command then works. That is a different claim from "run it
+ * again", which is what this field answers.
+ */
+const RETRYABLE: Record<ErrorKindValue, boolean> = {
+  internal: false,
+  usage: false,
+  not_found: false,
+  conflict: false,
+};
+
+/**
+ * The optional half of an error — everything past `kind` and `message`.
+ *
+ * `choices` is the one that earns its keep. Where the valid alternatives form a
+ * CLOSED SET — the commands, the flags a command takes, `text|json`, the types
+ * `new` can create — the rejection hands the caller that set instead of making
+ * it go and read help. Every one is derived from the same table the parser
+ * enforces, so the list in an error cannot drift from the list that is true.
+ */
+export interface ErrorDetail {
+  /**
+   * The token the rejection is ABOUT — the flag, verb, value or type the caller
+   * got wrong, verbatim.
+   *
+   * This one is rule-bound where the others are guidance. A3 requires that in
+   * machine mode the offending token appear as a FIELD and "not only inside the
+   * prose `message`": prose gets rewritten, a field is a contract. It is
+   * carried inside `details` rather than beside `kind`, because the canonical
+   * envelope's error keys are a closed list and `details` is where it puts
+   * everything a specific failure needs and prose cannot hold.
+   */
+  token?: string;
+  /** Prose remediation, for a human. Never parsed. */
+  hint?: string;
+  /** The closed set the caller got wrong, as data. */
+  choices?: string[];
+  /** Structured context — whatever the caller needs and prose cannot carry. */
+  details?: Record<string, unknown>;
+}
+
 /** A failure with a code and a machine-readable kind attached. Thrown anywhere;
  *  caught once, at the top of `cli.ts`. */
 export class CliError extends Error {
+  readonly hint: string | undefined;
+  readonly choices: string[] | undefined;
+  readonly details: Record<string, unknown> | undefined;
+
   constructor(
     message: string,
     readonly kind: ErrorKindValue,
-    readonly exitCode: ExitCodeValue
+    readonly exitCode: ExitCodeValue,
+    detail: ErrorDetail = {}
   ) {
     super(message);
     this.name = "CliError";
+    this.hint = detail.hint;
+    this.choices = detail.choices;
+    // `token` is folded into `details` here so that every rejection that names
+    // one publishes it under the same key, and a call site cannot spell it two
+    // ways. An explicit `details.token` wins, since it was written on purpose.
+    const details =
+      detail.token === undefined
+        ? detail.details
+        : { token: detail.token, ...detail.details };
+    this.details = details;
   }
 }
 
 /** The invocation was malformed. Retrying it unchanged will fail identically. */
 export class UsageError extends CliError {
-  constructor(message: string) {
-    super(message, ErrorKind.Usage, ExitCode.Usage);
+  constructor(message: string, detail: ErrorDetail = {}) {
+    super(message, ErrorKind.Usage, ExitCode.Usage, detail);
     this.name = "UsageError";
   }
 }
 
 /** The named thing does not exist. */
 export class NotFoundError extends CliError {
-  constructor(message: string) {
-    super(message, ErrorKind.NotFound, ExitCode.NotFound);
+  constructor(message: string, detail: ErrorDetail = {}) {
+    super(message, ErrorKind.NotFound, ExitCode.NotFound, detail);
     this.name = "NotFoundError";
   }
 }
@@ -119,13 +186,92 @@ export class NotFoundError extends CliError {
  * that is already open — and run exactly the same command again.
  */
 export class ConflictError extends CliError {
-  constructor(message: string) {
-    super(message, ErrorKind.Conflict, ExitCode.Conflict);
+  constructor(message: string, detail: ErrorDetail = {}) {
+    super(message, ErrorKind.Conflict, ExitCode.Conflict, detail);
     this.name = "ConflictError";
   }
 }
 
-export type Format = "text" | "json";
+/**
+ * The formats `--format` accepts — ONE declaration.
+ *
+ * The type, the parser's validation and the `choices` a rejection enumerates
+ * all read from this array, so a third format is one edit rather than three
+ * that have to be remembered together.
+ */
+export const FORMATS = ["text", "json"] as const;
+
+export type Format = (typeof FORMATS)[number];
+
+/**
+ * The rejection for a value outside a flag's declared set — ONE MESSAGE, two
+ * callers.
+ *
+ * `resolveFormat` below raises it while resolving the format; `run` in
+ * `cli.ts` raises it for a flag that is ALSO misplaced, because a value
+ * outside the set is wrong wherever the flag sits. Written out twice they
+ * would drift, and which of the two an agent parsed would depend on which
+ * branch happened to fire.
+ */
+export function outOfSet(
+  flag: string,
+  value: string,
+  values: readonly string[]
+): UsageError {
+  return new UsageError(
+    `${flag}: unknown value \`${value}\` — expected one of: ${values.join(", ")}.`,
+    { token: value, choices: [...values] }
+  );
+}
+
+/**
+ * The value of `flag` in `argv`, in EITHER SPELLING — `--flag value` and
+ * `--flag=value` are the same request written two ways.
+ *
+ * ONE READER FOR BOTH, because `repoRootFrom` in `cli.ts` and `resolveFormat`
+ * below both scan argv before the parser proper ever runs. A spelling the
+ * parser understood and those two did not would be worse than one understood
+ * nowhere: `pdocs check --root=/elsewhere` would parse, and then lint THIS
+ * repository while reporting on that one.
+ *
+ * `asks` deliberately does not read through here. It answers for `--help` and
+ * `--version`, which take no value, so `--help=x` is not a second spelling of
+ * anything — it is a malformed token, and the parser says so rather than
+ * shrugging and printing help.
+ *
+ * It lives here beside `resolveFormat` rather than in `cli.ts` for the dull
+ * reason: `cli.ts` imports this file, so a helper the other way round is a
+ * cycle.
+ *
+ * `found` and `value` are separate answers. A flag given without a value is
+ * `{ found: true, value: undefined }`, and the caller decides what that means
+ * — a missing path and a missing format read differently to whoever typed it.
+ */
+export function readFlag(
+  argv: string[],
+  flag: string
+): { found: boolean; value: string | undefined } {
+  const prefix = `${flag}=`;
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i] as string;
+    if (token === flag) {
+      const next = argv[i + 1];
+      return {
+        found: true,
+        // A following token that is itself a flag is not this one's value —
+        // `--root --json` is a missing path, not a path named `--json`.
+        value: next === undefined || next.startsWith("-") ? undefined : next,
+      };
+    }
+    if (token.startsWith(prefix)) {
+      const value = token.slice(prefix.length);
+      // `--format=` named the flag and gave it nothing, which is the same
+      // request as `--format` at the end of the line and gets the same answer.
+      return { found: true, value: value === "" ? undefined : value };
+    }
+  }
+  return { found: false, value: undefined };
+}
 
 /**
  * Which format to render in.
@@ -139,45 +285,121 @@ export type Format = "text" | "json";
  * measured under a real pty, `npm run` inherits the parent's stdio and stdout
  * IS a TTY, so `npm run docs:graph` would render text unless the script says
  * `--format json`. A resolver that guesses needs a way to be told.
+ *
+ * THAT LAST BRANCH IS DECLARABLE, not an implementation detail. An
+ * `acc.config.json` carrying `{ "defaultOutput": "json" }` tells
+ * `agent-cli-conformance` that a caller off a terminal is in machine mode, and
+ * its checkers then hold every outcome to the envelope — the parser error and
+ * `--version` included — with no flag selected. Change the branch and that
+ * declaration becomes false.
+ *
+ * The scaffold template's own repository carries one and gates on it. A project
+ * generated from it does NOT, deliberately: acc is a dev tool of that
+ * repository, and shipping its config into every generated project would ask
+ * the consumer to adopt a tool project-docs does not otherwise require. Adding
+ * the file is one line, and it is worth it the day you point acc at this CLI.
  */
 export function resolveFormat(argv: string[], isTTY: boolean): Format {
-  const i = argv.indexOf("--format");
-  if (i !== -1) {
-    const value = argv[i + 1];
-    if (value === undefined || value.startsWith("-"))
-      throw new UsageError(
-        "--format needs a value — `--format text` or `--format json`."
-      );
-    if (value !== "text" && value !== "json")
-      throw new UsageError(
-        `--format: unknown value \`${value}\` — expected \`text\` or \`json\`.`
-      );
-    return value;
+  const { found, value } = readFlag(argv, "--format");
+  if (found) {
+    const list = FORMATS.join(", ");
+    if (value === undefined)
+      throw new UsageError(`--format needs a value — one of: ${list}.`, {
+        token: "--format",
+        choices: [...FORMATS],
+        hint: "`--json` is shorthand for `--format json`.",
+      });
+    if (!(FORMATS as readonly string[]).includes(value))
+      throw outOfSet("--format", value, FORMATS);
+    return value as Format;
   }
   if (argv.includes("--json")) return "json";
   return isTTY ? "text" : "json";
 }
 
 /**
- * The machine envelope.
+ * The machine envelope, in `agent-cli-conformance`'s canonical shape.
+ *
+ * TWO TOP-LEVEL SHAPES AND NO THIRD: `{ ok: true, data }` on success and
+ * `{ ok: false, error }` on failure, with `meta` carrying what is true of the
+ * invocation either way. A discriminated union over `ok` is the whole algebra a
+ * consumer has to handle — there is no `status` field, and there is never a
+ * `data` beside an `error`.
  *
  * `ok` says whether the INVOCATION succeeded, not whether the answer was
  * positive: `pdocs check` on a dirty tree is `ok: true` with `clean: false`,
  * and exits 9. Conflating the two is the mistake this field exists to prevent.
+ *
+ * Shape taken from `docs/wiki/concepts/error-envelope.md` in
+ * `agent-cli-conformance`. That page is explicit that it is DESIGN GUIDANCE
+ * rather than a rule — no checker reads `kind`, `retryable` or the two-shape
+ * discipline — and this CLI adopts it whole anyway, because it is trying to be
+ * a first-party example of that catalogue rather than a partial one. The single
+ * rule-bound clause it satisfies on the way is A3's: in machine mode the
+ * offending token must appear as a FIELD, which is what `choices` is.
  */
-export interface Envelope<T> {
-  ok: boolean;
+export interface Meta {
+  /** The command the caller asked for — `check`, `new`, or `pdocs` where the
+   *  invocation never got as far as naming one. */
   command: string;
-  data: T;
 }
 
-export function envelope<T>(command: string, data: T, ok = true): Envelope<T> {
-  return { ok, command, data };
+export interface SuccessEnvelope<T> {
+  ok: true;
+  data: T;
+  meta: Meta;
+}
+
+/** The error object. `kind` is the contract; `message` is presentation. */
+export interface ErrorPayload {
+  kind: ErrorKindValue;
+  /** The status this failure exits with — the envelope and the exit code can
+   *  never disagree, because the caller reads them both. */
+  exit_code: ExitCodeValue;
+  retryable: boolean;
+  message: string;
+  hint?: string;
+  choices?: string[];
+  details?: Record<string, unknown>;
+}
+
+export interface ErrorEnvelope {
+  ok: false;
+  error: ErrorPayload;
+  meta: Meta;
+}
+
+export type Envelope<T> = SuccessEnvelope<T> | ErrorEnvelope;
+
+export function envelope<T>(command: string, data: T): SuccessEnvelope<T> {
+  return { ok: true, data, meta: { command } };
+}
+
+/** The failure half, built from a thrown `CliError`. Optional members are
+ *  OMITTED rather than emitted as null: a key that is absent says nothing, and
+ *  a key holding null says something a consumer then has to interpret. */
+export function errorEnvelope(
+  command: string,
+  error: CliError
+): ErrorEnvelope {
+  return {
+    ok: false,
+    error: {
+      kind: error.kind,
+      exit_code: error.exitCode,
+      retryable: RETRYABLE[error.kind],
+      message: error.message,
+      ...(error.hint === undefined ? {} : { hint: error.hint }),
+      ...(error.choices === undefined ? {} : { choices: error.choices }),
+      ...(error.details === undefined ? {} : { details: error.details }),
+    },
+    meta: { command },
+  };
 }
 
 /** Machine output goes to stdout, and only ever the envelope. */
-export function printEnvelope<T>(command: string, data: T, ok = true): void {
-  console.log(JSON.stringify(envelope(command, data, ok), null, 2));
+export function printEnvelope<T>(command: string, data: T): void {
+  console.log(JSON.stringify(envelope(command, data), null, 2));
 }
 
 /**
@@ -193,14 +415,12 @@ export function printDiagnostic(
   format: Format
 ): void {
   if (format === "json") {
-    console.error(
-      JSON.stringify(
-        { ok: false, command, error: { kind: error.kind, message: error.message } },
-        null,
-        2
-      )
-    );
+    console.error(JSON.stringify(errorEnvelope(command, error), null, 2));
     return;
   }
-  console.error(`pdocs: ${error.message}`);
+  // The prose half carries the same closed set the envelope carries as data —
+  // a caller reading a terminal is owed the alternatives as much as one reading
+  // JSON, and both are rendered from the one list on the error.
+  const hint = error.hint === undefined ? "" : `\n       ${error.hint}`;
+  console.error(`pdocs: ${error.message}${hint}`);
 }
