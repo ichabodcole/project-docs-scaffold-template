@@ -20,13 +20,13 @@
 // nothing. `rules.ts` re-exports all five names, because the v2.6-to-v2.7
 // codemod's test imports them from there to prove its own copies are equal.
 
-import type { ProjectDocsConfig } from "../../docs-lint/config.ts";
-import { DEFAULT_CONFIG } from "../../docs-lint/config.ts";
+import type { ProjectDocsConfig } from "../docs-lint/config.ts";
+import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 // The portable core, and the only direction the dependency may run: `pdocs`
 // reads `docs-lint`, never the reverse. `yamlList` is the parser the lint uses
 // for every list-valued field, so a validator reads `scope` exactly the way the
 // gate would read it.
-import { yamlList } from "../../docs-lint/index.ts";
+import { yamlList } from "../docs-lint/index.ts";
 
 // ---------------------------------------------------------------------------------------
 // The source tables

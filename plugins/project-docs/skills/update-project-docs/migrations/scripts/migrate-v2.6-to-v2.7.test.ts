@@ -4,9 +4,9 @@
 // half that drifts is always the one further from the tests — so this compares
 // them, and derives the rest of its cases from the same tables.
 //
-// It lives beside the codemod rather than in `scripts/docs-lint/`, where it
-// started, because comparing the copies means importing `scripts/pdocs/` — and
-// `scripts/docs-lint/` is a portable core copied verbatim into other
+// It lives beside the codemod rather than in the portable core, where it
+// started, because comparing the copies means importing the CLI's own tables —
+// and `scripts/pdocs/docs-lint/` is a core copied verbatim into other
 // repositories. A file in there that imports this repository's CLI is a file
 // those repositories cannot take.
 

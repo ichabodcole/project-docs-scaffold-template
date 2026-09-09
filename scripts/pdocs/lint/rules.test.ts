@@ -36,7 +36,7 @@ import {
   schemaTableChecks,
   thinTier,
 } from "./rules.ts";
-import { DEFAULT_CONFIG } from "../../docs-lint/config.ts";
+import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import { childEnv } from "../test-env.ts";
 import { buildRegistry } from "./registry.ts";
 

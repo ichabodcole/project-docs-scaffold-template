@@ -26,8 +26,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { DEFAULT_CONFIG } from "../../docs-lint/config.ts";
-import { stripCode } from "../../docs-lint/index.ts";
+import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
+import { stripCode } from "../docs-lint/index.ts";
 import { ExitCode } from "../envelope.ts";
 import { childEnv } from "../test-env.ts";
 import { type RegistryRow, buildRegistry } from "../lint/registry.ts";

@@ -16,7 +16,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
+import { DEFAULT_CONFIG } from "./docs-lint/config.ts";
 import { ExitCode, Outcome, UsageError, resolveFormat } from "./envelope.ts";
 import { childEnv } from "./test-env.ts";
 import { buildRegistry } from "./lint/registry.ts";

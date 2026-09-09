@@ -52,12 +52,13 @@ The list below is what it walks; keep them in step and the check stays quiet.
   `docs/specifications/README.md`
 - Category templates: all `TEMPLATE*.md` files within those directories,
   including `docs/cycles/TEMPLATE.md`
-- **The lint, byte for byte:** everything under `scripts/pdocs/` and
-  `scripts/docs-lint/`. The mirror check does not keep a list of these — it
-  discovers them from the payload's own `scripts/` tree, so a new file there is
-  compared automatically. The lint is copied into the payload rather than shared
-  as a package — deliberately, while three repositories are still discovering
-  what the tool should be. The mirror check is what makes copying survivable.
+- **The lint, byte for byte:** everything under `scripts/pdocs/`, the portable
+  core in `scripts/pdocs/docs-lint/` included. The mirror check does not keep a
+  list of these — it discovers them from the payload's own `scripts/` tree, so a
+  new file there is compared automatically. The lint is copied into the payload
+  rather than shared as a package — deliberately, while three repositories are
+  still discovering what the tool should be. The mirror check is what makes
+  copying survivable.
 
 **Payload-only (no counterpart here, and none wanted):**
 

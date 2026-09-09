@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
-import { loadConfig } from "../../docs-lint/config.ts";
+import { loadConfig } from "../docs-lint/config.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 

@@ -33,7 +33,7 @@ import {
   parseFrontmatter,
   parseGenerated,
   yamlList,
-} from "../docs-lint/index.ts";
+} from "./docs-lint/index.ts";
 import {
   CONTRACT_BASENAMES,
   type Ctx,

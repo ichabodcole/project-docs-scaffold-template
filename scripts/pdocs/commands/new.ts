@@ -42,7 +42,7 @@ import {
   parseFrontmatter,
   stripInlineComment,
   yamlList,
-} from "../../docs-lint/index.ts";
+} from "../docs-lint/index.ts";
 import {
   CliError,
   ConflictError,

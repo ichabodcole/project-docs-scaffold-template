@@ -252,7 +252,7 @@ it, and no others:
 | ---- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | 2    | Install Bun and cookiecutter                                | Bun is what runs the CLI at all                                                                                             |
 | 3    | Generate the scaffold, resolve `$SCAFFOLD`                  | Re-derive it in every shell — see that step's note                                                                          |
-| 4    | Copy `scripts/pdocs/`, refresh `scripts/docs-lint/`         | The actual repair                                                                                                           |
+| 4    | Copy `scripts/pdocs/`, remove any old `scripts/docs-lint/`  | The actual repair                                                                                                           |
 | 6    | Remove the development artefacts an earlier build installed | The CLI's tests and a `tsconfig` covering `scripts/` — skip whichever is not there                                          |
 | 7    | Add the `kickoff` row to `docs/SCHEMA.md`                   | **Check first:** `grep -q kickoff docs/SCHEMA.md`. A `docs/` copied from a current scaffold already has the row; skip if so |
 | 8    | Refresh the templates **and `docs/AGENTS.md`**              | Both halves. The second is what makes the docs tree's entry point name the CLI                                              |

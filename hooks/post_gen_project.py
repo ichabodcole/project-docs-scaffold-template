@@ -31,10 +31,19 @@ LAYER_NOTE = """     ───────────────────�
 
 
 def _move(source, target, label):
-    """Move one payload path into the parent, refusing to overwrite."""
+    """Move one payload path into the parent, refusing to overwrite.
+
+    Returns False on a collision, and THE CALLER MUST STOP. This used to
+    return False into nobody: the install printed its warning, carried on, and
+    finished with `Documentation structure installed` and six next steps —
+    having installed `docs/` and not the CLI that checks it. The warning
+    scrolled past inside a success message, and the recovery line it printed
+    named a directory `shutil.rmtree` deleted four lines later, so there was
+    nothing left to recover from either.
+    """
     if os.path.exists(target):
-        print(f"   ⚠️  {label} already exists — left yours in place.")
-        print(f"      The generated one is in ./{os.path.basename(os.path.dirname(source))}/")
+        print(f"\n⚠️  {label} already exists in the current directory.")
+        print("   Installation aborted rather than overwrite it.")
         return False
     os.makedirs(os.path.dirname(target), exist_ok=True)
     shutil.move(source, target)
@@ -59,38 +68,61 @@ def install_to_current_directory():
     shutil.move(os.path.join(project_dir, "docs"), docs_target)
 
     # The lint's portable core, the `pdocs` CLI that drives it, and its config
-    # travel with docs/. `.gitignore` deliberately does not: an existing
-    # project has its own, and overwriting it to install a doc lint would be a
-    # poor trade.
+    # travel with docs/, and THAT IS THE WHOLE PAYLOAD — the four moves below
+    # are everything the template has to give.
     #
-    # NOTHING ELSE IS INSTALLED, and that is the design rather than an
-    # omission. This scaffold used to ship a `package.json` wrapping the CLI in
-    # `docs:lint` / `docs:graph` / `docs:report`, a `tsconfig.json`, and the
-    # CLI's own test suite — a development setup for code the consumer does not
-    # own. The wrapper covered three of the CLI's eight verbs and had to pin
-    # `--format` to defeat the CLI's own resolution, so it taught a partial
-    # interface badly. `pdocs` has no dependencies, so there is nothing to
-    # install and nothing to configure: run it, or wrap it yourself if you want
-    # a shorthand in your own `package.json`.
+    # It used to be more, and the rest was a development setup for code the
+    # consumer does not own: a `package.json` wrapping the CLI in `docs:lint` /
+    # `docs:graph` / `docs:report`, a `tsconfig.json` to typecheck it, the CLI's
+    # own test suite, and a `.gitignore` for the `node_modules/` and `bun.lock`
+    # that `package.json` implied. The wrapper covered three of the CLI's eight
+    # verbs and had to pin `--format` to defeat the CLI's own resolution, so it
+    # taught a partial interface badly; `pdocs` has no dependencies, so nothing
+    # was ever installed for the ignore file to ignore.
     #
-    # `scripts/pdocs/` is not optional. It holds every rule the gate enforces
-    # and the entry point everything below names; without it `docs/` arrives
-    # with a contract and nothing that checks it.
-    _move(
-        os.path.join(project_dir, "scripts", "docs-lint"),
-        os.path.join(parent_dir, "scripts", "docs-lint"),
-        "scripts/docs-lint/",
-    )
-    _move(
-        os.path.join(project_dir, "scripts", "pdocs"),
-        os.path.join(parent_dir, "scripts", "pdocs"),
-        "scripts/pdocs/",
-    )
-    _move(
-        os.path.join(project_dir, ".project-docs.json"),
-        os.path.join(parent_dir, ".project-docs.json"),
-        ".project-docs.json",
-    )
+    # What is left needs no install and no configuration: run it, or wrap it
+    # yourself if you want a shorthand in your own `package.json`.
+    #
+    # ONE DIRECTORY, not two. `docs-lint/` is the lint's portable core and it
+    # used to land beside `pdocs/` as a second entry in a `scripts/` folder that
+    # is the project's, not ours — an implementation detail of this tool showing
+    # up as a directory the consumer has to account for. It lives inside
+    # `scripts/pdocs/` now, so a project gains exactly one thing it does not own
+    # and `update-project-docs` replaces it as one directory.
+    #
+    # A collision here is FATAL, and the `docs/` branch above is why: an
+    # existing `scripts/pdocs/` is somebody else's, we cannot merge into it, and
+    # `docs/` without the CLI is a contract with nothing that checks it. Note
+    # `scripts/` ITSELF is not a collision — `makedirs(..., exist_ok=True)` in
+    # `_move` merges into an existing one, leaving every file in it alone.
+    moved = [os.path.join(parent_dir, "docs")]
+    for source, target, label in (
+        (
+            os.path.join(project_dir, "scripts", "pdocs"),
+            os.path.join(parent_dir, "scripts", "pdocs"),
+            "scripts/pdocs/",
+        ),
+        (
+            os.path.join(project_dir, ".project-docs.json"),
+            os.path.join(parent_dir, ".project-docs.json"),
+            ".project-docs.json",
+        ),
+    ):
+        if _move(source, target, label):
+            moved.append(target)
+            continue
+
+        # Put back what already went out, so the tree is as it was found and
+        # the payload is still there to look at. Half an install is worse than
+        # none: `docs/` alone passes nothing, and the next run would abort on
+        # the `docs/` branch instead of saying what actually blocked it.
+        for done in moved:
+            shutil.move(done, os.path.join(project_dir, os.path.basename(done)))
+        print("   Nothing was installed; your tree is as you left it.")
+        print(f"   The generated layer is in ./{os.path.basename(project_dir)}/")
+        print("   Move it in by hand — or, if you are upgrading an existing")
+        print("   scaffold, run /project-docs:update-project-docs instead.\n")
+        return
 
     os.chdir(parent_dir)
     shutil.rmtree(project_dir)

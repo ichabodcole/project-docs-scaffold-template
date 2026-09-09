@@ -28,10 +28,12 @@ The template is organized with these key directories:
   (dispatch), `envelope.ts` (format, envelope, exit codes), `commands/`, and
   `lint/` (this schema's rules and the assembly that runs them). Zero
   dependencies, so a generated project can run it with nothing installed
-- `{{cookiecutter.project_slug}}/scripts/docs-lint/` - The lint's portable core
-  (`index.ts`, `config.ts`, `unlinted-links.ts`, `index.test.ts`), copied rather
-  than shared as a package — three repositories are still discovering what this
-  tool should be, and a package would freeze that early
+- `{{cookiecutter.project_slug}}/scripts/pdocs/docs-lint/` - The lint's portable
+  core (`index.ts`, `config.ts`, `unlinted-links.ts`), copied rather than shared
+  as a package — three repositories are still discovering what this tool should
+  be, and a package would freeze that early. It sits INSIDE `pdocs/` so a
+  consumer's `scripts/` gains exactly one directory it does not own; the split
+  between core and rules is ours, not theirs
 - `{{cookiecutter.project_slug}}/.project-docs.json`, `package.json`,
   `tsconfig.json` - Root config for a generated project. The `package.json` and
   `tsconfig.json` ship only in the new-folder install; an existing project keeps
@@ -59,13 +61,14 @@ The `hooks/post_gen_project.py` script provides user feedback about next steps,
 including plugin installation instructions.
 
 It has two branches. **New project folder** leaves the whole payload in place.
-**Current directory (existing project)** moves `docs/`, `scripts/docs-lint/`,
-`scripts/pdocs/` and `.project-docs.json` up into the existing repository and
-deletes the rest — deliberately including `package.json` and `tsconfig.json`,
-which an existing project already has and which are not worth overwriting to
-install a doc lint. What those two would have carried is printed instead: the
-`docs:*` scripts, and the `scripts/**/*.ts` the project needs in its `include`.
-Anything that would collide is left alone with a warning rather than replaced.
+**Current directory (existing project)** moves `docs/`, `scripts/pdocs/` and
+`.project-docs.json` up into the existing repository and deletes the rest. An
+existing `scripts/` is merged into, not replaced; an existing `scripts/pdocs/`
+or `docs/` is a collision, and the install ABORTS and rolls back rather than
+half-landing a `docs/` tree with nothing that checks it. What the payload no
+longer carries is printed instead: the `docs:*` scripts, and the
+`scripts/**/*.ts` the project needs in its `include`. Anything that would
+collide is left alone with a warning rather than replaced.
 
 **The printed scripts are read from the payload's `package.json`, not written
 out in the hook.** They used to be a literal, and the literal drifted: the same
@@ -80,11 +83,10 @@ Note that `--no-input` selects the **first** `install_target` choice, which is
 the current-directory branch. Generating a reference copy of the payload means
 passing `install_target="New project folder"` explicitly.
 
-`bun test` runs 18 files, one of which is the payload's own copy of
-`scripts/docs-lint/index.test.ts`. That is duplication — the mirror check
-guarantees it is byte-identical to this repo's copy — but it is the only thing
-that proves the shipped copy actually executes from where it will sit in a
-generated project, so it stays.
+`bun test` runs this repository's own tests only. The payload carries no
+`*.test.ts` at all: those test code a consumer is delivered rather than owns,
+and shipping them put them in the consumer's own `bun test` run. Byte-identity
+between the two copies is `check:mirror`'s job.
 
 ### The Mirror Check
 
@@ -190,9 +192,9 @@ is the full page.
 
 This repo runs **Node (via pnpm)** for Prettier, Husky and Slidev, **Python (via
 uv)** for the skill-validation script, and **Bun** for the documentation lint
-under `scripts/pdocs/` and `scripts/docs-lint/`. The split is deliberate: the
-lint is zero-dependency TypeScript that Bun executes directly, with no build
-step and no Node type-stripping flags to keep current.
+under `scripts/pdocs/`. The split is deliberate: the lint is zero-dependency
+TypeScript that Bun executes directly, with no build step and no Node
+type-stripping flags to keep current.
 
 `pnpm-lock.yaml` is the lockfile — `packageManager` in `package.json` pins the
 version, and `pnpm install --frozen-lockfile` is what CI runs. Do not

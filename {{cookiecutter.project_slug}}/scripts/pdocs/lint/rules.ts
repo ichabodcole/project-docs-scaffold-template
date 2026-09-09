@@ -21,7 +21,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
-import { type ProjectDocsConfig, loadConfig } from "../../docs-lint/config.ts";
+import { type ProjectDocsConfig, loadConfig } from "../docs-lint/config.ts";
 import {
   type DocsLintReport,
   type LintPage,
@@ -31,7 +31,7 @@ import {
   stripInlineComment,
   walkMarkdown,
   yamlList,
-} from "../../docs-lint/index.ts";
+} from "../docs-lint/index.ts";
 import {
   DURABLE_TYPE,
   PROJECT_FILE_TYPE,

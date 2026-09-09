@@ -10,7 +10,7 @@
 // The JSON rendering is NEW output and covered by tests of its own.
 
 import type { Command, Invocation } from "../cli.ts";
-import { docsLintSummary } from "../../docs-lint/index.ts";
+import { docsLintSummary } from "../docs-lint/index.ts";
 import { ExitCode, Outcome, printEnvelope } from "../envelope.ts";
 import { type LintReport, collect } from "../lint/collect.ts";
 

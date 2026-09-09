@@ -19,7 +19,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Command, Invocation } from "../cli.ts";
-import { parseFrontmatter } from "../../docs-lint/index.ts";
+import { parseFrontmatter } from "../docs-lint/index.ts";
 import {
   ExitCode,
   NotFoundError,

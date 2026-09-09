@@ -12,11 +12,11 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DocsLintReport } from "../../docs-lint/index.ts";
+import type { DocsLintReport } from "../docs-lint/index.ts";
 import {
   linkProblemsFor,
   trackedMarkdown,
-} from "../../docs-lint/unlinted-links.ts";
+} from "../docs-lint/unlinted-links.ts";
 import {
   type Ctx,
   excluder,

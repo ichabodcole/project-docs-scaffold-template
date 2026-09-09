@@ -76,7 +76,8 @@ convenience.
 
 ## References
 
-- `scripts/docs-lint/config.ts` — where `lint.durable` / `lint.workbench` live
+- `scripts/pdocs/docs-lint/config.ts` — where `lint.durable` / `lint.workbench`
+  live
 - `scripts/pdocs/lint/registry.ts` — `buildRegistry(config)`, which already
   takes the config this item wants to extend, and the source tables it unifies
 - `scripts/pdocs/lint/rules.ts` — `schemaTableChecks`, the property to preserve
