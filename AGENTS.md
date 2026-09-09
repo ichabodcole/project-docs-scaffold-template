@@ -137,8 +137,16 @@ exists for this check and nothing else.
 
 `npm run validate:skills` stays out of `npm run check` deliberately — it needs
 Python and `uv`, which the `docs-check` workflow does not install. `build:dist`
-runs it when `uv` is present, as a warning rather than a gate, so `check:dist`
-picks it up locally and skips it in CI.
+runs it when `uv` is present, as a warning rather than a gate.
+
+**It is READ-ONLY, and that is load-bearing.** It used to normalize each skill's
+frontmatter on its way past — `allowed_tools` to `allowed-tools`, JSON arrays to
+YAML lists — which made the build's OUTPUT depend on whether uv was installed.
+`check:dist` rebuilds and compares, so it passed on a machine with uv and could
+not pass in CI, which has none: the gate was unpassable in the one place it is
+not bypassable. The normalization is now
+`scripts/normalize-skill-frontmatter.py`, stdlib-only and run unconditionally by
+`build:dist`. **A step that changes what ships does not get to be optional.**
 
 ## Development Commands
 

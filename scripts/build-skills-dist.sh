@@ -265,7 +265,20 @@ for plugin_dir in "$PLUGINS_DIR"/*/; do
     plugins_built=$((plugins_built + 1))
 done
 
+# ── Normalize ────────────────────────────────────────────────────────────────
+#
+# UNCONDITIONAL, because it changes the build's OUTPUT. This used to run inside
+# the uv-gated validation below, so `dist/` came out one shape with uv installed
+# and another without — and `check:dist`, which rebuilds and compares, could
+# therefore never pass in CI. Stdlib only, so `python3` is enough.
+
+header "Normalizing skill frontmatter"
+python3 "$REPO_ROOT/scripts/normalize-skill-frontmatter.py" "$DIST_DIR"
+
 # ── Validate ─────────────────────────────────────────────────────────────────
+#
+# Optional, and only ever READS. `skills_ref` is a third-party import, so this
+# needs uv; nothing it does may change what ships.
 
 if command -v uv &> /dev/null && [ -f "$REPO_ROOT/pyproject.toml" ]; then
     header "Validating skills"
