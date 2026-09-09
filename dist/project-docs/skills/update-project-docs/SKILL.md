@@ -208,10 +208,10 @@ bun scripts/pdocs/cli.ts check --format text
 # 3. No delivered code is being treated as the project's own. The CLI ships
 #    production files only; tests or a tsconfig covering scripts/ mean an
 #    older build left artefacts behind.
-ls scripts/pdocs/*.test.ts scripts/pdocs/test-env.ts 2>/dev/null \
+find scripts/pdocs \( -name '*.test.ts' -o -name 'test-env.ts' \) | grep -q . \
   && echo "FAIL — the CLI's tests are installed" || echo "no shipped tests"
-grep -q 'scripts/\*\*/\*\.ts' tsconfig.json 2>/dev/null \
-  && echo "FAIL — tsconfig typechecks delivered code" || echo "tsconfig is the project's own"
+grep -lE '"(scripts|\*\*/)' tsconfig*.json 2>/dev/null \
+  && echo "FAIL — a tsconfig reaches into scripts/" || echo "tsconfig is the project's own"
 
 # 4. The two version markers agree
 grep docs_version docs/README.md
