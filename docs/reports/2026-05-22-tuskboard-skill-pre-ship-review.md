@@ -1,3 +1,13 @@
+---
+type: report
+title: "UX Review: Tusk Board (tuskboard) skill pre-ship assessment"
+description:
+  A pre-ship read of the tuskboard skill's documentation and UX, before it went
+  out to anyone else.
+status: stable
+generated: { by: unknown, at: 2026-05-22 }
+---
+
 # UX Review: Tusk Board (tuskboard) skill pre-ship assessment
 
 ## Metadata
@@ -359,8 +369,7 @@ explicit.
 
 ## Related Documentation
 
-- **Source skill:**
-  [`plugins/toolbox/skills/tuskboard/SKILL.md`](../../plugins/toolbox/skills/tuskboard/SKILL.md)
+- **Source skill:** `plugins/toolbox/skills/tuskboard/SKILL.md`
 - **Underlying recipe:**
   [`agent-surface-bun` recipe](../../plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
 - **Architecture review:**

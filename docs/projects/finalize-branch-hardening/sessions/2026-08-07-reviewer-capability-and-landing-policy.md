@@ -1,3 +1,13 @@
+---
+type: session
+title: "Reviewer Capability Check and Project-Owned Landing Policy — 2026-08-07"
+description:
+  "Two issues, one root cause: finalize-branch assumed things about the reviewer
+  and the project that it never checked."
+status: stable
+generated: { by: unknown, at: 2026-08-07 }
+---
+
 # Reviewer Capability Check and Project-Owned Landing Policy — 2026-08-07
 
 ## Context

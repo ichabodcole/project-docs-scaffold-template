@@ -1,8 +1,15 @@
-# Project Manifesto
-
-**Last Updated:** YYYY-MM-DD
-
 ---
+type: manifesto # REQUIRED (OKF §3). Do not change it — the filename decides it.
+title: Project Manifesto
+description:
+  What this project is for, what it deliberately is not, and the principles that
+  decide the arguments in between.
+tags: [manifesto, principles, scope]
+status: draft # OKF §5.4: draft | stable | deprecated. `stable` once it is written.
+generated: { by: project-docs-scaffold-template, at: 2026-09-04 }
+---
+
+# Project Manifesto
 
 ## What Is This?
 

@@ -1,0 +1,6 @@
+# pnpm blocks dependency install scripts by default. esbuild (a Slidev
+# transitive dependency) needs its postinstall to resolve the platform binary,
+# and npm ran it here before pnpm became the pinned manager, so allowing it
+# preserves the behaviour Slidev already depended on.
+allowBuilds:
+  esbuild: true

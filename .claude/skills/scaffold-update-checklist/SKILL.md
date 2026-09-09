@@ -31,24 +31,68 @@ These files exist in both the project's own `docs/` and in the cookiecutter
 template at `{{cookiecutter.project_slug}}/docs/`. Changes to one MUST be
 reflected in the other.
 
+**`scripts/check-mirror.sh` (`npm run check:mirror`) is the enforcement**, and
+it runs inside `npm run check`. It compares every payload document against this
+repo's copy, normalized through Prettier — the payload is `.prettierignore`d, so
+wrapping differs and means nothing. The `.ts` files are compared byte for byte.
+The list below is what it walks; keep them in step and the check stays quiet.
+
 **Always mirrored:**
 
 - `docs/README.md`
 - `docs/AGENTS.md`
+- `docs/SCHEMA.md` — the frontmatter contract
 - `docs/projects/README.md`
 - All files in `docs/projects/TEMPLATES/`
 - Category READMEs: `docs/architecture/README.md`, `docs/backlog/README.md`,
-  `docs/briefs/README.md`, `docs/fragments/README.md`,
+  `docs/briefs/README.md`, `docs/cycles/README.md`, `docs/fragments/README.md`,
   `docs/interaction-design/README.md`, `docs/investigations/README.md`,
   `docs/lessons-learned/README.md`, `docs/memories/README.md`,
   `docs/playbooks/README.md`, `docs/reports/README.md`,
   `docs/specifications/README.md`
-- Category templates: all `TEMPLATE*.md` files within those directories
+- Category templates: all `TEMPLATE*.md` files within those directories,
+  including `docs/cycles/TEMPLATE.md`
+- **The lint, byte for byte:** everything under `scripts/pdocs/`, the portable
+  core in `scripts/pdocs/docs-lint/` included. The mirror check does not keep a
+  list of these — it discovers them from the payload's own `scripts/` tree, so a
+  new file there is compared automatically. The lint is copied into the payload
+  rather than shared as a package — deliberately, while three repositories are
+  still discovering what the tool should be. The mirror check is what makes
+  copying survivable.
 
-**Structurally mirrored but content differs:**
+**Payload-only (no counterpart here, and none wanted):**
+
+- _(none any more.)_ The payload used to carry a `package.json` wrapping the CLI
+  in `docs:*` scripts and a `tsconfig.json` to typecheck it. Both are gone: the
+  payload is **production-only**, and a consumer is delivered a tool rather than
+  handed a development setup for code they do not own. This repo keeps its own
+  of each, with Prettier, husky and Slidev in it. **Do not add a payload
+  counterpart for either** — nor for any `*.test.ts`, which stay this
+  repository's own for the same reason (`scripts/check-mirror.sh` says why).
+- `{{cookiecutter.project_slug}}/.project-docs.json` — same file name as this
+  repo's, different content: no `exclude` entries, and `skip` without this
+  repo's `superpowers`. Its `version` is tracked by release-please through
+  `release-please-config.json`, the same way `docs/README.md`'s and the
+  `VERSION` literal in both copies of `scripts/pdocs/cli.ts` are.
+
+**Adding a file that carries the version?** Put it in
+`release-please-config.json`'s `extra-files` and nowhere else.
+`npm run check:version` reads that list and asserts every marker equals
+`package.json`'s version, so a new entry is checked without anyone adding it
+here — and a path that goes stale because a file moved fails the gate instead of
+being silently skipped at release time. A `generic` entry needs the
+`x-release-please-version` comment on the line holding the version; the check
+fails loudly if it is missing, because release-please would leave that file
+alone for ever.
+
+**Structurally mirrored but content differs** — these two are exempted by name
+in `scripts/check-mirror.sh`, so nothing checks them. Adding a third is a
+decision, not a convenience:
 
 - `docs/PROJECT_MANIFESTO.md` — project version is populated; cookiecutter
   version is an empty template skeleton
+- `docs/index.md` — this repo's catalogues every library page; the payload's is
+  the same headings with `_No pages yet._` under each
 
 **Not mirrored (project-specific):**
 
@@ -74,6 +118,40 @@ subsection leaves the two disagreeing. See
 3. Apply the migration to this project's own `docs/` — follow the same steps end
    users would, to validate the guide works
 4. Run Prettier on changed files to prevent line-wrapping drift
+5. `npm run check:mirror` — it should say `mirror: clean`
+
+**"Cookiecutter is the source of truth" is about structure, not about which copy
+is newer.** Work that lands here first — a template gaining a frontmatter block,
+say — moves repo → payload, and that is not a violation of the rule. What the
+rule forbids is the two copies disagreeing at the end of the change. When you
+find them already disagreeing, decide which is actually newer, copy that one
+across, and say which direction you chose in the commit.
+
+**Verify the payload by generating from it**, not by reading it:
+
+```bash
+cookiecutter . --no-input --overwrite-if-exists -o /tmp/cc \
+  install_target="New project folder"
+cd /tmp/cc/my-project
+bun scripts/pdocs/cli.ts check                  # the gate, on a fresh tree
+ls -A                                           # expect: .project-docs.json docs scripts
+find . -name '*.test.ts' -o -name 'test-env.ts' | grep . \
+  && echo "FAIL — the payload shipped tests" || echo "no tests shipped"
+ls package.json tsconfig.json acc.config.json 2>/dev/null \
+  && echo "FAIL — the payload shipped a development setup" || echo "production only"
+```
+
+`--no-input` alone picks the **first** `install_target` choice, which is the
+current-directory install — that branch moves `docs/` to the parent and deletes
+the rest, so you get no project to inspect. Pass the target explicitly.
+
+**Do not end this with `bun test`.** It used to, and the payload shipped a copy
+of the lint's test file for it to run. The payload is production-only now, so
+`bun test` in a correct generated project exits **1** with
+`0 test files matching` — a green payload reported as a failure, which is the
+worst direction for a verification step to be wrong in. The `find` above asserts
+the opposite and is the check that means something: a `*.test.ts` in the payload
+is the defect, not its absence.
 
 ## Checklists by Change Type
 

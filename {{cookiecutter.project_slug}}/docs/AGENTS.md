@@ -1,14 +1,18 @@
 # Documentation Overview
 
-For a complete overview of the documentation structure and how to use it, see [README.md](./README.md).
+For a complete overview of the documentation structure and how to use it, see
+[README.md](./README.md).
 
 ## Foundational Document
 
-- **PROJECT_MANIFESTO.md** - The constitution of this project. Defines what the project is, who it's for, core principles, what it does and doesn't do. Read this first to understand the foundational vision and boundaries.
+- **PROJECT_MANIFESTO.md** - The constitution of this project. Defines what the
+  project is, who it's for, core principles, what it does and doesn't do. Read
+  this first to understand the foundational vision and boundaries.
 
 ## Quick Onboarding
 
-- **memories/** - Summaries of recent work. Read this folder at the start of a new session to understand what's been happening lately.
+- **memories/** - Summaries of recent work. Read this folder at the start of a
+  new session to understand what's been happening lately.
 
 ## Documentation Structure
 
@@ -17,7 +21,8 @@ This project organizes documentation by purpose and lifecycle:
 ### Permanent Reference (type-based)
 
 - **architecture/** - System design and how things work
-- **specifications/** - Technology-agnostic description of application behavior, organized by domain
+- **specifications/** - Technology-agnostic description of application behavior,
+  organized by domain
 - **interaction-design/** - User experience flow documentation
 - **playbooks/** - Reusable patterns for recurring tasks
 - **lessons-learned/** - Specific problems and their solutions
@@ -25,14 +30,17 @@ This project organizes documentation by purpose and lifecycle:
 
 ### Discovery & Assessment (type-based)
 
-- **reports/** - Structured assessments of current state (code reviews, security audits, doc status)
+- **reports/** - Structured assessments of current state (code reviews, security
+  audits, doc status)
 - **investigations/** - Research exploring whether action is needed
 
 ### Work Tracking (domain-based)
 
-- **projects/** - Co-located pipeline documents (proposal, plan, sessions, artifacts) for defined bodies of work
+- **projects/** - Co-located pipeline documents (proposal, plan, sessions,
+  artifacts) for defined bodies of work. Optional stages: design resolution
+  (between proposal and plan), test plan (between plan and sessions)
 - **backlog/** - Small, self-contained tasks that don't need a project folder
-- **projects/_archive/** - Completed project folders
+- **projects/\_archive/** - Completed project folders
 
 ### The Documentation Cycle
 
@@ -45,6 +53,30 @@ Reports and investigations are the connective tissue between projects:
 - Reports assess current state and identify findings
 - Findings can spawn investigations or new projects
 - Investigations determine whether a project is warranted
-- Projects contain the full pipeline (proposal → [design-resolution] → plan → [test-plan] → sessions → artifacts)
+- Projects contain the full pipeline (proposal → [design-resolution] → plan →
+  [test-plan] → sessions → artifacts)
 - Completed projects may trigger new reports to assess outcomes
 - Small tasks that don't need the full pipeline go in the backlog
+
+## Creating and Querying Documents
+
+Documents are created with the `pdocs` CLI rather than written by hand:
+
+```bash
+bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
+```
+
+The type decides the folder, the filename shape and the template, and the CLI
+fills the frontmatter. For a library page (architecture, specification,
+interaction, playbook, lesson, memory) it also writes the line in
+[index.md](./index.md) that keeps the page out of the orphan list.
+
+The same CLI reads the tree:
+
+- **check** - the gate: frontmatter, links, anchors and catalog coverage
+- **find** - query by type, lifecycle, status, tag or date
+- **backlinks** - what cites a document, `related:` edges and body links apart
+- **orphans** - library pages the catalog cannot reach
+
+`bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
+[SCHEMA.md](./SCHEMA.md) is the frontmatter contract the gate enforces.

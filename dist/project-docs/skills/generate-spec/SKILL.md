@@ -23,6 +23,10 @@ documents that:
 3. Contain no framework or library-specific references
 4. Serve as living documentation that evolves with the project
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 Specifications are output to `docs/specifications/` using domain-oriented
 grouping, with each file covering a distinct functional domain of the
 application.

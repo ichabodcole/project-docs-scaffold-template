@@ -1,3 +1,13 @@
+---
+type: backlog # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Short Title]"
+description: "[One sentence: what needs doing.]"
+tags: [area] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: open # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file and rename to YYYY-MM-DD-short-description.md
 
@@ -9,8 +19,6 @@ When completed, move the file to backlog/_archive/.
 -->
 
 # [Short Title]
-
-**Added:** YYYY-MM-DD
 
 [Description of what needs to be done and why. Be specific enough that someone
 could pick this up and complete it without further discussion.]

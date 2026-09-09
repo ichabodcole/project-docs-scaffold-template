@@ -1,8 +1,15 @@
-# Project Manifesto
-
-**Last Updated:** 2026-05-21
-
 ---
+type: manifesto
+title: Project Manifesto
+description:
+  What this project is for, what it deliberately is not, and the principles that
+  decide the arguments in between.
+tags: [manifesto, principles, scope]
+status: stable
+generated: { by: unknown, at: 2026-05-21 }
+---
+
+# Project Manifesto
 
 ## What Is This?
 
@@ -124,10 +131,22 @@ iteration through real projects, which is what this project is doing.
   host, render, or serve documentation — that's what your docs site or wiki is
   for.
 
-- **Not a project management tool.** There are no sprints, tickets, Kanban
-  boards, or status dashboards. The project/backlog structure tracks _what_ work
-  exists and _why_, but tracking _who_ is doing _what_ by _when_ belongs in your
-  PM tool.
+  The documents do carry a machine-readable graph: OKF frontmatter, a catalog,
+  and a lint that resolves every link, anchor and `related` key. That makes the
+  tree navigable by a tool without making it depend on one. Plain Markdown on
+  disk stays the whole product; the graph is something you can compute from it,
+  not a service you have to run to read it.
+
+- **Records scope and state, not people or dates.** There are no tickets, Kanban
+  boards, story points, or status dashboards, and nothing here estimates
+  anything. The structure tracks _what_ work exists, _why_, and how far it has
+  got; tracking _who_ is doing it _by when_ belongs in your PM tool.
+
+  There is one unit of work in play — the [cycle](./cycles/README.md) — and it
+  is not a sprint. A sprint is a fixed span of time you fit work into; a cycle
+  is a set of work that closes when the work ships or is cut, with an appetite
+  rather than an end date. At most one is active, which is the whole point: the
+  answer to "what are we doing" should be a thing, not a list.
 
 - **Not a documentation generator.** This doesn't extract docs from code (like
   JSDoc or Sphinx). It provides the _human-authored_ documentation structure

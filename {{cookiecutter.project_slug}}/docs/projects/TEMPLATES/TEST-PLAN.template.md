@@ -1,3 +1,13 @@
+---
+type: test-plan # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Feature Name] Test Plan"
+description: "[One sentence: what has to be true before this ships.]"
+tags: [area, verification] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project folder as `test-plan.md`.
 
@@ -28,8 +38,6 @@ For more guidance on test plans, see the projects README: ../README.md
 
 # Test Plan: [Feature Name]
 
-**Status:** Draft | Scenarios Complete | In Execution | Results Recorded\
-**Created:** YYYY-MM-DD\
 **Related Plan:** [Development Plan](./plan.md)\
 **Related Proposal:** [Proposal](./proposal.md)
 

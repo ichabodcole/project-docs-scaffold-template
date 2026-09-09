@@ -1,0 +1,51 @@
+# The documentation gate, run where it cannot be skipped.
+#
+# The Husky pre-commit hook runs `npm run check` too, and it is the faster
+# feedback — but a local hook is bypassable with `--no-verify` and only ever
+# sees the machine it ran on. This workflow is what makes the docs lint a rule
+# rather than a suggestion.
+#
+# It runs `npm run check` and nothing else, deliberately: splitting the gate
+# into per-rule jobs would make this file a second declaration of what
+# "checked" means, and two declarations of one thing drift.
+#
+# `typecheck` is separate because it runs here only. It needs the Node
+# toolchain and a couple of seconds that the pre-commit hook should not spend.
+
+name: docs-check
+
+on:
+  # `branches` rather than a bare `push:` so a tag push does not run the gate a
+  # second time on a commit it has already passed on — release-please tags
+  # every release.
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+concurrency:
+  group: docs-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned to the version this repo develops against. Floating on
+          # `latest` lets a runtime release turn the gate red with no commit
+          # behind it, which trains people to ignore it.
+          bun-version: 1.4.0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npm run check
+      - run: npm run typecheck

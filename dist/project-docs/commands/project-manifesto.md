@@ -25,6 +25,10 @@ recognized.
 
 ### Phase 0: Read the Current Manifesto
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 First, read `docs/PROJECT_MANIFESTO.md` to understand:
 
 1. **The structure/format** - The manifesto file defines what sections to fill

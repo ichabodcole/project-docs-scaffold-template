@@ -45,6 +45,10 @@ document requires:
 
 List the documents that need review:
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 ```bash
 # List project proposals
 ls docs/projects/*/proposal.md

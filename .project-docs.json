@@ -1,0 +1,33 @@
+{
+  "docsRoot": "docs",
+  "version": "6.3.0",
+  "lint": {
+    "adopting": false,
+    "exclude": [
+      "docs/projects/markdown-slide-decks/artifacts/*-prototype.md",
+      "dist/**",
+      "\\{\\{cookiecutter.project_slug\\}\\}/**"
+    ],
+    "durable": [
+      "architecture",
+      "specifications",
+      "interaction-design",
+      "playbooks",
+      "lessons-learned",
+      "memories"
+    ],
+    "workbench": [
+      "backlog",
+      "briefs",
+      "investigations",
+      "projects",
+      "reports",
+      "fragments",
+      "cycles"
+    ],
+    "skip": [
+      "_archive",
+      "superpowers"
+    ]
+  }
+}

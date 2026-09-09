@@ -1,3 +1,12 @@
+---
+type: handoff # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Feature Name] Development Kickoff"
+description: "[One sentence: what the next developer is picking up.]"
+tags: [area, feature] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 USAGE: Copy this file to your project folder as `handoff.md` when the work
 requires specific deployment or integration steps to ship successfully.
@@ -14,7 +23,8 @@ Create this during branch finalization, when all steps are known.
 ## Prerequisites
 
 [Systems, services, or states that must exist before deployment. Examples:
-environment variables set, feature flags configured, dependent services updated.]
+environment variables set, feature flags configured, dependent services
+updated.]
 
 ## Deployment Steps
 
@@ -34,5 +44,5 @@ aren't.]
 
 ## Notes
 
-[Timing requirements, coordination with other teams, edge cases, or anything
-the deployer should know.]
+[Timing requirements, coordination with other teams, edge cases, or anything the
+deployer should know.]

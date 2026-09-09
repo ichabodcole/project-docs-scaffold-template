@@ -1,3 +1,13 @@
+---
+type: investigation # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "Investigation: [Topic or Question]"
+description: "[One sentence: the question this sets out to answer.]"
+tags: [area, question] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+lifecycle: active # where the work has got to; see docs/SCHEMA.md
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create investigations and when NOT to create them.
@@ -13,9 +23,8 @@ Focus on: What did you investigate? What did you find? What should happen next?
 
 # Investigation: [Topic/Question]
 
-**Date Started:** YYYY-MM-DD **Investigator:** [Name or "Claude Code"]
-**Status:** Active | Concluded **Outcome:** [TBD | Proposal Recommended | No
-Action Needed | Needs More Research | Monitoring]
+**Outcome:** [TBD | Proposal Recommended | No Action Needed | Needs More
+Research | Monitoring]
 
 ---
 
@@ -71,6 +80,6 @@ schedule follow-up, etc.]
 
 **Related Documents:**
 
-- [Code analyzed](../../src/path/to/code.ts)
-- [Related proposal](../projects/project-name/proposal.md) (if created)
-- [Related architecture](../architecture/architecture-name.md)
+- `[Code analyzed](../../src/path/to/code.ts)`
+- `[Related proposal](../projects/project-name/proposal.md)` (if created)
+- `[Related architecture](../architecture/architecture-name.md)`

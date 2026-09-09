@@ -1,3 +1,13 @@
+---
+type: playbook # REQUIRED (OKF §3). Do not change it — the folder decides it.
+title: "[Topic] Playbook"
+description:
+  "[One sentence: what this playbook gets done, and when to reach for it.]"
+tags: [process, area] # 2-4 kebab-case keywords
+status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+generated: { by: your-name-or-model, at: YYYY-MM-DD }
+---
+
 <!--
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create playbooks and when NOT to create them.
@@ -12,9 +22,6 @@ Adapt sections as needed - some playbooks might need 2 phases, others might need
 -->
 
 # [Topic] Playbook
-
-**Created:** YYYY-MM-DD **Last Updated:** YYYY-MM-DD **Status:** Draft | Active
-| Deprecated
 
 ---
 
@@ -150,9 +157,9 @@ approach]
 
 Links to related playbooks, architecture docs, or best practices
 
-- [Related playbook 1](./other-playbook.md)
-- [Architecture doc](../architecture/doc-name.md)
-- [External resource](URL)
+- `[Related playbook 1](./other-playbook.md)`
+- `[Architecture doc](../architecture/doc-name.md)`
+- `[External resource](URL)`
 
 ---
 

@@ -1,3 +1,14 @@
+---
+type: proposal
+title: "Grapevine — Agent-to-Agent Walkie-Talkie"
+description:
+  A named channel two or more agents on one machine can talk over — a stream of
+  messages, no knowledge base and no orchestration.
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-05-25 }
+---
+
 <!--
 This proposal captures V1.5 — what actually shipped during the spike. The
 "Design Notes" section preserves the framings that emerged from the live
@@ -7,11 +18,6 @@ alias guidance) live in the skill, not here.
 -->
 
 # Grapevine — Agent-to-Agent Walkie-Talkie
-
-**Status:** V1.5 shipped (in spike branch, awaiting merge) **Created:**
-2026-05-25 **Author:** Cole Reed
-
----
 
 ## Overview
 
@@ -37,8 +43,8 @@ deliberate constraint, not a missing feature.
 A single long-running Bun daemon on `127.0.0.1` hosts N named channels. Agents
 drive it via a small CLI; humans can watch any channel live in a browser tab.
 Operational details (signatures, flags, recipes) live in the
-[skill doc](../../../plugins/toolbox/skills/grapevine/SKILL.md) — the table
-below is the conceptual surface.
+`plugins/toolbox/skills/grapevine/SKILL.md` — the table below is the conceptual
+surface.
 
 | Verb                            | Shape                                                                                           |
 | ------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -209,15 +215,15 @@ the participants can collectively author.
 
 ## Related Documents
 
-- [grapevine skill](../../../plugins/toolbox/skills/grapevine/SKILL.md) — the
-  operational doc: verb signatures, presence model, recipes, alias guidance,
-  `--stdin` examples. Everything an agent _using_ grapevine needs.
+- `plugins/toolbox/skills/grapevine/SKILL.md` — the operational doc: verb
+  signatures, presence model, recipes, alias guidance, `--stdin` examples.
+  Everything an agent _using_ grapevine needs.
 - [agent-surface-bun recipe](../../../plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
   — parent pattern. Grapevine inherits Bun + JSONL conventions but is
   multi-tenant (one daemon, many channels) where the recipe's references are
   per-session.
-- [tuskboard skill](../../../plugins/toolbox/skills/tuskboard/SKILL.md) —
-  closest sibling for the multi-agent join shape, though tuskboard's server is
-  per-board where grapevine is per-machine.
-- [digestify skill](../../../plugins/toolbox/skills/digestify/SKILL.md) —
-  sibling on the agent-surface-bun pattern; one-shot review surface.
+- `plugins/toolbox/skills/tuskboard/SKILL.md` — closest sibling for the
+  multi-agent join shape, though tuskboard's server is per-board where grapevine
+  is per-machine.
+- `plugins/toolbox/skills/digestify/SKILL.md` — sibling on the agent-surface-bun
+  pattern; one-shot review surface.

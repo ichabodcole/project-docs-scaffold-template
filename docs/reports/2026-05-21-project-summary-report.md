@@ -1,3 +1,13 @@
+---
+type: report
+title: Project Summary Report
+description:
+  "How PROJECT-SUMMARY.md was produced: what was read, in what order, and what
+  the process missed."
+status: stable
+generated: { by: unknown, at: 2026-05-21 }
+---
+
 # Project Summary Report
 
 **Report Date:** 2026-05-21 **Report Type:** Project Summary Discovery

@@ -169,22 +169,22 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Project Lifecycle Skills
 
-| Skill                        | Description                                                                                                                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                                                                                                                   |
-| `create-project`             | Create project folder with proposal scaffold in docs/projects/                                                                                                                       |
-| `create-investigation`       | Create investigation from rough idea or voice note                                                                                                                                   |
-| `generate-proposal`          | Create project proposal from completed investigation                                                                                                                                 |
-| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                                                                                                                          |
-| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                                                                                                                              |
-| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                                                                                                                        |
-| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                                                                                                                    |
-| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                                                                                                                   |
-| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies                                                                                                    |
-| `dev-discovery`              | Pre-planning technical discovery for complex features                                                                                                                                |
-| `backlog-to-projects`        | Review backlog items and organize them into project groupings                                                                                                                        |
-| `update-project-docs`        | Upgrade docs structure to newer scaffold template version                                                                                                                            |
-| `sweep-project`              | Reconcile a project folder or backlog item against what was actually built, then either record the remaining work or — on confirmation — archive it and update live cross-references |
+| Skill                        | Description                                                                                                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                                                                                                                           |
+| `create-project`             | Create project folder with proposal scaffold in docs/projects/                                                                                                                               |
+| `create-investigation`       | Create investigation from rough idea or voice note                                                                                                                                           |
+| `generate-proposal`          | Create project proposal from completed investigation                                                                                                                                         |
+| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                                                                                                                                  |
+| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                                                                                                                                      |
+| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                                                                                                                                |
+| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                                                                                                                            |
+| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                                                                                                                           |
+| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies                                                                                                            |
+| `dev-discovery`              | Pre-planning technical discovery for complex features                                                                                                                                        |
+| `backlog-to-projects`        | Review backlog items and organize them into project groupings                                                                                                                                |
+| `update-project-docs`        | Upgrade docs structure to newer scaffold template version, including the v2.7 OKF frontmatter layer                                                                                          |
+| `sweep-project`              | Reconcile a project folder, backlog item, or cycle against what was actually built, then either record the remaining work or — on confirmation — archive it and update live cross-references |
 
 ### Research & Analysis Skills
 
@@ -278,6 +278,231 @@ docs/
    significantly
 
 ## Version History
+
+### 3.8.0 (2026-09-06)
+
+**`create-project` becomes a touchpoint.** The scaffold now ships a `pdocs` CLI
+(`scripts/pdocs/cli.ts`), and `pdocs new project <name>` does atomically what
+the skill used to describe as four manual steps: verify the folder is free,
+create it, copy `PROPOSAL.template.md`, fill the frontmatter, and — with
+`--from` — wire the originating investigation into Related Documents. The skill
+keeps the part a command cannot do (the naming judgement, when to use it at all,
+what happens after) and defers the file mechanics, dropping from 116 lines
+to 91.
+
+**A CLI reference the skills can point at** —
+[`create-project/references/pdocs.md`](skills/create-project/references/pdocs.md).
+Self-contained and verified by running every command in it: the seven commands
+with their JSON field names, format resolution and why a project that adds its
+own shortcuts must pin `--format`, the exit-code bands (1–8 the invocation
+failed, 9 it succeeded and the tree is dirty), and the `pdocs new` grammar — 18
+of 23 types creatable, the five that are not and why, filename shapes, and the
+catalog line a library page also gets. Other document-creating skills will point
+at it as they are converted; it lives under `create-project` because a directory
+under `skills/` without a `SKILL.md` fails `scripts/validate-skills-dist.py`.
+
+**A migration for projects still on the v2.7 lint** —
+[`v2.7-to-v2.8.md`](skills/update-project-docs/migrations/v2.7-to-v2.8.md).
+Installs `scripts/pdocs/`, deletes `docs/lint.ts`, removes the development
+artefacts an earlier v2.8 build installed, and refreshes the templates — v2.7's
+carry bare example links, and `pdocs new` copies a template body verbatim, so a
+stale template produces a document that fails the gate the moment it is written.
+Its presence check is `docs/lint.ts` existing, which is also its done-signal.
+
+**What the scaffold hands over, and what it only delivers.** The payload ships
+production files and nothing else: no `package.json` wrapping the CLI in
+`docs:*` scripts, no `tsconfig.json`, no test suite, no `acc.config.json` for a
+tool the consumer never agreed to use. A wrapper covered three of the CLI's
+eight verbs and had to pin `--format` to defeat the CLI's own resolution, so it
+taught a partial interface badly — and every one of those files implied the
+consumer owned code they are only ever handed. `scripts/pdocs/` is versioned
+with the scaffold and this skill replaces it wholesale. The lint's portable core
+moved to `scripts/pdocs/docs-lint/` for the same reason: a project gains exactly
+one directory it does not own, not two. The v2.7→v2.8 guide's step 6 removes
+what an earlier build installed, and `update-project-docs`'s own Step 7
+verification checks the boundary directly — no shipped tests, no `tsconfig`
+reaching into `scripts/` — rather than trusting the version number.
+
+**One thing the gate does not do, now written down.** `pdocs check` accepts a
+template placeholder — a document created without `--description` keeps
+`"[One sentence: …]"` and lints clean on both tiers. The skill says so and tells
+the caller to pass the flag.
+
+**A new root-level convention: the Documentation CLI pointer.** A migrated
+project had the CLI and no way for an agent to find out — root `AGENTS.md`
+described the gate at most, never the writer. `update-project-docs` Step 6 now
+checks for it and recommends a blurb; see
+[Documentation CLI pointer](skills/update-project-docs/SKILL.md#documentation-cli-pointer)
+for the content. Its check has two clauses, because absence is not the only
+failure: an `AGENTS.md` written against v2.7 still names `bun docs/lint.ts`, and
+a check that only asked whether the CLI was mentioned would call that satisfied.
+It also carries a **precondition** — the CLI must actually be installed — and
+Step 6 now tests preconditions before checks.
+
+**Every Root-Level Conventions check was rewritten to survive a missing file.**
+They passed two filenames to `grep`, and a filename that does not exist is an
+_error_, not a non-match: `grep -l` exits 2 having printed the match, and
+`grep -q` exits 0 under BSD grep but **2** under the `ugrep` wrapper Claude Code
+puts on `grep` — so the checks passed for a human and said "recommend it" for
+the agent running the skill, on any project keeping only `AGENTS.md`. All three
+rows now read one concatenated stream,
+`grep -q PATTERN <(cat AGENTS.md CLAUDE.md 2>/dev/null)`, which is 0-or-1 under
+both.
+
+**Step 7 of `update-project-docs` verifies something.** It was a fenced block
+with two comments in it. It now runs the common tail of every upgrade path — the
+CLI is installed and runnable, the gate is clean through it, the `docs:*`
+scripts resolve with the format pinned, nothing still names `docs/lint.ts`, and
+the two version markers agree — and names the one population no migration
+claims: a project with `docs/SCHEMA.md` and no `scripts/pdocs/`, for which both
+presence checks are false. The repair is a subset of `v2.7-to-v2.8`, so it gets
+a paragraph there rather than a migration row of its own.
+
+### 3.7.0 (2026-09-04)
+
+The plugin now emits and respects the **OKF frontmatter layer** that scaffold
+v2.7 installs — every document carries a checked frontmatter block, a two-tier
+lint gates it, and the new `cycle` type names the work in play. Skills that
+create documents fill the frontmatter; skills that close work write `lifecycle`;
+skills that touch the tree read the docs root from `.project-docs.json` rather
+than assuming `docs/`.
+
+**Cycles** — `init-branch` gains Step 5: it finds the `active` cycle, confirms
+the branch belongs to it, and appends the branch to its `## Sessions` section as
+`(open)`. `finalize-branch` Step 6 rewrites that marker as `(landed <date>)`
+and, once every entry in the cycle's `scope` has reached a terminal `lifecycle`,
+offers to close the cycle. `sweep-project` gains **The Cycle Path**, a complete
+alternative to its Steps 1–5b: check each scope entry's `lifecycle`, and on a
+full house write the `## Outcome`, set `lifecycle: closed`, and move any
+remaining `(open)` session lines. A `scope` entry naming a project resolves to a
+folder, so all of that folder's documents must be terminal — a proposal at
+`implemented` beside a plan at `active` does not close it. The cycle question
+and the project question are asked separately — a cycle spans projects and a
+project spans cycles, so neither answers the other.
+
+**`lifecycle`, not `**Status:**`** — `sweep-project` Step 2a now reads a
+declared state from frontmatter first and the bold line second, and reports a
+disagreement between them as a finding. Step 2b writes `lifecycle` _before_
+touching any completion marks, since it is the field every other skill reads and
+the lint checks. The per-type vocabularies are tabulated in the skill and are
+the same ones `docs/SCHEMA.md` defines. `approved` is explicitly not
+`implemented`: a proposal left at `approved` when the thing shipped is the drift
+the step exists to correct.
+
+**The library tier was not checking frontmatter at all, and now is.** For the
+first six phases of this work, `SCHEMA.md` said the graph tier checks
+"everything Thin checks, plus" the graph obligations, and it checked none of it:
+the vocabulary rules lived inside `thinTier`, which only ever walks the
+workbench folders. A library page could carry `status: approved` — the exact
+hand-invented value this whole layer exists to make impossible — and the gate
+printed `docs-lint: clean`. So could a `lifecycle` on a type that forbids one, a
+`type` disagreeing with its folder, a non-kebab tag, an unknown field and a
+legacy `date`. The one library-side check that did exist tested presence only
+and was reached solely from `--report`, which always exits 0.
+
+Found by a cold-read agent asked to add a memory page to a freshly scaffolded
+project and then break it — it tried the thing the contract forbids, in the
+first place a reader would try it. The per-document rules are now
+`documentProblems`, called by both tiers, with `tags` the single field they
+disagree about. Nine regression tests, one per break that used to pass.
+
+**Reference classification gained a fifth bucket.** `sweep-project` Step 3 now
+sorts on four questions, and an `_archive`-internal `../<name>/` link — one that
+resolves correctly the moment the target moves, and would become
+`_archive/_archive/<name>/` if rewritten — lands in **Self-correcting** rather
+than being a footnote exempting one case from the Rewrite rule. As a footnote it
+escaped both of that step's invariants: the classification said Rewrite, Step 5b
+declined to rewrite, and correctness grep 2 reported the hit as an unfinished
+rewrite, so a correct run read as a failed one. A rule that one case is exempt
+from is a rule with a hole in it. (Closes
+`backlog/2026-09-02-sweep-project-archive-internal-link-exception`.)
+
+**Archival became optional.** A terminal `lifecycle` is what records that work
+closed; moving the folder to `_archive/` is housekeeping on top of it. And a
+project named in an `active` cycle's `scope` is not moved at all — the move
+would break the one document that still needs to point at it.
+
+**Documents arrive complete.** `create-project`, `create-investigation`,
+`generate-proposal` and `generate-dev-plan` now fill the template's frontmatter
+rather than leaving the bracketed placeholders — including `description`, which
+is the catalog hook and the one field no tool can generate. Each runs
+`bun scripts/pdocs/cli.ts check` before reporting. `finalize-branch` Step 4
+fills the session block; Step 5 adds the memory's catalog line to
+`docs/index.md`, since a memory is a library page and an uncatalogued library
+page is an orphan.
+
+These steps are explicit that **the lint does not catch a placeholder** — it
+checks that a key is present and non-empty, and `title: "[Topic]"` satisfies
+that. Only the date is rejected. Filling the block is the author's job, not the
+gate's, and saying otherwise would have taught people to trust a check that
+isn't there.
+
+The session template shipped `status: draft`, which is wrong for a frozen record
+and is not a placeholder anyone would notice — it now ships `stable`. The memory
+template gained a commented `related:` key, which Step 5 asks for and the
+template didn't have.
+
+**The lint is part of the gate.** `finalize-branch` Step 3 runs
+`bun scripts/pdocs/cli.ts check` with the other quality tools, and Step 7 runs
+it again after the session and memory are written — the first run cannot check
+documents that don't exist yet. `adopting: true` and pre-existing problems in
+untouched documents are reported, not treated as this branch's failures.
+
+**Migration** — new
+[v2.6 → v2.7 guide](skills/update-project-docs/migrations/v2.6-to-v2.7.md),
+driven by a Bun codemod (`migrate-v2.6-to-v2.7.ts`, `--dry-run` first) that
+derives `type`, `title`, `lifecycle`, `tags` and `generated.at` from what each
+document already contains. It never writes `description`. `update-project-docs`
+Step 1 reads `.project-docs.json` before `docs/README.md`, and Step 5 writes
+both.
+
+**Migration rows gained an `Applies If` check.** release-please bumps
+`docs_version` on every scaffold release, so the number says which release a
+project copied from, not which structural migrations it has applied — the two
+namespaces diverged some time ago. Each row now carries a shell test that is
+true when that migration is still needed, and Step 3 runs it.
+
+**Root-level convention revised:** the
+[docs structure pointer](skills/update-project-docs/SKILL.md#docs-structure-pointer)
+now recommends pointing at `docs/SCHEMA.md` as the frontmatter contract, for
+projects on v2.7 or later.
+
+**Output that answers the question asked.** `--report` names the files it found
+rather than rolling them up into a folder and a count — "one file somewhere
+under `docs/memories/` is missing `status`" is not a worklist — and says how
+many documents it scanned, so an empty report is distinguishable from a report
+that looked at nothing. `--json` emits `generated` as `{ by, at }` instead of
+the raw inline-flow YAML as a string, which is what `tags` beside it already
+did.
+
+**Docs root** — eighteen skills and commands gained one sentence saying that
+`docs/` is `docsRoot` in `.project-docs.json` and only defaults to `docs/`. No
+example paths were rewritten. `sweep-project` resolves it once in its
+Prerequisites, alongside `ROOT`, since thirteen of its commands depend on it.
+
+**`related:` is library-only, and now says so in one place.** `docs/SCHEMA.md`
+gained the rule it was relying on implicitly: edges are `type/slug` where slug
+is the basename, they resolve against library pages only, and the thin tier
+doesn't resolve them at all — so a bad edge on a session or a proposal is
+accepted silently. Sessions link their cycle in the body instead, where the link
+is checked.
+
+### 3.6.1 (2026-09-03)
+
+- Broken and unresolvable links across the plugin's pages, found by the new
+  `docs:lint` link pass in the scaffold repo. `init-branch`, `dev-kickoff` and
+  `operator-triage` linked paths like `docs/playbooks/README.md` as if they
+  resolved next to the skill; they name files in the repository the skill is
+  _run against_, so they are now code spans rather than links that could only
+  ever be broken. The two illustrative links in `create-investigation`'s
+  overview and `generate-proposal`'s step 7 are examples of a line the skill
+  writes, not references this page has, and read as code for the same reason.
+- `tech-integration-research` — the output-format template closed its
+  ```markdown fence two-thirds of the way through, so a third of the template
+  (Setup Requirements through Sources Consulted) rendered as live document
+  instead of as the template it is, and a stray fence at the end of the file
+  swallowed the Quality Checklist and Example Questions sections. Both repaired.
+  ```
 
 ### 3.6.0 (2026-09-02)
 

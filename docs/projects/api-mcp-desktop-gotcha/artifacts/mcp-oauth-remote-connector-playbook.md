@@ -1,8 +1,14 @@
-# MCP OAuth Remote Connector (Claude Desktop) Playbook
-
-**Created:** 2026-04-16 **Last Updated:** 2026-04-16 **Status:** Active
-
 ---
+type: artifact
+title: MCP OAuth Remote Connector (Claude Desktop) Playbook
+description:
+  End-to-end diagnosis of a spec-compliant MCP server that works from Claude
+  Code and fails silently from Desktop.
+status: stable
+generated: { by: unknown, at: 2026-04-16 }
+---
+
+# MCP OAuth Remote Connector (Claude Desktop) Playbook
 
 ## Context
 
@@ -565,8 +571,9 @@ request in `curl` outperforms research by a wide margin.
 
 ## Related Patterns
 
-- [api-mcp-server-playbook.md](./api-mcp-server-playbook.md) — original MCP
-  server scaffolding for this repo
+- [api-mcp-server recipe](../../../../plugins/recipes/skills/recipes/library/api-mcp-server/RECIPE.md)
+  — MCP server scaffolding, which is where the playbook this once pointed at
+  ended up
 - [RFC 7591 – OAuth 2.0 Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591)
 - [RFC 8414 – OAuth 2.0 Authorization Server Metadata](https://datatracker.ietf.org/doc/html/rfc8414)
 - [RFC 9728 – OAuth 2.0 Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728)

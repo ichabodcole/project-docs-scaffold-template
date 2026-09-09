@@ -72,6 +72,10 @@ Create a list of exploration targets based on this analysis.
 
 ### 2. Check Architecture Documentation
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 For each affected system, check `docs/architecture/` for relevant docs:
 
 ```bash

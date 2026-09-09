@@ -1,13 +1,14 @@
-# Cross-Harness Event/Push Landscape for AI Coding Agents
-
-**Date:** 2026-05-28 **Author:** Research pass (deep-research harness — 105
-agents, 22 sources fetched, 78 claims extracted, 25 verified, 20 confirmed)
-**Scope:** Claude Code, OpenCode, MCP, A2A, Claude Squad (Pass 1); OpenHands,
-Gemini CLI, Aider, Roo Code, + MCP client matrix (Pass 2). Goose, Codex CLI,
-Cursor, Cline, Amp, Pi remain unsubstantiated. **Status:** Complete (2 passes).
-Pass 2 appended below.
-
 ---
+type: report
+title: Cross-Harness Event/Push Landscape for AI Coding Agents
+description:
+  Which agent harnesses besides Claude Code can be woken by an external event,
+  and which can only be polled.
+status: stable
+generated: { by: unknown, at: 2026-05-28 }
+---
+
+# Cross-Harness Event/Push Landscape for AI Coding Agents
 
 ## Question
 
@@ -256,11 +257,6 @@ harness that cleanly does both.
 ---
 
 # Pass 2 — Remaining harnesses
-
-**Date:** 2026-05-28 **Method:** deep-research harness — 106 agents, 24 sources
-fetched, 110 claims extracted, 25 verified, 23 confirmed, 2 killed. **Targets:**
-OpenHands, Goose, Aider, OpenAI Codex / Codex CLI, Gemini CLI, Cursor, Cline,
-Roo Code, Amp, Pi.
 
 ## Headline
 

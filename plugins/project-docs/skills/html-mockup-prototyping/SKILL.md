@@ -181,6 +181,10 @@ point with 3 placeholder groups and 7 states.
 **Realistic shell** — Wrap the mockup in app chrome. Avoids "floating widget"
 syndrome where design looks good in isolation but context is unclear.
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 **File location** — `docs/projects/<project>/artifacts/<feature>-mockup.html`.
 Commit to the branch as part of the project record.
 

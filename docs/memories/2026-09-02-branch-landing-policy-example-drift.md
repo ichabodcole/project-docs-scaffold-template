@@ -1,6 +1,15 @@
-# Branch Landing Policy example had drifted from its implementation
+---
+type: memory
+title: Branch Landing Policy example had drifted from its implementation
+description:
+  The landing-policy example shipped to downstream projects still carried
+  wording this repo had already replaced for being unreachable.
+tags: [skills, update-project-docs, drift]
+status: stable
+generated: { by: unknown, at: 2026-09-02 }
+---
 
-**Date:** 2026-09-02
+# Branch Landing Policy example had drifted from its implementation
 
 The `## Branch Landing Policy` example that `update-project-docs` ships to
 downstream projects still carried the 3.1.0 wording that 3.3.0 had already

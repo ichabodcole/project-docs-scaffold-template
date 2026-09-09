@@ -1,6 +1,15 @@
-# Generalized worktree scripts and bundled with skill
+---
+type: memory
+title: Generalized worktree scripts and bundled with skill
+description:
+  Project-specific worktree scripts were generalized and bundled into the skill
+  that uses them, so they carry no repo assumptions.
+tags: [skills, worktrees, scripts]
+status: stable
+generated: { by: unknown, at: 2026-02-14 }
+---
 
-**Date:** 2026-02-14
+# Generalized worktree scripts and bundled with skill
 
 Moved project-specific worktree management scripts into the
 `parallel-worktree-dev` skill as bundled, generic scripts. They auto-discover
@@ -12,4 +21,4 @@ root resolution. Plugin version bumped to 1.3.0.
 `plugins/project-docs/skills/dev-kickoff/scripts/copy-env-to-worktree.sh`
 
 **Docs:**
-[Session](../projects/generalize-worktree-scripts/sessions/2026-02-14-generalize-and-bundle-scripts.md)
+[Session](../projects/_archive/generalize-worktree-scripts/sessions/2026-02-14-generalize-and-bundle-scripts.md)

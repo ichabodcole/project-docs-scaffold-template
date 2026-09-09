@@ -1,0 +1,37 @@
+── library (graph tier) ────────────────────────────────
+UNKNOWN FIELD  docs/architecture/legacy-date.md: "date"
+LEGACY FIELD   docs/architecture/legacy-date.md: `date` is superseded by `generated.at` (OKF 0.2 §13.1)
+UNKNOWN FIELD  docs/interaction-design/unknown-field.md: "owner"
+UNKNOWN FIELD  docs/lessons-learned/frozen-with-lifecycle.md: "lifecycle"
+LIFECYCLE      docs/lessons-learned/frozen-with-lifecycle.md: a lesson is a frozen record and carries no lifecycle
+BAD STATUS     docs/memories/bad-status.md: "approved"  (OKF 0.2: draft | stable | deprecated)
+ORPHAN         specifications/orphan.md  (unreachable from index.md — add its catalog line)
+BAD related    playbooks/dangling-related.md: "playbook/no-such-page" matches no page (expected `type/slug`)
+STALE HOOK     index.md → architecture/legacy-date.md:
+         hook: "A hook that no longer says what the page says."
+  description: "An architecture page still carrying a legacy date field."
+
+3 problem(s).
+
+6 frontmatter problem(s) in the library.
+
+── workbench (thin tier) ───────────────────────────────
+BAD TAG        docs/backlog/bad-tag.md: "Not Kebab"  (kebab-case)
+MISSING title   docs/briefs/missing-fields.md
+MISSING description   docs/briefs/missing-fields.md
+MISSING status   docs/briefs/missing-fields.md
+MISSING generated   docs/briefs/missing-fields.md
+MISSING lifecycle   docs/briefs/missing-fields.md
+MISSING FILE   docs/investigations/broken-link.md: ./findings-that-do-not-exist.md
+BAD LIFECYCLE  docs/projects/sample/plan.md: "shipped"  (plan: draft | active | completed | abandoned)
+BAD GENERATED  docs/projects/sample/test-plan.md: 2026-01-01  (expected `{ by: <actor>, at: YYYY-MM-DD }`)
+NO FRONTMATTER docs/reports/no-frontmatter.md  (see docs/SCHEMA.md)
+WRONG TYPE     docs/fragments/wrong-type.md: "memory" (its position says "fragment")
+TWO ACTIVE CYCLES  docs/cycles/one.md, docs/cycles/two.md  (at most one cycle is `lifecycle: active`)
+BAD SCALAR     docs/cycles/one.md: `description` contains ": " unquoted  (a real YAML parser reads this as a nested mapping)
+SCHEMA EXTRA TYPE  SCHEMA.md documents `ghost`, which the lint knows nothing about
+TEMPLATE MISSING  docs/cycles/TEMPLATE.md  (the `cycle` registry row declares it; nothing is there)
+
+15 problem(s).
+
+docs-lint: 24 problem(s)

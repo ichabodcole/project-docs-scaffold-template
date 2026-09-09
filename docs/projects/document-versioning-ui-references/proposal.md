@@ -1,8 +1,15 @@
-# Document Versioning UI References
-
-**Status:** Draft **Created:** 2026-03-11 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Document Versioning UI References
+description:
+  Add HTML mockups to the document-versioning recipe, because prose descriptions
+  of dialogs produce inconsistent implementations.
+status: stable
+lifecycle: deferred
+generated: { by: unknown, at: 2026-03-11 }
+---
+
+# Document Versioning UI References
 
 ## Overview
 

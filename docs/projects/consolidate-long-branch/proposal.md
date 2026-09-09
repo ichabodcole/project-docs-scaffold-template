@@ -1,8 +1,15 @@
-# Consolidate Long Branch Skill
-
-**Status:** Draft **Created:** 2026-04-13 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Consolidate Long Branch Skill
+description:
+  A skill for collapsing a long feature branch — dozens of WIP saves, fixups and
+  reversals — into a history someone can read.
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-04-13 }
+---
+
+# Consolidate Long Branch Skill
 
 ## Overview
 

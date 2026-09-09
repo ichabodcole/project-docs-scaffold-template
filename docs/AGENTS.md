@@ -57,3 +57,26 @@ Reports and investigations are the connective tissue between projects:
   [test-plan] → sessions → artifacts)
 - Completed projects may trigger new reports to assess outcomes
 - Small tasks that don't need the full pipeline go in the backlog
+
+## Creating and Querying Documents
+
+Documents are created with the `pdocs` CLI rather than written by hand:
+
+```bash
+bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
+```
+
+The type decides the folder, the filename shape and the template, and the CLI
+fills the frontmatter. For a library page (architecture, specification,
+interaction, playbook, lesson, memory) it also writes the line in
+[index.md](./index.md) that keeps the page out of the orphan list.
+
+The same CLI reads the tree:
+
+- **check** - the gate: frontmatter, links, anchors and catalog coverage
+- **find** - query by type, lifecycle, status, tag or date
+- **backlinks** - what cites a document, `related:` edges and body links apart
+- **orphans** - library pages the catalog cannot reach
+
+`bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
+[SCHEMA.md](./SCHEMA.md) is the frontmatter contract the gate enforces.

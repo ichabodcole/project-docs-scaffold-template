@@ -1,0 +1,26 @@
+6 missing field(s) across 2 of 16 document(s)
+
+title  (1)
+       1  docs/briefs/
+          missing-fields.md
+
+description  (1)
+       1  docs/briefs/
+          missing-fields.md
+
+status  (1)
+       1  docs/briefs/
+          missing-fields.md
+
+generated  (1)
+       1  docs/briefs/
+          missing-fields.md
+
+lifecycle  (1)
+       1  docs/briefs/
+          missing-fields.md
+
+frontmatter  (1)
+       1  docs/reports/
+          no-frontmatter.md
+

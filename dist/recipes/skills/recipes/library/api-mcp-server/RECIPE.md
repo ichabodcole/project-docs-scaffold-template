@@ -53,9 +53,9 @@ indeterminate checkbox states) is worth reviewing before implementing that flow.
 
 **Prerequisite Recipes:**
 
-- [Elysia + BetterAuth API](../elysia-betterauth-api/SKILL.md) — Base API server
-  setup
-- [BetterAuth OAuth Provider](../elysia-betterauth-oauth/SKILL.md) — OAuth 2.1
+- [Elysia + BetterAuth API](../elysia-betterauth-api/RECIPE.md) — Base API
+  server setup
+- [BetterAuth OAuth Provider](../elysia-betterauth-oauth/RECIPE.md) — OAuth 2.1
   for transport-level authentication (required for production multi-tenant
   deployments)
 

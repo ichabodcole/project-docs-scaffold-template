@@ -1,8 +1,15 @@
-# Tusk Board
-
-**Status:** Draft **Created:** 2026-05-21 **Author:** Cole Reed
-
 ---
+type: proposal
+title: Tusk Board
+description:
+  A browser task board an agent posts work into while people and other agents
+  edit it live — the first branded surface on the agent-surface-bun recipe.
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-05-21 }
+---
+
+# Tusk Board
 
 ## Overview
 
@@ -204,11 +211,10 @@ work.
 
 - [agent-surface-bun recipe](../../../plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
   — the underlying pattern.
-- [tuskboard SKILL.md](../../../plugins/toolbox/skills/tuskboard/SKILL.md) —
-  current invocation contract for both flows.
-- [digestify recipe-sibling](../../../plugins/toolbox/skills/digestify/SKILL.md)
-  — the one-shot variant that paired with Tusk Board to define the
-  agent-surface-bun pattern.
+- `plugins/toolbox/skills/tuskboard/SKILL.md` — current invocation contract for
+  both flows.
+- `plugins/toolbox/skills/digestify/SKILL.md` — the one-shot variant that paired
+  with Tusk Board to define the agent-surface-bun pattern.
 
 ---
 

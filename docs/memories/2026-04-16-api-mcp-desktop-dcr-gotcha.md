@@ -1,6 +1,15 @@
-# api-mcp-server skill gains Claude Desktop DCR compatibility section
+---
+type: memory
+title: api-mcp-server skill gains Claude Desktop DCR compatibility section
+description:
+  Claude Desktop's connector fails silently against a confidential-client DCR
+  endpoint; the api-mcp-server recipe now documents the rewrite that fixes it.
+tags: [recipes, mcp, oauth]
+status: stable
+generated: { by: unknown, at: 2026-04-16 }
+---
 
-**Date:** 2026-04-16
+# api-mcp-server skill gains Claude Desktop DCR compatibility section
 
 Added Phase 5.3 to the `recipes:api-mcp-server` skill documenting a DCR
 intercept route that rewrites confidential-client DCR requests to public so

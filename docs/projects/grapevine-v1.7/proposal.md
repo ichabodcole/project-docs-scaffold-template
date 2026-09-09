@@ -1,8 +1,15 @@
-# Grapevine V1.7 — Human as First-Class Participant
-
-**Status:** Draft **Created:** 2026-05-27 **Author:** Cole
-
 ---
+type: proposal
+title: "Grapevine V1.7 — Human as First-Class Participant"
+description:
+  "Promote the human from observer to participant: the watch surface becomes a
+  control plane rather than a read-only view."
+status: stable
+lifecycle: deferred
+generated: { by: unknown, at: 2026-05-27 }
+---
+
+# Grapevine V1.7 — Human as First-Class Participant
 
 ## Overview
 

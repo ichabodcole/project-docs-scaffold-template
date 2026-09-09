@@ -6,6 +6,10 @@ argument-hint: "[--full | --refresh]"
 
 # Project Summary Command
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 Generate or update `docs/PROJECT-SUMMARY.md` and a discovery report. The command
 auto-selects between two modes based on how much has changed since the existing
 summary:

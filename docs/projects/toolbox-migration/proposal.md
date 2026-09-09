@@ -1,9 +1,15 @@
-# Toolbox Migration — Splitting the Interactive Suite into Its Own Repo
-
-**Status:** Draft (light proposal — scoping/exploratory) **Created:** 2026-05-27
-**Author:** Cole
-
 ---
+type: proposal
+title: "Toolbox Migration — Splitting the Interactive Suite into Its Own Repo"
+description:
+  Whether the toolbox family — its own design language, audience and release
+  cadence — should live in its own repository.
+status: stable
+lifecycle: deferred
+generated: { by: unknown, at: 2026-05-27 }
+---
+
+# Toolbox Migration — Splitting the Interactive Suite into Its Own Repo
 
 ## Overview
 

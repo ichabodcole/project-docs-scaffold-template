@@ -1,6 +1,15 @@
-# Documentation restructured to project folders
+---
+type: memory
+title: Documentation restructured to project folders
+description:
+  Flat proposals/, plans/ and sessions/ folders became co-located
+  projects/<name>/ folders, so a feature's whole record opens in one place.
+tags: [documentation, restructure, projects]
+status: stable
+generated: { by: unknown, at: 2026-02-09 }
+---
 
-**Date:** 2026-02-09
+# Documentation restructured to project folders
 
 Replaced flat `proposals/`, `plans/`, `sessions/` directories with co-located
 `projects/<name>/` folders. Each project folder holds its proposal, plan,
@@ -14,5 +23,6 @@ template, dogfood docs, and plugin tooling.
 `plugins/project-docs/skills/update-project-docs/skill.md`,
 `release-please-config.json`
 
-**Docs:** [Proposal](../projects/documentation-restructuring/proposal.md),
-[Plan](../projects/documentation-restructuring/plan.md)
+**Docs:**
+[Proposal](../projects/_archive/documentation-restructuring/proposal.md),
+[Plan](../projects/_archive/documentation-restructuring/plan.md)

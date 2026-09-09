@@ -112,6 +112,10 @@ Your investigation path may be valuable for future researchers.
 
 ## Output Format
 
+**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
+in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
+the file exists.
+
 Structure investigation outputs using the templates in
 `docs/investigations/README.md`. Key sections:
 

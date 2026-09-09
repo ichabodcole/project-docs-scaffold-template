@@ -1,8 +1,15 @@
-# Markdown Slide Decks — Proposal
-
-**Status:** Draft **Created:** 2026-03-13 **Author:** Cole Reed
-
 ---
+type: proposal
+title: "Markdown Slide Decks — Proposal"
+description:
+  Turn a dense project document into a slide deck someone can review before
+  reading the whole thing.
+status: stable
+lifecycle: implemented
+generated: { by: unknown, at: 2026-03-13 }
+---
+
+# Markdown Slide Decks — Proposal
 
 ## Overview
 
@@ -57,4 +64,4 @@ libraries)?
 **Related Documents:**
 
 - [Brief](../../briefs/2026-03-13-markdown-slide-decks.md)
-- [Investigation: Markdown Slide Deck Tooling](../../investigations/2026-03-13-markdown-slide-deck-tooling.md)
+- [Investigation: Markdown Slide Deck Tooling](../../investigations/_archive/2026-03-13-markdown-slide-deck-tooling.md)
