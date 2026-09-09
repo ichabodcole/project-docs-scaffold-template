@@ -293,22 +293,35 @@ to 91.
 **A CLI reference the skills can point at** —
 [`create-project/references/pdocs.md`](skills/create-project/references/pdocs.md).
 Self-contained and verified by running every command in it: the seven commands
-with their JSON field names, format resolution and why the `docs:*` npm scripts
-pin `--format`, the exit-code bands (1–8 the invocation failed, 9 it succeeded
-and the tree is dirty), and the `pdocs new` grammar — 18 of 23 types creatable,
-the five that are not and why, filename shapes, and the catalog line a library
-page also gets. Other document-creating skills will point at it as they are
-converted; it lives under `create-project` because a directory under `skills/`
-without a `SKILL.md` fails `scripts/validate-skills-dist.py`.
+with their JSON field names, format resolution and why a project that adds its
+own shortcuts must pin `--format`, the exit-code bands (1–8 the invocation
+failed, 9 it succeeded and the tree is dirty), and the `pdocs new` grammar — 18
+of 23 types creatable, the five that are not and why, filename shapes, and the
+catalog line a library page also gets. Other document-creating skills will point
+at it as they are converted; it lives under `create-project` because a directory
+under `skills/` without a `SKILL.md` fails `scripts/validate-skills-dist.py`.
 
 **A migration for projects still on the v2.7 lint** —
 [`v2.7-to-v2.8.md`](skills/update-project-docs/migrations/v2.7-to-v2.8.md).
-Installs `scripts/pdocs/`, deletes `docs/lint.ts`, rewrites the three `docs:*`
-script bodies with `--format text`, widens the `tsconfig` `include` to cover
-`scripts/`, and refreshes the templates — v2.7's carry bare example links, and
-`pdocs new` copies a template body verbatim, so a stale template produces a
-document that fails the gate the moment it is written. Its presence check is
-`docs/lint.ts` existing, which is also its done-signal.
+Installs `scripts/pdocs/`, deletes `docs/lint.ts`, removes the development
+artefacts an earlier v2.8 build installed, and refreshes the templates — v2.7's
+carry bare example links, and `pdocs new` copies a template body verbatim, so a
+stale template produces a document that fails the gate the moment it is written.
+Its presence check is `docs/lint.ts` existing, which is also its done-signal.
+
+**What the scaffold hands over, and what it only delivers.** The payload ships
+production files and nothing else: no `package.json` wrapping the CLI in
+`docs:*` scripts, no `tsconfig.json`, no test suite, no `acc.config.json` for a
+tool the consumer never agreed to use. A wrapper covered three of the CLI's
+eight verbs and had to pin `--format` to defeat the CLI's own resolution, so it
+taught a partial interface badly — and every one of those files implied the
+consumer owned code they are only ever handed. `scripts/pdocs/` is versioned
+with the scaffold and this skill replaces it wholesale. The lint's portable core
+moved to `scripts/pdocs/docs-lint/` for the same reason: a project gains exactly
+one directory it does not own, not two. Step 6 of the migration removes what an
+earlier build installed, and Step 7's verification checks the boundary directly
+— no shipped tests, no `tsconfig` reaching into `scripts/` — rather than
+trusting the version number.
 
 **One thing the gate does not do, now written down.** `pdocs check` accepts a
 template placeholder — a document created without `--description` keeps

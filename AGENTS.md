@@ -34,11 +34,13 @@ The template is organized with these key directories:
   be, and a package would freeze that early. It sits INSIDE `pdocs/` so a
   consumer's `scripts/` gains exactly one directory it does not own; the split
   between core and rules is ours, not theirs
-- `{{cookiecutter.project_slug}}/.project-docs.json`, `package.json`,
-  `tsconfig.json` - Root config for a generated project. The `package.json` and
-  `tsconfig.json` ship only in the new-folder install; an existing project keeps
-  its own, and the hook prints the scripts to add — read out of the payload's
-  own `package.json` — along with the `include` entry to extend
+- `{{cookiecutter.project_slug}}/.project-docs.json` - The only root config the
+  payload carries. It used to ship a `package.json` wrapping the CLI in `docs:*`
+  scripts and a `tsconfig.json` to typecheck it; both are gone. The payload is
+  production-only — a consumer is delivered a tool, not handed a development
+  setup for code they do not own — and a wrapper covering three of the CLI's
+  eight verbs is a second interface that has to grow every time the first one
+  does
 - `hooks/post_gen_project.py` - Python hook that runs after template generation
 - `cookiecutter.json` - Template configuration defining user prompts and
   variables
@@ -65,19 +67,19 @@ It has two branches. **New project folder** leaves the whole payload in place.
 `.project-docs.json` up into the existing repository and deletes the rest. An
 existing `scripts/` is merged into, not replaced; an existing `scripts/pdocs/`
 or `docs/` is a collision, and the install ABORTS and rolls back rather than
-half-landing a `docs/` tree with nothing that checks it. What the payload no
-longer carries is printed instead: the `docs:*` scripts, and the
-`scripts/**/*.ts` the project needs in its `include`. Anything that would
-collide is left alone with a warning rather than replaced.
+half-landing a `docs/` tree with nothing that checks it. `scripts/` itself is
+never the collision: `_move` merges into an existing one and leaves every file
+in it alone.
 
-**The printed scripts are read from the payload's `package.json`, not written
-out in the hook.** They used to be a literal, and the literal drifted: the same
-scripts are stated in this repo's `package.json` and the payload's, and the
-hook's third copy missed the `--format text` that pins `pdocs` to human-readable
-output, so it spent a release telling people to install a lint that emits JSON
-into their CI log. `render_package_scripts` renders the payload's own file at
-print time. Only the script **names** are stated twice, and only to leave
-`typecheck` out — it needs a `tsconfig.json` this branch does not move.
+**The hook prints no scripts to add, because there are none left to add.** It
+used to print a `docs:*` block rendered from the payload's own `package.json`,
+and before that a literal — a third statement of scripts already stated in this
+repo's `package.json` and the payload's. The literal drifted: it missed the
+`--format text` that pins `pdocs` to human-readable output, so the hook spent a
+release telling people to install a lint that emits JSON into their CI log.
+Rendering the payload's file at print time fixed the drift; deleting the wrapper
+removed the thing that could drift. What the hook prints in its place is
+`LAYER_NOTE`, the blurb naming the CLI for the project's own `AGENTS.md`.
 
 Note that `--no-input` selects the **first** `install_target` choice, which is
 the current-directory branch. Generating a reference copy of the payload means

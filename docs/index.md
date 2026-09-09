@@ -162,3 +162,6 @@ What has been happening lately, for a cold start. — see
   — Self-run verification cannot falsify its author's assumptions; an
   independent review found six defects in an afternoon that seven phases had
   passed.
+- [What you ship says who owns it](./memories/2026-09-08-shipped-ownership-boundary.md)
+  — Development-process artefacts leak into a payload one convenience at a time,
+  and each one quietly hands the consumer something to maintain.
