@@ -37,6 +37,19 @@ the implementer's judgement mid-cycle.
 see `sessions/2026-09-06-pdocs-cli-landing.md`. The plan's per-phase validation
 was necessary and not sufficient.
 
+**Phase 7's payload decision was superseded two days later**, on
+`chore/pdocs-acc-conformance` — see
+`sessions/2026-09-08-pdocs-consumer-boundary.md`. This plan asked for the CLI's
+tests to be mirrored into the payload ("the payload currently ships 826 lines of
+rules with no tests, and that gap should not survive the move") and for the hook
+to print `docs:*` scripts and a `tsconfig` `include` to adopt. The opposite
+shipped: the payload is production-only — no tests, no `package.json`, no
+`tsconfig.json` — because those files ask a consumer to own code they are only
+delivered. The gap the plan wanted closed was closed the other way: the tests
+stay in this repository, and `check:mirror` is what keeps the shipped copy
+honest. Read Phase 7 below as the plan of record for what was built on
+2026-09-06, not as a description of what the payload contains now.
+
 ## Overview
 
 Build `pdocs` — a zero-dependency, agent-facing CLI — and move the documentation
