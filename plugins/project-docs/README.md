@@ -318,10 +318,10 @@ taught a partial interface badly — and every one of those files implied the
 consumer owned code they are only ever handed. `scripts/pdocs/` is versioned
 with the scaffold and this skill replaces it wholesale. The lint's portable core
 moved to `scripts/pdocs/docs-lint/` for the same reason: a project gains exactly
-one directory it does not own, not two. Step 6 of the migration removes what an
-earlier build installed, and Step 7's verification checks the boundary directly
-— no shipped tests, no `tsconfig` reaching into `scripts/` — rather than
-trusting the version number.
+one directory it does not own, not two. The v2.7→v2.8 guide's step 6 removes
+what an earlier build installed, and `update-project-docs`'s own Step 7
+verification checks the boundary directly — no shipped tests, no `tsconfig`
+reaching into `scripts/` — rather than trusting the version number.
 
 **One thing the gate does not do, now written down.** `pdocs check` accepts a
 template placeholder — a document created without `--description` keeps

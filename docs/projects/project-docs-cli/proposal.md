@@ -272,7 +272,11 @@ lint move is delicate.
   tree and a dirty one, asserted by a test rather than by eye.
 - `npm run check`, the pre-commit hook and the `docs-check` workflow pass with
   no change to what they invoke beyond the `docs:lint` script body.
-- A project generated from the template lints clean and passes its own tests.
+- A project generated from the template lints clean. ~~and passes its own
+  tests~~ — superseded on 2026-09-08: the payload ships no tests, because a
+  consumer is delivered the CLI rather than handed it. `check:mirror` is what
+  keeps the shipped copy honest. See
+  `sessions/2026-09-08-pdocs-consumer-boundary.md`.
 - `create-project` is shorter than it is today and says less about file layout.
 - `pdocs new cycle` refuses to open a second active cycle, and refuses a scope
   entry that does not resolve.

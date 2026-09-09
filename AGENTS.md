@@ -192,11 +192,12 @@ is the full page.
 
 ### Two Runtimes, One Gate
 
-This repo runs **Node (via pnpm)** for Prettier, Husky and Slidev, **Python (via
-uv)** for the skill-validation script, and **Bun** for the documentation lint
-under `scripts/pdocs/`. The split is deliberate: the lint is zero-dependency
-TypeScript that Bun executes directly, with no build step and no Node
-type-stripping flags to keep current.
+This repo runs **Node (via pnpm)** for Prettier, Husky and Slidev, **Python**
+for the skill-validation script (via `uv`, outside the gate) and for
+`check-version.sh` and the post-gen hook's tests (system `python3`, inside it),
+and **Bun** for the documentation lint under `scripts/pdocs/`. The split is
+deliberate: the lint is zero-dependency TypeScript that Bun executes directly,
+with no build step and no Node type-stripping flags to keep current.
 
 `pnpm-lock.yaml` is the lockfile — `packageManager` in `package.json` pins the
 version, and `pnpm install --frozen-lockfile` is what CI runs. Do not

@@ -68,7 +68,7 @@ def install_to_current_directory():
     shutil.move(os.path.join(project_dir, "docs"), docs_target)
 
     # The lint's portable core, the `pdocs` CLI that drives it, and its config
-    # travel with docs/, and THAT IS THE WHOLE PAYLOAD — the four moves below
+    # travel with docs/, and THAT IS THE WHOLE PAYLOAD — the three moves below
     # are everything the template has to give.
     #
     # It used to be more, and the rest was a development setup for code the
@@ -95,7 +95,17 @@ def install_to_current_directory():
     # `docs/` without the CLI is a contract with nothing that checks it. Note
     # `scripts/` ITSELF is not a collision — `makedirs(..., exist_ok=True)` in
     # `_move` merges into an existing one, leaving every file in it alone.
-    moved = [os.path.join(parent_dir, "docs")]
+    # `_move` creates the target's PARENT, so a project with no `scripts/` of its
+    # own gains one. Remember whether it was ours to remove.
+    parent_scripts = os.path.join(parent_dir, "scripts")
+    scripts_was_theirs = os.path.isdir(parent_scripts)
+
+    # (where it is now, where it came from) — NOT a bare list of destinations.
+    # Rolling back with `basename(done)` lands `scripts/pdocs` at `<slug>/pdocs`,
+    # which is a different directory: the recovered layer then fails the very
+    # command the abort message tells you to run. Measured, on the one collision
+    # this path exists for.
+    moved = [(docs_target, os.path.join(project_dir, "docs"))]
     for source, target, label in (
         (
             os.path.join(project_dir, "scripts", "pdocs"),
@@ -109,15 +119,26 @@ def install_to_current_directory():
         ),
     ):
         if _move(source, target, label):
-            moved.append(target)
+            moved.append((target, source))
             continue
 
         # Put back what already went out, so the tree is as it was found and
         # the payload is still there to look at. Half an install is worse than
         # none: `docs/` alone passes nothing, and the next run would abort on
         # the `docs/` branch instead of saying what actually blocked it.
-        for done in moved:
-            shutil.move(done, os.path.join(project_dir, os.path.basename(done)))
+        for done, origin in reversed(moved):
+            os.makedirs(os.path.dirname(origin), exist_ok=True)
+            shutil.move(done, origin)
+
+        # An empty `scripts/` we created is still something we left behind, and
+        # the next line promises we did not.
+        if (
+            not scripts_was_theirs
+            and os.path.isdir(parent_scripts)
+            and not os.listdir(parent_scripts)
+        ):
+            os.rmdir(parent_scripts)
+
         print("   Nothing was installed; your tree is as you left it.")
         print(f"   The generated layer is in ./{os.path.basename(project_dir)}/")
         print("   Move it in by hand — or, if you are upgrading an existing")

@@ -49,3 +49,6 @@ tmp-template-test/
 .agents/
 .codex/
 .scratch/
+
+# Bun is used only to run .ts files, never to install — see AGENTS.md
+bun.lock
