@@ -114,12 +114,18 @@ exemption is a decision rather than a convenience, so record it as one.
 Prove the verb before relying on it: run a migration twice against a fixture
 with a locally-edited seeded file and assert the edit survives both runs.
 
-**Phase 2 — Open the type vocabulary.** Parse `types` and the folder→type map in
-`scripts/pdocs/docs-lint/config.ts`. Have `scripts/pdocs/lint/registry.ts`
-derive `DURABLE_TYPE` from config with the current table as the default rather
-than the ceiling. Extend `pdocs find --type` to reject unknown types against the
-resolved vocabulary, naming the valid set in `details.choices` per the error
-envelope this CLI already follows.
+**Phase 2 — Open the type vocabulary.** Prototyped 2026-09-11 in 46 lines across
+three files; what remains is tests, discoverability and the `find` validation.
+Parse `types` and the folder→type map in `scripts/pdocs/docs-lint/config.ts`.
+Have `scripts/pdocs/lint/registry.ts` derive `DURABLE_TYPE` from config with the
+current table as the default rather than the ceiling. Extend `pdocs find --type`
+to reject unknown types against the resolved vocabulary, naming the valid set in
+`details.choices` per the error envelope this CLI already follows.
+
+Note that `rules.ts` holds a **second** pair of position→type resolvers
+(`SPEC[folder]?.type` and its `DURABLE_TYPE` twin) beyond `registry.ts`. The
+spike found them only because patching the first left
+`WRONG TYPE ... (its position says "")` behind; both need the config fallback.
 
 Verify by generating: declare `docs/runbooks/` in a generated project, add a
 page, reach `pdocs check` exit 0, and confirm an undeclared type still exits 9.
@@ -153,9 +159,11 @@ changes.
   output. That is 12+ files changing class, and it is the difference between "a
   framework you conform to" and "a starting point you take over." Deciding it
   here is what gives Phase 1 a real file to prove the verb against.
-- Should an adopter-declared type be allowed into `durable`, or only
-  `workbench`? Durable carries catalog-reachability and stricter frontmatter
-  checks that the scaffold currently guarantees by construction.
+- ~~Should an adopter-declared type be allowed into `durable`, or only
+  `workbench`?~~ **Resolved by spike, 2026-09-11: yes, at no cost.** The tier is
+  chosen by which array the folder is listed in. A type declared into `durable`
+  gets the full library tier and the catalog obligation bites correctly —
+  `ORPHAN ... add its catalog line`. No special casing required.
 
 ## Success Criteria
 

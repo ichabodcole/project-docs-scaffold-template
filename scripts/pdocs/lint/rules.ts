@@ -167,7 +167,7 @@ export function workbenchFiles(ctx: Ctx): Array<{
         type:
           folder === "projects"
             ? projectType(path)
-            : (SPEC[folder]?.type ?? ""),
+            : (SPEC[folder]?.type ?? ctx.config.lint.types[folder] ?? ""),
       });
     }
   }
@@ -212,7 +212,11 @@ export function libraryFiles(ctx: Ctx): Array<{
     out.push({
       path,
       rel,
-      type: ROOT_PAGE_TYPE[name] ?? DURABLE_TYPE[folder] ?? "",
+      type:
+        ROOT_PAGE_TYPE[name] ??
+        DURABLE_TYPE[folder] ??
+        ctx.config.lint.types[folder] ??
+        "",
     });
   }
   return out;
