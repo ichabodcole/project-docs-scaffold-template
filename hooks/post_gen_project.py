@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Post-generation hook for project-docs-scaffold-template."""
 
+import hashlib
+import json
 import os
 import shutil
 
@@ -28,6 +30,53 @@ LAYER_NOTE = """     ───────────────────�
      [docs/memories/](./docs/memories/).
      ─────────────────────────────────────────────────────
 """
+
+
+SEED_MANIFEST = ".pdocs-seed.json"
+
+
+def _is_seeded(name):
+    """Seeded files are the templates: the scaffold installs a working default
+    and the adopter may take it over. Matched by shape rather than by a list, so
+    a template added later is recorded without anyone remembering to come here."""
+    return (name.startswith("TEMPLATE") and name.endswith(".md")) or name.endswith(
+        ".template.md"
+    )
+
+
+def write_seed_manifest(docs_dir, config_path):
+    """Record what we just installed, so a later migration can tell an adopter's
+    edit from a scaffold change.
+
+    Written HERE rather than shipped in the payload: hashing the files actually
+    installed cannot go stale, where a committed artifact needs its own gate to
+    stay honest. `scripts/pdocs/seed.ts` reads it back and decides.
+    """
+    version = None
+    try:
+        with open(config_path) as handle:
+            version = json.load(handle).get("version")
+    except (OSError, ValueError):
+        pass  # No version is recoverable; a missing manifest is not.
+
+    files = {}
+    for dirpath, _dirnames, filenames in os.walk(docs_dir):
+        for name in filenames:
+            if not _is_seeded(name):
+                continue
+            absolute = os.path.join(dirpath, name)
+            with open(absolute, "rb") as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()
+            files[os.path.relpath(absolute, docs_dir)] = digest
+
+    with open(os.path.join(docs_dir, SEED_MANIFEST), "w") as handle:
+        json.dump(
+            {"version": version, "files": dict(sorted(files.items()))},
+            handle,
+            indent=2,
+        )
+        handle.write("\n")
+    return len(files)
 
 
 def _move(source, target, label):
@@ -145,6 +194,10 @@ def install_to_current_directory():
         print("   scaffold, run /project-docs:update-project-docs instead.\n")
         return
 
+    write_seed_manifest(
+        docs_target, os.path.join(parent_dir, ".project-docs.json")
+    )
+
     os.chdir(parent_dir)
     shutil.rmtree(project_dir)
 
@@ -176,6 +229,12 @@ def install_to_current_directory():
 
 def install_to_new_folder():
     """Standard cookiecutter output — the whole payload inside a new folder."""
+    project_dir = os.getcwd()
+    write_seed_manifest(
+        os.path.join(project_dir, "docs"),
+        os.path.join(project_dir, ".project-docs.json"),
+    )
+
     print("\n✅ Project documentation structure created successfully!\n")
     print("📁 Project: {{ cookiecutter.project_name }}")
     print("📂 Location: ./{{ cookiecutter.project_slug }}\n")
