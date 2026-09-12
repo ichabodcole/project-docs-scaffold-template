@@ -37,9 +37,21 @@ SEED_MANIFEST = ".pdocs-seed.json"
 
 def _is_seeded(name):
     """Seeded files are the templates: the scaffold installs a working default
-    and the adopter may take it over. Matched by shape rather than by a list, so
-    a template added later is recorded without anyone remembering to come here."""
-    return (name.startswith("TEMPLATE") and name.endswith(".md")) or name.endswith(
+    and the adopter may take it over.
+
+    Matched on `TEMPLATE` ANYWHERE in the name, not as a prefix. The prefix form
+    silently missed `YYYY-MM-DD-TEMPLATE-investigation.md` and
+    `YYYY-MM-DD-TEMPLATE-report.md` — two templates the registry has always
+    named — so 17 of 19 were recorded while the comment here claimed shape
+    matching meant nothing could be forgotten.
+
+    The authority is `scripts/pdocs/lint/registry.ts`, which declares a
+    `template:` path per type. This predicate cannot read it (cookiecutter runs
+    this hook with the stdlib and no project on disk yet), so it approximates
+    it. Widening beyond the registry is harmless: recording a path the scaffold
+    will never write is a no-op. Narrowing is not, which is why this errs wide.
+    """
+    return ("TEMPLATE" in name and name.endswith(".md")) or name.endswith(
         ".template.md"
     )
 
@@ -60,7 +72,10 @@ def write_seed_manifest(docs_dir, config_path):
         pass  # No version is recoverable; a missing manifest is not.
 
     files = {}
-    for dirpath, _dirnames, filenames in os.walk(docs_dir):
+    for dirpath, dirnames, filenames in os.walk(docs_dir):
+        # `_archive/` is the adopter's own history. Kept in step with
+        # SKIP_DIRS in migrations/scripts/migrate-v2.8-to-v2.9.ts.
+        dirnames[:] = [d for d in dirnames if d not in ("_archive", "node_modules", ".git")]
         for name in filenames:
             if not _is_seeded(name):
                 continue

@@ -123,3 +123,18 @@ describe("a seeded file this version adds", () => {
     ).toEqual([false, false, false]);
   });
 });
+
+describe("manifest keys are contained", () => {
+  test("a key escaping the docs root can never permit writing", () => {
+    const root = docsRoot({ "a.md": "x" });
+    const m = { version: "7.0.0", files: { "../../../etc/hosts": "deadbeef" } };
+    expect(verdictFor(m, root, "../../../etc/hosts")).toBe("keep-unknown");
+    expect(mayWrite(verdictFor(m, root, "../../../etc/hosts"))).toBe(false);
+  });
+
+  test("an absolute key is refused the same way", () => {
+    const root = docsRoot();
+    const m = { version: "7.0.0", files: { "/etc/hosts": "deadbeef" } };
+    expect(mayWrite(verdictFor(m, root, "/etc/hosts"))).toBe(false);
+  });
+});

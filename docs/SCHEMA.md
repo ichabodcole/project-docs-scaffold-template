@@ -318,11 +318,17 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 
 Three classes. The rule that decides: **does shipped tooling read it?**
 
-| Class      | What a migration does                     | Which files                                                                                                    |
-| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, `docs/index.md`, every category `README.md`, `scripts/pdocs/**` |
-| **Seeded** | Updates only while you have not edited it | every `TEMPLATE*.md` and `*.template.md`                                                                       |
-| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, and every document you write  |
+| Class      | What a migration does                     | Which files                                                                                                                    |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                  |
+| **Seeded** | Updates only while you have not edited it | every template — any `.md` whose name contains `TEMPLATE`, plus every `*.template.md`                                          |
+| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write |
+
+`docs/index.md` is **theirs** even though the scaffold ships a skeleton: it is
+your catalog of your own pages, and no migration copies over it. It is one of
+only two files `scripts/check-mirror.sh` exempts by name, for exactly that
+reason. A migration that overwrote it would leave every library page reporting
+`ORPHAN`.
 
 **Owned** files are read by code. The lint implements this file; editing your
 copy makes your spec disagree with your linter, and the next migration will take
@@ -341,6 +347,12 @@ records the sha256 of each one as installed. A migration compares:
 | recorded but you deleted it | **stays deleted** — deleting is an edit                  |
 | neither recorded nor there  | installed; it is new in this version                     |
 
+Note the asymmetry between the last two rows. "Stays deleted" holds for a file
+you deleted **after** it was recorded. A file you deleted **before** the
+manifest existed is indistinguishable from one this version adds, so it comes
+back. Nothing can tell those two apart, and the first migration is the only run
+where it arises.
+
 So a template is yours to restructure. The **frontmatter block is the contract**
 — `pdocs new` fills `type` from the registry regardless, but a hand-copied
 template gets no such repair, and the lint will reject the document rather than
@@ -349,6 +361,11 @@ the template. Everything below the frontmatter is yours.
 The first migration on a project that has no manifest reads every file as
 absent-from-the-manifest, so it adopts your tree as it stands rather than
 rewriting it.
+
+**No migration performs this comparison yet.** `v2.8-to-v2.9` only writes the
+record; the table above is what the next migration to touch a seeded file will
+do with it, through `scripts/pdocs/seed.ts`. The record has to exist before
+there is anything to reconcile against, which is why it ships first.
 
 ## The maintenance contract
 

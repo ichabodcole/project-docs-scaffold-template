@@ -153,7 +153,7 @@ Parse `types` and the folder→type map in `scripts/pdocs/docs-lint/config.ts`.
 Have `scripts/pdocs/lint/registry.ts` derive `DURABLE_TYPE` from config with the
 current table as the default rather than the ceiling. Extend `pdocs find --type`
 to reject unknown types against the resolved vocabulary, naming the valid set in
-`details.choices` per the error envelope this CLI already follows.
+`choices` per the error envelope this CLI already follows.
 
 Note that `rules.ts` holds a **second** pair of position→type resolvers
 (`SPEC[folder]?.type` and its `DURABLE_TYPE` twin) beyond `registry.ts`. The

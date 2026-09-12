@@ -192,8 +192,8 @@ The library tier's obligations apply to declared types with no special casing.
 1. `bun scripts/pdocs/cli.ts find --type nonsense; echo $?`
 
 **Expected:** Non-zero exit. The error names the resolved vocabulary in
-`details.choices`. It must **not** return `ok: true, count: 0` at exit 0, which
-is today's behaviour and is indistinguishable from "nothing matches."
+`error.choices`. It must **not** return `ok: true, count: 0` at exit 0, which is
+today's behaviour and is indistinguishable from "nothing matches."
 
 ---
 
@@ -335,32 +335,43 @@ adequate for one pass over a known file set.
 
 _Filled in during and after test execution by the implementing agent._
 
-| Scenario | Status  | Notes                                          |
-| -------- | ------- | ---------------------------------------------- |
-| T1-01    | Pass    | `npm run check` green; 617 tests.              |
-| T1-02    | Pass    | Generated project, `pdocs check` exit 0.       |
-| T1-03    | Pass    | 17 hashes recomputed, all match.               |
-| T1-04    | Pass    | `check-dist` 0 with and without uv.            |
-| T2-01    | Pass    | Generated project, exit 0.                     |
-| T2-02    | Pass    | Withdrawn declaration, exit 9.                 |
-| T2-03    | Pass    | ORPHAN then exit 0 once catalogued.            |
-| T2-04    | Pass    | Unit; `cli.test.ts`, `read.test.ts`.           |
-| T2-05    | Pass    | Regression guard holds.                        |
-| T2-06    | Pass    | Edit survived; untouched reads `update`.       |
-| T2-07    | Pass    | First migration = the unknown case.            |
-| T2-08    | Pass    | Second run no-op; manifest byte-identical.     |
-| T3-01    | Pass    | Unit: corrupt manifest throws, names file.     |
-| T3-02    | Pass    | Resolved: deletion is an edit. `keep-deleted`. |
-| T3-03    | Partial | Classes stated by category, not file-by-file.  |
+| Scenario | Status   | Notes                                                               |
+| -------- | -------- | ------------------------------------------------------------------- |
+| T1-01    | Pass     | `npm run check` green; 617 tests.                                   |
+| T1-02    | Pass     | Generated project, `pdocs check` exit 0.                            |
+| T1-03    | Pass     | 17 hashes recomputed, all match.                                    |
+| T1-04    | Pass     | `check-dist` 0 with and without uv.                                 |
+| T2-01    | Pass     | Generated project, exit 0.                                          |
+| T2-02    | Pass     | Withdrawn declaration, exit 9.                                      |
+| T2-03    | Pass     | ORPHAN then exit 0 once catalogued.                                 |
+| T2-04    | Pass     | Unit; `cli.test.ts`, `read.test.ts`.                                |
+| T2-05    | Pass     | Regression guard holds.                                             |
+| T2-06    | Deferred | The v2.9 migration compares nothing; verified via `seed.ts` only.   |
+| T2-07    | Deferred | Same: no migration consumes `seed.ts` yet.                          |
+| T2-08    | Pass     | Second run no-op; manifest byte-identical.                          |
+| T3-01    | Pass     | Unit: corrupt manifest throws, names file.                          |
+| T3-02    | Pass     | Resolved: deletion is an edit. `keep-deleted`.                      |
+| T3-03    | Partial  | 4 payload paths fall in no class; 2 were real templates, now fixed. |
 
 **Blocked scenarios:** none. `cookiecutter` 2.6.0 was available, so every
 payload scenario executed rather than being reported green while never running.
 
-**T3-03 is Partial, deliberately.** `docs/SCHEMA.md` names the three classes and
-assigns every file by CATEGORY — "every category README", "every `TEMPLATE*.md`"
-— not file by file. That covers today's tree, but a shipped file matching no
-category would go unnoticed, which is the silent gap this project exists to
-close. Automating it stays the right follow-up.
+**T2-06 and T2-07 are Deferred, not Pass — a correction.** Both scenarios say
+"run the v2.9 migration against the project." That migration ADOPTS and does not
+reconcile: with a manifest present it prints `already exists — nothing to do`
+and returns 0. The behaviours were verified against `seed.ts` directly, which is
+a different and weaker claim, and recording them as Pass overstated the result.
+They become executable with the first migration that consumes `seed.ts`.
+
+**T3-03 is Partial.** The by-category classification left four payload paths in
+no class at all — and two of them,
+`docs/investigations/YYYY-MM-DD-TEMPLATE-investigation.md` and
+`docs/reports/YYYY-MM-DD-TEMPLATE-report.md`, were real templates the shape
+predicate silently skipped. Both are fixed, and
+`scripts/seeded-coverage.test.ts` now asserts the predicate covers every
+template the registry declares. The remaining gap is that the classification is
+still by category rather than file by file; automating it stays the right
+follow-up.
 
 ## Visual Artifacts
 

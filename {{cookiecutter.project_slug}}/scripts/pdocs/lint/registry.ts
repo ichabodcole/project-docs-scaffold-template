@@ -613,7 +613,11 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
     if (rows.some((r) => r.folder === folder || r.type === type)) continue;
     rows.push({
       type,
-      tier: config.lint.durable.includes(folder) ? "library" : "workbench",
+      // The LINT's rule, not the inverse of it: `graphTier` skips `workbench`
+      // and `skip`, so everything else is library. Choosing on `durable`
+      // membership instead registered a folder listed in neither array as
+      // workbench while the lint held it to the catalog obligation.
+      tier: config.lint.workbench.includes(folder) ? "workbench" : "library",
       scope: "docs",
       folder,
       filename: { kind: "slug", date: "none" },

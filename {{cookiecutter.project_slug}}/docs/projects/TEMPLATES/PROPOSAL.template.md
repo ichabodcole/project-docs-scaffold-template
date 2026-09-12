@@ -9,10 +9,10 @@ generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 
 <!--
-THIS TEMPLATE IS YOURS. The scaffold installs it and records its hash; a
-migration updates it only while you have not touched it, and reports it rather
-than overwriting once you have. The frontmatter block is the contract the lint
-enforces — see docs/SCHEMA.md. Everything below it is yours to restructure.
+OWNERSHIP (of this template file — not of documents created from it): it is
+yours to edit. The scaffold records its hash, so a migration updates it only
+while you have not touched it. Frontmatter is the contract the lint enforces;
+below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
 USAGE: Copy this file to your project folder as `proposal.md`.
 

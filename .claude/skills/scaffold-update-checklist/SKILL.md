@@ -85,6 +85,45 @@ being silently skipped at release time. A `generic` entry needs the
 fails loudly if it is missing, because release-please would leave that file
 alone for ever.
 
+## Mirroring is not ownership
+
+Two different questions, and conflating them is easy enough that it got into a
+proposal before the plan caught it:
+
+- **Mirroring** is repo ↔ payload, in THIS repository. `check-mirror.sh`
+  enforces it. Both copies are ours.
+- **Ownership** is what a migration does in a CONSUMER's repository.
+  `docs/SCHEMA.md` § "Who owns which file" states it: **owned** (overwritten
+  every migration), **seeded** (installed once, then reconciled by hash), or
+  **theirs** (never touched).
+
+**A seeded file still gets mirrored.** Templates are seeded — an adopter may
+edit them and a migration will not overwrite their edit — and they are _also_
+byte-mirrored here, because the repo copy and the payload copy are both ours and
+must agree. Exempting them from the mirror to express "seeded" would silence a
+live check over 19 file pairs and express nothing. Exempt a file only when THIS
+repo deliberately keeps a different copy from the payload, which is why
+`PROJECT_MANIFESTO.md` and `index.md` are the only two.
+
+**Which files are seeded** is decided by shape, in three places that must agree:
+`_is_seeded` in `hooks/post_gen_project.py`, `isSeeded` in the current
+`migrations/scripts/migrate-*.ts`, and the sentence in `docs/SCHEMA.md`. The
+authority is `scripts/pdocs/lint/registry.ts`, which declares a `template:` per
+type — and `scripts/seeded-coverage.test.ts` asserts the predicate covers every
+one of them. It exists because the first version matched `TEMPLATE` as a prefix
+and silently skipped `YYYY-MM-DD-TEMPLATE-investigation.md` and
+`YYYY-MM-DD-TEMPLATE-report.md`, recording 17 of 19 while its own comment
+claimed shape matching meant nothing could be forgotten.
+
+**Adding a template?** Nothing to do beyond the usual mirroring, as long as its
+name contains `TEMPLATE` or ends `.template.md` and the registry declares it —
+`seeded-coverage` fails loudly if the registry and the predicate disagree.
+
+**`docs/.pdocs-seed.json` is generated, never authored.** The post-gen hook
+writes it at install time from the files actually installed. Do **not** add a
+copy to the payload: a committed manifest would need its own gate to stay
+honest, which is the reason it is generated instead.
+
 **Structurally mirrored but content differs** — these two are exempted by name
 in `scripts/check-mirror.sh`, so nothing checks them. Adding a third is a
 decision, not a convenience:

@@ -36,7 +36,7 @@ Done when all of these hold:
 - A folder declared into `durable` gets the library tier, including
   `ORPHAN ... add its catalog line`.
 - `pdocs find --type nonsense` exits non-zero and names the resolved vocabulary
-  in `details.choices`.
+  in `choices`.
 - A locally-edited seeded file survives two consecutive migration runs, while an
   untouched one updates in the same run.
 - A migration reports a diverged file by name — never silently skips it, never
@@ -79,9 +79,9 @@ adopter's edit from a scaffold change.
 
 **Key changes.**
 
-- Create `scripts/seed-manifest.ts` — writes and reads `docs/.pdocs-seed.json`,
-  a flat `{ "<repo-relative path>": "<sha256>" }` map plus the scaffold
-  `version` that wrote it.
+- Create `scripts/pdocs/seed.ts` — writes and reads `docs/.pdocs-seed.json`, a
+  flat `{ "<repo-relative path>": "<sha256>" }` map plus the scaffold `version`
+  that wrote it.
 - Reconciliation has exactly three outcomes, and the third is the one that
   matters: entry present and hash matches → overwrite, re-record. Entry present
   and hash differs → keep theirs, **report by name**. Entry **absent** → keep
@@ -92,9 +92,9 @@ adopter's edit from a scaffold change.
 
 **Tasks.**
 
-1. Write `scripts/seed-manifest.test.ts` covering the three outcomes plus a
+1. Write `scripts/pdocs/seed.test.ts` covering the three outcomes plus a
    corrupt-JSON manifest. Run it; watch it fail.
-2. Implement `scripts/seed-manifest.ts` until it passes.
+2. Implement `scripts/pdocs/seed.ts` until it passes.
 3. Add manifest generation to `scripts/build-skills-dist.sh`, or a sibling build
    step. **It must be unconditional** — see `537c073`, where a build step gated
    on an optional tool made `check:dist` pass locally and fail in CI.
@@ -111,12 +111,12 @@ hashes verify.
 
 ### Phase 2: Reclassify templates as seeded ✅
 
-**Goal.** Hand the 16 templates to adopters without putting OKF at risk.
+**Goal.** Hand the templates to adopters without putting OKF at risk.
 
 **Key changes.**
 
-- 10 category templates (`docs/*/TEMPLATE*.md`) and 6 project templates
-  (`docs/projects/TEMPLATES/*.template.md`) enter the manifest as seeded.
+- Every template the registry declares — 19 under `docs/` — enters the manifest
+  as seeded.
 - Each gains a one-line note directly under the frontmatter: the frontmatter
   block is the contract, everything below it is yours. This matters most for
   hand-copiers — `new.ts`'s header records that copying a template by hand is
@@ -178,7 +178,7 @@ in `scripts/pdocs/docs-lint/config.ts`; adopter rows appended in `buildRegistry`
    withdrawn, folder present → `WRONG TYPE`; declared+durable → `ORPHAN`. Run;
    watch them pass (the implementation is already in).
 2. Write a failing test for `find --type nonsense` expecting non-zero and
-   `details.choices`.
+   `choices`.
 3. Implement the rejection in `find.ts`. Run; watch it pass.
 4. Add a test asserting a **declared** type is accepted by `find --type` — this
    is the regression the naive fix causes.
@@ -284,14 +284,14 @@ shipped guards that were structurally unable to report failure; see
 
 ## Implementation Notes
 
-**All four phases complete, 2026-09-11.** Both open questions resolved in Phase
-1: the manifest lives at `docs/.pdocs-seed.json`, and a seeded file the adopter
-deleted stays deleted. One deviation: the manifest is written by the
-cookiecutter post-gen hook rather than at build time, because hashing the files
-actually installed cannot go stale where a committed artifact would need its own
-gate. A fifth verdict — `install`, for a file neither recorded nor present —
-surfaced while implementing; without it a template added in a later version
-would have been skipped for ever.
+**All four phases complete, 2026-09-11**, then revised after review. Both open
+questions resolved in Phase 1: the manifest lives at `docs/.pdocs-seed.json`,
+and a seeded file the adopter deleted stays deleted. One deviation: the manifest
+is written by the cookiecutter post-gen hook rather than at build time, because
+hashing the files actually installed cannot go stale where a committed artifact
+would need its own gate. A fifth verdict — `install`, for a file neither
+recorded nor present — surfaced while implementing; without it a template added
+in a later version would have been skipped for ever.
 
 `f327151` is on `feat/docs-foundation` and is a spike: hand-verified, untested,
 undocumented. Phase 3 task 1 should confirm the three cases still hold before

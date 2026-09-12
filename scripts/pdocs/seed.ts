@@ -18,11 +18,17 @@
  * looks like on the first migration, before any manifest existed, which is why
  * the first run adopts a project as it stands rather than rewriting it.
  *
+ * NOTHING SHIPPED CALLS THIS YET, and that is deliberate rather than an
+ * oversight. The v2.9 migration only ADOPTS a project — it records hashes and
+ * compares nothing, because on that run nothing is known. These five verdicts
+ * are the API the NEXT migration consumes, which is why they ship now: the
+ * record has to exist before there is anything to reconcile against.
+ *
  * Zero dependencies, like the rest of `pdocs` — `node:crypto` and `node:fs`.
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 /** Lives inside the docs root, so it travels with what it describes — including
  *  across the cookiecutter install that moves `docs/` up into the parent. */
@@ -108,13 +114,28 @@ export function loadManifest(docsRoot: string): SeedManifest {
 }
 
 /** See `Verdict`. */
+/** A manifest key must name a file INSIDE the docs root. A key carrying `../`
+ *  would otherwise let a hand-edited manifest point the mechanism at any file
+ *  on disk. Nothing writes from this module today; the containment check is
+ *  here so that it cannot start doing so unsafely. */
+function within(docsRoot: string, rel: string): string | null {
+  const abs = resolve(docsRoot, rel);
+  const back = relative(resolve(docsRoot), abs);
+  if (back === "" || back.startsWith("..") || resolve(back) === back) return null;
+  return abs;
+}
+
 export function verdictFor(
   m: SeedManifest,
   docsRoot: string,
   rel: string
 ): Verdict {
+  const abs = within(docsRoot, rel);
+  // An escaping key is treated as the adopter's — the same answer every other
+  // uncertainty gets. It is never a verdict that permits writing.
+  if (abs === null) return "keep-unknown";
   const recorded = m.files[rel];
-  const current = hashOf(join(docsRoot, rel));
+  const current = hashOf(abs);
 
   if (recorded === undefined) return current === null ? "install" : "keep-unknown";
   if (current === null) return "keep-deleted";

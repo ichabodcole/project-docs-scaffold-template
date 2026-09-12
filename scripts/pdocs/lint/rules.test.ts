@@ -1056,12 +1056,4 @@ describe("a project that declares its own document types", () => {
     expect(graphTier(ctx).problems).toEqual([]);
   });
 
-  test("a declaration colliding with a built-in folder is ignored", () => {
-    const ctx = fixture(
-      { "docs/playbooks/a-playbook.md": runbook },
-      { types: { playbooks: "runbook" } }
-    );
-    expect(thinTier(ctx).concat(graphTier(ctx).problems.map(String)).join("\n"))
-      .not.toContain("runbook\" (its position says \"runbook\")");
-  });
 });

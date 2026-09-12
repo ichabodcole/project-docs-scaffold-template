@@ -27,20 +27,35 @@ import { join, relative, resolve } from "node:path";
 
 const MANIFEST_NAME = ".pdocs-seed.json";
 
-/** Matched by shape, not from a list: a template added later is recorded
- *  without anyone remembering to come back here. */
+/**
+ * `TEMPLATE` ANYWHERE in the name, not as a prefix — the prefix form missed
+ * `YYYY-MM-DD-TEMPLATE-investigation.md` and `YYYY-MM-DD-TEMPLATE-report.md`,
+ * both of which the registry has always declared as templates.
+ *
+ * Kept in step with `_is_seeded` in `hooks/post_gen_project.py`. Two copies,
+ * because the hook runs under cookiecutter with the stdlib and no project on
+ * disk. Erring wide is safe: recording a path the scaffold never writes is a
+ * no-op, where missing one silently drops a file out of the mechanism.
+ */
 function isSeeded(name: string): boolean {
   return (
-    (name.startsWith("TEMPLATE") && name.endsWith(".md")) ||
+    (name.includes("TEMPLATE") && name.endsWith(".md")) ||
     name.endsWith(".template.md")
   );
 }
 
+/** `_archive/` is the adopter's own history; a file named `TEMPLATE*.md` in
+ *  there is theirs, not a scaffold template we installed. */
+const SKIP_DIRS = new Set(["_archive", "node_modules", ".git"]);
+
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const abs = join(dir, entry.name);
-    if (entry.isDirectory()) walk(abs, out);
-    else if (entry.isFile() && isSeeded(entry.name)) out.push(abs);
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.has(entry.name)) walk(abs, out);
+      continue;
+    }
+    if (entry.isFile() && isSeeded(entry.name)) out.push(abs);
   }
   return out;
 }
