@@ -7,7 +7,7 @@ description:
   guides were not touched.
 tags: [migrations, agent-execution, tooling]
 status: draft
-lifecycle: active # where the work has got to; see docs/SCHEMA.md
+lifecycle: spent # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5, at: 2026-09-12 }
 ---
 
@@ -120,6 +120,9 @@ both were caught by review.
       evidence above and the replicated, cross-round shape they share.
 
 ## Suggested Next Steps
+
+Spawned [Migration Shape](../projects/migration-shape/proposal.md) on
+2026-09-12. The steps below are now that project's to carry.
 
 - [ ] Rewrite `migration-authoring/SKILL.md`, starting from
       [A guard must be able to fail](../lessons-learned/a-guard-must-be-able-to-fail.md)
