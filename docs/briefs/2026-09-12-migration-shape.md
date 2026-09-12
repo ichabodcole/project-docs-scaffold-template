@@ -35,7 +35,8 @@ The migration changed. **The document that teaches that shape did not.**
   it), and "checklist matches steps — one item per action".
 - **`update-project-docs/SKILL.md` § Creating New Migration Guides** — mandates
   `## Step-by-Step Migration`, `## What Moved`, `## What's Removed` and
-  `## Checklist`. The v2.9 guide has none of the four.
+  `## Checklist`. The v2.9 guide has two of the four, merged into one heading
+  that reads "Nothing, in either case"; it has no step list and no checklist.
 - **`.claude/skills/scaffold-update-checklist/SKILL.md`** — routes every
   migration author to `migration-authoring`, and its sync procedure says "follow
   the same steps end users would, to validate the guide works". There are no
@@ -63,16 +64,21 @@ v2.9 migration actually is, and the checklist that routes them there agrees.
 ## What Makes It Interesting
 
 The blast radius is measured, not guessed. Cross-block shell variables
-(`$SCAFFOLD`, `$VERSION`, `$SKILL_DIR`) per guide:
+(`$SCAFFOLD`, `$VERSION`, `$SKILL_DIR`, braced or not) per guide, counted as
+lines containing one:
 
-| guide             | occurrences | companion script |
-| ----------------- | ----------- | ---------------- |
-| `v2.6-to-v2.7.md` | 21          | yes              |
-| `v2.7-to-v2.8.md` | 17          | **none**         |
-| `v1-to-v2.md`     | 8           | no               |
+| guide             | lines with a cross-block variable | companion script |
+| ----------------- | --------------------------------- | ---------------- |
+| `v2.6-to-v2.7.md` | 23                                | yes              |
+| `v2.7-to-v2.8.md` | 17                                | **none**         |
+| `v1-to-v2.md`     | 8                                 | no               |
 
 `v2.7-to-v2.8.md` is 626 lines with no script at all, and it is the migration
 every v2.7 project still has to run.
+
+`v2.6-to-v2.7.md` has a companion script and carries the most cross-block state
+of the three. A script beside a guide does not remove the shape; the guide does.
+That is why the skill is the target and not any single guide.
 
 The v2.9 round also produced two defects worth keeping as evidence, because both
 were authored **by the repair written to remove them**: a guard computed in one
@@ -103,19 +109,21 @@ both were caught by review.
 - [ ] Rewrite the older guides, or mark them legacy and leave them working? A
       project three versions behind runs them unchanged today.
 - [ ] Does `v2.7-to-v2.8` get a script? It is the largest guide, has none, and
-      is the one most projects still need.
+      is the one most projects still need. A script alone is not the answer —
+      `v2.6-to-v2.7` has one and the same shape — so the question is whether the
+      guide is rewritten around one.
 - [ ] Should `migration-authoring` teach both shapes with a rule for choosing,
       or one shape with named exceptions?
-- [ ] Is there a lesson page owed here? The repo's own maintenance contract says
-      durable knowledge ships with the branch that produced it, and
-      `docs/lessons-learned/` gained nothing from three rounds that produced a
-      replicated, cross-round finding.
+- [x] Is there a lesson page owed here? It was:
+      [A guard must be able to fail](../lessons-learned/a-guard-must-be-able-to-fail.md)
+      landed with the session record (`c7b17be`). It names both defects kept as
+      evidence above and the replicated, cross-round shape they share.
 
 ## Suggested Next Steps
 
-- [ ] Write the lesson first — it is the input to the skill rewrite, not its
-      output.
-- [ ] Rewrite `migration-authoring/SKILL.md`.
+- [ ] Rewrite `migration-authoring/SKILL.md`, starting from
+      [A guard must be able to fail](../lessons-learned/a-guard-must-be-able-to-fail.md)
+      — the lesson is the input to the rewrite, not its output.
 - [ ] Correct `update-project-docs` § Creating New Migration Guides and
       `scaffold-update-checklist`'s two references.
 - [ ] Decide per guide: rewrite, or mark legacy.
