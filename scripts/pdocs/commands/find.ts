@@ -18,6 +18,7 @@
 import type { Command, Invocation } from "../cli.ts";
 import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import { type Page, collectPages } from "../pages.ts";
+import { buildRegistry } from "../lint/registry.ts";
 
 /** A match, minus the edges. Whoever wants those asks `pdocs graph` or
  *  `pdocs backlinks` — `find` answers "which documents", not "what cites
@@ -51,7 +52,8 @@ export interface FindFilters {
 }
 
 export function parseFilters(
-  flags: Record<string, string | true>
+  flags: Record<string, string | true>,
+  knownTypes: readonly string[]
 ): FindFilters {
   const value = (flag: string): string | undefined => {
     const v = flags[flag];
@@ -65,8 +67,17 @@ export function parseFilters(
         `A filter that cannot be applied would match nothing, which reads as an answer.`
     );
 
+  const type = value("--type");
+  if (type !== undefined && !knownTypes.includes(type)) {
+    const choices = [...new Set(knownTypes)].sort();
+    throw new UsageError(
+      `--type: \`${type}\` is not a type in this project. Known: ${choices.join(", ")}.`,
+      { token: type, choices }
+    );
+  }
+
   return {
-    type: value("--type"),
+    type,
     lifecycle: value("--lifecycle"),
     status: value("--status"),
     tag: value("--tag"),
@@ -157,7 +168,17 @@ export const find: Command = {
   ],
 
   run({ ctx, format, flags }: Invocation): number {
-    const data = findData(collectPages(ctx), parseFilters(flags));
+    // The vocabulary is the REGISTRY's, not a hardcoded list: a project that
+    // declared `runbook` in `.project-docs.json` must be able to filter on it.
+    // Validating against the built-ins would reject exactly the types
+    // `lint.types` exists to allow.
+    const data = findData(
+      collectPages(ctx),
+      parseFilters(
+        flags,
+        buildRegistry(ctx.config).map((r) => r.type)
+      )
+    );
 
     if (format === "json") printEnvelope("find", data);
     else renderText(data);

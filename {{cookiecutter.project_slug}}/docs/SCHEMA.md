@@ -43,6 +43,33 @@ lost, so the catalog is a hard requirement. A workbench document is found by its
 date and its folder README; it is written once, it closes, and it is never
 brought up to date — so cataloguing it would be a chore with no reader.
 
+### Declaring your own folder
+
+The folder lists above are defaults, not a ceiling. A project that wants
+`docs/runbooks/` adds the folder to a tier and names the `type` its pages carry,
+both in `.project-docs.json`:
+
+```json
+"lint": {
+  "workbench": ["backlog", "briefs", "...", "runbooks"],
+  "types": { "runbooks": "runbook" }
+}
+```
+
+`types` maps folder to type. The **tier follows from the array you list the
+folder in** — `workbench` for the thin checks, `durable` for the full graph
+tier. A durable declaration carries the catalog obligation like any other
+library folder: the page must be reachable from `index.md` or the lint reports
+`ORPHAN`.
+
+A declared type is **lintable but not creatable**. `pdocs new` will not make
+one, because the scaffold ships no template for it, and says so rather than
+failing obscurely. `pdocs find --type runbook` works, and `find` rejects a type
+this project has not declared — naming the resolved set, which includes yours.
+
+A declaration that collides with a folder or type the scaffold already ships is
+ignored; the built-in row wins.
+
 ## Layout
 
 ```

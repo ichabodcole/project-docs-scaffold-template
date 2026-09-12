@@ -335,23 +335,23 @@ adequate for one pass over a known file set.
 
 _Filled in during and after test execution by the implementing agent._
 
-| Scenario | Status            | Notes                           |
-| -------- | ----------------- | ------------------------------- |
-| T1-01    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T1-02    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T1-03    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T1-04    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-01    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-02    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-03    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-04    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-05    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-06    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-07    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T2-08    | Pass/Fail/Blocked | [Details on failures or blocks] |
-| T3-01    | Skipped           | [Tier 3 — covered by unit test] |
-| T3-02    | Skipped           | [Tier 3 — decision pending]     |
-| T3-03    | Skipped           | [Tier 3 — manual check]         |
+| Scenario | Status            | Notes                                |
+| -------- | ----------------- | ------------------------------------ |
+| T1-01    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T1-02    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T1-03    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T1-04    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T2-01    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T2-02    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T2-03    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T2-04    | Pass              | Unit. `cli.test.ts`, `read.test.ts`. |
+| T2-05    | Pass              | Unit. The regression guard holds.    |
+| T2-06    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T2-07    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T2-08    | Pass/Fail/Blocked | [Details on failures or blocks]      |
+| T3-01    | Skipped           | [Tier 3 — covered by unit test]      |
+| T3-02    | Skipped           | [Tier 3 — decision pending]          |
+| T3-03    | Skipped           | [Tier 3 — manual check]              |
 
 **Blocked scenarios:** T1-02, T1-03, T2-01, T2-02, T2-03 and T2-05 all require
 `cookiecutter`. If it is unavailable, mark them **blocked** rather than failed,

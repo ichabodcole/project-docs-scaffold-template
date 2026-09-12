@@ -544,7 +544,11 @@ export function graphTier(ctx: Ctx): DocsLintReport {
   const excluded = excluder(ctx);
   return collectDocsLint({
     root: ctx.docsRoot,
-    types: DURABLE_TYPES,
+    // A type this project declared is a known type. Passing only the built-in
+    // list here made a declared durable folder report `BAD type` even though
+    // the registry and both position resolvers had accepted it — the third
+    // closed set, and the one that only a test found.
+    types: [...DURABLE_TYPES, ...Object.values(ctx.config.lint.types)],
     nonPageDirs: [
       ...ctx.config.lint.workbench,
       ...ctx.config.lint.skip,
