@@ -8,6 +8,11 @@ generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 
 <!--
+THIS TEMPLATE IS YOURS. The scaffold installs it and records its hash; a
+migration updates it only while you have not touched it, and reports it rather
+than overwriting once you have. The frontmatter block is the contract the lint
+enforces — see docs/SCHEMA.md. Everything below it is yours to restructure.
+
 USAGE: Copy this file to your project's `sessions/` folder, replacing YYYY-MM-DD with the current date
 and renaming to describe the session topic (e.g., 2026-02-09-initial-implementation.md).
 

@@ -314,6 +314,42 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
    behaviour are verified against the source at writing time. A stale document
    is worse than none.
 
+## Who owns which file
+
+Three classes. The rule that decides: **does shipped tooling read it?**
+
+| Class      | What a migration does                     | Which files                                                                                                    |
+| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, `docs/index.md`, every category `README.md`, `scripts/pdocs/**` |
+| **Seeded** | Updates only while you have not edited it | every `TEMPLATE*.md` and `*.template.md`                                                                       |
+| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, and every document you write  |
+
+**Owned** files are read by code. The lint implements this file; editing your
+copy makes your spec disagree with your linter, and the next migration will take
+it back without asking. Change behaviour through `.project-docs.json` instead —
+it is yours, and it is where the tiers, the exclusions and your own `types`
+live.
+
+**Seeded** files are installed once and then negotiated. `docs/.pdocs-seed.json`
+records the sha256 of each one as installed. A migration compares:
+
+| On disk                     | What happens                                             |
+| --------------------------- | -------------------------------------------------------- |
+| matches what we recorded    | updated, and the new hash recorded                       |
+| differs                     | **kept**, and reported by name so you can see ours moved |
+| absent from the manifest    | **kept** — unknown is not permission                     |
+| recorded but you deleted it | **stays deleted** — deleting is an edit                  |
+| neither recorded nor there  | installed; it is new in this version                     |
+
+So a template is yours to restructure. The **frontmatter block is the contract**
+— `pdocs new` fills `type` from the registry regardless, but a hand-copied
+template gets no such repair, and the lint will reject the document rather than
+the template. Everything below the frontmatter is yours.
+
+The first migration on a project that has no manifest reads every file as
+absent-from-the-manifest, so it adopts your tree as it stands rather than
+rewriting it.
+
 ## The maintenance contract
 
 - **A branch that ships or changes something updates the affected page in the

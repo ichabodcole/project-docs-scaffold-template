@@ -8,6 +8,11 @@ generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 
 <!--
+THIS TEMPLATE IS YOURS. The scaffold installs it and records its hash; a
+migration updates it only while you have not touched it, and reports it rather
+than overwriting once you have. The frontmatter block is the contract the lint
+enforces — see docs/SCHEMA.md. Everything below it is yours to restructure.
+
 IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
 create lessons learned and what makes a good lesson.
 

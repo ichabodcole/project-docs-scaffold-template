@@ -8,6 +8,13 @@ lifecycle: open # where the work has got to; see docs/SCHEMA.md
 generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 
+<!--
+THIS TEMPLATE IS YOURS. The scaffold installs it and records its hash; a
+migration updates it only while you have not touched it, and reports it rather
+than overwriting once you have. The frontmatter block is the contract the lint
+enforces — see docs/SCHEMA.md. Everything below it is yours to restructure.
+-->
+
 # Fragment: [Brief Description]
 
 **Context:** [Where/when this observation came up - session, feature work, etc.]
