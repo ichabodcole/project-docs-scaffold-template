@@ -13,10 +13,11 @@
  * repo) — so this test is what holds all three in step.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { buildRegistry } from "./pdocs/lint/registry.ts";
 import { DEFAULT_CONFIG } from "./pdocs/docs-lint/config.ts";
+import { isSeeded as migrationIsSeeded } from "../plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.8-to-v2.9.ts";
 
 const REPO = join(import.meta.dir, "..");
 
@@ -52,22 +53,47 @@ describe("the seeded predicate covers the registry", () => {
     expect(missedByOld.length).toBeGreaterThan(0);
   });
 
-  test("the Python hook's copy agrees with this rule", () => {
-    const hook = readFileSync(join(REPO, "hooks/post_gen_project.py"), "utf8");
-    expect(hook).toContain('"TEMPLATE" in name and name.endswith(".md")');
-    expect(hook).toContain('name.endswith(\n        ".template.md"\n    )');
+  // Both other homes are EXECUTED against a shared fixture list, not matched as
+  // source text. An earlier version asserted exact line wrapping, so reflowing
+  // the Python predicate — behaviour identical — failed the test. A guard that
+  // fires on a formatting edit is the other way to lose a guard.
+  const FIXTURES = [
+    ["TEMPLATE.md", true],
+    ["TEMPLATE-domain.md", true],
+    ["YYYY-MM-DD-TEMPLATE-investigation.md", true],
+    ["YYYY-MM-DD-TEMPLATE-report.md", true],
+    ["PLAN.template.md", true],
+    ["BRIEF.template.md", true],
+    ["README.md", false],
+    ["a-real-playbook.md", false],
+    ["TEMPLATE.txt", false],
+    ["2026-01-01-a-session.md", false],
+  ] as const;
+
+  test("this rule matches the fixtures", () => {
+    expect(FIXTURES.map(([n]) => isSeeded(n))).toEqual(FIXTURES.map(([, e]) => e));
   });
 
-  test("the migration script's copy agrees with this rule", () => {
-    const script = readFileSync(
-      join(
-        REPO,
-        "plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.8-to-v2.9.ts"
-      ),
-      "utf8"
+  test("the Python hook's copy behaves identically", () => {
+    const names = FIXTURES.map(([n]) => n);
+    const driver = `
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("hook", ${JSON.stringify(
+      join(REPO, "hooks/post_gen_project.py")
+    )})
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+print(json.dumps([m._is_seeded(n) for n in ${JSON.stringify(names)}]))
+`;
+    const r = Bun.spawnSync(["python3", "-c", driver], { stdout: "pipe", stderr: "pipe" });
+    expect(r.stderr.toString()).toBe("");
+    expect(JSON.parse(r.stdout.toString())).toEqual(FIXTURES.map(([, e]) => e));
+  });
+
+  test("the migration script's copy behaves identically", () => {
+    expect(FIXTURES.map(([n]) => migrationIsSeeded(n))).toEqual(
+      FIXTURES.map(([, e]) => e)
     );
-    expect(script).toContain('name.includes("TEMPLATE") && name.endsWith(".md")');
-    expect(script).toContain('name.endsWith(".template.md")');
   });
 
   test("every declared template actually exists in this repo", () => {

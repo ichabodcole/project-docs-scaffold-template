@@ -7,9 +7,9 @@
  * opposite default is silent, destructive, and indistinguishable from success.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   MANIFEST_NAME,
   hashOf,
@@ -87,7 +87,7 @@ describe("reading and writing", () => {
     writeManifest(root, m);
     const back = loadManifest(root);
     expect(back.version).toBe("7.0.0");
-    expect(back.files["a.md"]).toBe(hashOf(join(root, "a.md")));
+    expect(back.files["a.md"]).toBe(hashOf(join(root, "a.md")) as string);
   });
 
   test("no manifest is an empty one — every file reads as unknown", () => {
@@ -117,9 +117,9 @@ describe("a seeded file this version adds", () => {
   });
 
   test("only `update` and `install` let the scaffold write", () => {
-    expect(["update", "install"].map(mayWrite)).toEqual([true, true]);
+    expect((["update", "install"] as const).map(mayWrite)).toEqual([true, true]);
     expect(
-      ["keep-modified", "keep-unknown", "keep-deleted"].map(mayWrite)
+      (["keep-modified", "keep-unknown", "keep-deleted"] as const).map(mayWrite)
     ).toEqual([false, false, false]);
   });
 });
@@ -136,5 +136,33 @@ describe("manifest keys are contained", () => {
     const root = docsRoot();
     const m = { version: "7.0.0", files: { "/etc/hosts": "deadbeef" } };
     expect(mayWrite(verdictFor(m, root, "/etc/hosts"))).toBe(false);
+  });
+});
+
+describe("containment is not lexical", () => {
+  test("a symlink inside the docs root that points outside is refused", () => {
+    const root = docsRoot({ "a.md": "x" });
+    const outside = mkdtempSync(join(tmpdir(), "pdocs-outside-"));
+    roots.push(outside);
+    writeFileSync(join(outside, "x.md"), "not ours");
+    symlinkSync(join(outside, "x.md"), join(root, "link.md"));
+    const m = { version: "7.0.0", files: { "link.md": hashOf(join(outside, "x.md")) as string } };
+    expect(mayWrite(verdictFor(m, root, "link.md"))).toBe(false);
+  });
+
+  test("a directory literally named `..foo` is NOT an escape", () => {
+    const root = docsRoot({ "..foo/TEMPLATE.md": "legit" });
+    const m = recordSeeded(root, ["..foo/TEMPLATE.md"], "7.0.0");
+    expect(m.files["..foo/TEMPLATE.md"]).toBeDefined();
+    expect(verdictFor(m, root, "..foo/TEMPLATE.md")).toBe("update");
+  });
+
+  test("the writer refuses what the reader refuses", () => {
+    const root = docsRoot({ "a.md": "x" });
+    const outside = mkdtempSync(join(tmpdir(), "pdocs-outside2-"));
+    roots.push(outside);
+    writeFileSync(join(outside, "x.md"), "not ours");
+    const m = recordSeeded(root, ["../" + basename(outside) + "/x.md", "a.md"], "7.0.0");
+    expect(Object.keys(m.files)).toEqual(["a.md"]);
   });
 });

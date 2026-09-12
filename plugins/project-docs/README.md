@@ -279,25 +279,35 @@ docs/
 
 ## Version History
 
-### 3.9.0 (2026-09-11)
+### 3.9.0 (2026-09-12)
 
 **Your templates become yours.** Every migration until now copied the scaffold's
 templates over a project's own, so tailoring one meant losing the edit at the
 next upgrade. `update-project-docs` gains
 [v2.8-to-v2.9](skills/update-project-docs/migrations/v2.8-to-v2.9.md), which
-writes `docs/.pdocs-seed.json` — a record of what the scaffold installed — and
-from then on a template is updated only while the project has not touched it,
-and reported rather than overwritten once it has.
+records what the scaffold installed in `docs/.pdocs-seed.json`; from then on a
+template is updated only while the project has not touched it, and reported
+rather than overwritten once it has.
+
+**The migration is a script, not a checklist** —
+`bun migrations/scripts/migrate-v2.8-to-v2.9.ts`, run from the project root with
+`--dry-run` first. Prose guides with shell blocks put a guard in one process and
+the command it protects in another, and make every check an echoed string that
+cannot fail a run; review found three instances of that in the first draft of
+this very migration. One process and real exit codes remove the possibility
+rather than warning against it.
 
 The first run compares nothing: a project arriving at v2.9 has no record of what
 was once installed, so every template is adopted as it stands. Unknown is not
 permission, which is the same rule that makes every later run safe.
 
-Also in the scaffold this guide migrates to: a project can declare its own
+Also in the scaffold this migration installs: a project can declare its own
 document types in `.project-docs.json` (`lint.types`), so a folder the scaffold
-never shipped passes the lint; and `pdocs find --type` now refuses a type the
-project does not have, instead of returning `count: 0` at exit 0 —
-indistinguishable from "nothing matches".
+never shipped passes the lint; `docs/SCHEMA.md` gains a "Who owns which file"
+section stating which files a migration replaces, which it negotiates by hash,
+and which it never touches; and **`pdocs find --type` now refuses a type the
+project does not have (exit 2) instead of returning `count: 0` at exit 0** — a
+breaking change for anything branching on that exit code.
 
 ### 3.8.0 (2026-09-06)
 

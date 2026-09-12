@@ -27,8 +27,8 @@
  * Zero dependencies, like the rest of `pdocs` — `node:crypto` and `node:fs`.
  */
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 /** Lives inside the docs root, so it travels with what it describes — including
  *  across the cookiecutter install that moves `docs/` up into the parent. */
@@ -70,7 +70,11 @@ export function recordSeeded(
 ): SeedManifest {
   const files: Record<string, string> = {};
   for (const rel of [...rels].sort()) {
-    const h = hashOf(join(docsRoot, rel));
+    // The WRITER refuses what the reader refuses. Without this it could mint
+    // exactly the keys `verdictFor` is written to reject.
+    const abs = within(docsRoot, rel);
+    if (abs === null) continue;
+    const h = hashOf(abs);
     if (h !== null) files[rel] = h;
   }
   return { version, files };
@@ -114,15 +118,36 @@ export function loadManifest(docsRoot: string): SeedManifest {
 }
 
 /** See `Verdict`. */
-/** A manifest key must name a file INSIDE the docs root. A key carrying `../`
- *  would otherwise let a hand-edited manifest point the mechanism at any file
- *  on disk. Nothing writes from this module today; the containment check is
- *  here so that it cannot start doing so unsafely. */
-function within(docsRoot: string, rel: string): string | null {
-  const abs = resolve(docsRoot, rel);
-  const back = relative(resolve(docsRoot), abs);
-  if (back === "" || back.startsWith("..") || resolve(back) === back) return null;
-  return abs;
+/** `realpathSync` where the path exists, the input where it does not — a file
+ *  that is not there yet cannot be resolved, and must not throw. */
+function realIfPossible(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
+
+/**
+ * The absolute path a manifest key names, or `null` if it escapes the docs root.
+ *
+ * Resolved through `realpathSync`, not lexically: a SYMLINK inside `docs/`
+ * pointing outside it survives a purely textual check, and a hand-edited
+ * manifest is the input this guards. Exported because `verdictFor` returns only
+ * a verdict — a caller that acts on `update` and recomputes `join(docsRoot, rel)`
+ * itself re-opens the hole one layer up, so the validated path has to be
+ * reachable.
+ */
+export function within(docsRoot: string, rel: string): string | null {
+  if (isAbsolute(rel)) return null;
+  const base = realIfPossible(resolve(docsRoot));
+  const real = realIfPossible(resolve(base, rel));
+  const back = relative(base, real);
+  // `back === ".."` and `"../"`-prefixed escape; a directory literally named
+  // `..foo` does not, which a bare `startsWith("..")` wrongly rejected.
+  if (back === "" || back === ".." || back.startsWith(`..${sep}`) || isAbsolute(back))
+    return null;
+  return real;
 }
 
 export function verdictFor(

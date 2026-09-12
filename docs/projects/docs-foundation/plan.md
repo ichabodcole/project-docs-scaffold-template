@@ -47,7 +47,7 @@ Done when all of these hold:
 
 ## Approach Summary
 
-Phases 1 and 2 build the seed manifest and reclassify the 16 templates. Phase 3
+Phases 1 and 2 build the seed manifest and reclassify the templates. Phase 3
 finishes the type vocabulary the spike started. Phase 4 writes the migration
 that delivers both.
 
@@ -129,7 +129,7 @@ hashes verify.
 regression.** The mirror compares this repo against the payload — both copies
 are project-docs'. "Seeded" describes migration behaviour in a _consumer_. The
 two are orthogonal, and exempting the templates would stop the check that keeps
-16 file pairs honest. Exempt a file only if project-docs deliberately tailors
+19 file pairs honest. Exempt a file only if project-docs deliberately tailors
 its own copy; `PROJECT_MANIFESTO.md` and `index.md` are exempt for that reason
 and nothing here joins them.
 
@@ -207,9 +207,11 @@ in `scripts/pdocs/docs-lint/config.ts`; adopter rows appended in `buildRegistry`
 
 **Tasks.**
 
-1. Write the guide following `migration-authoring`, taking uniform step
-   specificity from
-   [Migration Steps Must Be Uniformly Specific](../../lessons-learned/migration-steps-uniform-specificity.md).
+1. ~~Write the guide following `migration-authoring`~~ — **superseded after
+   review.** Both cited authorities are prose-guide doctrine, and review found
+   that shape to be what generates the defect. The migration is a script; the
+   guide explains and invokes it. `migration-authoring` still teaches the old
+   shape, and rewriting it is out of scope here — see the brief it spawned.
 2. Reconstruct a v2.8 tree in a scratch dir; run the guide end to end.
 3. Run it a **second** time. Assert idempotence and that an edit made between
    runs survives.
@@ -237,14 +239,17 @@ in `scripts/pdocs/docs-lint/config.ts`; adopter rows appended in `buildRegistry`
   verified by `cookiecutter ... install_target="New project folder"`.
 - **A build step gated on an optional tool.** Exactly the `537c073` defect —
   `check:dist` passed locally and was unpassable in CI. Mitigation: manifest
-  generation is unconditional and stdlib-only.
+  generation is unconditional and stdlib-only. **This risk fired anyway**: the
+  migration's formatting phase degraded to a note when `npx` was absent, which
+  produces a manifest the project's own formatter invalidates. It is now a hard
+  stop unless `--skip-format` is passed deliberately.
 
 ## Testing & Validation Strategy
 
-`bun test` (589 passing today) is the unit layer; `npm run check` is the gate
-and runs `format:check`, `docs:lint`, `check:version`, `check:mirror`,
-`check:dist` and `test`. The pre-commit hook runs the whole gate, so a red
-commit is not possible without `--no-verify`.
+`bun test` (the unit layer, run by the gate) is the unit layer; `npm run check`
+is the gate and runs `format:check`, `docs:lint`, `check:version`,
+`check:mirror`, `check:dist` and `test`. The pre-commit hook runs the whole
+gate, so a red commit is not possible without `--no-verify`.
 
 Three things unit tests structurally cannot cover, each needing a real run:
 

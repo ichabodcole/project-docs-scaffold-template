@@ -15,15 +15,15 @@ generated: { by: claude-opus-5, at: 2026-09-11 }
 ## Overview
 
 Verification for [the plan](./plan.md) and [the proposal](./proposal.md): the
-seed manifest, the 16 reclassified templates, the declarable type vocabulary,
+seed manifest, the 19 reclassified templates, the declarable type vocabulary,
 and the v2.9 migration.
 
-The weighting is deliberate. `bun test` already covers unit behaviour well — 589
-tests today — so this plan spends its Tier 2 budget on the three things unit
-tests structurally cannot reach: **payload correctness** (reading a payload is
-not verifying it), **migration idempotence** (a second run is a different test
-from the first), and **manifest reconciliation across a version boundary**
-(requires two runs with an edit between them).
+The weighting is deliberate. `bun test` already covers unit behaviour well — so
+this plan spends its Tier 2 budget on the three things unit tests structurally
+cannot reach: **payload correctness** (reading a payload is not verifying it),
+**migration idempotence** (a second run is a different test from the first), and
+**manifest reconciliation across a version boundary** (requires two runs with an
+edit between them).
 
 Two scenarios exist solely as regression guards against traps the plan names:
 `T2-05` (the obvious `find --type` fix rejects the declared types this project
@@ -262,9 +262,11 @@ safe, when nothing is known.
 2. Run the v2.9 guide end to end. Record the tree state.
 3. Run it a second time.
 
-**Expected:** The second run makes no changes and reports that the layer is
-already applied. A migration that is not idempotent cannot be safely retried
-after an interruption.
+**Expected:** The second run makes no changes to the manifest and reports
+`every recorded hash still matches, and nothing is unrecorded`, exit 0. It is
+**not** a silent no-op: a stale hash or an unrecorded template stops the run at
+exit 1 and names the file. A migration that is not idempotent cannot be safely
+retried — but one that is silent about drift is worse.
 
 ---
 
@@ -337,9 +339,9 @@ _Filled in during and after test execution by the implementing agent._
 
 | Scenario | Status   | Notes                                                               |
 | -------- | -------- | ------------------------------------------------------------------- |
-| T1-01    | Pass     | `npm run check` green; 617 tests.                                   |
+| T1-01    | Pass     | `npm run check` green.                                              |
 | T1-02    | Pass     | Generated project, `pdocs check` exit 0.                            |
-| T1-03    | Pass     | 17 hashes recomputed, all match.                                    |
+| T1-03    | Pass     | 19 hashes recomputed, all match.                                    |
 | T1-04    | Pass     | `check-dist` 0 with and without uv.                                 |
 | T2-01    | Pass     | Generated project, exit 0.                                          |
 | T2-02    | Pass     | Withdrawn declaration, exit 9.                                      |
@@ -358,10 +360,12 @@ payload scenario executed rather than being reported green while never running.
 
 **T2-06 and T2-07 are Deferred, not Pass — a correction.** Both scenarios say
 "run the v2.9 migration against the project." That migration ADOPTS and does not
-reconcile: with a manifest present it prints `already exists — nothing to do`
-and returns 0. The behaviours were verified against `seed.ts` directly, which is
-a different and weaker claim, and recording them as Pass overstated the result.
-They become executable with the first migration that consumes `seed.ts`.
+reconcile: with a manifest present it verifies the recorded hashes and reports,
+but it never compares the project's templates against the scaffold's, which is
+what T2-06 and T2-07 describe. The behaviours were verified against `seed.ts`
+directly, which is a different and weaker claim, and recording them as Pass
+overstated the result. They become executable with the first migration that
+consumes `seed.ts`.
 
 **T3-03 is Partial.** The by-category classification left four payload paths in
 no class at all — and two of them,

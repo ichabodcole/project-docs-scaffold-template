@@ -136,7 +136,7 @@ State every scaffold file's class in `docs/SCHEMA.md`. Seeded files do **not**
 need `check-mirror.sh` exemptions — the mirror compares this repo against the
 payload, both copies being project-docs', while "seeded" describes migration
 behaviour in a consumer. The two are orthogonal, and exempting the templates
-would silence a check that keeps 16 file pairs honest.
+would silence a check that keeps 19 file pairs honest.
 
 Each seeded template gains a one-line note that the frontmatter block is the
 contract and everything below it is the adopter's. `new` repairs `type` but
@@ -182,7 +182,7 @@ retirement in the sibling project stops being destructive.
 - _The manifest goes stale or is deleted._ A missing entry must mean "treat as
   theirs and report," never "safe to overwrite." Fail toward the adopter's copy.
 - _Seeding is confused with mirror exemption._ They are unrelated, and
-  conflating them would stop the check that keeps 16 template pairs in step.
+  conflating them would stop the check that keeps 19 template pairs in step.
   Mitigation: the plan states the distinction; exempt only a file project-docs
   deliberately tailors for itself.
 

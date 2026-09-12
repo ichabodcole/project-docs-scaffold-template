@@ -316,7 +316,10 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 
 ## Who owns which file
 
-Three classes. The rule that decides: **does shipped tooling read it?**
+Three classes decide what a migration does to a **documentation file**, and the
+rule that decides between them is: **does shipped tooling read it?** A fourth,
+**structural**, covers files that carry no content at all — the `.gitkeep`
+placeholders holding empty `_archive/` directories open.
 
 | Class      | What a migration does                     | Which files                                                                                                                    |
 | ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -329,6 +332,12 @@ your catalog of your own pages, and no migration copies over it. It is one of
 only two files `scripts/check-mirror.sh` exempts by name, for exactly that
 reason. A migration that overwrote it would leave every library page reporting
 `ORPHAN`.
+
+`docs/CLAUDE.md` is **owned** though the table does not name it: three lines
+pointing an agent at `docs/README.md`, describing scaffold structure rather than
+your project. Note that "overwrites, every time" describes the class, not every
+migration — `v2.8-to-v2.9` refreshes only `scripts/pdocs/` and this file. A
+migration refreshes the owned files it has reason to.
 
 **Owned** files are read by code. The lint implements this file; editing your
 copy makes your spec disagree with your linter, and the next migration will take
