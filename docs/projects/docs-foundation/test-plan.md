@@ -335,28 +335,32 @@ adequate for one pass over a known file set.
 
 _Filled in during and after test execution by the implementing agent._
 
-| Scenario | Status            | Notes                                |
-| -------- | ----------------- | ------------------------------------ |
-| T1-01    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T1-02    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T1-03    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T1-04    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T2-01    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T2-02    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T2-03    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T2-04    | Pass              | Unit. `cli.test.ts`, `read.test.ts`. |
-| T2-05    | Pass              | Unit. The regression guard holds.    |
-| T2-06    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T2-07    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T2-08    | Pass/Fail/Blocked | [Details on failures or blocks]      |
-| T3-01    | Skipped           | [Tier 3 — covered by unit test]      |
-| T3-02    | Skipped           | [Tier 3 — decision pending]          |
-| T3-03    | Skipped           | [Tier 3 — manual check]              |
+| Scenario | Status  | Notes                                          |
+| -------- | ------- | ---------------------------------------------- |
+| T1-01    | Pass    | `npm run check` green; 617 tests.              |
+| T1-02    | Pass    | Generated project, `pdocs check` exit 0.       |
+| T1-03    | Pass    | 17 hashes recomputed, all match.               |
+| T1-04    | Pass    | `check-dist` 0 with and without uv.            |
+| T2-01    | Pass    | Generated project, exit 0.                     |
+| T2-02    | Pass    | Withdrawn declaration, exit 9.                 |
+| T2-03    | Pass    | ORPHAN then exit 0 once catalogued.            |
+| T2-04    | Pass    | Unit; `cli.test.ts`, `read.test.ts`.           |
+| T2-05    | Pass    | Regression guard holds.                        |
+| T2-06    | Pass    | Edit survived; untouched reads `update`.       |
+| T2-07    | Pass    | First migration = the unknown case.            |
+| T2-08    | Pass    | Second run no-op; manifest byte-identical.     |
+| T3-01    | Pass    | Unit: corrupt manifest throws, names file.     |
+| T3-02    | Pass    | Resolved: deletion is an edit. `keep-deleted`. |
+| T3-03    | Partial | Classes stated by category, not file-by-file.  |
 
-**Blocked scenarios:** T1-02, T1-03, T2-01, T2-02, T2-03 and T2-05 all require
-`cookiecutter`. If it is unavailable, mark them **blocked** rather than failed,
-and say so — a suite reported green with six scenarios never executed is the
-failure mode this repository keeps finding.
+**Blocked scenarios:** none. `cookiecutter` 2.6.0 was available, so every
+payload scenario executed rather than being reported green while never running.
+
+**T3-03 is Partial, deliberately.** `docs/SCHEMA.md` names the three classes and
+assigns every file by CATEGORY — "every category README", "every `TEMPLATE*.md`"
+— not file by file. That covers today's tree, but a shipped file matching no
+category would go unnoticed, which is the silent gap this project exists to
+close. Automating it stays the right follow-up.
 
 ## Visual Artifacts
 

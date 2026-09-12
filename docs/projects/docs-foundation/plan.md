@@ -72,7 +72,7 @@ boundary, in prose), and `scripts/check-mirror.sh` (`DIFFERS_BY_DESIGN`, line
 
 ## Phases
 
-### Phase 1: The seed manifest
+### Phase 1: The seed manifest ✅
 
 **Goal.** Record what the scaffold installed, so a later migration can tell an
 adopter's edit from a scaffold change.
@@ -109,7 +109,7 @@ hashes verify.
 
 **Dependencies.** None. Start here.
 
-### Phase 2: Reclassify templates as seeded
+### Phase 2: Reclassify templates as seeded ✅
 
 **Goal.** Hand the 16 templates to adopters without putting OKF at risk.
 
@@ -148,7 +148,7 @@ matching.
 
 **Dependencies.** Phase 1 (the manifest must exist to list them in).
 
-### Phase 3: Finish the type vocabulary
+### Phase 3: Finish the type vocabulary ✅
 
 **Goal.** Make `f327151` shippable — tests, discoverability, and `find`
 validation.
@@ -189,7 +189,7 @@ in `scripts/pdocs/docs-lint/config.ts`; adopter rows appended in `buildRegistry`
 
 **Dependencies.** None on Phases 1–2; can run in parallel if useful.
 
-### Phase 4: The v2.9 migration
+### Phase 4: The v2.9 migration ✅
 
 **Goal.** Deliver both mechanisms to an existing project.
 
@@ -283,6 +283,15 @@ shipped guards that were structurally unable to report failure; see
   insufficient.
 
 ## Implementation Notes
+
+**All four phases complete, 2026-09-11.** Both open questions resolved in Phase
+1: the manifest lives at `docs/.pdocs-seed.json`, and a seeded file the adopter
+deleted stays deleted. One deviation: the manifest is written by the
+cookiecutter post-gen hook rather than at build time, because hashing the files
+actually installed cannot go stale where a committed artifact would need its own
+gate. A fifth verdict — `install`, for a file neither recorded nor present —
+surfaced while implementing; without it a template added in a later version
+would have been skipped for ever.
 
 `f327151` is on `feat/docs-foundation` and is a spike: hand-verified, untested,
 undocumented. Phase 3 task 1 should confirm the three cases still hold before
