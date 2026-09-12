@@ -278,14 +278,19 @@ shipped guards that were structurally unable to report failure; see
 
 ## Open Questions
 
-- Does `docs/.pdocs-seed.json` belong at the docs root or the repository root?
-  Docs root keeps it beside what it describes and inside `docsRoot`; repo root
-  keeps a dotfile out of a browsable documentation tree. Resolve in Phase 1 — it
-  is a one-line change either way, and both are lint-invisible.
-- Should the manifest record the scaffold version per file, rather than once for
-  the file as a whole? Per-file would let a report say "yours diverged, and ours
-  changed in 7.2." Deferred unless Phase 4 finds the single version
-  insufficient.
+Both resolved during implementation.
+
+- ~~Does `docs/.pdocs-seed.json` belong at the docs root or the repository
+  root?~~ **Docs root.** Every seeded file lives under `docsRoot`, and the
+  cookiecutter "current directory" install moves `docs/` up into the parent — a
+  manifest at the repository root would need separate handling on that branch.
+- ~~Should the manifest record the scaffold version per file, rather than once
+  for the file as a whole?~~ **Once, and it records the release migrated TO.**
+  Review found it was recording the version from _before_ the bump, so the
+  migration and the cookiecutter hook wrote two different meanings into the same
+  field; that is fixed. Per-file versioning would let a report say "yours
+  diverged, and ours changed in 7.2" — still deferred, and now cheap to add
+  because the writer is a single function.
 
 ## Implementation Notes
 

@@ -70,6 +70,9 @@ What went wrong or right, distilled so it transfers. — see
 - [Migration Steps Must Be Uniformly Specific](./lessons-learned/migration-steps-uniform-specificity.md)
   — In an agent-run guide, one underspecified step becomes the failure point —
   the specificity has to be uniform, not average.
+- [A guard must be able to fail](./lessons-learned/a-guard-must-be-able-to-fail.md)
+  — A check that cannot report failure certifies whatever it is pointed at;
+  write the failing case first and watch it fail.
 
 ## Memories
 
