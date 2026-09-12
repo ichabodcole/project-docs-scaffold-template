@@ -93,8 +93,8 @@ Contract owned, vocabulary open.
 `.project-docs.json`; `registry.ts` reading rather than hardcoding it; the seed
 manifest and hash reconciliation in the migration idiom; every `TEMPLATE*.md`
 and `STYLE.md` reclassified as seeded; ownership classes stated in `SCHEMA.md`;
-`check-mirror.sh` exemptions for seeded files; `pdocs find --type` validating
-against the resolved vocabulary; a migration carrying all of it.
+`pdocs find --type` validating against the resolved vocabulary; a migration
+carrying all of it.
 
 **Out of Scope:** Any change to the set of types the scaffold ships by default —
 that is [Guidance Lifecycle](../guidance-lifecycle/proposal.md). Adding
@@ -132,10 +132,11 @@ the lint, which catches it on the next document written
 enforced on the document, not on the template**, so handing templates over risks
 nothing that was ever guarded there.
 
-State every scaffold file's class in `docs/SCHEMA.md`. Exempt seeded files by
-name in `scripts/check-mirror.sh`, following the existing `PROJECT_MANIFESTO.md`
-/ `index.md` precedent — the checklist notes that a third exemption is a
-decision rather than a convenience, so record it as one.
+State every scaffold file's class in `docs/SCHEMA.md`. Seeded files do **not**
+need `check-mirror.sh` exemptions — the mirror compares this repo against the
+payload, both copies being project-docs', while "seeded" describes migration
+behaviour in a consumer. The two are orthogonal, and exempting the templates
+would silence a check that keeps 16 file pairs honest.
 
 Each seeded template gains a one-line note that the frontmatter block is the
 contract and everything below it is the adopter's. `new` repairs `type` but
@@ -180,8 +181,10 @@ retirement in the sibling project stops being destructive.
   alternative is overwriting their work.
 - _The manifest goes stale or is deleted._ A missing entry must mean "treat as
   theirs and report," never "safe to overwrite." Fail toward the adopter's copy.
-- _The mirror exemption grows._ Each seeded file is a file nothing compares.
-  Mitigation: exempt by explicit name, never by pattern.
+- _Seeding is confused with mirror exemption._ They are unrelated, and
+  conflating them would stop the check that keeps 16 template pairs in step.
+  Mitigation: the plan states the distinction; exempt only a file project-docs
+  deliberately tailors for itself.
 
 **Complexity:** Medium — two mechanisms, both localized to the lint layer, the
 config parser, the mirror check and the migration idiom. No document content
