@@ -7,7 +7,7 @@ description:
   all on v2.6 — a migration that verifies itself.
 tags: [migrations, agent-execution, tooling]
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: approved # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-fable-5-1, at: 2026-09-12 }
 ---
 
