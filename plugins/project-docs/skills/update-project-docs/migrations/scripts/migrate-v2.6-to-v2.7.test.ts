@@ -967,6 +967,8 @@ function stubScaffold(
     cyclesReadme?: boolean;
     template?: string | null;
     cli?: boolean;
+    /** `scripts/pdocs/seed.ts`, the marker phase 2 reads as "new enough". */
+    seed?: boolean;
   } = {}
 ): string {
   const s = mkdtempSync(join(tmpdir(), "migrate-v27-stub-"));
@@ -987,6 +989,7 @@ function stubScaffold(
   if (template !== null) files["docs/cycles/TEMPLATE.md"] = template;
   if (o.cli !== false) files["scripts/pdocs/cli.ts"] = STUB_CLI;
   else files["scripts/pdocs/other.ts"] = "// no cli here\n";
+  if (o.seed !== false) files["scripts/pdocs/seed.ts"] = "// seed\n";
   for (const [rel, body] of Object.entries(files)) {
     mkdirSync(dirname(join(s, rel)), { recursive: true });
     writeFileSync(join(s, rel), body);
@@ -1628,12 +1631,54 @@ describe("guards that must be able to fire", () => {
     expect(r.out).toContain("STOPPED: scripts/pdocs/cli.ts did not arrive");
   });
 
-  test("layer: a SCHEMA.md without the ownership section is older than v2.9 and stops the run", () => {
+  test("scaffold: a scaffold older than this migration — SCHEMA.md without the ownership section — stops in phase 2, in both modes, before anything is written", () => {
+    // MediaForge: the published template was a release behind. The dry run
+    // must stop where the real run would, not print a green plan.
+    const old = stubScaffold({ schemaMarker: false });
+    for (const args of [["--dry-run"], []]) {
+      const root = fixtureA({ undeclaredFolder: false });
+      const before = treeDigest(root);
+      const r = migrate(root, args, { scaffold: old });
+      expect(r.exitCode).toBe(1);
+      expect(r.out).toContain(
+        `STOPPED: the scaffold at --scaffold-dir ${old} is older than this migration requires (release 9.9.9, missing docs/SCHEMA.md § "Who owns which file")`
+      );
+      expect(r.out).toContain("Pass --scaffold-dir pointing at a");
+      expect(r.out).toContain("generated from a checkout that has it");
+      expect(r.out).toContain("Nothing was written.");
+      expect(r.out).not.toContain("[3/9]");
+      expect(treeDigest(root)).toEqual(before);
+    }
+    // Fetched rather than supplied, the stop names the published template.
+    const fetched = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: null,
+      env: { PATH: stubCookiecutter("copy", old) },
+    });
+    expect(fetched.exitCode).toBe(1);
+    expect(fetched.out).toContain(
+      "the scaffold at gh:ichabodcole/project-docs-scaffold-template (the published template) is older than this migration requires"
+    );
+  });
+
+  test("scaffold: a scaffold without scripts/pdocs/seed.ts is older than this migration and stops in phase 2", () => {
     const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
-      scaffold: stubScaffold({ schemaMarker: false }),
+      scaffold: stubScaffold({ seed: false }),
     });
     expect(r.exitCode).toBe(1);
-    expect(r.out).toContain('docs/SCHEMA.md is missing "Who owns which file"');
+    expect(r.out).toContain("older than this migration requires (release 9.9.9, missing scripts/pdocs/seed.ts)");
+    expect(r.out).not.toContain("[3/9]");
+  });
+
+  test("invariant: a docs/SCHEMA.md on disk without the ownership section is caught", () => {
+    // The layer phase copies a file phase 2 verified; a phase that wrote a
+    // different SCHEMA.md would be caught by the end-of-run check.
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: patchedScript([
+        ["    cpSync(schemaSrc, schemaDst);\n", '    writeFileSync(schemaDst, "# bare\\n");\n'],
+      ]),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain('docs/SCHEMA.md is missing or has no "Who owns which file" section');
   });
 
   test("layer: a scaffold with no docs/index.md stops the run on a tree that has none", () => {
@@ -1890,7 +1935,7 @@ describe("wiring witnesses — each phase's call site, neutered", () => {
     expect(r.exitCode).toBe(1);
     // Not a cwd-relative read of docs/README.md — this repository has one,
     // and a `join("", ...)` would have found it and reported ITS version.
-    expect(r.out).toContain("STOPPED: no scaffold to read a version from — the scaffold phase did not run");
+    expect(r.out).toContain("STOPPED: no scaffold to verify — the scaffold phase did not run");
   });
 
   test("phase 3 layer: neutered, the report has no CLI to run", () => {

@@ -138,12 +138,16 @@ For each migration file:
    prints, run it without the flag, and read the output lines its
    `## Verification` section names — the exit code is the check. The `.ts`
    scripts run with `bun`, which must already be on PATH;
-   `migrate-v2.6-to-v2.7.ts` checks for it and stops if it is not. **A
-   guide-shaped migration** (the legacy rows) is followed step by step, in order
-   — most have a companion `.sh` script in `migrations/scripts/` that handles
-   the mechanical steps, run with `bash`, `--dry-run` first to preview, then
-   without the flag. Only content-editing steps (flowchart updates, README
-   prose) remain for the agent.
+   `migrate-v2.6-to-v2.7.ts` checks for it and stops if it is not. A script
+   fetches its scaffold from the published template, which can lag the plugin
+   that ships the migration; if its scaffold phase stops saying the scaffold is
+   older than the migration requires, the guide's `## Run it` section says how
+   to generate one from a checkout and pass `--scaffold-dir`. **A guide-shaped
+   migration** (the legacy rows) is followed step by step, in order — most have
+   a companion `.sh` script in `migrations/scripts/` that handles the mechanical
+   steps, run with `bash`, `--dry-run` first to preview, then without the flag.
+   Only content-editing steps (flowchart updates, README prose) remain for the
+   agent.
 3. Verify: the checklist at the end of a guide, or the output lines and exit 0
    of a script
 4. Move to the next migration

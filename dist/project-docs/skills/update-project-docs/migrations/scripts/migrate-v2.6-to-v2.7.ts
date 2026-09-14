@@ -15,7 +15,8 @@
  * WHAT IT DOES
  *   1  preflight   — this is a v2.6 project-docs tree, the tools exist, git is
  *                    clean, and EVERY docs-root folder is in a lint tier
- *   2  scaffold    — generate the current template into a private temp dir
+ *   2  scaffold    — generate the current template into a private temp dir,
+ *                    and verify it is new enough for what phase 3 installs
  *   3  layer       — scripts/pdocs/, docs/SCHEMA.md, docs/index.md if absent,
  *                    and any category folder the project does not have
  *   4  templates   — every template the scaffold ships, verified per file
@@ -486,16 +487,30 @@ function getScaffold(ctx: Ctx): string {
   return s;
 }
 
-/** The release being migrated TO, read from the generated scaffold. */
-function scaffoldVersion(ctx: Ctx): string {
+/**
+ * Everything the layer phase will later require of the scaffold, verified
+ * HERE, in both modes, before anything is written — and the release being
+ * migrated TO, read from it.
+ *
+ * On MediaForge the published template was a release behind this migration:
+ * its SCHEMA.md had no ownership section and its scripts/pdocs/ no seed.ts.
+ * The dry run printed a full green plan, and the real run installed
+ * scripts/pdocs/ and then stopped in phase 3 on the SCHEMA marker, leaving the
+ * tree partly migrated. The markers that decide whether a scaffold is new
+ * enough belong to the phase that fetches it, not to the phase that copies.
+ */
+function verifyScaffold(ctx: Ctx): string {
   // An empty scaffold path would make `join` produce a path relative to the
   // process cwd — and read a version from whatever tree the script was run
   // from. Checked by itself, so the failure names the phase that did not run.
   if (!ctx.scaffoldDir)
-    fail(
-      "no scaffold to read a version from — the scaffold phase did not run."
-    );
-  const readmeSrc = join(ctx.scaffoldDir, "docs/README.md");
+    fail("no scaffold to verify — the scaffold phase did not run.");
+  const s = ctx.scaffoldDir;
+  const source = ctx.scaffold
+    ? `--scaffold-dir ${s}`
+    : `${TEMPLATE_REPO} (the published template)`;
+
+  const readmeSrc = join(s, "docs/README.md");
   if (!existsSync(readmeSrc))
     fail(`the scaffold has no docs/README.md at ${readmeSrc}`);
   const m = /^docs_version:\s*"([^"]+)"/m.exec(readFileSync(readmeSrc, "utf8"));
@@ -504,6 +519,24 @@ function scaffoldVersion(ctx: Ctx): string {
     fail(
       `could not read a version from the scaffold's docs/README.md (got ${JSON.stringify(version ?? null)})`
     );
+
+  // The markers phase 3 installs and phase 6's hand-off relies on: a SCHEMA.md
+  // with the ownership section, and the seed.ts the v2.9 script calls.
+  const missing: string[] = [];
+  if (!readFileSync(join(s, "docs/SCHEMA.md"), "utf8").includes(SCHEMA_MARKER))
+    missing.push(`docs/SCHEMA.md § "${SCHEMA_MARKER}"`);
+  if (!existsSync(join(s, "scripts/pdocs/seed.ts")))
+    missing.push("scripts/pdocs/seed.ts");
+  if (missing.length > 0)
+    fail(
+      `the scaffold at ${source} is older than this migration requires (release ${version}, missing ${missing.join(" and ")}).\n` +
+        `   This migration ships with the plugin; the scaffold is fetched from the published template, and the two\n` +
+        `   are at different points whenever develop is ahead of the last release. Pass --scaffold-dir pointing at a\n` +
+        `   scaffold generated from a checkout that has it — the guide's "Run it" section says how — or wait for the release.`
+    );
+  ok(
+    `release ${version}, carrying what the layer phase installs (SCHEMA.md § "${SCHEMA_MARKER}", scripts/pdocs/seed.ts)`
+  );
   return version as string;
 }
 
@@ -588,11 +621,9 @@ function installLayer(ctx: Ctx): void {
   else {
     const replacing = existsSync(schemaDst);
     ctx.wrote = true;
+    // The marker was verified on the source in phase 2; the end-of-run check
+    // reads it back from the destination.
     cpSync(schemaSrc, schemaDst);
-    if (!readFileSync(schemaDst, "utf8").includes(SCHEMA_MARKER))
-      fail(
-        `${ctx.docsRootName}/SCHEMA.md is missing "${SCHEMA_MARKER}" — the scaffold is older than v2.9. This migration installs the current layer, not a v2.7 snapshot.`
-      );
     ok(
       `${ctx.docsRootName}/SCHEMA.md ${replacing ? "replaced (owned)" : "installed"}`
     );
@@ -917,6 +948,16 @@ export function migrationHolds(
       );
   }
 
+  // The layer phase: the SCHEMA.md on disk is the one phase 2 verified.
+  const schemaDst = join(ctx.docsRoot, "SCHEMA.md");
+  if (
+    !existsSync(schemaDst) ||
+    !readFileSync(schemaDst, "utf8").includes(SCHEMA_MARKER)
+  )
+    v.push(
+      `${ctx.docsRootName}/SCHEMA.md is missing or has no "${SCHEMA_MARKER}" section — the layer phase installs the scaffold's, which the scaffold phase verified carries it`
+    );
+
   // The preflight and the layer phase: no folder the lint would read is left
   // undeclared by the config on disk — including the ones the layer created.
   const { judged } = undeclaredFolders(ctx.docsRoot, cfgOnDisk, ctx.root);
@@ -1008,7 +1049,7 @@ export function main(argv: string[]): number {
     ctx = resolveContext(opts);
     preflight(ctx);
     ctx.scaffoldDir = getScaffold(ctx);
-    const version = scaffoldVersion(ctx);
+    const version = verifyScaffold(ctx);
     const templates = seededIn(join(ctx.scaffoldDir, "docs"));
     installLayer(ctx);
     installTemplates(ctx, templates);
