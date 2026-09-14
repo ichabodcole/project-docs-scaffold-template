@@ -1,5 +1,17 @@
 # Changelog
 
+## [8.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v8.0.0...project-docs-scaffold-template-v8.1.0) (2026-09-14)
+
+
+### Features
+
+* **update-project-docs:** v2.9-to-v2.10 — refresh the owned files, reconcile the seeded ones (3.12.0) ([9537d93](https://github.com/ichabodcole/project-docs-scaffold-template/commit/9537d9398f82a6df1232395bed7c4d20a9dbe571))
+
+
+### Bug Fixes
+
+* **project-docs:** story-loom's nine, verified and landed (3.11.0) ([8253db9](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8253db9b119789a2d148bb6cb81db3e86c4d6c5d))
+
 ## [8.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v7.0.0...project-docs-scaffold-template-v8.0.0) (2026-09-14)
 
 
