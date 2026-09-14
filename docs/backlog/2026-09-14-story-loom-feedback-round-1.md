@@ -6,7 +6,7 @@ description:
   163–171), one commit per issue, minor plugin bump.
 tags: [lint, codemod, migrations]
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: open # where the work has got to; see docs/SCHEMA.md
+lifecycle: done # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-fable-5-1, at: 2026-09-14 }
 ---
 
@@ -44,8 +44,7 @@ already on 8.0.0 receives them only through
 
 Landed on `develop` 2026-09-14 as sixteen commits on
 `fix/story-loom-feedback-round-1`, one per issue plus three follow-ons and the
-3.11.0 bump. The issues close when `develop` reaches `main`; the item is done
-when that release is cut.
+3.11.0 bump. Released as 8.1.0 on 2026-09-14; the nine issues are closed.
 
 ## Done when
 
