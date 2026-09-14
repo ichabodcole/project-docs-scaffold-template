@@ -279,6 +279,31 @@ docs/
 
 ## Version History
 
+### 3.10.0 (2026-09-13)
+
+**The migration every consuming project has to run is a script.**
+[v2.6-to-v2.7](skills/update-project-docs/migrations/v2.6-to-v2.7.md) was
+thirteen steps around a codemod; it is now
+`bun migrations/scripts/migrate-v2.6-to-v2.7.ts`, run from the project root with
+`--dry-run` first. Nine phases, each testing its own precondition, so the same
+command serves a fresh v2.6 tree and one that got `docs/` without `scripts/`.
+Preflight stops, before writing anything, on a docs-root folder the lint would
+judge and the project has not declared — and prints the lines to paste. A
+template the project has already edited is kept and named, not replaced. The
+script ends with the gate off and the worklist printed; the backfill, the
+catalog and the gate are the four steps the guide names as yours.
+
+**Six guides are legacy.** `v1-to-v2` through `v2.5-to-v2.6` and `v2.7-to-v2.8`
+carry a banner: written before the script shape, run as-is, last maintained at
+3.9.0. `v2.7-to-v2.8`'s precondition now reads `docs/lint.ts` rather than
+testing for its name, so a project with its own file by that name is no longer
+told to run a migration whose step 5 deletes it.
+
+**`update-project-docs` § Step 7 lost its repair table.** A tree with the
+layer's contract and no tooling is the v2.6 script's own case now; § Step 4
+names the script-shaped migration first, and § Creating New Migration Guides
+carries both structures and the rule for choosing.
+
 ### 3.9.0 (2026-09-12)
 
 **Your templates become yours.** Every migration until now copied the scaffold's

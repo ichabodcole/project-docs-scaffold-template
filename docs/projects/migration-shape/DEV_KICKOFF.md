@@ -90,9 +90,9 @@ bump, and run the script for real on `dreamwood/media-forge`.
 - [x] Phase 3 — the v2.6-to-v2.7 script, guide and tests (`17be36b`; guards
       record in `artifacts/`)
 - [x] Phase 4 — legacy banners, precondition, table, § Step 7 collapse
-- [ ] Phase 5 — version bump, dist rebuild, gate
+- [x] Phase 5 — version bump 3.9.0 → 3.10.0, dist rebuilt, gate clean
 - [ ] Phase 6 — the MediaForge run
-- [ ] Tests passing
+- [x] Tests passing — 905 across 18 files at phase 5
 - [ ] Ready for merge
 
 ## Completion
