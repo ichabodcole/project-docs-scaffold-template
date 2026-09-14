@@ -176,3 +176,7 @@ What has been happening lately, for a cold start. — see
   — The first consumer's nine issues were reproduced before scoping and landed
   one commit each; running two implementers in one working tree showed that a
   build mirror couples every commit to every uncommitted change.
+- [The v2.10 migration reconciles, and its verify phase is meant to go red](./memories/2026-09-14-v2.10-migration.md)
+  — The first migration written under the rewritten skill by an outside author
+  used the seed verdicts for real, stops after the refresh when the newer lint
+  finds what the older one hid, and grew the skill in seven more places.

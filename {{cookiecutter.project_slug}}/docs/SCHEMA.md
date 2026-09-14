@@ -321,11 +321,11 @@ rule that decides between them is: **does shipped tooling read it?** A fourth,
 **structural**, covers files that carry no content at all — the `.gitkeep`
 placeholders holding empty `_archive/` directories open.
 
-| Class      | What a migration does                     | Which files                                                                                                                    |
-| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                  |
+| Class      | What a migration does                     | Which files                                                                                                                                                                                                                |
+| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                                                                                                              |
 | **Seeded** | Updates only while you have not edited it | every template, by exact name: `TEMPLATE.md`, `TEMPLATE-<variant>.md`, `YYYY-MM-DD-TEMPLATE-<type>.md`, `<name>.template.md`, and anything under a `TEMPLATES/` directory; plus every path `docs/.pdocs-seed.json` records |
-| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write |
+| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write                                                                                             |
 
 `.project-docs.json` is **theirs** with one exception a migration names when it
 happens: it sets the top-level `version` there, patched in place in the file's
