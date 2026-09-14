@@ -91,7 +91,9 @@ bump, and run the script for real on `dreamwood/media-forge`.
       record in `artifacts/`)
 - [x] Phase 4 — legacy banners, precondition, table, § Step 7 collapse
 - [x] Phase 5 — version bump 3.9.0 → 3.10.0, dist rebuilt, gate clean
-- [ ] Phase 6 — the MediaForge run
+- [x] Phase 6 — the MediaForge run: `2961a95` (v2.6 → v2.7) and `e24e485` (v2.8
+      → v2.9) on `chore/project-docs-frontmatter-layer` in
+      dreamwood/media-forge; backfill and gate pending there
 - [x] Tests passing — 905 across 18 files at phase 5
 - [ ] Ready for merge
 
