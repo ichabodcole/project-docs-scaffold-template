@@ -12,6 +12,8 @@
 
 import { afterAll, describe, expect, test } from "bun:test";
 import {
+  cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -19,7 +21,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { DEFAULT_CONFIG } from "../../../../../../scripts/pdocs/docs-lint/config.ts";
 import {
   DURABLE_TYPE as LINT_DURABLE,
   PROJECT_FILE_TYPE as LINT_PROJECT_FILE,
@@ -71,6 +74,237 @@ function run(root: string, args: string[] = []): number {
   } finally {
     console.log = real;
   }
+}
+
+// ─── Generated fixtures: real trees, not hand-built ones ─────────────────────
+//
+// `fixture()` above builds the handful of files one unit test needs. The
+// migration's population is every consuming project, and those are generated
+// trees — so the whole-script tests also get real ones, produced by
+// cookiecutter from this repository's own history rather than checked in as
+// snapshots that rot silently.
+//
+// Everything here is OFFLINE. The v2.6 template is `git archive`d out of this
+// repository's object store at the release tag, the current template is the
+// working tree, and cookiecutter is pointed at a local directory both times, so
+// nothing is cloned or fetched. Generation runs once per test process and each
+// fixture is a fresh copy of it, because the tests that consume a tree write
+// to it. Measured on a laptop: ~0.15s for the archive and ~0.25s per
+// cookiecutter run, so the whole cache costs well under a second.
+
+const REPO_ROOT = resolve(import.meta.dir, "../../../../../..");
+
+/** The last release before the frontmatter layer. Fixture A is what it generated. */
+const V26_TAG = "project-docs-scaffold-template-v6.3.0";
+
+/**
+ * A0's extra docs-root folder: in neither tier and not in `lint.skip`, so an
+ * unlisted folder that would silently get the strictest tier — the case the
+ * preflight has to name and stop on. `describe("fixtures")` checks the claim
+ * against the lint's own config rather than trusting this comment.
+ */
+const UNDECLARED_FOLDER = "runbooks";
+const UNDECLARED_FILE = `docs/${UNDECLARED_FOLDER}/deploy.md`;
+
+interface Scaffolds {
+  /** A generated v2.6 project: `docs/` only, no layer. */
+  v26: string;
+  /** A generated project from the working tree: `docs/`, `scripts/pdocs/`, config. */
+  current: string;
+  generationMs: number;
+}
+
+let scaffolds: Scaffolds | null = null;
+
+function sh(cmd: string[], cwd?: string): string {
+  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
+  if (r.exitCode !== 0)
+    throw new Error(
+      `${cmd.join(" ")} exited ${r.exitCode}\n${r.stderr.toString()}${r.stdout.toString()}`
+    );
+  return r.stdout.toString();
+}
+
+/**
+ * Generate both templates once. Throws, rather than skipping, when cookiecutter
+ * is missing: a fixture that quietly vanishes is a suite that quietly stops
+ * testing the migration, and the plan's validation items depend on this one.
+ */
+function generatedScaffolds(): Scaffolds {
+  if (scaffolds) return scaffolds;
+  if (!Bun.which("cookiecutter"))
+    throw new Error(
+      "cookiecutter is not on PATH, so the generated fixtures cannot be built. " +
+        "Install it (`uv tool install cookiecutter` or `pipx install cookiecutter`) — " +
+        "these tests do not skip without it."
+    );
+  const started = performance.now();
+  const base = mkdtempSync(join(tmpdir(), "migrate-v27-scaffolds-"));
+  roots.push(base);
+
+  // cookiecutter records a replay file per template under ~/.cookiecutter_replay
+  // and would clone into ~/.cookiecutters; point both at the temp dir so a test
+  // run leaves nothing in the home directory.
+  const config = join(base, "cookiecutter.yaml");
+  writeFileSync(
+    config,
+    `replay_dir: "${join(base, "replay")}"\ncookiecutters_dir: "${join(base, "cookiecutters")}"\n`
+  );
+
+  // A shallow or `--no-tags` clone has no such object, and `git archive` then
+  // fails with only `fatal: not a valid object name` — which names the symptom,
+  // not the fix.
+  const tagPresent =
+    Bun.spawnSync(
+      [
+        "git",
+        "-C",
+        REPO_ROOT,
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        `${V26_TAG}^{commit}`,
+      ],
+      { stdout: "pipe", stderr: "pipe" }
+    ).exitCode === 0;
+  if (!tagPresent)
+    throw new Error(
+      `tag ${V26_TAG} is not in this clone, so fixture A cannot be generated. ` +
+        "Run `git fetch --tags` (a shallow or --no-tags clone drops it) and re-run."
+    );
+
+  const template26 = join(base, "template-v2.6");
+  mkdirSync(template26);
+  const tar = join(base, "template-v2.6.tar");
+  sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", tar, V26_TAG]);
+  sh(["tar", "-xf", tar, "-C", template26]);
+
+  const generate = (template: string, into: string): string => {
+    mkdirSync(into);
+    sh([
+      "cookiecutter",
+      "--config-file",
+      config,
+      "--no-input",
+      "-o",
+      into,
+      template,
+      "install_target=New project folder",
+    ]);
+    return join(into, "my-project"); // cookiecutter.json's default slug
+  };
+
+  scaffolds = {
+    v26: generate(template26, join(base, "v2.6")),
+    current: generate(REPO_ROOT, join(base, "current")),
+    generationMs: performance.now() - started,
+  };
+  return scaffolds;
+}
+
+/** `git`, borrowing no identity, signing or default branch from the machine. */
+function git(root: string, ...args: string[]): string {
+  return sh(
+    [
+      "git",
+      "-c",
+      "user.name=fixture",
+      "-c",
+      "user.email=fixture@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      "init.defaultBranch=main",
+      ...args,
+    ],
+    root
+  );
+}
+
+function commitAll(root: string, message: string): void {
+  if (!existsSync(join(root, ".git"))) git(root, "init", "-q");
+  git(root, "add", "-A");
+  git(root, "commit", "-q", "-m", message);
+}
+
+/** Every committed path, sorted — what `git status` will judge the tree against. */
+function tracked(root: string): string[] {
+  return git(root, "ls-files").split("\n").filter(Boolean).sort();
+}
+
+/**
+ * Fixture A: a real v2.6 tree, generated from the tag and committed, because
+ * the migration reports a dirty tree rather than proceeding past one.
+ *
+ * `undeclaredFolder` is the A0/A1 switch. A0 (`true`) carries a docs-root
+ * folder that is in no tier and not skipped, which the preflight must name and
+ * stop on — so A0 can never complete a run and is for the preflight test only.
+ * A1 (`false`) is the same tree without it, for the full run. One generator,
+ * one flag, so the two cannot drift. Removal rather than declaration, because a
+ * v2.6 tree has no `.project-docs.json` to declare the folder in — the
+ * migration is what writes that file — and pre-declaring would mean hand-
+ * building the config the run is supposed to produce.
+ */
+function fixtureA({ undeclaredFolder }: { undeclaredFolder: boolean }): string {
+  const root = mkdtempSync(
+    join(tmpdir(), undeclaredFolder ? "migrate-v27-A0-" : "migrate-v27-A1-")
+  );
+  roots.push(root);
+  cpSync(generatedScaffolds().v26, root, { recursive: true });
+  if (undeclaredFolder) {
+    mkdirSync(join(root, "docs", UNDECLARED_FOLDER));
+    writeFileSync(join(root, UNDECLARED_FILE), "# Deploy\n\nHow to deploy.\n");
+  }
+  commitAll(root, "the v2.6 tree, as generated");
+  return root;
+}
+
+/** The v2.9 migration's presence check, as `update-project-docs/SKILL.md` lists it. */
+const v29Precondition = (root: string): boolean =>
+  !existsSync(join(root, "docs", ".pdocs-seed.json"));
+
+/**
+ * Fixture B: the orphaned tree. A1 with `docs/` from the current scaffold
+ * copied over it and `scripts/` deliberately left out — the layer's contract
+ * installed with nothing that checks it. Both presence checks are false on it:
+ * `docs/SCHEMA.md` says the layer is in, `scripts/pdocs/cli.ts` says it is not.
+ * Committed, like A, so the dirty-tree guard is not what stops a run on it.
+ *
+ * `update-project-docs/SKILL.md` § Step 7 names three ways a tree gets here:
+ * (a) `docs/` copied from a generated project without `scripts/`, (b) a
+ * current-directory install interrupted before `scripts/` moved up, and (c)
+ * `docs/lint.ts` deleted in a cleanup with nothing put in its place. The
+ * generation hook writes `docs/.pdocs-seed.json`, so the default, `seeded`,
+ * reproduces (a) and (b). Origin (c) is a v2.7-era layer, and `seeded: false`
+ * reproduces it by stripping what such a `docs/` never carried — which is
+ * exactly the manifest, per the v2.7 payload at `1dde782^`
+ * (`{{cookiecutter.project_slug}}/docs/`): it shipped `SCHEMA.md` and
+ * `index.md`, and the hook only began writing the manifest at v2.9. `lint.ts`
+ * is not restored, because (c) is the origin where it was deleted. The v2.9
+ * precondition `[ ! -f docs/.pdocs-seed.json ]` is false on the seeded variant
+ * and true on the unseeded one — a different tree, and phase 3 runs against
+ * both.
+ *
+ * NOTE FOR PHASE 3: on the seeded variant the v2.9 script's adopt phase takes
+ * its "manifest already exists, every hash matches" early return
+ * (`migrate-v2.8-to-v2.9.ts`, `adopt()`), so a run there can report success
+ * from that phase without having installed anything. Confirm the CLI-install
+ * phase still fires independently on that tree rather than assuming it.
+ */
+function fixtureB({ seeded = true }: { seeded?: boolean } = {}): string {
+  const root = fixtureA({ undeclaredFolder: false });
+  cpSync(join(generatedScaffolds().current, "docs"), join(root, "docs"), {
+    recursive: true,
+    force: true,
+  });
+  if (!seeded) rmSync(join(root, "docs", ".pdocs-seed.json"));
+  commitAll(
+    root,
+    seeded
+      ? "docs/ from the current scaffold, without scripts/"
+      : "docs/ from a v2.7-era scaffold, without scripts/"
+  );
+  return root;
 }
 
 describe("the copied tables equal the ones the lint enforces", () => {
@@ -437,6 +671,135 @@ describe("the version marker is carried forward, never invented", () => {
       "docs/memories/a.md": "# A memory\n\nBody.\n",
     });
     run(root);
+    const config = JSON.parse(
+      readFileSync(join(root, ".project-docs.json"), "utf8")
+    );
+    expect(config.version).toBe("6.3.0");
+    expect(config.lint.adopting).toBe(true);
+  });
+});
+
+describe("fixtures — the generated trees the whole-script tests run against", () => {
+  test("both templates generate offline: the tag from the object store, the current one from the working tree", () => {
+    const { v26, current, generationMs } = generatedScaffolds();
+    expect(existsSync(join(v26, "docs/README.md"))).toBe(true);
+    expect(existsSync(join(current, "docs/README.md"))).toBe(true);
+    // Measured at ~0.6s for both. The bound is a sanity check, not proof of
+    // hermeticity — a clone of this repository finishes well inside it. The
+    // proof is that this file passes with every route to the network dead:
+    //   HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9 bun test <this file>
+    // Re-prove it that way after touching the construction above.
+    expect(generationMs).toBeLessThan(30_000);
+  });
+
+  test("fixture A is a v2.6 tree: no part of the layer is present", () => {
+    const root = fixtureA({ undeclaredFolder: false });
+    for (const rel of [
+      "docs/SCHEMA.md",
+      "scripts/pdocs",
+      "docs/.pdocs-seed.json",
+      ".project-docs.json",
+    ])
+      expect({ rel, present: existsSync(join(root, rel)) }).toEqual({
+        rel,
+        present: false,
+      });
+    expect(
+      existsSync(join(root, "docs/projects/TEMPLATES/PROPOSAL.template.md"))
+    ).toBe(true);
+  });
+
+  // The plan's stated assumption: if the tag is wrong, fixture A is wrong and
+  // every result against it is suspect. The README's marker is the check.
+  test("and it is the release the plan assumes — the docs README says 6.3.0", () => {
+    expect(docsVersionOf(fixtureA({ undeclaredFolder: false }), "docs")).toBe(
+      "6.3.0"
+    );
+  });
+
+  test("fixture A is committed and clean, so a dirty-tree guard has something to pass", () => {
+    const root = fixtureA({ undeclaredFolder: false });
+    expect(git(root, "status", "--porcelain")).toBe("");
+    expect(tracked(root)).toContain("docs/README.md");
+  });
+
+  test("A0's folder is in no tier and not skipped — the lint's own config says so", () => {
+    const { durable, workbench, skip } = DEFAULT_CONFIG.lint;
+    expect([...durable, ...workbench, ...skip]).not.toContain(
+      UNDECLARED_FOLDER
+    );
+    expect(UNDECLARED_FOLDER in DURABLE_TYPE).toBe(false);
+    expect(UNDECLARED_FOLDER in WORKBENCH_TYPE).toBe(false);
+  });
+
+  test("A0 carries it, with a document inside; A1 does not", () => {
+    expect(
+      existsSync(join(fixtureA({ undeclaredFolder: true }), UNDECLARED_FILE))
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(fixtureA({ undeclaredFolder: false }), "docs", UNDECLARED_FOLDER)
+      )
+    ).toBe(false);
+  });
+
+  test("A0 and A1 differ by that folder and by nothing else", () => {
+    const a0 = tracked(fixtureA({ undeclaredFolder: true }));
+    const a1 = tracked(fixtureA({ undeclaredFolder: false }));
+    expect(a0.length).toBe(a1.length + 1);
+    expect(
+      a0.filter((f) => !f.startsWith(`docs/${UNDECLARED_FOLDER}/`))
+    ).toEqual(a1);
+  });
+
+  test("fixture B has docs/SCHEMA.md and no scripts/pdocs/cli.ts — the pair that makes both presence checks false", () => {
+    const root = fixtureB();
+    expect(existsSync(join(root, "docs/SCHEMA.md"))).toBe(true);
+    expect(existsSync(join(root, "scripts/pdocs/cli.ts"))).toBe(false);
+    expect(existsSync(join(root, "scripts"))).toBe(false);
+    expect(existsSync(join(root, ".project-docs.json"))).toBe(false);
+  });
+
+  test("fixture B is A1 underneath, with the current docs/ on top, and is clean", () => {
+    const root = fixtureB();
+    const inB = new Set(tracked(root));
+    for (const f of tracked(fixtureA({ undeclaredFolder: false })))
+      expect({ f, inB: inB.has(f) }).toEqual({ f, inB: true });
+    expect(existsSync(join(root, "docs/index.md"))).toBe(true);
+    expect(existsSync(join(root, "docs/.pdocs-seed.json"))).toBe(true);
+    expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  test("seeded B carries the manifest, so the v2.9 precondition is false on it", () => {
+    const root = fixtureB();
+    expect(existsSync(join(root, "docs/.pdocs-seed.json"))).toBe(true);
+    expect(v29Precondition(root)).toBe(false);
+  });
+
+  test("unseeded B is a v2.7-era layer: no manifest, precondition true, index.md still there", () => {
+    const root = fixtureB({ seeded: false });
+    expect(existsSync(join(root, "docs/.pdocs-seed.json"))).toBe(false);
+    expect(v29Precondition(root)).toBe(true);
+    expect(existsSync(join(root, "docs/SCHEMA.md"))).toBe(true);
+    expect(existsSync(join(root, "docs/index.md"))).toBe(true);
+    expect(existsSync(join(root, "docs/lint.ts"))).toBe(false);
+    expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  test("the two B variants differ by exactly the manifest", () => {
+    const seeded = tracked(fixtureB());
+    const unseeded = tracked(fixtureB({ seeded: false }));
+    expect(seeded.length).toBe(unseeded.length + 1);
+    expect(seeded.filter((f) => f !== "docs/.pdocs-seed.json")).toEqual(
+      unseeded
+    );
+  });
+
+  // The codemod is what phase 3 wraps; if it cannot consume the generated tree
+  // as it stands, the fixture is the first thing to look at.
+  test("the codemod as it stands accepts A1 and carries its version forward", () => {
+    const root = fixtureA({ undeclaredFolder: false });
+    expect(run(root)).toBe(0);
     const config = JSON.parse(
       readFileSync(join(root, ".project-docs.json"), "utf8")
     );
