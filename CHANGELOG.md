@@ -1,5 +1,35 @@
 # Changelog
 
+## [8.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v7.0.0...project-docs-scaffold-template-v8.0.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **update-project-docs:** `pdocs find --type <unknown>` now exits 2 instead of 0. It previously returned `ok: true, count: 0` — indistinguishable from "nothing matches" — and any script or agent branching on that exit code will now see a usage rejection instead of an empty result. `scripts/pdocs/envelope.ts` states the rule this falls under: exit codes are a published contract. The change landed in 8bd5337 and should have carried this footer there; it is recorded here because that is where it can still be read. The v2.9 migration's own shape change breaks nobody — it has never been released.
+
+### Features
+
+* **migration-authoring:** the skill teaches the shape the v2.9 migration proved ([c2e4881](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c2e4881623046b45b038c6f506330d7b38071583))
+* **pdocs:** `find --type` refuses a type the project has not declared ([8bd5337](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8bd533765c76bc9f06f01a8366f920e1dc1536fa))
+* **pdocs:** a project can declare its own document types ([f327151](https://github.com/ichabodcole/project-docs-scaffold-template/commit/f3271516f7cb9361f1f321636b6684be8a295291))
+* **pdocs:** the seed manifest — record what the scaffold installed ([313a75d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/313a75d1012f864e0eab79fd6690d59d84a8e545))
+* **project-docs:** 3.10.0 — the v2.6 migration is a script, six guides are legacy ([6dfb203](https://github.com/ichabodcole/project-docs-scaffold-template/commit/6dfb203d5a2b78956b4de59e08d90b9a0d43c14d))
+* **scaffold:** templates become seeded, and SCHEMA states who owns what ([1396c1a](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1396c1acb628487cbc4f172bd98eefffa7a972cc))
+* **update-project-docs:** v2.6-to-v2.7 becomes a script — the whole migration ([17be36b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/17be36b3b292ab195b2cd17d558179c5fdf909fa))
+* **update-project-docs:** v2.9 migration — adopt a project's templates ([2142718](https://github.com/ichabodcole/project-docs-scaffold-template/commit/2142718d812fd22753020ba1edab027a54e2236d))
+
+
+### Bug Fixes
+
+* **docs-foundation:** address dual review — the guide destroyed its own manifest ([c766b58](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c766b58429b444ef1104f816e4b2cd4688d84c48))
+* **update-project-docs:** a dirty path the run would write is a stop, and the codemod reads the config ([76e56d7](https://github.com/ichabodcole/project-docs-scaffold-template/commit/76e56d7dcddf2d675cde77630a37827f85f0ece1))
+* **update-project-docs:** the dry run verifies the scaffold is new enough ([55816fa](https://github.com/ichabodcole/project-docs-scaffold-template/commit/55816fafbc423270315671cfe25b27e0c0612f1d))
+
+
+### Code Refactoring
+
+* **update-project-docs:** the v2.9 migration becomes a script ([45be710](https://github.com/ichabodcole/project-docs-scaffold-template/commit/45be710b7ca70c5b141b03ceefb01c1d62b1d8d8))
+
 ## [7.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v6.3.0...project-docs-scaffold-template-v7.0.0) (2026-09-09)
 
 
