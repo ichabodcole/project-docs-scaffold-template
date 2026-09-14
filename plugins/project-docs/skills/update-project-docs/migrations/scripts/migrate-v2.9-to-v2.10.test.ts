@@ -344,6 +344,36 @@ function treeDigest(root: string): Record<string, string> {
   return out;
 }
 
+// ─── The owned and seeded diff between O and N is DERIVED, never pinned ──────
+//
+// release-please bumps the version marker inside scripts/pdocs/cli.ts (both
+// copies; see release-please-config.json) on every release, so on a release
+// branch N differs from O by one more owned file than the 3.11.0 fixes
+// touched, and a test that hard-codes the count or the list goes red on every
+// release PR. What a test must prove is a FLOOR — the refresh carries the
+// fixes — and the exact set is read off the two generated trees.
+
+/** Under scripts/pdocs/, the files the 3.11.0 fixes touched: the refresh must carry these. */
+const FIXED_OWNED = ["commands/check.ts", "lint/collect.ts", "lint/rules.ts", "pages.ts", "seed.ts"];
+/** The template the 3.11.0 fixes touched. */
+const FIXED_TEMPLATES = ["playbooks/TEMPLATE.md"];
+
+/** Paths under `sub` whose bytes differ between two scaffolds, relative to `sub`, sorted. */
+function ownedDiff(o: string, n: string, sub = "scripts/pdocs"): string[] {
+  const a = treeDigest(join(o, sub));
+  const b = treeDigest(join(n, sub));
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => a[k] !== b[k]).sort();
+}
+/** Templates whose bytes differ between two scaffolds, docs-relative, sorted. */
+const templateDiff = (o: string, n: string) => ownedDiff(o, n, "docs").filter((rel) => isSeeded(rel));
+
+/** The owned files this release's refresh writes on O. */
+const owned = () => ownedDiff(generatedScaffolds().old, generatedScaffolds().current);
+/** The templates this release moves on O — the `update` verdicts that write. */
+const moved = () => templateDiff(generatedScaffolds().old, generatedScaffolds().current);
+/** How many templates the scaffold ships. */
+const total = () => seededIn(join(generatedScaffolds().current, "docs")).length;
+
 /**
  * A stub CLI answering only what the script asks of it: `check --format json`
  * prints an envelope, with the exit code, the count and the readability each
@@ -590,20 +620,22 @@ describe("fixtures — the generated trees the whole-script tests run against", 
     expect(on(target())).toBe(1);
   });
 
-  test("N differs from O in exactly the owned files the 3.11.0 fixes touched, one template, and the manifest", () => {
+  test("N differs from O in the owned files (at least the ones the 3.11.0 fixes touched), the templates those fixes moved, SCHEMA.md and the manifest", () => {
+    // The floor is what proves the refresh carries the fixes; the exact set is
+    // derived, because release-please bumps cli.ts's marker on every release.
+    for (const f of FIXED_OWNED) expect(owned()).toContain(f);
+    for (const t of FIXED_TEMPLATES) expect(moved()).toContain(t);
     const o = treeDigest(fixtureO());
     const n = treeDigest(generatedScaffolds().current);
     const differ = Object.keys(o).filter((k) => o[k] !== n[k]).sort();
-    expect(differ).toEqual([
-      "docs/.pdocs-seed.json",
-      "docs/SCHEMA.md",
-      "docs/playbooks/TEMPLATE.md",
-      "scripts/pdocs/commands/check.ts",
-      "scripts/pdocs/lint/collect.ts",
-      "scripts/pdocs/lint/rules.ts",
-      "scripts/pdocs/pages.ts",
-      "scripts/pdocs/seed.ts",
-    ]);
+    expect(differ).toEqual(
+      [
+        "docs/.pdocs-seed.json",
+        "docs/SCHEMA.md",
+        ...moved().map((t) => `docs/${t}`),
+        ...owned().map((f) => `scripts/pdocs/${f}`),
+      ].sort()
+    );
   });
 
   test("the story-loom page passes the old lint and fails the new one", () => {
@@ -636,26 +668,32 @@ describe("the whole migration on fixture O", () => {
     expect(r.out).toContain("✓ v2.9 tree at");
     expect(r.out).toContain("· `pdocs check` under the installed CLI: clean");
     expect(r.out).toContain("✓ release 9.9.9, carrying what the refresh installs");
-    expect(r.out).toContain("✓ scripts/pdocs/ refreshed (5 file(s) written; the copy merges");
+    expect(r.out).toContain(`✓ scripts/pdocs/ refreshed (${owned().length} file(s) written; the copy merges`);
     expect(r.out).toContain("✓ docs/SCHEMA.md replaced (owned)");
-    expect(r.out).toContain("✓ updated docs/playbooks/TEMPLATE.md");
+    for (const t of moved()) expect(r.out).toContain(`✓ updated docs/${t}`);
     expect(r.out).toContain("· docs/architecture/TEMPLATE.md already at the scaffold's bytes — update, nothing to write");
     expect(r.out).toContain("· formatting skipped (--skip-format)");
-    expect(r.out).toContain("✓ docs/.pdocs-seed.json written: 19 template(s) recorded at version 9.9.9, 19 entries");
-    expect(r.out).toContain("✓ 19 template(s) in the scaffold: 1 updated, 18 already at the scaffold's bytes, 0 installed, 0 kept (modified), 0 kept (unknown), 0 kept (deleted)");
+    expect(r.out).toContain(`✓ docs/.pdocs-seed.json written: ${total()} template(s) recorded at version 9.9.9, ${total()} entries`);
+    expect(r.out).toContain(
+      `✓ ${total()} template(s) in the scaffold: ${moved().length} updated, ${total() - moved().length} already at the scaffold's bytes, 0 installed, 0 kept (modified), 0 kept (unknown), 0 kept (deleted)`
+    );
     expect(r.out).toContain("✓ pdocs check: clean (exit 0)");
     expect(r.out).toContain("✓ docs/README.md set to 9.9.9");
     expect(r.out).toContain("✓ .project-docs.json set to 9.9.9 — that one key; every other byte as it was");
-    expect(r.out).toContain("Migration complete. 19 template(s) reconciled, 19 recorded; the owned files are at release 9.9.9.");
+    expect(r.out).toContain(`Migration complete. ${total()} template(s) reconciled, ${total()} recorded; the owned files are at release 9.9.9.`);
     expectRefreshed(root);
-    expect(read(root, PLAYBOOK)).toBe(readFileSync(join(target(), PLAYBOOK), "utf8"));
     const after = manifestOf(root);
     expect(after.version).toBe("9.9.9");
-    expect(after.files["playbooks/TEMPLATE.md"]).toBe(hashOf(join(target(), PLAYBOOK)) as string);
-    expect(after.files["playbooks/TEMPLATE.md"]).not.toBe(before.files["playbooks/TEMPLATE.md"]);
-    const { "playbooks/TEMPLATE.md": _a, ...restAfter } = after.files;
-    const { "playbooks/TEMPLATE.md": _b, ...restBefore } = before.files;
-    expect(restAfter).toEqual(restBefore);
+    // Every moved template is now the scaffold's, bytes and record; every
+    // other record is as it was.
+    for (const t of moved()) {
+      expect(read(root, `docs/${t}`)).toBe(readFileSync(join(target(), "docs", t), "utf8"));
+      expect(after.files[t]).toBe(hashOf(join(target(), "docs", t)) as string);
+      expect(after.files[t]).not.toBe(before.files[t]);
+    }
+    const rest = (files: Record<string, string>) =>
+      Object.fromEntries(Object.entries(files).filter(([k]) => !moved().includes(k)));
+    expect(rest(after.files)).toEqual(rest(before.files));
     // Nothing the project wrote is touched: the scripts' unmirrored siblings, index.md, the manifesto.
     expect(read(root, "docs/index.md")).toBe(readFileSync(join(generatedScaffolds().old, "docs/index.md"), "utf8"));
   });
@@ -667,7 +705,10 @@ describe("the whole migration on fixture O", () => {
     const r = migrate(root);
     expect(r.exitCode).toBe(0);
     expect(r.out).toContain("· kept docs/playbooks/TEMPLATE.md — keep-modified: you edited it since it was recorded; the scaffold's moved, yours stays");
-    expect(r.out).toContain("0 updated, 18 already at the scaffold's bytes, 0 installed, 1 kept (modified), 0 kept (unknown), 0 kept (deleted)");
+    const others = moved().filter((t) => t !== "playbooks/TEMPLATE.md").length;
+    expect(r.out).toContain(
+      `${others} updated, ${total() - 1 - others} already at the scaffold's bytes, 0 installed, 1 kept (modified), 0 kept (unknown), 0 kept (deleted)`
+    );
     expect(read(root, PLAYBOOK)).toBe(mine);
     const after = manifestOf(root);
     expect(after.files["playbooks/TEMPLATE.md"]).toBe(before.files["playbooks/TEMPLATE.md"]);
@@ -715,7 +756,7 @@ describe("the whole migration on fixture O", () => {
     expect(r.exitCode).toBe(0);
     expect(r.out).toContain("· kept docs/reports/YYYY-MM-DD-TEMPLATE-report.md — keep-unknown: on disk but never recorded; unknown is not permission");
     expect(r.out).toContain("1 kept (unknown)");
-    expect(r.out).toContain("18 template(s) recorded at version 9.9.9, 18 entries");
+    expect(r.out).toContain(`${total() - 1} template(s) recorded at version 9.9.9, ${total() - 1} entries`);
     expect(r.out).not.toContain("TEMPLATE-triage");
     expect(read(root, REPORT)).toBe(report);
     expect(manifestOf(root).files["reports/YYYY-MM-DD-TEMPLATE-report.md"]).toBeUndefined();
@@ -844,7 +885,7 @@ describe("idempotence and dry run", () => {
     expect(r.out).toContain("✓ git tree clean");
     expect(r.out).toContain("✓ scripts/pdocs/ already identical to the scaffold's");
     expect(r.out).toContain("✓ docs/SCHEMA.md already identical to the scaffold's");
-    expect(r.out).toContain("0 updated, 19 already at the scaffold's bytes, 0 installed");
+    expect(r.out).toContain(`0 updated, ${total()} already at the scaffold's bytes, 0 installed`);
     expect(r.out).toContain("· nothing was written, so nothing to format");
     expect(r.out).toContain("✓ docs/.pdocs-seed.json unchanged (19 entries, version 9.9.9)");
     expect(r.out).toContain("✓ docs/README.md already at 9.9.9");
@@ -860,18 +901,26 @@ describe("idempotence and dry run", () => {
     const before = treeDigest(root);
     const r = migrate(root, ["--dry-run"]);
     expect(r.exitCode).toBe(0);
-    expect(r.out).toContain("· would refresh scripts/pdocs/ (5 file(s) to write: commands/check.ts, lint/collect.ts, lint/rules.ts, pages.ts, seed.ts)");
+    expect(r.out).toContain(`· would refresh scripts/pdocs/ (${owned().length} file(s) to write: ${owned().join(", ")})`);
     expect(r.out).toContain("· would replace docs/SCHEMA.md (owned)");
-    expect(r.out).toContain("· 19 template(s) in the scaffold: 0 to update, 17 already at the scaffold's bytes, 0 to install, 1 kept (modified), 0 kept (unknown), 1 kept (deleted)");
+    // The playbook is kept (edited) and cycles/ is kept (deleted), whatever
+    // the release did to them; any other moved template is one to update.
+    const up = moved().filter((t) => t !== "playbooks/TEMPLATE.md" && t !== "cycles/TEMPLATE.md").length;
+    expect(r.out).toContain(
+      `· ${total()} template(s) in the scaffold: ${up} to update, ${total() - 2 - up} already at the scaffold's bytes, 0 to install, 1 kept (modified), 0 kept (unknown), 1 kept (deleted)`
+    );
     expect(r.out).toContain("· would keep docs/playbooks/TEMPLATE.md — keep-modified:");
     expect(r.out).toContain("· would keep docs/cycles/TEMPLATE.md — keep-deleted:");
     expect(r.out).toContain("· docs/architecture/TEMPLATE.md already at the scaffold's bytes — update, nothing to write");
-    expect(r.out).toContain("· would record 17 template(s) in docs/.pdocs-seed.json at version 9.9.9 (nothing written, so nothing to format)");
+    expect(r.out).toContain(
+      `· would record ${total() - 2} template(s) in docs/.pdocs-seed.json at version 9.9.9` +
+        (up === 0 ? " (nothing written, so nothing to format)" : " (no formatting: --skip-format)")
+    );
     // With something to write, the flag is what the line reports.
     const w = migrate(fixtureO(), ["--dry-run"]);
-    expect(w.out).toContain("· would record 19 template(s) in docs/.pdocs-seed.json at version 9.9.9 (no formatting: --skip-format)");
+    expect(w.out).toContain(`· would record ${total()} template(s) in docs/.pdocs-seed.json at version 9.9.9 (no formatting: --skip-format)`);
     const f = migrate(fixtureO(), ["--dry-run"], { format: true });
-    expect(f.out).toContain("· would record 19 template(s) in docs/.pdocs-seed.json at version 9.9.9, after prettier over the 1 written");
+    expect(f.out).toContain(`· would record ${total()} template(s) in docs/.pdocs-seed.json at version 9.9.9, after prettier over the ${moved().length} written`);
     expect(r.out).toContain("· would run `pdocs check`");
     expect(r.out).toContain("· would set docs/README.md from 8.0.0 to 9.9.9");
     expect(r.out).toContain("· would set .project-docs.json from \"8.0.0\" to 9.9.9");
@@ -902,7 +951,7 @@ describe("format before record", () => {
     const root = fixtureO();
     const r = migrate(root, [], { format: true, env: { PATH: stubNpx("append") } });
     expect(r.exitCode).toBe(0);
-    expect(r.out).toContain("✓ formatted 1 written template(s) with your Prettier — before recording, never after");
+    expect(r.out).toContain(`✓ formatted ${moved().length} written template(s) with your Prettier — before recording, never after`);
     const onDisk = read(root, PLAYBOOK);
     expect(onDisk).toEndWith("<!-- formatted by the stub -->\n");
     expect(manifestOf(root).files["playbooks/TEMPLATE.md"]).toBe(sha(onDisk));

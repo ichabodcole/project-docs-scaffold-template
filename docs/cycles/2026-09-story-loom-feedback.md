@@ -48,3 +48,4 @@ _Written at close._
 
 - fix/story-loom-feedback-round-1 (landed 2026-09-14)
 - feature/v2.9-to-v2.10-migration (landed 2026-09-14)
+- fix/v2.10-tests-derive-owned-diff (landed 2026-09-14)
