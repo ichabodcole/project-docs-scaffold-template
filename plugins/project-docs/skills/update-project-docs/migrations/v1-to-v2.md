@@ -1,5 +1,9 @@
 # Migration: v1 → v2
 
+> **Legacy.** This guide was written before the script shape and is no longer
+> maintained to the current `migration-authoring` skill. Run it as-is — it
+> works. Last maintained at `project-docs` 3.9.0.
+
 ## Summary
 
 The v2 structure replaces flat documentation directories (`proposals/`,

@@ -89,7 +89,7 @@ bump, and run the script for real on `dreamwood/media-forge`.
 - [x] Phase 2 — fixtures A0, A1, B seeded and B unseeded (`3448277`)
 - [x] Phase 3 — the v2.6-to-v2.7 script, guide and tests (`17be36b`; guards
       record in `artifacts/`)
-- [ ] Phase 4 — legacy banners, precondition, table, § Step 7 collapse
+- [x] Phase 4 — legacy banners, precondition, table, § Step 7 collapse
 - [ ] Phase 5 — version bump, dist rebuild, gate
 - [ ] Phase 6 — the MediaForge run
 - [ ] Tests passing
