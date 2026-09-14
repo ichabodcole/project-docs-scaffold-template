@@ -137,8 +137,13 @@ For each migration file:
    preview, then run without the flag. Only content-editing steps (flowchart
    updates, README prose) remain for the agent. The `.sh` scripts run with
    `bash`; `migrate-v2.6-to-v2.7.ts` runs with `bun`, and the guide's step 2
-   installs it.
-3. Verify the checklist at the end
+   installs it. **A script-shaped migration has no steps to follow** — its guide
+   carries a `## This migration is a script` section: read the guide, run the
+   script with `--dry-run`, read the plan it prints, run it without the flag,
+   and read the output lines its `## Verification` section names — the exit code
+   is the check.
+3. Verify: the checklist at the end of a guide, or the output lines and exit 0
+   of a script
 4. Move to the next migration
 
 ### Step 5: Update Version Marker
@@ -465,15 +470,78 @@ would call that satisfied.
 
 ## Creating New Migration Guides
 
-When the scaffold template releases structural changes:
+When the scaffold template releases structural changes, a migration takes one of
+two shapes. The `migration-authoring` skill states the rule in full and carries
+the quality checklist; in short:
 
-1. Create a new migration file: `migrations/vX-to-vY.md`
-2. Use the `migration-authoring` skill to ensure every step is agent-executable
-3. Run the quality checklist before finalizing
-4. Add a row to the `## Available Migrations` table
+A migration is a **script** when a later step depends on a value an earlier step
+computed (a scaffold path, a version), when a check must be able to stop the
+run, or when it must be re-runnable or partially applicable. It may remain a
+**guide** only when every shell block is self-contained and every check exits
+non-zero on failure. Any migration that generates a scaffold is a script.
+
+1. Decide the shape by that rule
+2. Create `migrations/vX-to-vY.md`. For a script, also create
+   `migrations/scripts/migrate-vX-to-vY.ts` and
+   `migrations/scripts/migrate-vX-to-vY.test.ts` beside it — the
+   `migrate-v2.8-to-v2.9` pair is the reference
+3. Use the `migration-authoring` skill and pass its quality checklist before
+   finalizing
+4. Add a row to the `## Available Migrations` table. A script's Summary leads
+   with **Run as a script** and names the command and `--dry-run`
 5. The version in `docs/README.md` is bumped automatically by release-please
 
-**Migration file structure:**
+**Script-shaped structure** — the guide explains the command; it has no steps
+and no checklist, because the script's output is the checklist:
+
+```markdown
+# Migration: vX → vY
+
+## Summary
+
+[What changed and why, ending with a bold **What changes in your tree:**
+sentence naming every path the script writes]
+
+## This migration is a script
+
+[One command does the whole migration; every phase verifies itself; any failure
+stops the run with a non-zero exit and a named reason — and the two-sentence
+reason why]
+
+## What's New
+
+## What Moved
+
+## What's Removed
+
+[Merge the last two when the answer is "nothing, in either case"]
+
+## Run it
+
+[The --dry-run command, what to read in its output, the real command, what to
+commit; an ### Options table; the exit codes 0 / 1 / 2]
+
+## What it does, phase by phase
+
+[One numbered entry per phase, in the script's order, naming what stops the run]
+
+## What it cannot check
+
+[What a person must still confirm — a commit, a sentence's truth, a choice. v2.9
+carries this as the last bullets of its Verification section instead]
+
+## Cross-Reference Updates
+
+[Paths that change and need updating, or "None"]
+
+## Verification
+
+[The output lines to look for, in order, and the exit code — not commands to
+run]
+```
+
+**Guide-shaped structure** — every step self-contained and mechanically
+executable:
 
 ```markdown
 # Migration: vX → vY
