@@ -43,6 +43,33 @@ lost, so the catalog is a hard requirement. A workbench document is found by its
 date and its folder README; it is written once, it closes, and it is never
 brought up to date — so cataloguing it would be a chore with no reader.
 
+### Declaring your own folder
+
+The folder lists above are defaults, not a ceiling. A project that wants
+`docs/runbooks/` adds the folder to a tier and names the `type` its pages carry,
+both in `.project-docs.json`:
+
+```json
+"lint": {
+  "workbench": ["backlog", "briefs", "...", "runbooks"],
+  "types": { "runbooks": "runbook" }
+}
+```
+
+`types` maps folder to type. The **tier follows from the array you list the
+folder in** — `workbench` for the thin checks, `durable` for the full graph
+tier. A durable declaration carries the catalog obligation like any other
+library folder: the page must be reachable from `index.md` or the lint reports
+`ORPHAN`.
+
+A declared type is **lintable but not creatable**. `pdocs new` will not make
+one, because the scaffold ships no template for it, and says so rather than
+failing obscurely. `pdocs find --type runbook` works, and `find` rejects a type
+this project has not declared — naming the resolved set, which includes yours.
+
+A declaration that collides with a folder or type the scaffold already ships is
+ignored; the built-in row wins.
+
 ## Layout
 
 ```
@@ -286,6 +313,68 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
 6. **Truth comes from the code, not from prior prose.** Names, ranges and
    behaviour are verified against the source at writing time. A stale document
    is worse than none.
+
+## Who owns which file
+
+Three classes decide what a migration does to a **documentation file**, and the
+rule that decides between them is: **does shipped tooling read it?** A fourth,
+**structural**, covers files that carry no content at all — the `.gitkeep`
+placeholders holding empty `_archive/` directories open.
+
+| Class      | What a migration does                     | Which files                                                                                                                    |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                  |
+| **Seeded** | Updates only while you have not edited it | every template — any `.md` whose name contains `TEMPLATE`, plus every `*.template.md`                                          |
+| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write |
+
+`docs/index.md` is **theirs** even though the scaffold ships a skeleton: it is
+your catalog of your own pages, and no migration copies over it. It is one of
+only two files `scripts/check-mirror.sh` exempts by name, for exactly that
+reason. A migration that overwrote it would leave every library page reporting
+`ORPHAN`.
+
+`docs/CLAUDE.md` is **owned** though the table does not name it: three lines
+pointing an agent at `docs/README.md`, describing scaffold structure rather than
+your project. Note that "overwrites, every time" describes the class, not every
+migration — `v2.8-to-v2.9` refreshes only `scripts/pdocs/` and this file. A
+migration refreshes the owned files it has reason to.
+
+**Owned** files are read by code. The lint implements this file; editing your
+copy makes your spec disagree with your linter, and the next migration will take
+it back without asking. Change behaviour through `.project-docs.json` instead —
+it is yours, and it is where the tiers, the exclusions and your own `types`
+live.
+
+**Seeded** files are installed once and then negotiated. `docs/.pdocs-seed.json`
+records the sha256 of each one as installed. A migration compares:
+
+| On disk                     | What happens                                             |
+| --------------------------- | -------------------------------------------------------- |
+| matches what we recorded    | updated, and the new hash recorded                       |
+| differs                     | **kept**, and reported by name so you can see ours moved |
+| absent from the manifest    | **kept** — unknown is not permission                     |
+| recorded but you deleted it | **stays deleted** — deleting is an edit                  |
+| neither recorded nor there  | installed; it is new in this version                     |
+
+Note the asymmetry between the last two rows. "Stays deleted" holds for a file
+you deleted **after** it was recorded. A file you deleted **before** the
+manifest existed is indistinguishable from one this version adds, so it comes
+back. Nothing can tell those two apart, and the first migration is the only run
+where it arises.
+
+So a template is yours to restructure. The **frontmatter block is the contract**
+— `pdocs new` fills `type` from the registry regardless, but a hand-copied
+template gets no such repair, and the lint will reject the document rather than
+the template. Everything below the frontmatter is yours.
+
+The first migration on a project that has no manifest reads every file as
+absent-from-the-manifest, so it adopts your tree as it stands rather than
+rewriting it.
+
+**No migration performs this comparison yet.** `v2.8-to-v2.9` only writes the
+record; the table above is what the next migration to touch a seeded file will
+do with it, through `scripts/pdocs/seed.ts`. The record has to exist before
+there is anything to reconcile against, which is why it ships first.
 
 ## The maintenance contract
 

@@ -53,6 +53,13 @@ export interface LintConfig {
   workbench: string[];
   /** Directory names skipped entirely, at any depth. */
   skip: string[];
+  /**
+   * Folders this project declares itself, mapped to the `type` their pages
+   * carry: `{ "runbooks": "runbook" }`. The scaffold ships no template for
+   * these, so `pdocs new` will not create one — but the lint accepts them.
+   * List the folder in `durable` or `workbench` too, to pick its tier.
+   */
+  types: Record<string, string>;
 }
 
 export interface ProjectDocsConfig {
@@ -78,6 +85,7 @@ export const DEFAULT_CONFIG: ProjectDocsConfig = {
       "memories",
     ],
     workbench: ["backlog", "briefs", "investigations", "projects", "reports", "fragments", "cycles"],
+    types: {},
     skip: ["_archive", "superpowers"],
   },
 };
@@ -113,6 +121,16 @@ export function loadConfig(repoRoot: string): ProjectDocsConfig {
   const o = parsed as Record<string, unknown>;
   const lint = (o.lint ?? {}) as Record<string, unknown>;
 
+  /** `{ folder: type }`, keeping only string-valued entries. */
+  const typeMap = (v: unknown): Record<string, string> =>
+    typeof v === "object" && v !== null && !Array.isArray(v)
+      ? (Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).filter(
+            ([, t]) => typeof t === "string"
+          )
+        ) as Record<string, string>)
+      : {};
+
   const strings = (v: unknown, fallback: string[]): string[] =>
     Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : fallback;
 
@@ -125,6 +143,7 @@ export function loadConfig(repoRoot: string): ProjectDocsConfig {
       durable: strings(lint.durable, DEFAULT_CONFIG.lint.durable),
       workbench: strings(lint.workbench, DEFAULT_CONFIG.lint.workbench),
       skip: strings(lint.skip, DEFAULT_CONFIG.lint.skip),
+      types: typeMap(lint.types),
     },
   };
 }

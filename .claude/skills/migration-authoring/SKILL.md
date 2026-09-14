@@ -1,180 +1,386 @@
 ---
 name: migration-authoring
 description:
-  Methodology for writing agent-executable migration guides. Use when creating
-  or reviewing a migration guide for the update-project-docs skill, when the
-  user says "write a migration guide", "create migration steps", "document the
-  upgrade path", or "review migration quality". Ensures every step is precise
-  enough for a fresh agent with no context to execute mechanically.
+  How to write a migration for the update-project-docs skill — as a script under
+  `migrations/scripts/` with a guide that explains it, or as a prose guide when
+  the rule allows one. Use when creating or reviewing anything under
+  `migrations/`, when the user says "write a migration", "write a migration
+  guide", "create migration steps", "document the upgrade path", or "review
+  migration quality". States the rule that picks the shape, describes the script
+  shape from the v2.8 → v2.9 reference, and carries the quality checklist a
+  migration must pass before it ships.
 ---
 
-# Migration Authoring Methodology
+# Migration Authoring
 
-A structured approach to writing migration guides that are reliably executable
-by agents. The core principle: **every step must be completable without creative
-judgment.**
+A migration is run by an agent in a consuming project with none of the context
+you have. Two shapes exist. Pick one by the rule below, build it to the
+description of that shape, and pass the checklist. The reference for the script
+shape is
+[`migrations/v2.8-to-v2.9.md`](../../../plugins/project-docs/skills/update-project-docs/migrations/v2.8-to-v2.9.md)
+and
+[`migrations/scripts/migrate-v2.8-to-v2.9.ts`](../../../plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.8-to-v2.9.ts);
+read both before writing either kind.
 
-## When to Use
+## The rule
 
-- Writing a new migration guide for a scaffold template version bump
-- Reviewing an existing migration guide before release
-- After a migration execution produces drift or errors (diagnose the guide, not
-  just the output)
+A migration is a **script** when any of these is true:
 
-## The Problem This Solves
+- a later step depends on a value an earlier step computed — a scaffold path, a
+  version string, a count, a generated directory;
+- a check must be able to stop the run — anything whose failure means the
+  adopter's tree is now wrong;
+- the migration must be re-runnable or partially applicable, so each phase has
+  to test its own precondition.
 
-Migration guides are written by someone with full context about a change — they
-know what changed, why, and how it fits together. The guide is executed by an
-agent with zero context — it reads the instructions and follows them literally.
-This asymmetry means anything left to interpretation will be interpreted
-differently than intended.
+A migration may remain a **guide** only when every shell block is self-contained
+— nothing flows between blocks — and every check exits non-zero on failure
+rather than echoing a word. A draft guide that cannot meet that becomes a
+script.
 
-## Authoring Principles
+**In practice, any migration that generates a scaffold is a script.** The
+scaffold's path is the first cross-block value: `v2.7-to-v2.8.md` sets
+`SCAFFOLD=$(ls -d .scaffold-tmp/*/ | head -1)` in step 3 and reads `$SCAFFOLD`
+in steps 4, 8 and 12. An agent runs each block in a different process, so the
+value is empty by step 4, `cp -R "$SCAFFOLD/scripts/pdocs/."` copies from
+`/scripts/pdocs/`, and the block exits 0. Its guard for that —
+`[ -n "$SCAFFOLD" ] ... || echo "STOP — re-derive SCAFFOLD"` — exits 0 as well.
+One process and real exit codes make both defects impossible.
 
-### 1. Uniform Specificity
+The rule is not "every migration is a script". A migration that adds one
+template and one README paragraph computes nothing and can stay prose.
 
-Every step in a migration guide must be at the same level of detail. If most
-steps provide exact before/after text, **all** steps must.
+## Which shape is mine
 
-**The failure mode:** Nine precise steps and one vague step. The vague step gets
-executed with the same mechanical confidence as the precise ones, producing
-subtle drift that passes verification but doesn't match the source of truth.
+Answer these about the draft, in order. The first "yes" decides.
 
-**The check:** After drafting all steps, scan them side by side. Flag any step
-that requires more judgment than its neighbors.
+1. Does it generate a scaffold, or read a version from one? **Script.**
+2. Does any block use a variable, path or number produced by an earlier block?
+   **Script.**
+3. Is there a check whose failure must stop the run — a copy that must have
+   arrived, a lint that must be clean before the markers move? **Script.**
+4. Might an adopter run it twice, or arrive with some of it already done?
+   **Script.**
+5. None of the above, and every check you can write ends in `exit 1`? **Guide.**
 
-### 2. Artifacts Over Descriptions
+## Script-shaped migration
 
-Provide the thing to insert, not a description of the thing to insert. This
-applies especially to:
+Two files under `migrations/`, plus a test file. Everything below is what the
+v2.9 migration does; describe it, do not reinvent it.
 
-- ASCII art (flowcharts, diagrams, box-drawing)
-- Complex markdown structures (tables, nested lists)
-- Multi-line blocks where formatting matters
-- Anything with visual structure
+### The script: `migrations/scripts/migrate-vX-to-vY.ts`
 
-**Don't:** "Add a decision diamond matching the existing style"
+- **One entry point, run with `bun` from the adopter's project root.** The
+  header comment carries a `Usage:` block and the exit codes; `parseArgs` is the
+  authority on the flag set, aliases included.
+  `if (import.meta.main) process.exit(main(process.argv.slice(2)))` at the
+  bottom; `main` is exported so the test file can call it.
+- **Flags:** `--root <path>` (the project; default the current directory),
+  `--dry-run` (report every phase's plan; change nothing in the project),
+  `--scaffold-dir <path>` (use an already-generated scaffold; skips the
+  network). Add others only for a behaviour the migration needs — v2.9 adds
+  `--skip-format` and `--re-adopt`. Reject an unknown flag; reject a flag whose
+  value is missing or empty.
+- **Exit codes are a contract:** `0` success · `1` the migration could not
+  complete · `2` bad invocation. Every failure is a `MigrationError` thrown from
+  inside a phase, caught in `main`, printed as `STOPPED: <named reason>`, and
+  exited `1`. Any other exception is also exit `1` with a named reason and a
+  line saying re-running is safe — a stack trace is not a reason.
+- **Phases, each self-verifying.** The v2.9 order: preflight, scaffold, the
+  change itself (refresh, format, adopt), verify, version markers, cleanup.
+  Every phase prints what it did (`✓`), what it skipped and why (`·`), or
+  throws. A phase that finds its work already done says so and continues; a
+  phase that cannot confirm its result stops the run. A phase whose precondition
+  is false for this tree reports that and continues, so the same command serves
+  a fresh tree and a partly-migrated one.
+- **Preflight** confirms this is a project-docs tree (`.project-docs.json`,
+  `docsRoot` resolves — or, for a migration that _installs_
+  `.project-docs.json`, `docs/README.md` with a `docs_version` line, since the
+  config is what the run writes), the tools exist (`bun`, `cookiecutter` unless
+  `--scaffold-dir`), and reads `git status`. Dirt in a path the run will not
+  touch is reported, not enforced — it is the adopter's repository. Dirt in a
+  path the run will write is a stop that names the path, with `--force` to
+  override (v2.6: the templates it would replace, `scripts/pdocs/`,
+  `docs/SCHEMA.md`, every document the codemod would mark — a replaced file's
+  uncommitted edit is gone and was never in git). A preflight may also stop on a
+  condition the adopter must decide before anything is written — v2.6's tier
+  check names every docs-root folder the lint would silently read as library —
+  and a stop there prints the exact lines that resolve it.
+- **Scaffold** generates into a private temp directory (`mkdtempSync`), never
+  into the project, and verifies the generated root has `docs/SCHEMA.md` and
+  `scripts/pdocs/`. **A dry run generates it too** — without one the version
+  phase has nothing to read and reports a number taken from the adopter's own
+  tree. Cleanup removes it in both modes.
+- **Copy phases copy from the scaffold and verify arrival.** `cpSync` from the
+  generated root, then check a file or marker that only the new version carries
+  (v2.9: `seed.ts` present, both new `SCHEMA.md` sections present). A
+  single-path copy checks a marker or the file's existence right after the copy,
+  and the test that watches it fail supplies a `--scaffold-dir` that lacks the
+  file (v2.6: a `scripts/pdocs/` with no `cli.ts`). A phase that copies many
+  files (v2.6: every template) may leave per-file arrival to the end-of-run
+  invariant, provided the invariant checks every file the phase wrote — then the
+  phase itself checks the source (a frontmatter block on each scaffold template)
+  and the invariant checks the destination. State whether the copy merges or
+  replaces; classify each path by `docs/SCHEMA.md` § "Who owns which file" —
+  **owned** is replaced, **seeded** is negotiated by hash, **theirs** is never
+  written. A first-adoption migration installs a **theirs** file that is absent
+  (v2.6: the `index.md` skeleton) and says so; it still never overwrites one.
+- **Counts parse structure.** A count of manifest entries is
+  `Object.keys(JSON.parse(...)).length`, never `grep -c`. `grep -c '": "'` on
+  the manifest matched its own `version` line, so an empty manifest counted 1
+  and passed the guard written to catch it.
+- **Version markers belong to a phase.** Both markers — `docs_version` in
+  `docs/README.md` and `version` in `.project-docs.json` — set together from the
+  scaffold's version, reported separately, and with a distinct line for "no such
+  line" versus "already at that value". The JSON is parsed and re-serialised,
+  never regex-substituted: a line-based `sed` rewrote every nested `"version"`
+  in a file the ownership table classifies as theirs.
+- **An end-of-run invariant check**, inside the program, for anything the phase
+  ordering guarantees. `manifestMatchesDisk` is the model: after every phase,
+  every recorded hash must still match the bytes on disk, and a mismatch fails
+  the run with a message naming the phase ordering that must hold. A test guards
+  an invariant only while the test exists; this guards every run in every
+  adopter's repository.
+- **Self-contained.** It runs inside a repository that has not adopted whatever
+  it installs, so it imports nothing from the tree it migrates — `node:` modules
+  and `Bun` only. Anything it needs from the lint is its own copy, pinned to the
+  original by a test in this repository: v2.9's `isSeeded` template predicate is
+  pinned to the registry by `scripts/seeded-coverage.test.ts`; the v2.6
+  codemod's folder → type table is pinned to `scripts/pdocs/lint/rules.ts` by
+  `describe("the copied tables equal the ones the lint enforces")` in its own
+  test file.
+- **One test seam, if wiring must be witnessed** — an environment variable read
+  at a single, commented call site (v2.9: `PDOCS_MIGRATE_TEST_MUTATE` corrupts a
+  recorded file between adopt and the self-check).
 
-**Do:** Provide the exact block with the exact characters, spacing, and
-alignment.
+### The tests: `migrations/scripts/migrate-vX-to-vY.test.ts`
 
-### 3. Before/After Pairs
+- **A `describe` of guards, each test breaking one guarded thing in a fixture
+  and asserting exit `1` and the reason text** — `expect(r.exitCode).toBe(1)`
+  and `expect(out(r)).toContain("...")`. v2.9's
+  `describe("guards that must be able to fire")` is the shape. Read the script's
+  `fail(` sites against these tests before shipping; a guard you cannot make
+  fail is redesigned, not annotated.
+- **A wiring witness** for every claim that a function is called: neuter the
+  call site in a disposable copy and expect the end-to-end run to fail. v2.9's
+  `"the self-check is WIRED, not merely exported"` is the shape. One witness per
+  phase, made by copying the script (and any sibling module it imports, so the
+  import still resolves) to a temp directory and replacing the one call line —
+  and the copy must throw if the line is not found, or a renamed call site
+  neuters nothing and passes. A phase whose absence lets a run _succeed_ that
+  should have stopped — the preflight — is witnessed the other way round: the
+  neutered copy exits 0 where the intact script exits 1.
+- **The already-done path and the dry run**: a second run verifies rather than
+  rewrites; `--dry-run` leaves the tree byte-identical.
+- **The bad-invocation path** exits 2, not 1.
 
-Every modification step should include:
+### The guide: `migrations/vX-to-vY.md`
 
-- **What to find** — the exact text that currently exists
-- **What to replace it with** — the exact text to put in its place
+It **explains** the command. It does not instruct an agent through steps,
+because there are none. Headings, in the v2.9 order:
 
-This turns every step into a mechanical find-and-replace. The executing agent
-doesn't need to understand the surrounding context or make placement decisions.
+- `## Summary` — what changed and why, ending with a bold **What changes in your
+  tree:** sentence naming every path the script writes.
+- `## This migration is a script` — one command does the whole migration, every
+  phase verifies itself, any failure stops the run with a non-zero exit and a
+  named reason; then the two-sentence reason (a guard computed in one block and
+  consumed in the next runs in a different process; an echoed string cannot fail
+  a run).
+- `## What's New` / `## What Moved` / `## What's Removed` — merged when the
+  answer is "nothing, in either case".
+- `## Run it` — the `--dry-run` command, what to read in its output, the real
+  command, what to commit; an `### Options` table; the three exit codes. Any
+  shell variable in a block is either set in that block or replaced by the
+  literal path, and the prose says so.
+- `## What it does, phase by phase` — one numbered entry per `step()` in the
+  script, in the script's order, naming what stops the run.
+- `## After the script` — only when the migration hands work to a person that no
+  script can do (v2.6: the backfill, the catalog, turning the gate on, a cycle).
+  Numbered `###` subsections in the order they must happen, each saying why it
+  sits where it does. These are not migration steps and carry no `[Agent]`
+  label; they are what the script's last line hands off to.
+- `## What it cannot check` — what a person must confirm: that the result is
+  committed, that a sentence is true, that a chosen thing is the right one. v2.9
+  carries this as the last bullets of its Verification section; either placement
+  satisfies the checklist.
+- Any section the migration's own behaviour needs — v2.9:
+  `## If you run it twice`, `## What adoption does not do`.
+- `## Cross-Reference Updates` — even when it reads "None".
+- `## Verification` — **output lines and an exit code**, not commands to run.
+  Each line the script prints on success, in order, and `Migration complete.`
+  with exit 0 as the check.
 
-### 4. One Verification Per Change
+No `[Agent] N.` steps. No `## Checklist`. The script's output is the checklist.
 
-Every step that modifies a file should have a corresponding verification
-command. If you can't write a grep that confirms the change was applied
-correctly, the step may be underspecified.
+## Guide-shaped migration
 
-### 5. Copy Commands for New Files
+Use only when the rule allows it. The shape is
+`plugins/project-docs/skills/update-project-docs/SKILL.md` § "Creating New
+Migration Guides", guide-shaped structure: `## Summary`, `## What's New`,
+`## What Moved`, `## What's Removed`, `## Step-by-Step Migration`,
+`## Cross-Reference Updates`, `## Verification`, `## Checklist`.
 
-When a migration adds new files, prefer `cp` from a scaffold source over inline
-content. This avoids the guide going stale when the template evolves. When
-inline content is necessary (e.g., the scaffold isn't available), provide the
-complete file contents.
+Write every step so a fresh agent completes it without judgment:
 
-## Writing Process
+- **Every shell block is self-contained.** Nothing set in one block is read in
+  another. If a step needs a path or a version, the block that uses it computes
+  it — and if two blocks need the same computed value, the migration is a
+  script.
+- **Every check exits non-zero on failure.** A check is
+  `<test> || { echo "STOP — <why>"; exit 1; }`. Never `&& echo ok || echo STOP`,
+  which exits 0 either way.
+- **Uniform specificity.** Every step is at the same level of detail. Nine
+  before/after steps and one "add a decision diamond matching the existing
+  style" means the tenth is where the guide drifts — the v2.3 → v2.4 flowchart.
+  After drafting, scan the steps side by side and flag any that needs more
+  judgment than its neighbours.
+- **Artifacts over descriptions.** Provide the block to insert — ASCII art,
+  tables, multi-line markdown — with its exact characters and spacing.
+- **Before/after pairs** for every modification: the exact text to find, with
+  enough surrounding lines to match one place in the file, and the exact text to
+  put there.
+- **Copy from the scaffold, not inline content.** New and replaced files come
+  from a generated scaffold with `cp`, verified with `ls` or `diff`, and the
+  generation and the copy sit in the same block. Inline the full contents only
+  when no scaffold can be generated. Say for each file whether to overwrite or
+  merge, and what to preserve when merging.
+- **Removals** are `rm` with the exact path, verified by `ls ... 2>/dev/null`
+  printing nothing.
 
-### Phase 1: Inventory Changes
+The same four principles — uniform specificity, artifacts, before/after,
+copy-from-scaffold — apply to a script's copy phases and to any content a
+script-shaped guide still asks a person to write.
 
-Before writing any steps, catalog everything that changed:
+## Quality checklist
 
-1. Diff the cookiecutter template against the previous version
-2. Categorize each change: new file, modified file, removed file, renamed
-3. For modified files, identify the exact blocks that changed
-4. Note which changes are mechanical (copy/replace) vs. structural (requires
-   understanding context)
+Run it before the migration ships. The v2.8 → v2.9 migration passes every item
+below; `v2.7-to-v2.8.md` fails **No cross-block state** — counted with
+`grep -nE '\$\{?(SCAFFOLD|VERSION)'`, it has 17 lines carrying `$SCAFFOLD` or
+`$VERSION`, of which 8 are fenced reads of a value another block produced: step
+3's `ls` assigns `$SCAFFOLD`, and step 3's own verify and guard blocks, step 4's
+`cp`, step 8's template loop and `AGENTS.md` copy, and step 12's `VERSION=` line
+each read it in a block of their own. The other 9 are prose, the assigning
+block, and step 12's same-block `$VERSION` reads. It also fails **Every check
+can fail** (`|| echo "STOP — re-derive SCAFFOLD"`). A checklist the reference
+cannot pass is the defect, not the reference.
 
-### Phase 2: Draft Steps
+**Both shapes:**
 
-Write each step following the principles above:
+- [ ] **Shape matches the rule.** If the migration generates a scaffold, reads a
+      value across blocks, needs a stopping check, or must be re-runnable, it is
+      a script. A guide that does any of these is the wrong shape.
+- [ ] **No cross-block state.** `grep -nE '\$\{?[A-Z_]+' migrations/vX-to-vY.md`
+      — every variable name, not a fixed list. A fenced hit passes only if its
+      value is known before any block runs (the skill directory is the one such
+      value) and the guide tells the reader to set it in the block that reads it
+      or paste the literal. A value that exists only because an earlier block
+      produced it — a generated path, a version read from a file, a count — is
+      computed whatever the prose says, and a hit reading one fails.
+      `v2.8-to-v2.9.md:79` passes: `$SKILL_DIR` is the reader's own path, set at
+      line 61, and line 65 says to set it again in the same block or paste it.
+      `v2.7-to-v2.8.md` step 4's `cp -R "$SCAFFOLD/scripts/pdocs/."` fails: step
+      3's `ls` produced `$SCAFFOLD`, in another block.
+- [ ] **Every check can fail.** Each shell check ends
+      `|| { echo "..."; exit 1; }`; each script check throws. Nothing ends in
+      `&& echo "ok" || echo "STOP"`.
+- [ ] **The precondition is a shell test that is true when work remains**, in
+      the `Applies If` cell of `## Available Migrations`. `Applies If` routes;
+      it is not what a script re-tests. Each script phase tests its own
+      precondition and reports already-done (v2.9's adopt phase: "already
+      exists"; v2.6's layer phase: "already installed and identical"), and a
+      guide repeats the precondition in prose. Where a file name is ambiguous,
+      test content: `[ -f docs/lint.ts ]` is true on a project with its own
+      unrelated `docs/lint.ts`. Where a tree can have part of what the migration
+      installs, the test names every part (v2.6: `docs/SCHEMA.md` or
+      `scripts/pdocs/cli.ts` missing).
+- [ ] **Files that land come from a generated scaffold and are verified on
+      arrival** — a marker only the new version carries or, for a single path,
+      its existence after the copy; a phase that writes many files may leave
+      arrival to the end-of-run invariant when the invariant checks every file
+      it wrote. Inline content only when no scaffold can be generated.
+- [ ] **Overwrite or merge is stated per path**, by ownership: owned is
+      replaced, seeded is negotiated by hash, theirs is never written.
+- [ ] **What it cannot check is named** — a commit, a sentence's truth, a choice
+      — so the reader knows what is still theirs.
+- [ ] **`## Cross-Reference Updates` is present**, even when it reads "None".
+- [ ] **Verification names outcomes, not intentions.** A script guide lists the
+      output lines and the exit code; a prose guide lists commands that exit
+      non-zero on failure.
+- [ ] **The `## Available Migrations` row exists**, with the precondition in
+      `Applies If`; a script's Summary leads with **Run as a script** and names
+      the command and `--dry-run`.
 
-1. **New files** — `cp` command from scaffold, or full inline content
-2. **Full file replacements** — `cp` command when the file can be overwritten
-   (templates, structural READMEs). Note when the user may have customizations
-   that need merging instead.
-3. **Targeted modifications** — before/after text blocks with enough surrounding
-   context to be unique in the file
-4. **Removals** — `rm` command with the exact path
+**Script-shaped only:**
 
-For targeted modifications, include enough context in the "before" block to
-uniquely identify the location. A three-line before block is better than a
-one-line block that might match multiple locations.
+- [ ] **One entry point, `bun`, and the three flags** `--root`, `--dry-run`,
+      `--scaffold-dir`; the guide's options table and `parseArgs` accept the
+      same flag set, aliases included.
+- [ ] **Exit codes are `0` / `1` / `2`**, every stop is `STOPPED: <reason>`, and
+      an unexpected exception is still exit 1 with a named reason.
+- [ ] **The dry run generates the scaffold and changes nothing in the project**;
+      the test proves the tree is byte-identical afterwards.
+- [ ] **Every phase reports** — did, skipped-and-why, or stopped — and a phase
+      whose work is already done says so and continues.
+- [ ] **Counts parse structure**, never pattern-match.
+- [ ] **Both version markers are set by one phase**, reported separately, and
+      the JSON is parsed and re-serialised.
+- [ ] **An end-of-run invariant check runs inside the program** for anything the
+      phase ordering guarantees.
+- [ ] **The script imports nothing from the tree it migrates.** Any copied table
+      or predicate is pinned to its original by a test here.
+- [ ] **The test file has a `describe` of guards whose every test asserts exit
+      `1` and the reason text**, a wiring witness exists for every "this is
+      called" claim, and any test seam is a single commented call site.
+- [ ] **The guide explains and does not instruct**: the script-shaped headings,
+      one phase entry per `step()` in the script's order, no `[Agent]` steps, no
+      `## Checklist`.
 
-### Phase 3: Write Verification
+**Guide-shaped only:**
 
-For each step, write a verification command:
-
-- `ls` for new files
-- `grep` for content changes
-- `! grep` for removed content
-- `diff` against scaffold for full-file copies
-
-Group these into a verification section at the end, but also consider inline
-verification notes after complex steps.
-
-### Phase 4: Quality Review
-
-Run through the quality checklist below before shipping the guide.
-
-## Quality Checklist
-
-Before finalizing any migration guide:
-
-- [ ] **Uniform specificity** — all steps are at the same level of detail; no
-      step requires more creative judgment than its neighbors
-- [ ] **No description-only steps** — every step that adds or modifies content
-      provides the actual content, not a description of what to add
-- [ ] **Before/after pairs** — every modification step includes both the text to
-      find and the text to replace it with
-- [ ] **Unique match context** — before blocks include enough surrounding
-      context to match exactly one location in the file
-- [ ] **Verification coverage** — every change has a corresponding verification
-      command
-- [ ] **Copy vs. merge guidance** — for each file update, the guide explicitly
-      states whether to overwrite or merge (and when merging, what to preserve)
-- [ ] **Ordering is correct** — steps that depend on earlier steps come after
-      them; independent steps are grouped logically
-- [ ] **Scaffold cleanup** — includes step to remove temporary scaffold
-      directory
-- [ ] **Version marker** — includes step to update `docs_version` frontmatter
-- [ ] **Checklist matches steps** — the final checklist has one item per action,
-      no steps are missing from the checklist
+- [ ] **Uniform specificity** — no step requires more judgment than its
+      neighbours.
+- [ ] **Artifacts over descriptions** — every insertion provides the block.
+- [ ] **Before/after pairs with unique match context** for every modification.
+- [ ] **The guide-shaped headings**, `## Step-by-Step Migration` through
+      `## Checklist`, are all present.
 
 ## Lessons Learned
 
-This section captures specific authoring mistakes encountered in practice. Add
-to it as new failure modes are discovered.
+**[A guard must be able to fail](../../../docs/lessons-learned/a-guard-must-be-able-to-fail.md)**
+— its "Do this" clauses are authoring requirements here:
 
-### Flowchart / ASCII Art Steps
+- **Write the failing case first and watch it fail.** Before trusting a guard,
+  break the thing it guards and confirm the guard reports it. If you cannot make
+  it fail, it is not a guard. A green suite is not the observation; record it in
+  the project's session note under a `Guards watched failing` heading, one line
+  per guard naming the test that covers it, so the note and the suite can be
+  read against each other.
+- **A shell check is `|| { echo "..."; exit 1; }`**, never an echoed word. The
+  exit code is the result.
+- **A claim about wiring is tested by neutering the call site**, not the
+  function. A unit test of a function never shows that anything calls it.
+- **A count parses the structure and counts its keys.** Never pattern-match.
+- **Prefer a runtime assertion over a test** for an invariant that must hold in
+  someone else's repository later. A test guards it only while the test exists
+  and only where it runs; a check inside the program guards every run.
 
-**Problem:** A migration step said "add a decision diamond" without providing
-the actual ASCII art. The executing agent composed its own version —
-functionally correct but visually inconsistent with the existing flowchart
-style.
-
-**Fix:** Always provide the exact ASCII art block to insert, including the
-before block for context. Treat ASCII art the same as code — literal content,
-not intent.
-
-**Reference:**
-[migration-steps-uniform-specificity](../../../docs/lessons-learned/migration-steps-uniform-specificity.md)
+**[Migration Steps Must Be Uniformly Specific](../../../docs/lessons-learned/migration-steps-uniform-specificity.md)**
+— provide the artifact, never a description of it, at the same specificity in
+every step. It is the source of the guide-shaped principles above and applies to
+a script wherever the script asks a person to write content.
 
 ---
 
 ## Related Resources
 
 - [Update Project Docs skill](../../../plugins/project-docs/skills/update-project-docs/SKILL.md)
-  — the consumer of migration guides
+  — runs migrations in sequence (§ Step 4) and states both file structures (§
+  Creating New Migration Guides)
+- [Migration: v2.8 → v2.9](../../../plugins/project-docs/skills/update-project-docs/migrations/v2.8-to-v2.9.md)
+  and
+  [its script](../../../plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.8-to-v2.9.ts)
+  — the reference for the script shape
 - [Scaffold Update Checklist](../scaffold-update-checklist/SKILL.md) — the
-  release workflow that triggers migration guide creation
+  release workflow that triggers a migration, and how each shape is validated
 - [Lessons Learned](../../../docs/lessons-learned/README.md) — where migration
   authoring failures are documented

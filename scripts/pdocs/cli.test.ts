@@ -999,3 +999,100 @@ describe("a reader that leaves is not a fault", () => {
     expect(JSON.parse(stderr).error.kind).toBe("usage");
   });
 });
+
+describe("`find --type` validates against the project's own vocabulary", () => {
+  const LINT = {
+    adopting: false,
+    exclude: [] as string[],
+    durable: [
+      "architecture",
+      "specifications",
+      "interaction-design",
+      "playbooks",
+      "lessons-learned",
+      "memories",
+    ],
+    workbench: [
+      "backlog",
+      "briefs",
+      "investigations",
+      "projects",
+      "reports",
+      "fragments",
+      "cycles",
+    ],
+    skip: ["_archive", "superpowers"],
+  };
+
+  const declaring = () => ({
+    lint: {
+      ...LINT,
+      workbench: [...LINT.workbench, "runbooks"],
+      types: { runbooks: "runbook" },
+    },
+  });
+
+  const RUNBOOK = `---
+type: runbook
+title: Restart the Queue
+description: Bring the job queue back after a wedged deploy.
+tags: [ops, queue]
+status: stable
+generated: { by: cli-test, at: 2026-01-01 }
+---
+
+# Restart the Queue
+`;
+
+  test("an unknown type is refused, and the refusal names the set", () => {
+    // Before this, a mistyped type returned `ok: true, count: 0` at exit 0 —
+    // indistinguishable from "nothing matches", which reads as an answer.
+    const { code, stdout, stderr } = run([
+      "find",
+      "--type",
+      "nonsense",
+      "--root",
+      tree({}),
+    ]);
+    expect(code).toBe(ExitCode.Usage);
+    expect(stdout).toBe("");
+    const out = JSON.parse(stderr);
+    expect(out.ok).toBe(false);
+    expect(out.error.details.token).toBe("nonsense");
+    expect(out.error.choices).toContain("memory");
+    expect(out.error.choices).toContain("playbook");
+  });
+
+  test("a type this project declared is accepted", () => {
+    // THE REGRESSION GUARD. The obvious implementation of the test above
+    // validates against the built-in list, which rejects exactly the types
+    // `lint.types` exists to allow. That test passing while this one fails is
+    // worse than shipping neither.
+    const root = tree(
+      { "docs/runbooks/restart-the-queue.md": RUNBOOK },
+      declaring()
+    );
+    const { code, stdout } = run([
+      "find",
+      "--type",
+      "runbook",
+      "--format",
+      "json",
+      "--root",
+      root,
+    ]);
+    expect(code).toBe(ExitCode.Success);
+    expect(JSON.parse(stdout).data.count).toBe(1);
+  });
+
+  test("a declared type appears in the refusal's set", () => {
+    const { stderr } = run([
+      "find",
+      "--type",
+      "nope",
+      "--root",
+      tree({}, declaring()),
+    ]);
+    expect(JSON.parse(stderr).error.choices).toContain("runbook");
+  });
+});

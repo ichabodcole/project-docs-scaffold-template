@@ -445,3 +445,89 @@ describe("templateProblems", () => {
 afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });
 });
+
+// ---------------------------------------------------------------------------------------
+
+describe("rows a project declares for itself", () => {
+  const withTypes = (
+    types: Record<string, string>,
+    tiers: Partial<{ durable: string[]; workbench: string[] }> = {}
+  ) =>
+    buildRegistry({
+      ...DEFAULT_CONFIG,
+      lint: { ...DEFAULT_CONFIG.lint, ...tiers, types },
+    });
+
+  const find = (rows: RegistryRow[], type: string) =>
+    rows.filter((r) => r.type === type);
+
+  test("a declared folder becomes one row, lintable but not creatable", () => {
+    const rows = withTypes(
+      { runbooks: "runbook" },
+      { workbench: [...DEFAULT_CONFIG.lint.workbench, "runbooks"] }
+    );
+    const found = find(rows, "runbook");
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      folder: "runbooks",
+      scope: "docs",
+      template: null,
+      creatable: false,
+    });
+    // The message `pdocs new` gives back has to say WHY, not just refuse.
+    expect(found[0]?.uncreatableReason).toContain(".project-docs.json");
+  });
+
+  test("the tier follows the array the folder is listed in", () => {
+    expect(
+      find(
+        withTypes(
+          { runbooks: "runbook" },
+          { workbench: [...DEFAULT_CONFIG.lint.workbench, "runbooks"] }
+        ),
+        "runbook"
+      )[0]?.tier
+    ).toBe("workbench");
+
+    expect(
+      find(
+        withTypes(
+          { runbooks: "runbook" },
+          { durable: [...DEFAULT_CONFIG.lint.durable, "runbooks"] }
+        ),
+        "runbook"
+      )[0]?.tier
+    ).toBe("library");
+  });
+
+  test("a folder in neither array is library, matching what the lint enforces", () => {
+    // `graphTier` skips only `workbench` and `skip`, so anything else IS
+    // library. The registry has to agree, or a declared row is registered
+    // workbench while the lint holds it to the catalog obligation.
+    expect(find(withTypes({ runbooks: "runbook" }), "runbook")[0]?.tier).toBe(
+      "library"
+    );
+  });
+
+  test("a declaration colliding with a built-in folder is ignored", () => {
+    // POSITIVE assertion. The previous version of this test asserted the
+    // ABSENCE of a string that was absent under both behaviours: deleting the
+    // collision guard outright left the whole suite green.
+    const rows = withTypes({ playbooks: "runbook" });
+    expect(find(rows, "runbook")).toHaveLength(0);
+    const playbooks = rows.filter((r) => r.folder === "playbooks");
+    expect(playbooks).toHaveLength(1);
+    expect(playbooks[0]?.type).toBe("playbook");
+    expect(playbooks[0]?.creatable).toBe(true);
+  });
+
+  test("a declaration colliding with a built-in TYPE is ignored too", () => {
+    const rows = withTypes({ someplace: "playbook" });
+    expect(find(rows, "playbook")).toHaveLength(1);
+    expect(find(rows, "playbook")[0]?.folder).toBe("playbooks");
+  });
+
+  test("declaring nothing changes nothing", () => {
+    expect(withTypes({}).length).toBe(ROWS.length);
+  });
+});

@@ -85,6 +85,45 @@ being silently skipped at release time. A `generic` entry needs the
 fails loudly if it is missing, because release-please would leave that file
 alone for ever.
 
+## Mirroring is not ownership
+
+Two different questions, and conflating them is easy enough that it got into a
+proposal before the plan caught it:
+
+- **Mirroring** is repo ↔ payload, in THIS repository. `check-mirror.sh`
+  enforces it. Both copies are ours.
+- **Ownership** is what a migration does in a CONSUMER's repository.
+  `docs/SCHEMA.md` § "Who owns which file" states it: **owned** (overwritten
+  every migration), **seeded** (installed once, then reconciled by hash), or
+  **theirs** (never touched).
+
+**A seeded file still gets mirrored.** Templates are seeded — an adopter may
+edit them and a migration will not overwrite their edit — and they are _also_
+byte-mirrored here, because the repo copy and the payload copy are both ours and
+must agree. Exempting them from the mirror to express "seeded" would silence a
+live check over 19 file pairs and express nothing. Exempt a file only when THIS
+repo deliberately keeps a different copy from the payload, which is why
+`PROJECT_MANIFESTO.md` and `index.md` are the only two.
+
+**Which files are seeded** is decided by shape, in three places that must agree:
+`_is_seeded` in `hooks/post_gen_project.py`, `isSeeded` in the current
+`migrations/scripts/migrate-*.ts`, and the sentence in `docs/SCHEMA.md`. The
+authority is `scripts/pdocs/lint/registry.ts`, which declares a `template:` per
+type — and `scripts/seeded-coverage.test.ts` asserts the predicate covers every
+one of them. It exists because the first version matched `TEMPLATE` as a prefix
+and silently skipped `YYYY-MM-DD-TEMPLATE-investigation.md` and
+`YYYY-MM-DD-TEMPLATE-report.md`, recording 17 of 19 while its own comment
+claimed shape matching meant nothing could be forgotten.
+
+**Adding a template?** Nothing to do beyond the usual mirroring, as long as its
+name contains `TEMPLATE` or ends `.template.md` and the registry declares it —
+`seeded-coverage` fails loudly if the registry and the predicate disagree.
+
+**`docs/.pdocs-seed.json` is generated, never authored.** The post-gen hook
+writes it at install time from the files actually installed. Do **not** add a
+copy to the payload: a committed manifest would need its own gate to stay
+honest, which is the reason it is generated instead.
+
 **Structurally mirrored but content differs** — these two are exempted by name
 in `scripts/check-mirror.sh`, so nothing checks them. Adding a third is a
 decision, not a convenience:
@@ -115,8 +154,36 @@ subsection leaves the two disagreeing. See
 1. Edit the cookiecutter copy first (under `{{cookiecutter.project_slug}}/`)
 2. Create or update the migration guide in
    `plugins/project-docs/skills/update-project-docs/migrations/`
-3. Apply the migration to this project's own `docs/` — follow the same steps end
-   users would, to validate the guide works
+3. Validate the migration, one way per shape. The rule that picks the shape is
+   in [migration-authoring](../migration-authoring/SKILL.md): a script when a
+   later step depends on a computed value, a check must stop the run, or it must
+   be re-runnable; a guide only when every block is self-contained and every
+   check exits non-zero.
+   - **Script** — against a generated fixture, never this repository. The
+     script's test file builds one — `fixtureA` (a v2.6 tree) and `fixtureB`
+     (the orphaned tree) in `migrate-v2.6-to-v2.7.test.ts` — and runs the script
+     against it under
+     `bun test plugins/project-docs/skills/update-project-docs/migrations/scripts/`
+     from the repository root. By hand, pass the path such a builder returns:
+
+     ```bash
+     bun plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-vX-to-vY.ts \
+       --root <the fixture root the test file's builder returns> --dry-run
+     ```
+
+     Read the plan, then run the same command without `--dry-run`. Expect exit 0
+     and the output lines the guide's `## Verification` names.
+
+   - **Guide** — follow its steps as an end user would, against this project's
+     own `docs/`, when its `Applies If` is true here.
+
+   **This repository is not in the v2.6 population.** Its markers are current,
+   it has `docs/.pdocs-seed.json`, and it never had `docs/lint.ts` — so
+   `v2.6-to-v2.7`'s `[ ! -f docs/SCHEMA.md ]` is false here, and "apply it to
+   our own docs" is unavailable for that migration and for any other whose
+   precondition is false in this tree. Run the `Applies If` first; when it is
+   false, the fixture and a real consuming project are the validation.
+
 4. Run Prettier on changed files to prevent line-wrapping drift
 5. `npm run check:mirror` — it should say `mirror: clean`
 
@@ -170,13 +237,23 @@ is the defect, not its absence.
 
 **Migration path (dogfood the update-project-docs skill):**
 
-- [ ] Create migration guide in
-      `plugins/project-docs/skills/update-project-docs/migrations/` — use the
-      `migration-authoring` skill for quality checks
+- [ ] Create the migration in
+      `plugins/project-docs/skills/update-project-docs/migrations/` in the shape
+      [migration-authoring](../migration-authoring/SKILL.md)'s rule picks: a
+      **script** (`scripts/migrate-vX-to-vY.ts`, its test file, and a guide that
+      explains it) when a later step depends on a computed value, a check must
+      stop the run, or it must be re-runnable; a **guide** only when every block
+      is self-contained and every check exits non-zero. Pass that skill's
+      quality checklist
 - [ ] Update migration table in
       `plugins/project-docs/skills/update-project-docs/SKILL.md`
-- [ ] Apply the migration to this project's own `docs/` — follow the same steps
-      end users would to validate the guide works
+- [ ] Validate it, one way per shape: a **script** runs `--dry-run` and then the
+      run against a generated fixture (sync procedure step 3 has the command); a
+      **guide** is followed as an end user would, against this project's own
+      `docs/` when its `Applies If` is true here. This repository is not in the
+      v2.6 population — `[ ! -f docs/SCHEMA.md ]` is false here — so "apply it
+      to our own docs" is unavailable for `v2.6-to-v2.7` and any other migration
+      whose precondition is false in this tree
 
 **Project-specific updates (not mirrored):**
 
@@ -354,9 +431,14 @@ patch-only changes.
 
 **Apply to this project via migration path:**
 
-- [ ] Update or create migration guide if this is a structural change
-- [ ] Apply changes to project's own `docs/README.md` and
-      `docs/projects/README.md` following the migration steps
+- [ ] Update or create the migration if this is a structural change, in the
+      shape [migration-authoring](../migration-authoring/SKILL.md)'s rule picks
+- [ ] Validate it, one way per shape: a **script** runs `--dry-run` and then the
+      run against a generated fixture (sync procedure step 3 has the command); a
+      **guide** is followed as an end user would, against this project's own
+      `docs/README.md` and `docs/projects/README.md`, when its `Applies If` is
+      true here — it is false here for `v2.6-to-v2.7`, so "apply it to our own
+      docs" is unavailable for that migration
 
 **Project-specific:**
 

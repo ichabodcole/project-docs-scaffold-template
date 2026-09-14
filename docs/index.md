@@ -70,6 +70,9 @@ What went wrong or right, distilled so it transfers. — see
 - [Migration Steps Must Be Uniformly Specific](./lessons-learned/migration-steps-uniform-specificity.md)
   — In an agent-run guide, one underspecified step becomes the failure point —
   the specificity has to be uniform, not average.
+- [A guard must be able to fail](./lessons-learned/a-guard-must-be-able-to-fail.md)
+  — A check that cannot report failure certifies whatever it is pointed at;
+  write the failing case first and watch it fail.
 
 ## Memories
 
@@ -165,3 +168,7 @@ What has been happening lately, for a cold start. — see
 - [What you ship says who owns it](./memories/2026-09-08-shipped-ownership-boundary.md)
   — Development-process artefacts leak into a payload one convenience at a time,
   and each one quietly hands the consumer something to maintain.
+- [The v2.6 migration is a script, and the skill teaches the shape](./memories/2026-09-13-migration-shape-script.md)
+  — v2.6-to-v2.7 became a nine-phase self-verifying script authored under a
+  rewritten migration-authoring skill, ran for real on MediaForge, and six older
+  guides went legacy; project-docs 3.10.0.

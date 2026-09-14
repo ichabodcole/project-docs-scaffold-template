@@ -167,7 +167,7 @@ export function workbenchFiles(ctx: Ctx): Array<{
         type:
           folder === "projects"
             ? projectType(path)
-            : (SPEC[folder]?.type ?? ""),
+            : (SPEC[folder]?.type ?? ctx.config.lint.types[folder] ?? ""),
       });
     }
   }
@@ -212,7 +212,11 @@ export function libraryFiles(ctx: Ctx): Array<{
     out.push({
       path,
       rel,
-      type: ROOT_PAGE_TYPE[name] ?? DURABLE_TYPE[folder] ?? "",
+      type:
+        ROOT_PAGE_TYPE[name] ??
+        DURABLE_TYPE[folder] ??
+        ctx.config.lint.types[folder] ??
+        "",
     });
   }
   return out;
@@ -540,7 +544,11 @@ export function graphTier(ctx: Ctx): DocsLintReport {
   const excluded = excluder(ctx);
   return collectDocsLint({
     root: ctx.docsRoot,
-    types: DURABLE_TYPES,
+    // A type this project declared is a known type. Passing only the built-in
+    // list here made a declared durable folder report `BAD type` even though
+    // the registry and both position resolvers had accepted it — the third
+    // closed set, and the one that only a test found.
+    types: [...DURABLE_TYPES, ...Object.values(ctx.config.lint.types)],
     nonPageDirs: [
       ...ctx.config.lint.workbench,
       ...ctx.config.lint.skip,

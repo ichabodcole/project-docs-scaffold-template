@@ -979,3 +979,81 @@ describe("--root", () => {
     expect(stdout).not.toContain("across 2 files");
   });
 });
+
+// ---------------------------------------------------------------------------------------
+
+describe("a project that declares its own document types", () => {
+  const runbook =
+    fm({
+      type: "runbook",
+      title: "Restart the Queue",
+      description: "Bring the job queue back after a wedged deploy.",
+      tags: "[ops]",
+      status: "stable",
+      generated: GENERATED,
+    }) + "# Restart the Queue\n";
+
+  const catalog = (entries: string) =>
+    fm({
+      type: "index",
+      title: "Catalog",
+      description: "The catalog.",
+      tags: "[catalog]",
+      status: "stable",
+      generated: GENERATED,
+    }) + `# Catalog\n\n${entries}\n`;
+
+  test("a declared folder's pages carry the type it names", () => {
+    const ctx = fixture(
+      { "docs/runbooks/restart-the-queue.md": runbook },
+      {
+        types: { runbooks: "runbook" },
+        workbench: [...DEFAULT_CONFIG.lint.workbench, "runbooks"],
+      }
+    );
+    expect(thinTier(ctx)).toEqual([]);
+  });
+
+  test("withdrawing the declaration restores the rejection", () => {
+    // The perturbation test for the one above: without it, a passing check
+    // proves the lint is quiet rather than that it is looking.
+    const ctx = fixture(
+      { "docs/runbooks/restart-the-queue.md": runbook },
+      { workbench: [...DEFAULT_CONFIG.lint.workbench, "runbooks"] }
+    );
+    expect(thinTier(ctx).some((p) => p.startsWith("WRONG TYPE"))).toBe(true);
+  });
+
+  test("a declared type may be durable, and carries the catalog obligation", () => {
+    const ctx = fixture(
+      {
+        "docs/index.md": catalog(""),
+        "docs/runbooks/restart-the-queue.md": runbook,
+      },
+      {
+        types: { runbooks: "runbook" },
+        durable: [...DEFAULT_CONFIG.lint.durable, "runbooks"],
+      }
+    );
+    expect(
+      graphTier(ctx).problems.some((p) => String(p).includes("ORPHAN"))
+    ).toBe(true);
+  });
+
+  test("catalogued, the same durable page is clean", () => {
+    const ctx = fixture(
+      {
+        "docs/index.md": catalog(
+          "- [Restart the Queue](./runbooks/restart-the-queue.md) — Bring the job queue back after a wedged deploy."
+        ),
+        "docs/runbooks/restart-the-queue.md": runbook,
+      },
+      {
+        types: { runbooks: "runbook" },
+        durable: [...DEFAULT_CONFIG.lint.durable, "runbooks"],
+      }
+    );
+    expect(graphTier(ctx).problems).toEqual([]);
+  });
+
+});

@@ -132,13 +132,24 @@ for the ones that are, the check costs a single `ls`.
 For each migration file:
 
 1. Read the migration guide
-2. Follow its steps in order — most migrations have a companion script in
-   `migrations/scripts/` that handles mechanical steps. Run `--dry-run` first to
-   preview, then run without the flag. Only content-editing steps (flowchart
-   updates, README prose) remain for the agent. The `.sh` scripts run with
-   `bash`; `migrate-v2.6-to-v2.7.ts` runs with `bun`, and the guide's step 2
-   installs it.
-3. Verify the checklist at the end
+2. **A script-shaped migration has no steps to follow** — its guide carries a
+   `## This migration is a script` section (`v2.6-to-v2.7` and `v2.8-to-v2.9`
+   today): read the guide, run the script with `--dry-run`, read the plan it
+   prints, run it without the flag, and read the output lines its
+   `## Verification` section names — the exit code is the check. The `.ts`
+   scripts run with `bun`, which must already be on PATH;
+   `migrate-v2.6-to-v2.7.ts` checks for it and stops if it is not. A script
+   fetches its scaffold from the published template, which can lag the plugin
+   that ships the migration; if its scaffold phase stops saying the scaffold is
+   older than the migration requires, the guide's `## Run it` section says how
+   to generate one from a checkout and pass `--scaffold-dir`. **A guide-shaped
+   migration** (the legacy rows) is followed step by step, in order — most have
+   a companion `.sh` script in `migrations/scripts/` that handles the mechanical
+   steps, run with `bash`, `--dry-run` first to preview, then without the flag.
+   Only content-editing steps (flowchart updates, README prose) remain for the
+   agent.
+3. Verify: the checklist at the end of a guide, or the output lines and exit 0
+   of a script
 4. Move to the next migration
 
 ### Step 5: Update Version Marker
@@ -222,8 +233,8 @@ Expect a version string from `--version`, `docs-lint: clean`, both artefact
 lines reporting clean, and one version value in both markers. A `FAIL` on either
 artefact line means an older scaffold's development setup is still installed:
 the CLI's own tests running in the project's suite, or its files being
-typechecked under a `tsconfig` they were never written for. The migration
-guide's step 6 removes both.
+typechecked under a `tsconfig` they were never written for.
+[v2.7-to-v2.8](migrations/v2.7-to-v2.8.md)'s step 6 removes both.
 
 Shortcut scripts are deliberately not checked. The scaffold ships no
 `package.json`, so `docs:*` entries are the project's own business — if it has
@@ -234,34 +245,34 @@ strings it made stale and greps for them in its own Verification section — tho
 are per-migration and Step 4 ran them. What is common to every path is that the
 tool exists, answers, and agrees with the markers.
 
-**If check 1 fails and `docs/SCHEMA.md` exists, no migration claimed this
-project.** `v2.6-to-v2.7`'s presence check is `[ ! -f docs/SCHEMA.md ]` and
-`v2.7-to-v2.8`'s is `[ -f docs/lint.ts ]` — both false for a tree that has the
-frontmatter layer but never got the tooling, so Step 3 dropped every candidate
-and Step 4 did nothing. It arises from a partial adoption rather than from a
-version step: `docs/` copied across from a generated project without `scripts/`,
-or the current-directory cookiecutter install interrupted before it moved
-`scripts/` up, or `docs/lint.ts` deleted in a cleanup with nothing put in its
-place.
+**If check 1 fails and `docs/SCHEMA.md` exists, this is a partial adoption, not
+a version step.** The tree has the frontmatter layer's contract and never got
+the tooling that reads it. It arises from `docs/` copied across from a generated
+project without `scripts/`, or the current-directory cookiecutter install
+interrupted before it moved `scripts/` up, or `docs/lint.ts` deleted in a
+cleanup with nothing put in its place.
 
-There is no migration row for it, because the repair is a subset of one that
-exists: [v2.7-to-v2.8](migrations/v2.7-to-v2.8.md). Run exactly these steps of
-it, and no others:
+There is no migration row for it, because
+[v2.6-to-v2.7](migrations/v2.6-to-v2.7.md)'s precondition is already true on it:
+that migration applies while **either** half of the layer is missing, the
+contract or the tooling. Step 3 may still have missed it, because the version
+number narrows the list first and a `docs/` copied from a 2.9 scaffold says 2.9.
+Run the script anyway, from the repository root, `--dry-run` first — `SKILL_DIR`
+is this skill's directory, set in the same shell or pasted as the literal path:
 
-| Step | Do                                                          | Note                                                                                                                        |
-| ---- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 2    | Install Bun and cookiecutter                                | Bun is what runs the CLI at all                                                                                             |
-| 3    | Generate the scaffold, resolve `$SCAFFOLD`                  | Re-derive it in every shell — see that step's note                                                                          |
-| 4    | Copy `scripts/pdocs/`, remove any old `scripts/docs-lint/`  | The actual repair                                                                                                           |
-| 6    | Remove the development artefacts an earlier build installed | The CLI's tests and a `tsconfig` covering `scripts/` — skip whichever is not there                                          |
-| 7    | Add the `kickoff` row to `docs/SCHEMA.md`                   | **Check first:** `grep -q kickoff docs/SCHEMA.md`. A `docs/` copied from a current scaffold already has the row; skip if so |
-| 8    | Refresh the templates **and `docs/AGENTS.md`**              | Both halves. The second is what makes the docs tree's entry point name the CLI                                              |
-| 11   | `pdocs check`                                               | The repair's own gate                                                                                                       |
+```bash
+bun "$SKILL_DIR/migrations/scripts/migrate-v2.6-to-v2.7.ts" --dry-run
+```
 
-Steps **1, 5, 9, 10 and 12 do not apply**: 1 and 10 are hygiene you can do
-anyway, 5 has no `docs/lint.ts` to delete, 9 has no reference to it to re-point,
-and 12's version markers are already whatever they were — this is a repair, not
-a version step, so do not move them.
+Its phases test their own preconditions, and the ones with nothing to do say so
+and continue: the layer phase installs `scripts/pdocs/`, the templates phase
+finds every template already in place, the codemod has nothing to mark, and the
+config phase creates `.project-docs.json` only if the tree never had one.
+Nothing is skipped by hand, and the version markers move only to where the
+scaffold says they belong. The one stop it makes on such a tree is the
+preflight's: a `.project-docs.json` whose `lint.adopting` is already `false` is
+a tree that finished adopting once, and the script prints that refreshing its
+layer is `v2.8-to-v2.9`'s job rather than its own.
 
 Then **re-run this step, and Step 6**. Step 6 ran before the CLI existed, so its
 `Documentation CLI pointer` row was skipped by its own precondition and root
@@ -273,15 +284,16 @@ The **Applies If** column is a shell test that is true when the migration is
 still needed. Run it before applying (Step 3) — the version number narrows the
 list, this settles it.
 
-| Migration                                                | From    | To    | Applies If                                                       | Summary                                                                                                                                                                                                                                      |
-| -------------------------------------------------------- | ------- | ----- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [migrations/v1-to-v2.md](migrations/v1-to-v2.md)         | pre-2.0 | 2.0.0 | `[ ! -d docs/projects ]`                                         | Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports                                                                                                                                        |
-| [migrations/v2.0-to-v2.3.md](migrations/v2.0-to-v2.3.md) | 2.0–2.2 | 2.3.0 | `[ ! -f docs/projects/TEMPLATES/DESIGN-RESOLUTION.template.md ]` | Add design resolution and handoff templates, update READMEs with new pipeline stage                                                                                                                                                          |
-| [migrations/v2.3-to-v2.4.md](migrations/v2.3-to-v2.4.md) | 2.3     | 2.4.0 | `[ ! -f docs/projects/TEMPLATES/TEST-PLAN.template.md ]`         | Add test plan template, external dependencies in DR template, update lifecycle across docs                                                                                                                                                   |
-| [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | `[ ! -d docs/briefs ]`                                           | Add briefs document type, update pipeline lifecycle to start with Brief                                                                                                                                                                      |
-| [migrations/v2.5-to-v2.6.md](migrations/v2.5-to-v2.6.md) | 2.5     | 2.6.0 | `ls -d docs/*/archive/ 2>/dev/null \| grep -q .`                 | Rename `archive/` → `_archive/` for consistent sort-to-top behavior                                                                                                                                                                          |
-| [migrations/v2.6-to-v2.7.md](migrations/v2.6-to-v2.7.md) | 2.6     | 2.7.0 | `[ ! -f docs/SCHEMA.md ]`                                        | Add the OKF frontmatter layer: frontmatter on every document, `SCHEMA.md`, `index.md`, a two-tier lint that gates commits and CI, the `cycle` type, and `.project-docs.json`                                                                 |
-| [migrations/v2.7-to-v2.8.md](migrations/v2.7-to-v2.8.md) | 2.7     | 2.8.0 | `[ -f docs/lint.ts ]`                                            | Replace the single-file `docs/lint.ts` with the `pdocs` CLI under `scripts/pdocs/`; REMOVE the `docs:*` scripts and the `tsconfig` reach into `scripts/` as development artefacts, refresh the templates, and re-point every reference to it |
+| Migration                                                | From    | To    | Applies If                                                                 | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | ------- | ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [migrations/v1-to-v2.md](migrations/v1-to-v2.md)         | pre-2.0 | 2.0.0 | `[ ! -d docs/projects ]`                                                   | **Legacy.** Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports                                                                                                                                                                                                                                                                                                                                                                                       |
+| [migrations/v2.0-to-v2.3.md](migrations/v2.0-to-v2.3.md) | 2.0–2.2 | 2.3.0 | `[ ! -f docs/projects/TEMPLATES/DESIGN-RESOLUTION.template.md ]`           | **Legacy.** Add design resolution and handoff templates, update READMEs with new pipeline stage                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [migrations/v2.3-to-v2.4.md](migrations/v2.3-to-v2.4.md) | 2.3     | 2.4.0 | `[ ! -f docs/projects/TEMPLATES/TEST-PLAN.template.md ]`                   | **Legacy.** Add test plan template, external dependencies in DR template, update lifecycle across docs                                                                                                                                                                                                                                                                                                                                                                                                  |
+| [migrations/v2.4-to-v2.5.md](migrations/v2.4-to-v2.5.md) | 2.4     | 2.5.0 | `[ ! -d docs/briefs ]`                                                     | **Legacy.** Add briefs document type, update pipeline lifecycle to start with Brief                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| [migrations/v2.5-to-v2.6.md](migrations/v2.5-to-v2.6.md) | 2.5     | 2.6.0 | `ls -d docs/*/archive/ 2>/dev/null \| grep -q .`                           | **Legacy.** Rename `archive/` → `_archive/` for consistent sort-to-top behavior                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [migrations/v2.6-to-v2.7.md](migrations/v2.6-to-v2.7.md) | 2.6     | 2.7.0 | `[ ! -f docs/SCHEMA.md ] \|\| [ ! -f scripts/pdocs/cli.ts ]`               | **Run as a script**, not a checklist: `bun "$SKILL_DIR/migrations/scripts/migrate-v2.6-to-v2.7.ts"` from the project root, `--dry-run` first. Installs the OKF frontmatter layer — `docs/SCHEMA.md`, the `pdocs` CLI under `scripts/pdocs/`, frontmatter on every document, `.project-docs.json` — with the gate left off for the backfill the guide's `## After the script` hands you. Applies while either half of the layer is missing, so a `docs/` that arrived without `scripts/` is this row too |
+| [migrations/v2.7-to-v2.8.md](migrations/v2.7-to-v2.8.md) | 2.7     | 2.8.0 | `[ -f docs/lint.ts ] && grep -q 'scripts/docs-lint/index.ts' docs/lint.ts` | **Legacy.** Replace the single-file `docs/lint.ts` with the `pdocs` CLI under `scripts/pdocs/`; REMOVE the `docs:*` scripts and the `tsconfig` reach into `scripts/` as development artefacts, refresh the templates, and re-point every reference to it                                                                                                                                                                                                                                                |
+| [migrations/v2.8-to-v2.9.md](migrations/v2.8-to-v2.9.md) | 2.8     | 2.9.0 | `[ ! -f docs/.pdocs-seed.json ]`                                           | **Run as a script**, not a checklist: `bun "$SKILL_DIR/migrations/scripts/migrate-v2.8-to-v2.9.ts"` from the project root, `--dry-run` first. Templates become **seeded** — the scaffold records what it installed in `docs/.pdocs-seed.json`, and a later migration updates a template only while you have not edited it. Also opens the type vocabulary via `lint.types`, and makes `pdocs find --type` refuse an unknown type instead of returning nothing at exit 0                                 |
 
 ## Root-Level Conventions
 
@@ -464,15 +476,92 @@ would call that satisfied.
 
 ## Creating New Migration Guides
 
-When the scaffold template releases structural changes:
+When the scaffold template releases structural changes, a migration takes one of
+two shapes. The `migration-authoring` skill states the rule in full and carries
+the quality checklist; in short:
 
-1. Create a new migration file: `migrations/vX-to-vY.md`
-2. Use the `migration-authoring` skill to ensure every step is agent-executable
-3. Run the quality checklist before finalizing
-4. Add a row to the `## Available Migrations` table
+A migration is a **script** when a later step depends on a value an earlier step
+computed (a scaffold path, a version), when a check must be able to stop the
+run, or when it must be re-runnable or partially applicable. It may remain a
+**guide** only when every shell block is self-contained and every check exits
+non-zero on failure. Any migration that generates a scaffold is a script.
+
+1. Decide the shape by that rule
+2. Create `migrations/vX-to-vY.md`. For a script, also create
+   `migrations/scripts/migrate-vX-to-vY.ts` and
+   `migrations/scripts/migrate-vX-to-vY.test.ts` beside it — the
+   `migrate-v2.8-to-v2.9` pair is the reference
+3. Use the `migration-authoring` skill and pass its quality checklist before
+   finalizing
+4. Add a row to the `## Available Migrations` table. A script's Summary leads
+   with **Run as a script** and names the command and `--dry-run`
 5. The version in `docs/README.md` is bumped automatically by release-please
 
-**Migration file structure:**
+**Script-shaped structure** — the guide explains the command; it has no steps
+and no checklist, because the script's output is the checklist:
+
+```markdown
+# Migration: vX → vY
+
+## Summary
+
+[What changed and why, ending with a bold **What changes in your tree:**
+sentence naming every path the script writes]
+
+## This migration is a script
+
+[One command does the whole migration; every phase verifies itself; any failure
+stops the run with a non-zero exit and a named reason — and the two-sentence
+reason why]
+
+## What's New
+
+## What Moved
+
+## What's Removed
+
+[Merge the last two when the answer is "nothing, in either case"]
+
+## Run it
+
+[The --dry-run command, what to read in its output, the real command, what to
+commit; an ### Options table; the exit codes 0 / 1 / 2]
+
+## What it does, phase by phase
+
+[One numbered entry per phase, in the script's order, naming what stops the run]
+
+## After the script
+
+[Only when the migration hands work to a person that no script can do — v2.6:
+the backfill, the catalog, turning the gate on. Numbered ### subsections in the
+order they must happen, each saying why it sits where it does; not migration
+steps, no [Agent] label]
+
+## What it cannot check
+
+[What a person must still confirm — a commit, a sentence's truth, a choice. v2.9
+carries this as the last bullets of its Verification section instead]
+
+## What it does not do
+
+[What a reader might expect of it and it leaves alone — v2.6: no seed manifest,
+so no negotiation; v2.9 carries this as `## What adoption does not do`. Any
+other section the migration's own behaviour needs goes here too, e.g. `## If you
+run it twice`]
+
+## Cross-Reference Updates
+
+[Paths that change and need updating, or "None"]
+
+## Verification
+
+[The output lines to look for, in order, and the exit code — not commands to
+run]
+```
+
+**Guide-shaped structure** — every step self-contained and mechanically
+executable:
 
 ```markdown
 # Migration: vX → vY

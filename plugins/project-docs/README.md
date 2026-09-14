@@ -279,6 +279,61 @@ docs/
 
 ## Version History
 
+### 3.10.0 (2026-09-13)
+
+**The migration every consuming project has to run is a script.**
+[v2.6-to-v2.7](skills/update-project-docs/migrations/v2.6-to-v2.7.md) was
+thirteen steps around a codemod; it is now
+`bun migrations/scripts/migrate-v2.6-to-v2.7.ts`, run from the project root with
+`--dry-run` first. Nine phases, each testing its own precondition, so the same
+command serves a fresh v2.6 tree and one that got `docs/` without `scripts/`.
+Preflight stops, before writing anything, on a docs-root folder the lint would
+judge and the project has not declared — and prints the lines to paste. A
+template the project has already edited is kept and named, not replaced. The
+script ends with the gate off and the worklist printed; the backfill, the
+catalog and the gate are the four steps the guide names as yours.
+
+**Six guides are legacy.** `v1-to-v2` through `v2.5-to-v2.6` and `v2.7-to-v2.8`
+carry a banner: written before the script shape, run as-is, last maintained at
+3.9.0. `v2.7-to-v2.8`'s precondition now reads `docs/lint.ts` rather than
+testing for its name, so a project with its own file by that name is no longer
+told to run a migration whose step 5 deletes it.
+
+**`update-project-docs` § Step 7 lost its repair table.** A tree with the
+layer's contract and no tooling is the v2.6 script's own case now; § Step 4
+names the script-shaped migration first, and § Creating New Migration Guides
+carries both structures and the rule for choosing.
+
+### 3.9.0 (2026-09-12)
+
+**Your templates become yours.** Every migration until now copied the scaffold's
+templates over a project's own, so tailoring one meant losing the edit at the
+next upgrade. `update-project-docs` gains
+[v2.8-to-v2.9](skills/update-project-docs/migrations/v2.8-to-v2.9.md), which
+records what the scaffold installed in `docs/.pdocs-seed.json`; from then on a
+template is updated only while the project has not touched it, and reported
+rather than overwritten once it has.
+
+**The migration is a script, not a checklist** —
+`bun migrations/scripts/migrate-v2.8-to-v2.9.ts`, run from the project root with
+`--dry-run` first. Prose guides with shell blocks put a guard in one process and
+the command it protects in another, and make every check an echoed string that
+cannot fail a run; review found three instances of that in the first draft of
+this very migration. One process and real exit codes remove the possibility
+rather than warning against it.
+
+The first run compares nothing: a project arriving at v2.9 has no record of what
+was once installed, so every template is adopted as it stands. Unknown is not
+permission, which is the same rule that makes every later run safe.
+
+Also in the scaffold this migration installs: a project can declare its own
+document types in `.project-docs.json` (`lint.types`), so a folder the scaffold
+never shipped passes the lint; `docs/SCHEMA.md` gains a "Who owns which file"
+section stating which files a migration replaces, which it negotiates by hash,
+and which it never touches; and **`pdocs find --type` now refuses a type the
+project does not have (exit 2) instead of returning `count: 0` at exit 0** — a
+breaking change for anything branching on that exit code.
+
 ### 3.8.0 (2026-09-06)
 
 **`create-project` becomes a touchpoint.** The scaffold now ships a `pdocs` CLI

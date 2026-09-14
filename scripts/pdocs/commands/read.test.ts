@@ -296,10 +296,14 @@ describe("pdocs find", () => {
   });
 
   test("a filter that matches nothing exits 0 — no matches is an answer", () => {
+    // `architecture` is a REAL type that this fixture has no pages of. It used
+    // to say `nosuchtype`, which conflated two different answers: a valid
+    // filter with nothing to match, and a filter that could never match. Only
+    // the first is an answer; the second is now a rejection, below.
     const json = run([
       "find",
       "--type",
-      "nosuchtype",
+      "architecture",
       "--format",
       "json",
       "--root",
@@ -314,7 +318,7 @@ describe("pdocs find", () => {
     const text = run([
       "find",
       "--type",
-      "nosuchtype",
+      "architecture",
       "--format",
       "text",
       "--root",
@@ -322,6 +326,22 @@ describe("pdocs find", () => {
     ]);
     expect(text.code).toBe(ExitCode.Success);
     expect(text.stdout.trim()).toBe("no matches");
+  });
+
+  test("an unknown --type exits 2 rather than matching nothing", () => {
+    // The same refusal as `--since` below, for the same reason: a filter that
+    // can never match returns an empty list an agent reads as "there are none".
+    const { code, stderr } = run([
+      "find",
+      "--type",
+      "nosuchtype",
+      "--format",
+      "json",
+      "--root",
+      ROOT,
+    ]);
+    expect(code).toBe(ExitCode.Usage);
+    expect(JSON.parse(stderr).error.details.token).toBe("nosuchtype");
   });
 
   test("an invalid --since exits 2 rather than matching nothing", () => {

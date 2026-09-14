@@ -9,6 +9,11 @@ generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 
 <!--
+OWNERSHIP (of this template file — not of documents created from it): it is
+yours to edit. The scaffold records its hash, so a migration updates it only
+while you have not touched it. Frontmatter is the contract the lint enforces;
+below it is yours. See docs/SCHEMA.md → "Who owns which file".
+
 USAGE: Copy this file to your project folder as `proposal.md`.
 
 This template helps you tell the story of what you're proposing and why.

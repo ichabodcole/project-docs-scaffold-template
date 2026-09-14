@@ -605,6 +605,31 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
       []
     );
 
+  // Folders this project declared in `.project-docs.json`. The scaffold ships
+  // no template for them, so they are lintable but not creatable — the same
+  // shape the root pages already use. A declaration that collides with a
+  // built-in folder or type is ignored: the scaffold's own row wins.
+  for (const [folder, type] of Object.entries(config.lint.types)) {
+    if (rows.some((r) => r.folder === folder || r.type === type)) continue;
+    rows.push({
+      type,
+      // The LINT's rule, not the inverse of it: `graphTier` skips `workbench`
+      // and `skip`, so everything else is library. Choosing on `durable`
+      // membership instead registered a folder listed in neither array as
+      // workbench while the lint held it to the catalog obligation.
+      tier: config.lint.workbench.includes(folder) ? "workbench" : "library",
+      scope: "docs",
+      folder,
+      filename: { kind: "slug", date: "none" },
+      template: null,
+      externalTemplate: false,
+      lifecycle: null,
+      extra: [],
+      creatable: false,
+      uncreatableReason: `\`${type}\` is declared in this project's .project-docs.json; the scaffold ships no template for it`,
+    });
+  }
+
   return rows;
 }
 
