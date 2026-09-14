@@ -20,7 +20,7 @@
 // core and stays that way.
 
 import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { type ProjectDocsConfig, loadConfig } from "../docs-lint/config.ts";
 import {
   type DocsLintReport,
@@ -43,6 +43,7 @@ import {
   defaultRegistryIndex,
   registryIndex,
 } from "./registry.ts";
+import { isSeeded, loadManifest } from "../seed.ts";
 
 /**
  * Where to lint, and by what rules.
@@ -83,9 +84,62 @@ export const CONTRACT_BASENAMES = new Set([
   "SCHEMA.md",
 ]);
 
-/** A form, not a document: its links are placeholders by construction. */
-export const isTemplate = (path: string): boolean =>
-  /template/i.test(basename(path));
+/**
+ * A form, not a document: its links are placeholders by construction.
+ *
+ * This IS `seed.ts`'s `isSeeded` — the same function, not a copy — because a
+ * migration reconciles templates through that module and the lint skips them
+ * here, and two rules for one question is how a real specification named
+ * `templates.md` went unread by every tier while `/template/i` called it a
+ * form. See `isSeeded` for the five shapes it matches. `templateTest` below is
+ * what a caller with a `Ctx` should use: it adds the seed manifest.
+ */
+export const isTemplate = isSeeded;
+
+/**
+ * `isTemplate`, plus every path `docs/.pdocs-seed.json` records.
+ *
+ * The manifest is the exact list of what the scaffold installed, so a seeded
+ * file is a template whatever it is called. The name rule stays live beside it
+ * rather than yielding to it, for two reasons: `collect` applies this to
+ * tracked markdown OUTSIDE the docs root, which a docs-root manifest cannot
+ * describe; and a template added after the manifest was written — this
+ * repository's own next one, or an adopter's — would otherwise be linted as a
+ * document with nothing saying why.
+ *
+ * Compiled once per context, like `excluder`: the manifest is read once, not
+ * once per file.
+ */
+export function templateTest(ctx: Ctx): (path: string) => boolean {
+  const seeded = new Set(Object.keys(loadManifest(ctx.docsRoot).files));
+  return (path) => {
+    if (isTemplate(path)) return true;
+    if (seeded.size === 0) return false;
+    const abs = isAbsolute(path) ? path : join(ctx.repoRoot, path);
+    const rel = relative(ctx.docsRoot, abs);
+    if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return false;
+    return seeded.has(rel);
+  };
+}
+
+/**
+ * Every file under the docs root the lint skips as a template, repo-relative.
+ *
+ * `pdocs check --format json` carries this so a project can see what the lint
+ * decided not to look at — the one thing a wrong skip otherwise leaves no
+ * trace of. Walked without pruning `TEMPLATES/`, because those are skipped as
+ * templates too, by directory rather than by name.
+ */
+export function templatePaths(ctx: Ctx): string[] {
+  const isTpl = templateTest(ctx);
+  const excluded = excluder(ctx);
+  const out: string[] = [];
+  for (const path of walkMarkdown(ctx.docsRoot, new Set(ctx.config.lint.skip))) {
+    const rel = relative(ctx.repoRoot, path);
+    if (isTpl(path) && !excluded(rel)) out.push(rel);
+  }
+  return out.sort();
+}
 
 /**
  * Not documentation at all — `lint.exclude` in `.project-docs.json`, matched
@@ -332,10 +386,11 @@ export function documentProblems(
  */
 export function libraryFieldChecks(ctx: Ctx): string[] {
   const registry = registryIndex(ctx.config);
+  const isTpl = templateTest(ctx);
   const problems: string[] = [];
   for (const file of libraryFiles(ctx)) {
-    const name = basename(file.path);
-    if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
+    if (CONTRACT_BASENAMES.has(basename(file.path)) || isTpl(file.path))
+      continue;
     problems.push(
       ...documentProblems(
         file,
@@ -351,6 +406,7 @@ export function libraryFieldChecks(ctx: Ctx): string[] {
 
 export function thinTier(ctx: Ctx): string[] {
   const registry = registryIndex(ctx.config);
+  const isTpl = templateTest(ctx);
   const problems: string[] = [];
   const activeCycles: string[] = [];
 
@@ -362,7 +418,7 @@ export function thinTier(ctx: Ctx): string[] {
     // Links are checked on every file including the folder READMEs, which are
     // the contracts and cross-link each other constantly. Templates are the one
     // exception: their links are placeholders.
-    if (!isTemplate(name)) {
+    if (!isTpl(path)) {
       for (const bad of checkLinks(path, raw).problems) {
         problems.push(
           bad.kind === "MISSING FILE"
@@ -372,7 +428,7 @@ export function thinTier(ctx: Ctx): string[] {
       }
     }
 
-    if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
+    if (CONTRACT_BASENAMES.has(name) || isTpl(path)) continue;
 
     const r = documentProblems(file, raw, ctx.config.docsRoot, false, registry);
     problems.push(...r.problems);
@@ -420,12 +476,12 @@ function generatedProblems(
  */
 export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
   const excluded = excluder(ctx);
+  const isTpl = templateTest(ctx);
   const skip = new Set([...ctx.config.lint.skip, "TEMPLATES"]);
   const problems: string[] = [];
 
   for (const path of walkMarkdown(ctx.docsRoot, skip)) {
-    const name = basename(path);
-    if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
+    if (CONTRACT_BASENAMES.has(basename(path)) || isTpl(path)) continue;
     const rel = relative(ctx.repoRoot, path);
     if (excluded(rel)) continue;
     const m = /^---\n([\s\S]*?)\n---/.exec(readFileSync(path, "utf8"));
@@ -542,6 +598,7 @@ export function graphTier(ctx: Ctx): DocsLintReport {
   // written relative to the repository root, which is the only root a person
   // editing `.project-docs.json` can see.
   const excluded = excluder(ctx);
+  const isTpl = templateTest(ctx);
   return collectDocsLint({
     root: ctx.docsRoot,
     // A type this project declared is a known type. Passing only the built-in
@@ -557,7 +614,7 @@ export function graphTier(ctx: Ctx): DocsLintReport {
     dateField: "generated",
     allowDateOnly: true,
     skipFiles: (rel) =>
-      isTemplate(rel) || excluded(join(ctx.config.docsRoot, rel)),
+      isTpl(join(ctx.docsRoot, rel)) || excluded(join(ctx.config.docsRoot, rel)),
     isContractPage: (rel) => CONTRACT_BASENAMES.has(basename(rel)),
     extraChecks: hookChecks,
   });
@@ -679,6 +736,29 @@ export function templateProblems(ctx: Ctx): string[] {
 // ---------------------------------------------------------------------------------------
 
 /**
+ * Keys a slide renderer reads — Slidev and Marp between them. A file whose
+ * frontmatter has no `type` but carries one of these is a program that happens
+ * to be written in Markdown, which SCHEMA.md § "Files that are not
+ * documentation" describes and answers with `lint.exclude`. Exported because
+ * the v2.6-to-v2.7 codemod carries a copy, and its test holds the two equal.
+ */
+export const RENDERER_KEYS = [
+  "marp",
+  "theme",
+  "paginate",
+  "layout",
+  "colorSchema",
+  "highlighter",
+];
+
+/** A frontmatter block that is plainly a renderer's, not this schema's. */
+export function looksLikeSlideDeck(
+  fields: ReadonlyMap<string, string>
+): boolean {
+  return !fields.get("type") && RENDERER_KEYS.some((k) => fields.has(k));
+}
+
+/**
  * What is missing, grouped by field and then by folder — and never a failure.
  *
  * A gate answers "may this land"; this answers "what is left", which is a
@@ -703,14 +783,34 @@ export function reportLines(ctx: Ctx): string[] {
       );
   }
 
+  // A slide deck reached this list as a bare `type` row, indistinguishable from
+  // a document that wants a `type` written — and an agent working the list
+  // mechanically would write `type: artifact` into a deck, which breaks the
+  // deck and describes the file wrongly to make a gate quiet. SCHEMA.md gives
+  // the answer; this is where the question appears, so the pointer goes here.
+  // Pulled out of every group: a deck is not a document with blanks in it.
+  const decks: string[] = [];
+  for (const rel of missing.get("type") ?? []) {
+    const m = /^---\n([\s\S]*?)\n---/.exec(
+      readFileSync(join(ctx.repoRoot, rel), "utf8")
+    );
+    if (m && looksLikeSlideDeck(parseFrontmatter(m[1] as string))) decks.push(rel);
+  }
+  for (const [field, rels] of [...missing]) {
+    const kept = rels.filter((r) => !decks.includes(r));
+    if (kept.length) missing.set(field, kept);
+    else missing.delete(field);
+  }
+
   const lines: string[] = [];
   const total = [...missing.values()].reduce((n, v) => n + v.length, 0);
   // Templates are excluded from the denominator because they are excluded from
   // every check that could put something in the numerator: a form has no
   // frontmatter to backfill, and counting nineteen of them as documents with
   // nothing missing makes the ratio say less than it appears to.
+  const isTpl = templateTest(ctx);
   const scanned = [...workbenchFiles(ctx), ...libraryFiles(ctx)].filter(
-    (f) => !isTemplate(f.path)
+    (f) => !isTpl(f.path)
   ).length;
   lines.push(
     `${total} missing field(s) across ${new Set([...missing.values()].flat()).size} of ${scanned} document(s)\n`
@@ -741,6 +841,17 @@ export function reportLines(ctx: Ctx): string[] {
       if (paths.length > SHOWN)
         lines.push(`          … and ${paths.length - SHOWN} more`);
     }
+    lines.push("");
+  }
+
+  if (decks.length) {
+    lines.push(
+      `${decks.length} file(s) look like slide decks rather than documents — consider \`lint.exclude\`:`
+    );
+    for (const rel of decks.sort()) lines.push(`    ${rel}`);
+    lines.push(
+      `  See ${ctx.config.docsRoot}/SCHEMA.md § "Files that are not documentation".`
+    );
     lines.push("");
   }
   return lines;

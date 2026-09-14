@@ -279,6 +279,51 @@ docs/
 
 ## Version History
 
+### 3.12.0 (2026-09-14)
+
+**The 3.11.0 fixes reach a project that already has the layer.**
+`update-project-docs` gains
+[v2.9-to-v2.10](skills/update-project-docs/migrations/v2.9-to-v2.10.md), a
+script — `bun migrations/scripts/migrate-v2.9-to-v2.10.ts`, run from the project
+root with `--dry-run` first — that replaces the owned `scripts/pdocs/` and
+`docs/SCHEMA.md` with the current release. It is the first migration to
+**reconcile the seeded templates**: every template the scaffold ships gets a
+verdict against `docs/.pdocs-seed.json` through the logic v2.9 shipped in
+`seed.ts` — updated while untouched, installed if new, and otherwise named and
+kept as modified, unknown or deleted — formatted with the project's Prettier
+before the record is rewritten. Its verify phase is designed to go red: the
+refreshed lint judges pages the older one hid, so the run stops after the
+refresh and before the markers move, says how many problems are new to it, and
+passes once they are worked. Every guard was watched failing; the record is
+under `docs/projects/story-loom-feedback/artifacts/`.
+
+**`migration-authoring` learned from its first outside author.** A post-copy
+marker check that phase 2 has already verified on the source cannot fail and is
+not written; a verify phase may be designed to stop after a correct refresh; the
+end-of-run invariant re-reads what the run recorded, not every recorded entry;
+and a `keep-*` verdict is a report, never a write.
+
+### 3.11.0 (2026-09-14)
+
+**The first consumer's feedback, verified and landed.** Story-loom adopted 8.0.0
+and filed nine issues; every claim was reproduced here before scoping, and each
+fix landed as its own commit closing its issue.
+
+- A template is an exact shape, never a substring of the name: a real page
+  called `templates.md` is linted like the page beside it,
+  `pdocs check --format json` names what it skipped as templates, and `seed.ts`
+  and the lint decide "template" by one rule (#163).
+- The v2.6 codemod derives tags only from the metadata paragraph and only from
+  real tokens, names skipped files whose frontmatter is not this contract's,
+  writes YAML Prettier leaves alone, and sets a slide deck apart with a pointer
+  at `lint.exclude` (#164, #165, #168, #169).
+- Both migration scripts patch `version` in `.project-docs.json` in place; the
+  file's bytes are the project's (#167).
+- `update-project-docs` § Step 7 runs the project's own formatter on
+  `scripts/pdocs/` in check mode; the guide names the docs gate `docs:check` and
+  shows how to compose it with an existing `check`; the v2.5 precondition is
+  silent under zsh (#166, #170, #171).
+
 ### 3.10.0 (2026-09-13)
 
 **The migration every consuming project has to run is a script.**

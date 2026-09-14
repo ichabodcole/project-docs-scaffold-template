@@ -1,5 +1,5 @@
 {
-  "version": "7.0.0",
+  "version": "8.0.0",
   "files": {
     "architecture/TEMPLATE.md": "8c15da6659577c7ba485b9085a7aff475b9c1818d5f2447a162fe38de23982ca",
     "backlog/TEMPLATE.md": "b611a9a29d62d835772084687a32615f45ed19e26513da108ed6534c2db4bb7a",
@@ -10,7 +10,7 @@
     "investigations/YYYY-MM-DD-TEMPLATE-investigation.md": "eaa76a038c37c0c0488593001f3701bd1b4df757c84a6b4243398f4216257955",
     "lessons-learned/TEMPLATE.md": "1f78c13d12a1b9f76afba1e52c310031fa16dce09e0d4884d237123ce9fbb5d8",
     "memories/TEMPLATE.md": "b9d534aa427aaf6cf6592451769a1cfcafee5d695b5c3239a3ec86d21c8ccd0b",
-    "playbooks/TEMPLATE.md": "e184b9f98b7189ca8f0cc8f5e53685192183fc89a5f8e729977bdc73830cdff0",
+    "playbooks/TEMPLATE.md": "0fedfda743f52bbdf2d63ee2b444a6b464d68f5fe23e3b425c23502ed9b54345",
     "projects/TEMPLATES/DESIGN-RESOLUTION.template.md": "5f9bafedd2a0f419d7dee9c6e45a04a65e478d455f7a909cc60e9ebfd458f0df",
     "projects/TEMPLATES/HANDOFF.template.md": "3bd4f4a807e41df44d22077885398d9355714dfc72aaec3f6e130b26cacd78d1",
     "projects/TEMPLATES/PLAN.template.md": "26b80a019b92f3b1215e0ad950c0426ebe9c42d7db72da16feb40c12db02a499",

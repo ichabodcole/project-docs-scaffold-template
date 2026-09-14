@@ -224,12 +224,21 @@ const fail = (m: string) => console.log(`  ${C.red}✗${C.reset} ${m}`);
 
 // ─── Derivation ───────────────────────────────────────────────────────────────
 
-/** A README, template or contract page: never a document to mark. */
+/**
+ * A README, template or contract page: never a document to mark.
+ *
+ * A template is an EXACT SHAPE — the five the scaffold ships, copied from the
+ * lint's `isTemplate` in `scripts/pdocs/lint/rules.ts` and held equal to it by
+ * the test beside this file. This was `/template/i`, and a specification named
+ * `templates.md` was the one document a migration left bare, then invisible to
+ * the lint that shared the same substring rule.
+ */
 export function isContractPage(docsRelative: string): boolean {
   const name = basename(docsRelative);
   return (
     CONTRACT_BASENAMES.has(name) ||
-    /template/i.test(name) ||
+    /^(?:YYYY-MM-DD-)?TEMPLATE(?:-[^/]+)?\.md$/.test(name) ||
+    name.endsWith(".template.md") ||
     docsRelative.split("/").includes("TEMPLATES")
   );
 }
@@ -330,13 +339,50 @@ export function dateOf(
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
 }
 
-/** `**Tags:** `#a` `#b`` → ["a", "b"]. Only what is already written down. */
+/** A line that OPENS a bold metadata paragraph: the keys this script reads. */
+const METADATA_LINE =
+  /^\*\*(Status|Created|Date Started|Date|Added|Last Updated|Last Reviewed|Author|Investigator|Tags):?\*\*/;
+
+/**
+ * The bold metadata paragraphs, joined — the exact text `stripConsumedMetadata`
+ * removes. Anything derived from the body is derived from here, so a value the
+ * codemod writes into the frontmatter is one it is also taking out of the prose.
+ */
+function metadataParagraphs(body: string): string {
+  const lines = body.split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!METADATA_LINE.test(lines[i] as string)) continue;
+    while (i < lines.length && (lines[i] as string).trim() !== "")
+      out.push(lines[i++] as string);
+  }
+  return out.join("\n");
+}
+
+/**
+ * `**Tags:** `#a` `#b`` → ["a", "b"]. Only what is already written down as a
+ * tag — which means two things this used to get wrong.
+ *
+ * The label is read only inside a bold metadata paragraph, not anywhere in the
+ * body: a UI spec's bullet `- **Tags**: Clickable tag chips: Clicking adds…`
+ * is prose about tags, and matching it produced `[clickable, tag, chips,
+ * licking, adds, …]` — values that pass the lint, so nothing downstream ever
+ * said so. And a token is a backticked or `#`-prefixed word, never a bare run
+ * of letters; the old lowercase-only class is what turned `Clicking` into
+ * `licking`. Within the paragraph the value runs to the next bold key across
+ * wrapped lines, which the packed Prettier form (`**Date:** X **Tags:** …`)
+ * needs.
+ */
 export function tagsOf(body: string): string[] {
-  const m = /\*\*Tags:?\*\*:?\s*([^*\n]+)/m.exec(body);
+  const m = /\*\*Tags:?\*\*:?\s*([^*]*)/.exec(metadataParagraphs(body));
   if (!m) return [];
-  return [...(m[1] as string).matchAll(/[`#]?([a-z0-9]+(?:-[a-z0-9]+)*)[`]?/g)]
-    .map((x) => x[1] as string)
-    .filter((t) => t.length > 1);
+  const TOKEN = "[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*";
+  const tokens = [
+    ...(m[1] as string).matchAll(
+      new RegExp(`\`#?(${TOKEN})\`|(?:^|\\s)#(${TOKEN})`, "g")
+    ),
+  ].map((x) => ((x[1] ?? x[2]) as string).toLowerCase());
+  return [...new Set(tokens)].filter((t) => t.length > 1);
 }
 
 /** The bold metadata paragraph this script consumed, so it is not said twice. */
@@ -345,11 +391,7 @@ export function stripConsumedMetadata(body: string): string {
   const out: string[] = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] as string;
-    if (
-      !/^\*\*(Status|Created|Date Started|Date|Added|Last Updated|Last Reviewed|Author|Investigator|Tags):?\*\*/.test(
-        line
-      )
-    ) {
+    if (!METADATA_LINE.test(line)) {
       out.push(line);
       continue;
     }
@@ -410,10 +452,17 @@ export function frontmatterFor(d: Derived): string {
   return `---\n${lines.join("\n")}\n---\n\n`;
 }
 
+/**
+ * A YAML scalar the way Prettier would write it, so a project that formats
+ * `docs/**` has nothing to reformat on a file the migration just touched.
+ * Bare when it can be; otherwise SINGLE quotes when the value holds a double
+ * quote and no single one — Prettier's choice, and it needs no escapes —
+ * and double quotes with escapes for everything else.
+ */
 function yamlScalar(v: string): string {
-  return /^[A-Za-z0-9][\w .,'()/-]*$/.test(v) && !v.includes(": ")
-    ? v
-    : `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  if (/^[A-Za-z0-9][\w .,'()/-]*$/.test(v) && !v.includes(": ")) return v;
+  if (v.includes('"') && !v.includes("'")) return `'${v}'`;
+  return `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
 // ─── Walking ──────────────────────────────────────────────────────────────────
@@ -505,11 +554,75 @@ function docsRootIsDirty(repoRoot: string, docsRoot: string): boolean {
 
 // ─── The codemod, as a phase ──────────────────────────────────────────────────
 
+/**
+ * Keys a slide renderer reads — Slidev and Marp between them. Copied from
+ * `scripts/pdocs/lint/rules.ts` and held equal to it by the test beside this
+ * file.
+ */
+export const RENDERER_KEYS = [
+  "marp",
+  "theme",
+  "paginate",
+  "layout",
+  "colorSchema",
+  "highlighter",
+];
+
+/** The top-level keys of a frontmatter block. */
+function keysOf(block: string): Set<string> {
+  const keys = new Set<string>();
+  for (const line of block.split("\n")) {
+    const k = /^([A-Za-z_][\w-]*):/.exec(line)?.[1];
+    if (k) keys.add(k);
+  }
+  return keys;
+}
+
+/** A frontmatter block that is plainly a renderer's, not this schema's. */
+function looksLikeSlideDeck(block: string): boolean {
+  const keys = keysOf(block);
+  return !keys.has("type") && RENDERER_KEYS.some((k) => keys.has(k));
+}
+
+/**
+ * Why an EXISTING block is not this contract's — or `null` when it is. Only
+ * `type` is judged: a foreign block with the right `type` and a stray `name:`
+ * is the lint's `UNKNOWN FIELD`, a backfill and not a conversion.
+ */
+function conversionNeeded(block: string, expected: string): string | null {
+  const raw = /^type:\s*([^\s#]+)/m.exec(block)?.[1] ?? null;
+  if (raw === null) return "no type";
+  // `type: "memory"` is `memory` to every YAML reader, the lint's included.
+  const declared = /^(["']).*\1$/.test(raw) ? raw.slice(1, -1) : raw;
+  if (declared !== expected)
+    return `type: ${declared} — its position says ${expected}`;
+  return null;
+}
+
 export interface CodemodResult {
   /** Repo-relative paths that gained (or, on a dry run, would gain) a block. */
   changed: string[];
   /** Already marked, or a README, template or contract page. */
   skipped: string[];
+  /**
+   * `[path, reason]` — skipped because a block was there, but the block is not
+   * this contract's: no `type`, or a `type` the file's position does not
+   * allow. A frontmatter block from some other system looks exactly like
+   * "already migrated" to the skip, and reached `pdocs report` as ordinary
+   * missing-field rows — three per file, beside documents that merely want a
+   * backfill. These need converting, not filling in, and the difference has
+   * to be visible where the skip happens. Naming them is the whole of what
+   * this does; the file itself is left alone.
+   */
+  needsConversion: Array<[string, string]>;
+  /**
+   * Skipped because a block was there, and the block has no `type` but carries
+   * a slide renderer's keys — a Slidev or Marp deck, a program that happens to
+   * be written in Markdown. Not conversion work: the answer is `lint.exclude`,
+   * per SCHEMA.md § "Files that are not documentation", and it has to be
+   * offered here, where the file would otherwise read as "needs a type".
+   */
+  slideDecks: string[];
   /** `[path, raw status]` — a bold status nobody mapped; `lifecycle` left blank. */
   unmapped: Array<[string, string]>;
   /** No date line, no dated filename, no first commit — `1970-01-01`. */
@@ -553,6 +666,8 @@ export function runCodemod(opts: {
   const result: CodemodResult = {
     changed: [],
     skipped: [],
+    needsConversion: [],
+    slideDecks: [],
     unmapped: [],
     undated: [],
     untyped: [],
@@ -563,8 +678,19 @@ export function runCodemod(opts: {
     const docsRelative = relative(docsRoot, abs);
     const body = readFileSync(abs, "utf8");
 
-    if (/^---\n[\s\S]*?\n---/.test(body)) {
+    const block = /^---\n([\s\S]*?)\n---/.exec(body);
+    if (block) {
       result.skipped.push(rel);
+      // Judged only in a document position: a template's block is a form, and
+      // a contract page's position declares no type.
+      const expected = typeOf(docsRelative, types);
+      if (expected !== null) {
+        if (looksLikeSlideDeck(block[1] as string)) result.slideDecks.push(rel);
+        else {
+          const why = conversionNeeded(block[1] as string, expected);
+          if (why) result.needsConversion.push([rel, why]);
+        }
+      }
       continue;
     }
     const d = derive(body, abs, docsRelative, opts.repoRoot, types);
@@ -621,7 +747,7 @@ export function main(argv: string[], repoRoot: string): number {
   }
 
   step(dryRun ? "What would change" : "Writing frontmatter");
-  const { changed, skipped, unmapped, undated, untyped } = runCodemod({
+  const { changed, skipped, needsConversion, slideDecks, unmapped, undated, untyped } = runCodemod({
     repoRoot,
     docsRootName: config.docsRoot,
     exclude: config.exclude,
@@ -654,6 +780,22 @@ export function main(argv: string[], repoRoot: string): number {
   ok(
     `${skipped.length} skipped (already marked, or a README, template or contract page)`
   );
+  if (needsConversion.length) {
+    warn(
+      `${needsConversion.length} skipped file(s) need conversion — an existing block with no \`type\`, or a \`type\` this folder does not allow. Not a backfill: rewrite the block by hand, then re-run:`
+    );
+    for (const [rel, why] of needsConversion)
+      console.log(`      ${rel}  ${C.dim}(${why})${C.reset}`);
+  }
+  if (slideDecks.length) {
+    warn(
+      `${slideDecks.length} file(s) look like slide decks rather than documents — consider \`lint.exclude\`:`
+    );
+    for (const rel of slideDecks) console.log(`      ${rel}`);
+    console.log(
+      `    See ${config.docsRoot}/SCHEMA.md § "Files that are not documentation".`
+    );
+  }
   if (untyped.length) {
     warn(`${untyped.length} document(s) not typed by this codemod — in a folder it has no type for:`);
     for (const rel of untyped) console.log(`      ${rel}`);

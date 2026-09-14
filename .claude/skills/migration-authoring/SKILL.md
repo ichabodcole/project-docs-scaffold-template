@@ -79,7 +79,8 @@ v2.9 migration does; describe it, do not reinvent it.
   `--dry-run` (report every phase's plan; change nothing in the project),
   `--scaffold-dir <path>` (use an already-generated scaffold; skips the
   network). Add others only for a behaviour the migration needs — v2.9 adds
-  `--skip-format` and `--re-adopt`. Reject an unknown flag; reject a flag whose
+  `--skip-format` and `--re-adopt`, v2.6 adds `--force`, v2.10 adds
+  `--skip-format` and `--force`. Reject an unknown flag; reject a flag whose
   value is missing or empty.
 - **Exit codes are a contract:** `0` success · `1` the migration could not
   complete · `2` bad invocation. Every failure is a `MigrationError` thrown from
@@ -97,34 +98,75 @@ v2.9 migration does; describe it, do not reinvent it.
   `docsRoot` resolves — or, for a migration that _installs_
   `.project-docs.json`, `docs/README.md` with a `docs_version` line, since the
   config is what the run writes), the tools exist (`bun`, `cookiecutter` unless
-  `--scaffold-dir`), and reads `git status`. Dirt in a path the run will not
-  touch is reported, not enforced — it is the adopter's repository. Dirt in a
-  path the run will write is a stop that names the path, with `--force` to
-  override (v2.6: the templates it would replace, `scripts/pdocs/`,
-  `docs/SCHEMA.md`, every document the codemod would mark — a replaced file's
-  uncommitted edit is gone and was never in git). A preflight may also stop on a
-  condition the adopter must decide before anything is written — v2.6's tier
-  check names every docs-root folder the lint would silently read as library —
-  and a stop there prints the exact lines that resolve it.
+  `--scaffold-dir`), and reads `git status`. A migration that consumes an
+  earlier migration's output names every such file it needs and, for each one
+  missing, the migration that owns it (v2.10: `docs/.pdocs-seed.json` is
+  `v2.8-to-v2.9`'s; `scripts/pdocs/cli.ts` is `v2.6-to-v2.7`'s) — migrations run
+  in sequence, and "not a project-docs tree" is the wrong stop for a tree that
+  is one and is merely behind. Dirt in a path the run will not touch is
+  reported, not enforced — it is the adopter's repository. Dirt in a path the
+  run will write is a stop that names the path, with `--force` to override
+  (v2.6: the templates it would replace, `scripts/pdocs/`, `docs/SCHEMA.md`,
+  every document the codemod would mark — a replaced file's uncommitted edit is
+  gone and was never in git). A preflight may also stop on a condition the
+  adopter must decide before anything is written — v2.6's tier check names every
+  docs-root folder the lint would silently read as library — and a stop there
+  prints the exact lines that resolve it.
 - **Scaffold** generates into a private temp directory (`mkdtempSync`), never
-  into the project, and verifies the generated root has `docs/SCHEMA.md` and
-  `scripts/pdocs/`. **A dry run generates it too** — without one the version
-  phase has nothing to read and reports a number taken from the adopter's own
-  tree. Cleanup removes it in both modes.
+  into the project, verifies the generated root has `docs/SCHEMA.md` and
+  `scripts/pdocs/`, and then **verifies every marker a later phase will require
+  of it, in both modes, before anything is written** — the release in
+  `docs/README.md`, and whatever proves the scaffold is new enough for what the
+  copy phases install (v2.6: SCHEMA.md's ownership section and `seed.ts`; v2.10:
+  `isSeeded` in `lint/rules.ts` and the exact-shape Seeded row). The published
+  template can lag the plugin that ships the migration; on MediaForge the v2.6
+  dry run printed a green plan and the real run stopped mid-copy, because the
+  markers were checked by the phase that copied rather than the one that
+  fetched. The stop names what is missing and how to supply a newer scaffold
+  with `--scaffold-dir`. **A dry run generates it too** — without one the
+  version phase has nothing to read and reports a number taken from the
+  adopter's own tree. Cleanup removes it in both modes.
 - **Copy phases copy from the scaffold and verify arrival.** `cpSync` from the
   generated root, then check a file or marker that only the new version carries
   (v2.9: `seed.ts` present, both new `SCHEMA.md` sections present). A
-  single-path copy checks a marker or the file's existence right after the copy,
-  and the test that watches it fail supplies a `--scaffold-dir` that lacks the
-  file (v2.6: a `scripts/pdocs/` with no `cli.ts`). A phase that copies many
-  files (v2.6: every template) may leave per-file arrival to the end-of-run
-  invariant, provided the invariant checks every file the phase wrote — then the
-  phase itself checks the source (a frontmatter block on each scaffold template)
-  and the invariant checks the destination. State whether the copy merges or
-  replaces; classify each path by `docs/SCHEMA.md` § "Who owns which file" —
-  **owned** is replaced, **seeded** is negotiated by hash, **theirs** is never
-  written. A first-adoption migration installs a **theirs** file that is absent
-  (v2.6: the `index.md` skeleton) and says so; it still never overwrites one.
+  single-path copy checks a marker or the file's existence right after the copy
+  **only when the scaffold phase has not already verified that marker on the
+  source** — a check of a marker phase 2 verified cannot fail, could not be
+  watched failing, and is not written (v2.6's G14 after MediaForge; v2.10's
+  refresh phase); there the end-of-run invariant reads the marker back from the
+  installed file, and the phase's wiring witness is what turns it red. Where the
+  copy phase is the first to look, the test that watches its check fail supplies
+  a `--scaffold-dir` that lacks the file (v2.6: a `scripts/pdocs/` with no
+  `cli.ts`). A phase that copies many files (v2.6: every template) may leave
+  per-file arrival to the end-of-run invariant, provided the invariant checks
+  every file the phase wrote — then the phase itself checks the source (a
+  frontmatter block on each scaffold template) and the invariant checks the
+  destination. State whether the copy merges or replaces; classify each path by
+  `docs/SCHEMA.md` § "Who owns which file" — **owned** is replaced, **seeded**
+  is negotiated by hash, **theirs** is never written. A first-adoption migration
+  installs a **theirs** file that is absent (v2.6: the `index.md` skeleton) and
+  says so; it still never overwrites one.
+- **A reconciling phase** (v2.10, the first to compare against
+  `docs/.pdocs-seed.json`) gives every template the scaffold ships a verdict
+  through logic copied from `scripts/pdocs/seed.ts` and prints the verdict by
+  name: `update` and `install` write, `keep-modified`, `keep-unknown` and
+  `keep-deleted` are reported and left alone — bytes and record both. A recorded
+  path the scaffold no longer ships is reported and its record kept. It formats
+  **only what it wrote**, with the project's formatter, **before** it records;
+  it records the written and the already-identical at the bytes on disk, keeps
+  every other entry's hash, and never records a `keep-unknown` — recording one
+  would read as "untouched" next time and permit the overwrite the verdict
+  refused. The manifest is written only if it changed, in its own indent.
+- **A verify phase may be designed to go red after a correct change.** When the
+  change is a lint that judges more than the one it replaced (v2.10: the
+  refreshed rule reads a real page named `templates.md` the old one skipped), a
+  red `pdocs check` is the change working, not failing. The phase then stops the
+  run with exit 1 **after** the change and **before** the version markers move —
+  so the markers phase sits after verify — and the stop says what stays, what
+  did not move, where the worklist is, and that re-running is safe and passes
+  once the problems are worked. The preflight runs the same check under the
+  tree's own tooling first, as a baseline, so the stop can say how many of the
+  problems are new to the change rather than pre-existing.
 - **Counts parse structure.** A count of manifest entries is
   `Object.keys(JSON.parse(...)).length`, never `grep -c`. `grep -c '": "'` on
   the manifest matched its own `version` line, so an empty manifest counted 1
@@ -132,13 +174,20 @@ v2.9 migration does; describe it, do not reinvent it.
 - **Version markers belong to a phase.** Both markers — `docs_version` in
   `docs/README.md` and `version` in `.project-docs.json` — set together from the
   scaffold's version, reported separately, and with a distinct line for "no such
-  line" versus "already at that value". The JSON is parsed and re-serialised,
-  never regex-substituted: a line-based `sed` rewrote every nested `"version"`
-  in a file the ownership table classifies as theirs.
+  line" versus "already at that value". `.project-docs.json` is theirs, so its
+  bytes are preserved: patch the one top-level `version` key in the file's own
+  text, parse the result and check it equals the intended object, and only if
+  that fails re-serialise in the file's own indent and say so in the phase line.
+  Never a line-based `sed` — one rewrote every nested `"version"` — and never a
+  whole-file `JSON.stringify` — one expanded every array a project's formatter
+  had collapsed (#167).
 - **An end-of-run invariant check**, inside the program, for anything the phase
   ordering guarantees. `manifestMatchesDisk` is the model: after every phase,
-  every recorded hash must still match the bytes on disk, and a mismatch fails
-  the run with a message naming the phase ordering that must hold. A test guards
+  every hash **this run recorded** must still match the bytes on disk, and a
+  mismatch fails the run with a message naming the phase ordering that must
+  hold. On a first adoption that is every entry; on a reconciling run it is the
+  entries the run wrote or re-recorded, since a `keep-modified` or
+  `keep-deleted` entry is recorded and does not match by design. A test guards
   an invariant only while the test exists; this guards every run in every
   adopter's repository.
 - **Self-contained.** It runs inside a repository that has not adopted whatever
@@ -297,7 +346,10 @@ cannot pass is the defect, not the reference.
       arrival** — a marker only the new version carries or, for a single path,
       its existence after the copy; a phase that writes many files may leave
       arrival to the end-of-run invariant when the invariant checks every file
-      it wrote. Inline content only when no scaffold can be generated.
+      it wrote; and a marker the scaffold phase already verified on the source
+      is read back by the end-of-run invariant, not re-checked after the copy,
+      because that check could not fail. Inline content only when no scaffold
+      can be generated.
 - [ ] **Overwrite or merge is stated per path**, by ownership: owned is
       replaced, seeded is negotiated by hash, theirs is never written.
 - [ ] **What it cannot check is named** — a commit, a sentence's truth, a choice
@@ -323,7 +375,8 @@ cannot pass is the defect, not the reference.
       whose work is already done says so and continues.
 - [ ] **Counts parse structure**, never pattern-match.
 - [ ] **Both version markers are set by one phase**, reported separately, and
-      the JSON is parsed and re-serialised.
+      `.project-docs.json` keeps its bytes: the one key is patched in place, the
+      result parse-verified, re-serialisation only as a reported fallback.
 - [ ] **An end-of-run invariant check runs inside the program** for anything the
       phase ordering guarantees.
 - [ ] **The script imports nothing from the tree it migrates.** Any copied table
@@ -380,6 +433,13 @@ a script wherever the script asks a person to write content.
   and
   [its script](../../../plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.8-to-v2.9.ts)
   — the reference for the script shape
+- [Migration: v2.9 → v2.10](../../../plugins/project-docs/skills/update-project-docs/migrations/v2.9-to-v2.10.md)
+  and
+  [its script](../../../plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.9-to-v2.10.ts)
+  — the reference for a reconciling phase, a verify phase designed to go red,
+  and a preflight that names the migration a missing file belongs to; its guards
+  record is
+  [v2.10: guards watched failing](../../../docs/projects/story-loom-feedback/artifacts/v2.10-guards-watched-failing.md)
 - [Scaffold Update Checklist](../scaffold-update-checklist/SKILL.md) — the
   release workflow that triggers a migration, and how each shape is validated
 - [Lessons Learned](../../../docs/lessons-learned/README.md) — where migration

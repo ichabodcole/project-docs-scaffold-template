@@ -172,3 +172,11 @@ What has been happening lately, for a cold start. — see
   — v2.6-to-v2.7 became a nine-phase self-verifying script authored under a
   rewritten migration-authoring skill, ran for real on MediaForge, and six older
   guides went legacy; project-docs 3.10.0.
+- [Story-loom's nine, and what two agents in one tree taught](./memories/2026-09-14-story-loom-feedback-round-1.md)
+  — The first consumer's nine issues were reproduced before scoping and landed
+  one commit each; running two implementers in one working tree showed that a
+  build mirror couples every commit to every uncommitted change.
+- [The v2.10 migration reconciles, and its verify phase is meant to go red](./memories/2026-09-14-v2.10-migration.md)
+  — The first migration written under the rewritten skill by an outside author
+  used the seed verdicts for real, stops after the refresh when the newer lint
+  finds what the older one hid, and grew the skill in seven more places.

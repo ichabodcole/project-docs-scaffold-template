@@ -199,6 +199,33 @@ describe("pdocs check", () => {
     expect(out.data.total).toBe(0);
   });
 
+  // What the lint decided NOT to look at is otherwise invisible. Every tier
+  // skips a template by name, so a real page that skip wrongly caught would
+  // leave no trace anywhere — this list is where it would show up.
+  test("the envelope names the files it skipped as templates, and only those", () => {
+    const root = tree({
+      ...CLEAN,
+      "docs/memories/templates.md":
+        "---\ntype: memory\ntitle: T\ndescription: A page about templates.\ntags: [a-tag]\nstatus: stable\ngenerated: { by: cli-test, at: 2026-01-01 }\n---\n\n# T\n",
+    });
+    const { stdout } = run(["check", "--format", "json", "--root", root]);
+    const out = JSON.parse(stdout);
+    expect(out.data.templates).toContain("docs/memories/TEMPLATE.md");
+    expect(out.data.templates).toContain(
+      "docs/projects/TEMPLATES/PROPOSAL.template.md"
+    );
+    expect(out.data.templates).toHaveLength(
+      Object.keys(templateStubs()).length
+    );
+    expect(out.data.templates).not.toContain("docs/memories/templates.md");
+    // And the real page is READ, not skipped: uncatalogued, so an orphan.
+    expect(
+      out.data.problems.some((p: { message: string }) =>
+        p.message.startsWith("ORPHAN         memories/templates.md")
+      )
+    ).toBe(true);
+  });
+
   test("a dirty tree exits 9 with ok: true — an outcome, not an error", () => {
     const { code, stdout } = run([
       "check",

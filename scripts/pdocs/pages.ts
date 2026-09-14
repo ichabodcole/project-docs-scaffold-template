@@ -37,7 +37,7 @@ import {
 import {
   CONTRACT_BASENAMES,
   type Ctx,
-  isTemplate,
+  templateTest,
   libraryFiles,
   workbenchFiles,
 } from "./lint/rules.ts";
@@ -101,9 +101,10 @@ export function collectPages(ctx: Ctx): Page[] {
   const anchorCache = new Map<string, Set<string>>();
   const pages: Page[] = [];
 
+  const isTpl = templateTest(ctx);
   for (const file of files) {
-    const name = basename(file.path);
-    if (CONTRACT_BASENAMES.has(name) || isTemplate(name)) continue;
+    if (CONTRACT_BASENAMES.has(basename(file.path)) || isTpl(file.path))
+      continue;
     if (seen.has(file.path)) continue;
     seen.add(file.path);
 

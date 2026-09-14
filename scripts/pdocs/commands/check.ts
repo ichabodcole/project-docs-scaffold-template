@@ -30,6 +30,10 @@ export interface CheckData {
   adopting: boolean;
   total: number;
   problems: CheckProblem[];
+  /** What the lint decided NOT to look at: every file under the docs root it
+   *  skipped as a template, repo-relative. A skip that wrongly catches a real
+   *  page leaves no other trace, so the list is the only way to see it. */
+  templates: string[];
 }
 
 export function checkData(report: LintReport): CheckData {
@@ -52,6 +56,7 @@ export function checkData(report: LintReport): CheckData {
     adopting: report.adopting,
     total: report.total,
     problems,
+    templates: report.templates,
   };
 }
 
