@@ -85,8 +85,8 @@ bump, and run the script for real on `dreamwood/media-forge`.
 - [x] Plan created and user-reviewed — approved 2026-09-12
 - [x] Test plan assessed — not needed; the plan's validation sections name the
       fixtures and the guard tests
-- [ ] Phase 1 — skill rewrite and routing corrections
-- [ ] Phase 2 — fixtures A0, A1 and B
+- [x] Phase 1 — skill rewrite and routing corrections (`c2e4881`)
+- [x] Phase 2 — fixtures A0, A1, B seeded and B unseeded (`3448277`)
 - [ ] Phase 3 — the v2.6-to-v2.7 script, guide and tests
 - [ ] Phase 4 — legacy banners, precondition, table, § Step 7 collapse
 - [ ] Phase 5 — version bump, dist rebuild, gate
