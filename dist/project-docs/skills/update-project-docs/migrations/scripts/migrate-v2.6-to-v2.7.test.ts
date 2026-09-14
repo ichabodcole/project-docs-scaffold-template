@@ -1415,23 +1415,45 @@ describe("idempotence and dry run", () => {
 
   test("a dirty tree is reported, not enforced", () => {
     const root = fixtureA({ undeclaredFolder: false });
-    writeFileSync(join(root, "docs/memories/wip.md"), "# WIP\n");
+    // Dirt in a path the run will not touch: reported, and the run goes on.
+    writeFileSync(join(root, "notes.txt"), "scratch\n");
     const r = migrate(root);
     expect(r.exitCode).toBe(0);
     expect(r.out).toContain("working tree is dirty (1 path(s))");
+    expect(r.out).not.toContain("--force");
   });
 
-  test("an existing .project-docs.json gains only what it lacks", () => {
+  test("a no-op re-run leaves a hand-formatted .project-docs.json byte-identical", () => {
+    // `.project-docs.json` is theirs; the version phase used to re-serialise
+    // it even when the value was already right.
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL);
+    expect(migrate(root).exitCode).toBe(0);
+    const cfgPath = join(root, ".project-docs.json");
+    const handFormatted = `${JSON.stringify(readJson(cfgPath), null, 4)}\n`;
+    writeFileSync(cfgPath, handFormatted);
+    commitAll(root, "the migration, config hand-formatted");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(readFileSync(cfgPath, "utf8")).toBe(handFormatted);
+    expect(git(root, "status", "--porcelain")).toBe("");
+  });
+
+  test("an existing .project-docs.json gains only what it lacks, and its lint.types reach the codemod", () => {
     const root = withFiles(fixtureA({ undeclaredFolder: false }), {
       ".project-docs.json": JSON.stringify(
-        { docsRoot: "docs", custom: { version: "keep-me" }, lint: { types: { runbooks: "runbook" }, workbench: [...DEFAULT_CONFIG.lint.workbench] } },
+        { docsRoot: "docs", custom: { version: "keep-me" }, lint: { types: { runbooks: "runbook" }, workbench: [...DEFAULT_CONFIG.lint.workbench, "runbooks"] } },
         null,
         2
       ),
+      "docs/runbooks/deploy.md": "# Deploy\n\n**Status:** Draft\n\nHow to deploy.\n",
     });
     const r = migrate(root);
     expect(r.exitCode).toBe(0);
     expect(r.out).toContain("added lint.adopting: true, lint.exclude, lint.durable, lint.skip, version: 6.3.0 — every existing key left as it was");
+    expect(r.out).toContain("docs/runbooks/deploy.md  type: runbook");
+    const deploy = readFileSync(join(root, "docs/runbooks/deploy.md"), "utf8");
+    expect(deploy).toContain("type: runbook");
+    expect(deploy).not.toContain("lifecycle:");
     const cfg = readJson(join(root, ".project-docs.json"));
     expect(cfg.custom.version).toBe("keep-me");
     expect(cfg.lint.types).toEqual({ runbooks: "runbook" });
@@ -1561,6 +1583,108 @@ describe("guards that must be able to fire", () => {
     });
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("STOPPED: cookiecutter is not installed, and no --scaffold-dir");
+  });
+
+  test("preflight: an uncommitted edit to a path the run would write stops the run — the v2.6 template repro", () => {
+    // The exact reproduction: a section appended to a v2.6 template, not
+    // committed. Without the stop the template was replaced, exit 0, and the
+    // section was gone and never in git.
+    const root = fixtureA({ undeclaredFolder: false });
+    const tpl = join(root, "docs/playbooks/TEMPLATE.md");
+    const edited = `${readFileSync(tpl, "utf8")}\n## My section\n\nNot committed.\n`;
+    writeFileSync(tpl, edited);
+    const before = treeDigest(root);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: 1 path(s) this run would write have uncommitted changes:");
+    expect(r.out).toContain("docs/playbooks/TEMPLATE.md");
+    expect(r.out).toContain("Commit or stash them");
+    expect(r.out).toContain("--force");
+    expect(r.out).toContain("Nothing was written.");
+    expect(r.out).not.toContain("[2/9]");
+    expect(treeDigest(root)).toEqual(before);
+    expect(readFileSync(tpl, "utf8")).toBe(edited);
+
+    // --force is the documented override, and says what it is writing over.
+    const forced = migrate(root, ["--force"]);
+    expect(forced.exitCode).toBe(0);
+    expect(forced.out).toContain("--force: writing over 1 uncommitted path(s) this run touches: docs/playbooks/TEMPLATE.md");
+    expect(readFileSync(tpl, "utf8")).toBe(
+      readFileSync(join(generatedScaffolds().current, "docs/playbooks/TEMPLATE.md"), "utf8")
+    );
+  });
+
+  test("preflight: the dirty-write stop covers the layer and the documents the codemod would mark, not a template it would keep", () => {
+    const layer = withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL);
+    mkdirSync(join(layer, "scripts/pdocs"), { recursive: true });
+    writeFileSync(join(layer, "scripts/pdocs/mine.ts"), "// untracked\n");
+    writeFileSync(join(layer, "docs/projects/sync/proposal.md"), "# Proposal: Sync engine\n\nEdited, uncommitted.\n");
+    const r = migrate(layer);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("2 path(s) this run would write have uncommitted changes");
+    expect(r.out).toContain("scripts/pdocs/mine.ts");
+    expect(r.out).toContain("docs/projects/sync/proposal.md");
+
+    // A template that already carries a frontmatter block is kept, so an
+    // uncommitted edit to it is dirt the run will not touch.
+    const kept = fixtureA({ undeclaredFolder: false });
+    writeFileSync(join(kept, "docs/playbooks/TEMPLATE.md"), "---\ntype: playbook\n---\n\n# Mine, uncommitted\n");
+    const k = migrate(kept);
+    expect(k.exitCode).toBe(0);
+    expect(k.out).toContain("working tree is dirty (1 path(s))");
+    expect(k.out).toContain("kept docs/playbooks/TEMPLATE.md");
+  });
+
+  test("the seam refuses a path, and takes only a bare file name", () => {
+    const r = migrate(withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL), [], {
+      env: { PDOCS_MIGRATE_TEST_MUTATE: "../outside/late.md" },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: PDOCS_MIGRATE_TEST_MUTATE must be a bare file name, not a path.");
+  });
+
+  test("codemod: a folder declared in lint.types is typed, a folder in lint.skip is left alone, and a bare document in a folder with no type is reported under its own count", () => {
+    // The lines the preflight tells the adopter to paste, followed.
+    const declared = withFiles(fixtureA({ undeclaredFolder: true }), {
+      ".project-docs.json": JSON.stringify(
+        { docsRoot: "docs", lint: { workbench: [...DEFAULT_CONFIG.lint.workbench, UNDECLARED_FOLDER], types: { [UNDECLARED_FOLDER]: "runbook" } } },
+        null,
+        2
+      ),
+    });
+    const d = migrate(declared);
+    expect(d.exitCode).toBe(0);
+    expect(d.out).toContain(`${UNDECLARED_FILE}  type: runbook`);
+    expect(readFileSync(join(declared, UNDECLARED_FILE), "utf8")).toContain("type: runbook");
+    expect(d.out).not.toContain("not typed by this codemod");
+
+    const skipped = withFiles(fixtureA({ undeclaredFolder: true }), {
+      ".project-docs.json": JSON.stringify(
+        { docsRoot: "docs", lint: { skip: ["_archive", "superpowers", UNDECLARED_FOLDER] } },
+        null,
+        2
+      ),
+    });
+    const bare = readFileSync(join(skipped, UNDECLARED_FILE), "utf8");
+    const s = migrate(skipped);
+    expect(s.exitCode).toBe(0);
+    expect(readFileSync(join(skipped, UNDECLARED_FILE), "utf8")).toBe(bare);
+    expect(s.out).not.toContain("not typed by this codemod");
+
+    // Declared in a tier but given no type: the lint reads it, the codemod
+    // cannot type it, and it must not hide under "skipped".
+    const untyped = withFiles(fixtureA({ undeclaredFolder: true }), {
+      ".project-docs.json": JSON.stringify(
+        { docsRoot: "docs", lint: { workbench: [...DEFAULT_CONFIG.lint.workbench, UNDECLARED_FOLDER] } },
+        null,
+        2
+      ),
+    });
+    const u = migrate(untyped);
+    expect(u.exitCode).toBe(0);
+    expect(u.out).toContain("1 document(s) not typed by this codemod");
+    expect(u.out).toContain(UNDECLARED_FILE);
+    expect(u.out).toContain("1 document(s) gained frontmatter");
   });
 
   test("preflight: an undeclared docs-root folder stops the run (A0)", () => {
@@ -1872,7 +1996,7 @@ describe("guards that must be able to fire", () => {
     // The seam: a bare document lands between the report phase and the
     // version phase. Only a wired end-of-run check can see it.
     const r = migrate(withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL), [], {
-      env: { PDOCS_MIGRATE_TEST_MUTATE: "memories/late.md" },
+      env: { PDOCS_MIGRATE_TEST_MUTATE: "late.md" },
     });
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("the migration's own invariants do not hold");

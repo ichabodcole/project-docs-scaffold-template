@@ -224,11 +224,31 @@ const fail = (m: string) => console.log(`  ${C.red}✗${C.reset} ${m}`);
 
 // ─── Derivation ───────────────────────────────────────────────────────────────
 
-/** The `type` a document's position declares. `null` means "not ours to touch". */
-export function typeOf(docsRelative: string): string | null {
+/** A README, template or contract page: never a document to mark. */
+export function isContractPage(docsRelative: string): boolean {
   const name = basename(docsRelative);
-  if (CONTRACT_BASENAMES.has(name)) return null;
-  if (/template/i.test(name)) return null;
+  return (
+    CONTRACT_BASENAMES.has(name) ||
+    /template/i.test(name) ||
+    docsRelative.split("/").includes("TEMPLATES")
+  );
+}
+
+/**
+ * The `type` a document's position declares. `null` means "not ours to touch"
+ * — a contract page, or a folder this codemod has no type for.
+ *
+ * `types` is the project's own `lint.types` — `{ runbooks: "runbook" }` — the
+ * folders the preflight told the adopter to declare. A page there gets the
+ * declared type and no `lifecycle`: this codemod has no vocabulary for a type
+ * it did not ship.
+ */
+export function typeOf(
+  docsRelative: string,
+  types: Record<string, string> = {}
+): string | null {
+  const name = basename(docsRelative);
+  if (isContractPage(docsRelative)) return null;
 
   const parts = docsRelative.split("/");
   if (parts.length === 1) return ROOT_PAGE_TYPE[name] ?? null;
@@ -237,10 +257,10 @@ export function typeOf(docsRelative: string): string | null {
   if (top in DURABLE_TYPE) return DURABLE_TYPE[top] as string;
   if (top in WORKBENCH_TYPE) return WORKBENCH_TYPE[top] as string;
   if (top === "projects") {
-    if (parts.includes("TEMPLATES")) return null;
     if (parts.includes("sessions")) return "session";
     return PROJECT_FILE_TYPE[name] ?? "artifact";
   }
+  if (top in types) return types[top] as string;
   return null;
 }
 
@@ -360,9 +380,10 @@ export function derive(
   body: string,
   abs: string,
   docsRelative: string,
-  repoRoot: string
+  repoRoot: string,
+  types: Record<string, string> = {}
 ): Derived | null {
-  const type = typeOf(docsRelative);
+  const type = typeOf(docsRelative, types);
   if (type === null) return null;
   const { value, raw } = lifecycleOf(body, type);
   return {
@@ -493,12 +514,22 @@ export interface CodemodResult {
   unmapped: Array<[string, string]>;
   /** No date line, no dated filename, no first commit — `1970-01-01`. */
   undated: string[];
+  /**
+   * Bare documents in a folder this codemod has no type for — neither shipped
+   * nor declared in `lint.types`. Reported under their own count, never as
+   * "skipped": the lint will read them, and they are not marked.
+   */
+  untyped: string[];
 }
 
 /**
  * Walk the docs root and prepend a derived frontmatter block to every document
  * that has none. Idempotent: a file that already opens with `---` is skipped,
  * so a second run changes nothing.
+ *
+ * `types` and `skip` are the project's own `lint.types` and `lint.skip`, so
+ * the codemod agrees with the lint the migration installs — passed in, so
+ * this file still imports nothing from the tree it migrates.
  *
  * `onFile` is called once per document that gains a block, before it is
  * written, so a caller can print the line in its own voice.
@@ -508,11 +539,14 @@ export function runCodemod(opts: {
   docsRootName: string;
   exclude: string[];
   dryRun: boolean;
+  types?: Record<string, string>;
+  skip?: string[];
   onFile?: (rel: string, d: Derived) => void;
 }): CodemodResult {
   const docsRoot = join(opts.repoRoot, opts.docsRootName);
   const excluded = opts.exclude.map((g) => new Bun.Glob(g));
-  const files = walk(docsRoot, new Set(DEFAULT_SKIP)).filter(
+  const types = opts.types ?? {};
+  const files = walk(docsRoot, new Set(opts.skip ?? DEFAULT_SKIP)).filter(
     (f) => !excluded.some((g) => g.match(relative(opts.repoRoot, f)))
   );
 
@@ -521,6 +555,7 @@ export function runCodemod(opts: {
     skipped: [],
     unmapped: [],
     undated: [],
+    untyped: [],
   };
 
   for (const abs of files) {
@@ -532,9 +567,9 @@ export function runCodemod(opts: {
       result.skipped.push(rel);
       continue;
     }
-    const d = derive(body, abs, docsRelative, opts.repoRoot);
+    const d = derive(body, abs, docsRelative, opts.repoRoot, types);
     if (d === null) {
-      result.skipped.push(rel);
+      (isContractPage(docsRelative) ? result.skipped : result.untyped).push(rel);
       continue;
     }
     if (d.unmappedStatus) result.unmapped.push([rel, d.unmappedStatus]);
@@ -586,7 +621,7 @@ export function main(argv: string[], repoRoot: string): number {
   }
 
   step(dryRun ? "What would change" : "Writing frontmatter");
-  const { changed, skipped, unmapped, undated } = runCodemod({
+  const { changed, skipped, unmapped, undated, untyped } = runCodemod({
     repoRoot,
     docsRootName: config.docsRoot,
     exclude: config.exclude,
@@ -619,6 +654,10 @@ export function main(argv: string[], repoRoot: string): number {
   ok(
     `${skipped.length} skipped (already marked, or a README, template or contract page)`
   );
+  if (untyped.length) {
+    warn(`${untyped.length} document(s) not typed by this codemod — in a folder it has no type for:`);
+    for (const rel of untyped) console.log(`      ${rel}`);
+  }
 
   if (unmapped.length) {
     warn(

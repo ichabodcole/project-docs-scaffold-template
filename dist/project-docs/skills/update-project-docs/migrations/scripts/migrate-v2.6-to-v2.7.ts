@@ -45,13 +45,15 @@
  *
  * Usage:
  *   bun migrate-v2.6-to-v2.7.ts [--root <path>] [--dry-run]
- *                               [--scaffold-dir <path>]
+ *                               [--scaffold-dir <path>] [--force]
  *
  *   --root <path>          the project to migrate. Default: the current directory.
  *   --dry-run              report every phase's plan; change nothing.
  *   --scaffold-dir <path>  use an already-generated scaffold instead of fetching
  *                          one. Skips the network; the path must be a generated
  *                          project root, not its docs/. `--scaffold` is an alias.
+ *   --force                write over uncommitted changes in the paths this run
+ *                          touches. Without it the preflight stops on them.
  *
  * Exit codes: 0 success · 1 the migration could not complete · 2 bad invocation.
  */
@@ -63,6 +65,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -179,10 +182,17 @@ interface Options {
   root: string;
   dryRun: boolean;
   scaffold: string | null;
+  /** Write over uncommitted changes in paths this run touches. */
+  force: boolean;
 }
 
 export function parseArgs(argv: string[]): Options {
-  const opts: Options = { root: ".", dryRun: false, scaffold: null };
+  const opts: Options = {
+    root: ".",
+    dryRun: false,
+    scaffold: null,
+    force: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const value = (): string => {
@@ -204,9 +214,10 @@ export function parseArgs(argv: string[]): Options {
       if (v.trim() === "") fail(`${a} was given an empty value.`);
       opts.scaffold = v;
     } else if (a === "--dry-run") opts.dryRun = true;
+    else if (a === "--force") opts.force = true;
     else
       fail(
-        `unknown argument \`${a}\`. Valid: --root, --dry-run, --scaffold-dir (--scaffold).`
+        `unknown argument \`${a}\`. Valid: --root, --dry-run, --scaffold-dir (--scaffold), --force.`
       );
   }
   return opts;
@@ -358,6 +369,62 @@ function declareHint(
   );
 }
 
+/** What the codemod is told about this tree: its excludes, skips and declared types. */
+function codemodOptions(ctx: Ctx) {
+  const lint = (ctx.config?.lint ?? {}) as Record<string, unknown>;
+  const types =
+    typeof lint.types === "object" && lint.types !== null && !Array.isArray(lint.types)
+      ? (Object.fromEntries(
+          Object.entries(lint.types as Record<string, unknown>).filter(
+            ([, t]) => typeof t === "string"
+          )
+        ) as Record<string, string>)
+      : {};
+  return {
+    repoRoot: ctx.root,
+    docsRootName: ctx.docsRootName,
+    exclude: strings(lint.exclude) ?? [],
+    skip: strings(lint.skip) ?? DEFAULT_SKIP,
+    types,
+  };
+}
+
+/**
+ * The paths this run will write that git says are dirty, relative to the
+ * project root. Computed before the scaffold exists, so the template set is
+ * "every template of theirs without a frontmatter block" — the ones phase 4
+ * replaces if the scaffold ships them — rather than the exact list.
+ */
+function dirtyPathsTheRunWrites(ctx: Ctx): string[] {
+  const candidates = ["scripts/pdocs", `${ctx.docsRootName}/SCHEMA.md`];
+  for (const rel of seededIn(ctx.docsRoot)) {
+    const abs = join(ctx.docsRoot, rel);
+    if (!hasFrontmatter(abs)) candidates.push(relative(ctx.root, abs));
+  }
+  candidates.push(...runCodemod({ ...codemodOptions(ctx), dryRun: true }).changed);
+  const present = candidates.filter((c) => existsSync(join(ctx.root, c)));
+  if (present.length === 0) return [];
+  // `--untracked-files=all` so an untracked directory is listed file by file
+  // rather than collapsed to `dir/`.
+  const st = run(
+    ["git", "status", "--porcelain", "--untracked-files=all", "--", ...present],
+    ctx.root
+  );
+  const top = run(["git", "rev-parse", "--show-toplevel"], ctx.root).stdout.trim();
+  if (st.code !== 0 || !top) return [];
+  // Porcelain paths are repo-root relative, whatever the cwd; a rename shows
+  // as `old -> new`, and the new name is the one on disk. Both roots are
+  // resolved through symlinks — git reports the real path, and on macOS
+  // /var is one.
+  const root = realpathSync(ctx.root);
+  return st.stdout
+    .split("\n")
+    .filter((l) => l.length > 3)
+    .map((l) => l.slice(3).split(" -> ").pop() as string)
+    .map((p) => relative(root, join(realpathSync(top), p)))
+    .sort();
+}
+
 function preflight(ctx: Ctx): void {
   step(1, "Preflight");
   // A v2.6 tree has no .project-docs.json yet — this migration writes it — so
@@ -403,14 +470,33 @@ function preflight(ctx: Ctx): void {
     );
 
   // A dirty tree makes this migration's changes indistinguishable from the
-  // adopter's. Reported, not enforced: it is their repository.
+  // adopter's. Dirt in a path this run will NOT touch is reported — it is
+  // their repository. Dirt in a path it WILL write is a stop: the layer and
+  // the templates are replaced wholesale, so an uncommitted edit there is
+  // gone and was never in git. Reproduced on the v6.3.0 fixture with a
+  // section appended to a template: `✓ replaced`, exit 0, edit lost.
   const git = run(["git", "status", "--porcelain"], ctx.root);
-  if (git.code === 0 && git.stdout.trim() !== "")
+  if (git.code !== 0) note("not a git repository — nothing to report");
+  else if (git.stdout.trim() === "") ok("git tree clean");
+  else {
+    const dirty = dirtyPathsTheRunWrites(ctx);
+    if (dirty.length > 0 && !ctx.force)
+      fail(
+        `${dirty.length} path(s) this run would write have uncommitted changes:\n` +
+          dirty.map((p) => `       ${p}`).join("\n") +
+          `\n\n   The layer and the templates are replaced wholesale, and a document gains its` +
+          `\n   block in place; an uncommitted edit in any of these cannot be told apart from` +
+          `\n   what this migration did, and one in a template is lost. Commit or stash them` +
+          `\n   first — or pass --force to write over them anyway.`
+      );
+    if (dirty.length > 0)
+      note(
+        `--force: writing over ${dirty.length} uncommitted path(s) this run touches: ${dirty.join(", ")}`
+      );
     note(
       `working tree is dirty (${git.stdout.trim().split("\n").length} path(s)) — commit or stash first if you want this migration isolated`
     );
-  else if (git.code === 0) ok("git tree clean");
-  else note("not a git repository — nothing to report");
+  }
 
   // THE HARD STOP. See the header. Only a folder the lint would actually read
   // stops the run; one holding no markdown is reported and left alone.
@@ -732,11 +818,8 @@ function installTemplates(ctx: Ctx, templates: string[]): void {
 
 function frontmatter(ctx: Ctx): void {
   step(5, "Frontmatter on every document");
-  const lint = (ctx.config?.lint ?? {}) as Record<string, unknown>;
   const r = runCodemod({
-    repoRoot: ctx.root,
-    docsRootName: ctx.docsRootName,
-    exclude: strings(lint.exclude) ?? [],
+    ...codemodOptions(ctx),
     dryRun: ctx.dryRun,
     onFile: (rel, d) =>
       say(
@@ -749,6 +832,14 @@ function frontmatter(ctx: Ctx): void {
   ok(
     `${r.changed.length} document(s) ${ctx.dryRun ? "would gain" : "gained"} frontmatter; ${r.skipped.length} skipped (already marked, or a README, template or contract page)`
   );
+  // Its own count, never folded into "skipped": a bare document in a folder
+  // the codemod has no type for is a lint finding waiting to happen.
+  if (r.untyped.length) {
+    note(
+      `${r.untyped.length} document(s) not typed by this codemod — in a folder it has no type for. Declare the folder's type in lint.types, or skip the folder, and re-run:`
+    );
+    for (const rel of r.untyped) say(`       ${rel}`);
+  }
   if (r.unmapped.length) {
     note(
       `${r.unmapped.length} document(s) had a **Status:** nobody could map — lifecycle left blank, for you to decide:`
@@ -885,16 +976,18 @@ function bumpVersion(ctx: Ctx, version: string): void {
     note(".project-docs.json is not there — nothing to set");
     return;
   }
+  // Written only when the value moves. `.project-docs.json` is theirs, and a
+  // re-serialisation of a hand-formatted file is a diff for nothing.
   const cfg = JSON.parse(readFileSync(ctx.configPath, "utf8"));
   const configBefore = cfg.version;
+  if (configBefore === version) {
+    ok(`.project-docs.json already at ${version}`);
+    return;
+  }
   cfg.version = version;
-  if (configBefore !== version) ctx.wrote = true;
+  ctx.wrote = true;
   writeFileSync(ctx.configPath, `${JSON.stringify(cfg, null, 2)}\n`);
-  ok(
-    configBefore === version
-      ? `.project-docs.json already at ${version}`
-      : `.project-docs.json set to ${version}`
-  );
+  ok(`.project-docs.json set to ${version}`);
 }
 
 function cleanup(ctx: Ctx): void {
@@ -979,14 +1072,9 @@ export function migrationHolds(
   }
 
   // The codemod phase: nothing is left for it to do — it ran, and nothing
-  // after it added a document.
-  const lint = (ctx.config?.lint ?? {}) as Record<string, unknown>;
-  const left = runCodemod({
-    repoRoot: ctx.root,
-    docsRootName: ctx.docsRootName,
-    exclude: strings(lint.exclude) ?? [],
-    dryRun: true,
-  }).changed;
+  // after it added a document. Asked with the same declared types and skips
+  // the phase used, so a declared folder's documents count.
+  const left = runCodemod({ ...codemodOptions(ctx), dryRun: true }).changed;
   if (left.length > 0)
     v.push(
       `${left.length} document(s) still have no frontmatter block after the run:\n` +
@@ -1061,11 +1149,15 @@ export function main(argv: string[]): number {
     // phase ordering enforce itself, and a unit test of the function does not
     // show it is WIRED. This lets a test add a bare document AFTER the report
     // was read and assert the run still stops.
+    // The value is a bare file name, written under memories/; a path is refused
+    // rather than joined into the adopter's tree.
     const mutate = process.env.PDOCS_MIGRATE_TEST_MUTATE;
     if (mutate && !ctx.dryRun) {
+      if (/[\\/]/.test(mutate))
+        fail("PDOCS_MIGRATE_TEST_MUTATE must be a bare file name, not a path.");
       ctx.wrote = true;
-      mkdirSync(dirname(join(ctx.docsRoot, mutate)), { recursive: true });
-      writeFileSync(join(ctx.docsRoot, mutate), "# Added by the test seam\n");
+      mkdirSync(join(ctx.docsRoot, "memories"), { recursive: true });
+      writeFileSync(join(ctx.docsRoot, "memories", mutate), "# Added by the test seam\n");
     }
 
     bumpVersion(ctx, version);

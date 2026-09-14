@@ -97,12 +97,15 @@ v2.9 migration does; describe it, do not reinvent it.
   `docsRoot` resolves — or, for a migration that _installs_
   `.project-docs.json`, `docs/README.md` with a `docs_version` line, since the
   config is what the run writes), the tools exist (`bun`, `cookiecutter` unless
-  `--scaffold-dir`), and reports a dirty git tree. Reported, not enforced — it
-  is the adopter's repository, and the report is what keeps this migration's
-  changes separable from theirs. A preflight may also stop on a condition the
-  adopter must decide before anything is written — v2.6's tier check names every
-  docs-root folder the lint would silently read as library — and a stop there
-  prints the exact lines that resolve it.
+  `--scaffold-dir`), and reads `git status`. Dirt in a path the run will not
+  touch is reported, not enforced — it is the adopter's repository. Dirt in a
+  path the run will write is a stop that names the path, with `--force` to
+  override (v2.6: the templates it would replace, `scripts/pdocs/`,
+  `docs/SCHEMA.md`, every document the codemod would mark — a replaced file's
+  uncommitted edit is gone and was never in git). A preflight may also stop on a
+  condition the adopter must decide before anything is written — v2.6's tier
+  check names every docs-root folder the lint would silently read as library —
+  and a stop there prints the exact lines that resolve it.
 - **Scaffold** generates into a private temp directory (`mkdtempSync`), never
   into the project, and verifies the generated root has `docs/SCHEMA.md` and
   `scripts/pdocs/`. **A dry run generates it too** — without one the version
@@ -251,12 +254,15 @@ script-shaped guide still asks a person to write.
 ## Quality checklist
 
 Run it before the migration ships. The v2.8 → v2.9 migration passes every item
-below; `v2.7-to-v2.8.md` fails **No cross-block state** — of its 17 lines
-carrying `$SCAFFOLD` or `$VERSION`, 8 are fenced reads of a value another block
-produced (lines 162, 174, 185, 369, 371, 404, 411, 516; the rest are prose, the
-assigning block, or the same-block `$VERSION` reads) — and **Every check can
-fail** (`|| echo "STOP — re-derive SCAFFOLD"`). A checklist the reference cannot
-pass is the defect, not the reference.
+below; `v2.7-to-v2.8.md` fails **No cross-block state** — counted with
+`grep -nE '\$\{?(SCAFFOLD|VERSION)'`, it has 17 lines carrying `$SCAFFOLD` or
+`$VERSION`, of which 8 are fenced reads of a value another block produced: step
+3's `ls` assigns `$SCAFFOLD`, and step 3's own verify and guard blocks, step 4's
+`cp`, step 8's template loop and `AGENTS.md` copy, and step 12's `VERSION=` line
+each read it in a block of their own. The other 9 are prose, the assigning
+block, and step 12's same-block `$VERSION` reads. It also fails **Every check
+can fail** (`|| echo "STOP — re-derive SCAFFOLD"`). A checklist the reference
+cannot pass is the defect, not the reference.
 
 **Both shapes:**
 
@@ -272,7 +278,8 @@ pass is the defect, not the reference.
       computed whatever the prose says, and a hit reading one fails.
       `v2.8-to-v2.9.md:79` passes: `$SKILL_DIR` is the reader's own path, set at
       line 61, and line 65 says to set it again in the same block or paste it.
-      `v2.7-to-v2.8.md:185` fails: line 155's `ls` produced `$SCAFFOLD`.
+      `v2.7-to-v2.8.md` step 4's `cp -R "$SCAFFOLD/scripts/pdocs/."` fails: step
+      3's `ls` produced `$SCAFFOLD`, in another block.
 - [ ] **Every check can fail.** Each shell check ends
       `|| { echo "..."; exit 1; }`; each script check throws. Nothing ends in
       `&& echo "ok" || echo "STOP"`.
