@@ -168,3 +168,7 @@ What has been happening lately, for a cold start. — see
 - [What you ship says who owns it](./memories/2026-09-08-shipped-ownership-boundary.md)
   — Development-process artefacts leak into a payload one convenience at a time,
   and each one quietly hands the consumer something to maintain.
+- [The v2.6 migration is a script, and the skill teaches the shape](./memories/2026-09-13-migration-shape-script.md)
+  — v2.6-to-v2.7 became a nine-phase self-verifying script authored under a
+  rewritten migration-authoring skill, ran for real on MediaForge, and six older
+  guides went legacy; project-docs 3.10.0.

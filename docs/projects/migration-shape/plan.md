@@ -7,7 +7,7 @@ description:
   project.
 tags: [migrations, agent-execution, tooling]
 status: draft
-lifecycle: draft
+lifecycle: completed
 generated: { by: claude-fable-5-1, at: 2026-09-12 }
 ---
 
@@ -47,15 +47,15 @@ its script. Nothing in this plan changes either.
 
 **Definition of Done:**
 
-- [ ] `migration-authoring/SKILL.md` states the script-vs-guide rule and carries
+- [x] `migration-authoring/SKILL.md` states the script-vs-guide rule and carries
       a quality checklist that the v2.9 migration satisfies in full and that a
       prose guide with cross-block state fails.
-- [ ] `migrations/scripts/migrate-v2.6-to-v2.7.ts` is a whole-migration script
+- [x] `migrations/scripts/migrate-v2.6-to-v2.7.ts` is a whole-migration script
       on the v2.9 shape, with the existing codemod as one self-contained phase,
       and `migrations/v2.6-to-v2.7.md` is a guide that explains it.
-- [ ] `grep` for a cross-block shell variable in `v2.6-to-v2.7.md` returns 0
+- [x] `grep` for a cross-block shell variable in `v2.6-to-v2.7.md` returns 0
       lines.
-- [ ] Every guard in the new script has a test that was **watched failing**,
+- [x] Every guard in the new script has a test that was **watched failing**,
       plus a wiring witness per phase — and the observation is recorded, not
       inferred. A green `bun test` does not tick this box. The evidence is the
       break-observe-restore round-trip per guard and the neutered call site per
@@ -63,17 +63,17 @@ its script. Nothing in this plan changes either.
       `Guards watched failing` heading, one line per guard naming the test that
       covers it; the test names themselves carry the guard they exercise so the
       note and the suite can be read against each other.
-- [ ] `update-project-docs` § Step 7 contains no table of guide steps to
+- [x] `update-project-docs` § Step 7 contains no table of guide steps to
       hand-assemble; § Step 4 names the script-shaped case; § Creating New
       Migration Guides describes both shapes and the rule for choosing.
-- [ ] `v2.7-to-v2.8`'s `Applies If` identifies the v2.7 lint by content and is
+- [x] `v2.7-to-v2.8`'s `Applies If` identifies the v2.7 lint by content and is
       false on `dreamwood/dream-flute`.
-- [ ] The six non-current guides carry a legacy banner.
-- [ ] `scaffold-update-checklist`'s sync procedure names one validation per
+- [x] The six non-current guides carry a legacy banner.
+- [x] `scaffold-update-checklist`'s sync procedure names one validation per
       shape, and the script one is a command.
-- [ ] `project-docs` plugin minor-bumped, `dist/` rebuilt, `npm run check`
+- [x] `project-docs` plugin minor-bumped, `dist/` rebuilt, `npm run check`
       clean.
-- [ ] The script has run for real on `dreamwood/media-forge`, exiting 0 with the
+- [x] The script has run for real on `dreamwood/media-forge`, exiting 0 with the
       gate still off, committed on its own branch there, **and the v2.9 script
       has run after it**; the backfill and the gate follow in later commits.
 
@@ -223,18 +223,18 @@ the best migration in the repository.
 
 **Validation:**
 
-- [ ] Read the v2.9 guide and script against the new quality checklist, item by
+- [x] Read the v2.9 guide and script against the new quality checklist, item by
       item. Every item passes. Any item it fails is a defect in the checklist.
-- [ ] Read `v2.7-to-v2.8.md` against the same checklist. It fails on the
+- [x] Read `v2.7-to-v2.8.md` against the same checklist. It fails on the
       cross-block-state item. If it passes, the checklist does not discriminate
       and is not done.
-- [ ] The rewritten skill contains no instruction that the v2.9 migration
+- [x] The rewritten skill contains no instruction that the v2.9 migration
       violates. Specifically: no "scaffold cleanup step", no "version marker
       step", no "one item per action" checklist rule, no "one verification per
       change".
-- [ ] `grep -n "Step-by-Step Migration" plugins/project-docs/skills/update-project-docs/SKILL.md`
+- [x] `grep -n "Step-by-Step Migration" plugins/project-docs/skills/update-project-docs/SKILL.md`
       shows it only inside the guide-shaped branch.
-- [ ] `npx prettier --write` on all four changed files; `npm run format:check`
+- [x] `npx prettier --write` on all four changed files; `npm run format:check`
       clean.
 
 **Dependencies:** None.
@@ -280,12 +280,12 @@ from its first commit.
 
 **Validation:**
 
-- [ ] Fixture A generates offline-reproducibly from the tag, and
+- [x] Fixture A generates offline-reproducibly from the tag, and
       `[ ! -f docs/SCHEMA.md ]` is true on it.
-- [ ] Fixture B has `docs/SCHEMA.md` and no `scripts/pdocs/cli.ts` — the exact
+- [x] Fixture B has `docs/SCHEMA.md` and no `scripts/pdocs/cli.ts` — the exact
       pair that makes both existing presence checks false, which is why § Step 7
       exists.
-- [ ] A note records how long fixture generation takes and whether it needs the
+- [x] A note records how long fixture generation takes and whether it needs the
       network; if `--checkout` requires a fetch, the test must be able to reuse
       a cached clone rather than hitting the network per test.
 
@@ -384,23 +384,23 @@ actually teaches the shape.
 
 **Validation:**
 
-- [ ] `bun test` green, including the pre-existing codemod tests.
-- [ ] Fixture **A1**: `--dry-run` then a real run exits 0 with the gate off and
+- [x] `bun test` green, including the pre-existing codemod tests.
+- [x] Fixture **A1**: `--dry-run` then a real run exits 0 with the gate off and
       the report printed; `pdocs check` on the result reports the missing
       `description`s rather than erroring, because `adopting` is true.
-- [ ] Fixture **A0**: the same command exits non-zero from preflight, naming the
+- [x] Fixture **A0**: the same command exits non-zero from preflight, naming the
       undeclared folder, and the tree is byte-identical afterwards. A0 is never
       run to completion — that is what A1 is for.
-- [ ] Fixture B passes through the **same** command with no flag. If it does
+- [x] Fixture B passes through the **same** command with no flag. If it does
       not, apply Decision 2's fallback and record it here.
-- [ ] `grep -nE '\$\{?(SCAFFOLD|VERSION|SKILL_DIR)' migrations/v2.6-to-v2.7.md`
+- [x] `grep -nE '\$\{?(SCAFFOLD|VERSION|SKILL_DIR)' migrations/v2.6-to-v2.7.md`
       returns nothing, except inside a single self-contained block (the v2.9
       guide's two-line precedent).
-- [ ] Every item of phase 1's quality checklist passes against the new guide and
+- [x] Every item of phase 1's quality checklist passes against the new guide and
       script. **Any item that cannot be satisfied is a phase 1 defect** — go
       back and fix the skill, then re-check. Record each such round-trip; they
       are the evidence that the ordering was worth it.
-- [ ] A cold read of the guide by a reader who has not seen the script: can they
+- [x] A cold read of the guide by a reader who has not seen the script: can they
       tell what the command does, when to stop, and what it will not check?
 
 **Dependencies:** Phases 1 and 2.
@@ -451,14 +451,14 @@ the routing table tells the truth.
 
 **Validation:**
 
-- [ ] `grep -c "Legacy" migrations/*.md` shows exactly the six.
-- [ ] The tightened test, run against
+- [x] `grep -c "Legacy" migrations/*.md` shows exactly the six.
+- [x] The tightened test, run against
       `/Users/colereed/Projects/dreamwood/dream-flute`, is **false**; run
       against a tree carrying the real v2.7 lint (recoverable from history),
       **true**. Both directions, actually executed — an untested precondition is
       the defect this phase is fixing.
-- [ ] § Step 7 contains no table of migration steps.
-- [ ] Every `Applies If` cell in the table is a shell test that still parses;
+- [x] § Step 7 contains no table of migration steps.
+- [x] Every `Applies If` cell in the table is a shell test that still parses;
       run each one from this repository's root and confirm it does not error.
 
 **Dependencies:** Phase 3 (the § Step 7 collapse depends on per-phase
@@ -491,11 +491,11 @@ preconditions actually covering the orphaned tree).
 
 **Validation:**
 
-- [ ] `npm run check` clean — `format:check`, `docs:lint`, `check:version`,
+- [x] `npm run check` clean — `format:check`, `docs:lint`, `check:version`,
       `check:mirror`, `check:dist`, `test`.
-- [ ] `git diff --stat dist/` shows the `update-project-docs` skill and its
+- [x] `git diff --stat dist/` shows the `update-project-docs` skill and its
       `migrations/` folder, and nothing else.
-- [ ] `bun scripts/pdocs/cli.ts check --format text` clean, including this plan.
+- [x] `bun scripts/pdocs/cli.ts check --format text` clean, including this plan.
 
 **Dependencies:** Phases 3 and 4.
 
@@ -557,14 +557,14 @@ documents outside `_archive/`, one already carrying frontmatter.
 
 **Validation:**
 
-- [ ] The dry run's output was read before the real run, not after — for both
+- [x] The dry run's output was read before the real run, not after — for both
       scripts.
-- [ ] Exit 0; `lint.adopting` is still `true` in the migration commit.
-- [ ] MediaForge ends with `docs/.pdocs-seed.json` present **and committed**
+- [x] Exit 0; `lint.adopting` is still `true` in the migration commit.
+- [x] MediaForge ends with `docs/.pdocs-seed.json` present **and committed**
       (`git check-ignore -v docs/.pdocs-seed.json` prints nothing), in a commit
       of its own separate from the v2.6 one. A manifest that never reaches the
       repository cannot be read by the migration after it.
-- [ ] `bun scripts/pdocs/cli.ts check` in MediaForge reports the missing
+- [x] `bun scripts/pdocs/cli.ts check` in MediaForge reports the missing
       `description`s and exits 0, because the gate is off.
 - [ ] The gate-on commit is separate, and `pdocs check` is clean when it lands.
 
@@ -669,10 +669,13 @@ Revert the branch. `npm run check` proves the revert is complete because
 
 ## Open Questions
 
-- [ ] Does the `v2.6-to-v2.7` entry point grow into the whole-migration script,
-      or does a new entry point call the existing codemod as a module? Decide in
-      phase 3; either satisfies the constraint, and the constraint is that the
-      codemod stays self-contained and its table-pinning test keeps passing.
+- [x] **Decided in phase 3: a new entry point calls the codemod as a sibling
+      module** (`migrate-v2.6-to-v2.7.codemod.ts`); the table-pinning test is
+      unchanged. Does the `v2.6-to-v2.7` entry point grow into the
+      whole-migration script, or does a new entry point call the existing
+      codemod as a module? Decide in phase 3; either satisfies the constraint,
+      and the constraint is that the codemod stays self-contained and its
+      table-pinning test keeps passing.
 - [ ] Does the preflight tier report belong in the v2.9 script too? Out of scope
       here — the v2.9 migration is the reference and is not a target — but worth
       recording if phase 3 shows the check is general rather than specific to

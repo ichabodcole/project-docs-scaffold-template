@@ -95,7 +95,8 @@ bump, and run the script for real on `dreamwood/media-forge`.
       → v2.9) on `chore/project-docs-frontmatter-layer` in
       dreamwood/media-forge; backfill and gate pending there
 - [x] Tests passing — 905 across 18 files at phase 5
-- [ ] Ready for merge
+- [x] Ready for merge — dual finalize review, three defects fixed and
+      re-verified by the reviewer's own probes
 
 ## Completion
 
