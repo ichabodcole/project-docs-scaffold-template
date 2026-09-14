@@ -1,8 +1,7 @@
 ---
 type: playbook # REQUIRED (OKF §3). Do not change it — the folder decides it.
 title: "[Topic] Playbook"
-description:
-  "[One sentence: what this playbook gets done, and when to reach for it.]"
+description: "[One sentence: what this gets done, and when to reach for it.]"
 tags: [process, area] # 2-4 kebab-case keywords
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
 generated: { by: your-name-or-model, at: YYYY-MM-DD }

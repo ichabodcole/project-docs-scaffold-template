@@ -390,3 +390,73 @@ describe("guards that had no witness", () => {
     expect(r.exitCode).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// #167 — `.project-docs.json` is theirs: a run that moves `version` moves that
+// one line and nothing else. The file used to come back re-serialised in the
+// script's own style, so a Biome-formatted file (short arrays on one line)
+// failed the adopter's own gate one commit after it had been formatted.
+// ---------------------------------------------------------------------------------------
+
+/** The file as Biome leaves it: 2-space, short arrays collapsed. */
+const BIOME_STYLE_CONFIG = `{
+  "docsRoot": "docs",
+  "version": "7.0.0",
+  "lint": {
+    "adopting": false,
+    "exclude": [],
+    "skip": ["_archive", "superpowers"]
+  }
+}
+`;
+
+/** The lines that differ between two texts, as [index, before, after]. */
+const changedLines = (before: string, after: string): Array<[number, string, string]> => {
+  const a = before.split("\n");
+  const b = after.split("\n");
+  const out: Array<[number, string, string]> = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++)
+    if (a[i] !== b[i]) out.push([i, a[i] ?? "<none>", b[i] ?? "<none>"]);
+  return out;
+};
+
+describe("#167 — .project-docs.json keeps its bytes when only `version` moves", () => {
+  test("a Biome-style file: the run changes the version line and no other", () => {
+    const p = project({ ...TPL, ".project-docs.json": BIOME_STYLE_CONFIG });
+    const cfgPath = join(p, ".project-docs.json");
+    const r = run(p, scaffold("9.9.9"));
+    expect(r.exitCode).toBe(0);
+    const after = readFileSync(cfgPath, "utf8");
+    expect(changedLines(BIOME_STYLE_CONFIG, after)).toEqual([
+      [2, '  "version": "7.0.0",', '  "version": "9.9.9",'],
+    ]);
+    expect(after).toContain('"skip": ["_archive", "superpowers"]');
+    expect(out(r)).toContain(".project-docs.json set to 9.9.9 — that one key; every other byte as it was");
+  });
+
+  test("a file already at the release is not written at all", () => {
+    const text = `${JSON.stringify({ docsRoot: "docs", version: "9.9.9", lint: {} }, null, 4)}\n`;
+    const p = project({ ...TPL, ".project-docs.json": text });
+    const cfgPath = join(p, ".project-docs.json");
+    const r = run(p, scaffold("9.9.9"));
+    expect(r.exitCode).toBe(0);
+    expect(readFileSync(cfgPath, "utf8")).toBe(text);
+    expect(out(r)).toContain(".project-docs.json already at 9.9.9");
+  });
+
+  test("when the key cannot be patched in place the file is re-serialised, the phase says so, and the indent is kept", () => {
+    // No top-level `version` at all: nothing to patch, so the phase adds the
+    // key by re-serialising — in the file's own indent, and saying so.
+    const text = `{\n    "docsRoot": "docs",\n    "lint": {}\n}\n`;
+    const p = project({ ...TPL, ".project-docs.json": text });
+    const cfgPath = join(p, ".project-docs.json");
+    const r = run(p, scaffold("9.9.9"));
+    expect(r.exitCode).toBe(0);
+    expect(out(r)).toContain(
+      '.project-docs.json set to 9.9.9 — re-serialised, indent kept: no top-level "version" to patch in place'
+    );
+    const after = readFileSync(cfgPath, "utf8");
+    expect(JSON.parse(after).version).toBe("9.9.9");
+    expect(after.startsWith('{\n    "docsRoot"')).toBe(true);
+  });
+});

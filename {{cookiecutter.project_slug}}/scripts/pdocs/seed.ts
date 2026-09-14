@@ -28,11 +28,43 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 /** Lives inside the docs root, so it travels with what it describes — including
  *  across the cookiecutter install that moves `docs/` up into the parent. */
 export const MANIFEST_NAME = ".pdocs-seed.json";
+
+/**
+ * Is this path a template — a seeded file, a form rather than a document?
+ *
+ * ONE RULE, in the one place both readers can reach. A migration reconciles
+ * templates through this module, and the lint (`lint/rules.ts`, whose
+ * `isTemplate` is this function) skips them on every tier. They used to be two
+ * rules: the lint matched `/template/i` on the basename, which hid a real
+ * specification named `templates.md` from every tier and never said so; the
+ * seeded rule matched `TEMPLATE` anywhere in the name. Both now match exactly
+ * the five shapes the scaffold ships, and nothing else:
+ *
+ *   TEMPLATE.md                   the one-per-folder form
+ *   TEMPLATE-<variant>.md         specifications/TEMPLATE-domain.md
+ *   YYYY-MM-DD-TEMPLATE-<type>.md the dated forms
+ *   <NAME>.template.md            everything under a TEMPLATES/ directory
+ *   TEMPLATES/…                   the directory itself, at any depth
+ *
+ * Any path form is accepted — basename, docs-relative, repo-relative, absolute
+ * — because callers hold every one. The v2.9 migration script and the
+ * cookiecutter hook keep their own, wider, adoption-time copies on purpose;
+ * `scripts/seeded-coverage.test.ts` holds this one equal to the lint's and
+ * proves those two still cover everything this one reads.
+ */
+export function isSeeded(path: string): boolean {
+  const name = basename(path);
+  return (
+    /^(?:YYYY-MM-DD-)?TEMPLATE(?:-[^/]+)?\.md$/.test(name) ||
+    name.endsWith(".template.md") ||
+    path.split("/").includes("TEMPLATES")
+  );
+}
 
 export interface SeedManifest {
   /** The scaffold version that wrote these hashes. `null` when there is no manifest. */

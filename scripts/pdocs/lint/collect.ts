@@ -22,10 +22,11 @@ import {
   excluder,
   frontmatterSyntaxProblems,
   graphTier,
-  isTemplate,
   libraryFieldChecks,
   schemaTableChecks,
+  templatePaths,
   templateProblems,
+  templateTest,
   thinTier,
 } from "./rules.ts";
 
@@ -41,6 +42,8 @@ export interface LintReport {
   workbench: string[];
   /** `library.fieldProblems` + `library.graph.problems` + `workbench`. */
   total: number;
+  /** Repo-relative paths under the docs root the lint skipped as templates. */
+  templates: string[];
   /** `lint.adopting` in `.project-docs.json`: problems are reported and do not fail the gate. */
   adopting: boolean;
 }
@@ -58,6 +61,7 @@ export interface LintReport {
 export function collect(ctx: Ctx): LintReport {
   const fieldProblems = libraryFieldChecks(ctx);
   const graph = graphTier(ctx);
+  const isTpl = templateTest(ctx);
 
   const workbench = [
     ...thinTier(ctx),
@@ -75,7 +79,7 @@ export function collect(ctx: Ctx): LintReport {
     ...linkProblemsFor(
       ctx.repoRoot,
       trackedMarkdown(ctx.repoRoot).filter(
-        (p) => !isTemplate(p) && !excluder(ctx)(p)
+        (p) => !isTpl(p) && !excluder(ctx)(p)
       )
     ),
   ];
@@ -84,6 +88,7 @@ export function collect(ctx: Ctx): LintReport {
     library: { fieldProblems, graph },
     workbench,
     total: fieldProblems.length + graph.problems.length + workbench.length,
+    templates: templatePaths(ctx),
     adopting: ctx.config.lint.adopting,
   };
 }

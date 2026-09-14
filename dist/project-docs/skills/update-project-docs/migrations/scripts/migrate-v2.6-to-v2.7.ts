@@ -23,7 +23,8 @@
  *   5  frontmatter — the codemod: a derived block on every document
  *   6  config      — .project-docs.json, lint.adopting: true, version carried
  *   7  report      — `pdocs report`, printed: the backfill's worklist
- *   8  version     — both markers, set together to the scaffold's release
+ *   8  version     — both markers, set together to the scaffold's release;
+                    the JSON's one key patched in place, its other bytes kept
  *   9  cleanup     — remove the generated scaffold
  *
  * WHERE IT STOPS. Tooling installed, codemod run, report printed, exit 0, and
@@ -221,6 +222,98 @@ export function parseArgs(argv: string[]): Options {
       );
   }
   return opts;
+}
+
+// ---------------------------------------------------------------------------------------
+// `.project-docs.json` is THEIRS. When a run moves `version` it patches that one
+// value in the file's own text and verifies the result by parsing it; only when
+// there is no top-level `"version"` to patch does it fall back to re-serialising,
+// and then in the file's own indent, and the phase line says so. Both scripts
+// carry this pair; the v2.6 test file pins the two copies to each other.
+// ---------------------------------------------------------------------------------------
+
+/**
+ * The text of `json` with the value of its top-level `"version"` replaced, and
+ * every other byte — indent, array style, key order — as it was. `null` when
+ * there is no top-level `"version"` key with a scalar value: a nested one, one
+ * appearing as a value, or one spelled with an escape is not the match. The
+ * caller parses the result before trusting it.
+ */
+export function patchTopLevelVersion(json: string, version: string): string | null {
+  const n = json.length;
+  // The index just past the string token that opens at `from`.
+  const endOfString = (from: number): number => {
+    let j = from + 1;
+    while (j < n) {
+      if (json[j] === "\\") j += 2;
+      else if (json[j] === '"') return j + 1;
+      else j++;
+    }
+    return n;
+  };
+  let depth = 0;
+  let i = 0;
+  while (i < n) {
+    const c = json[i];
+    if (c === '"') {
+      const end = endOfString(i);
+      if (depth === 1 && json.slice(i, end) === '"version"') {
+        const colon = /^\s*:\s*/.exec(json.slice(end));
+        // Followed by a colon it is a key; otherwise it is a value — keep going.
+        if (colon) {
+          const valueStart = end + colon[0].length;
+          const v = json[valueStart];
+          if (v === "{" || v === "[" || v === undefined) return null;
+          const valueEnd =
+            v === '"'
+              ? endOfString(valueStart)
+              : valueStart + (/^[^\s,}\]]*/.exec(json.slice(valueStart)) as RegExpExecArray)[0].length;
+          return json.slice(0, valueStart) + JSON.stringify(version) + json.slice(valueEnd);
+        }
+      }
+      i = end;
+    } else {
+      if (c === "{" || c === "[") depth++;
+      else if (c === "}" || c === "]") depth--;
+      i++;
+    }
+  }
+  return null;
+}
+
+/**
+ * `cfg` serialised in the indent `before` used (the first indented line's
+ * leading whitespace; two spaces when there is none), ending in a newline only
+ * if `before` did.
+ */
+export function reserialiseLike(cfg: unknown, before: string): string {
+  const indent = /^([ \t]+)"/m.exec(before)?.[1] ?? "  ";
+  return `${JSON.stringify(cfg, null, indent)}${before.endsWith("\n") ? "\n" : ""}`;
+}
+
+/**
+ * Write `.project-docs.json` with `version` moved to `version` and nothing else
+ * changed: the in-place patch when it parses to the intended object, else a
+ * re-serialisation in the file's indent. Returns the phase line's suffix.
+ */
+export function writeVersionInto(path: string, before: string, version: string): string {
+  const intended = JSON.parse(before) as Record<string, unknown>;
+  intended.version = version;
+  const patched = patchTopLevelVersion(before, version);
+  let verified = false;
+  if (patched !== null) {
+    try {
+      verified = Bun.deepEquals(JSON.parse(patched), intended, true);
+    } catch {
+      verified = false;
+    }
+  }
+  if (verified) {
+    writeFileSync(path, patched as string);
+    return "that one key; every other byte as it was";
+  }
+  writeFileSync(path, reserialiseLike(intended, before));
+  return 're-serialised, indent kept: no top-level "version" to patch in place';
 }
 
 // ---------------------------------------------------------------------------------------
@@ -832,6 +925,24 @@ function frontmatter(ctx: Ctx): void {
   ok(
     `${r.changed.length} document(s) ${ctx.dryRun ? "would gain" : "gained"} frontmatter; ${r.skipped.length} skipped (already marked, or a README, template or contract page)`
   );
+  // Two of the codemod's buckets that are "skipped" by count and not by
+  // meaning, printed in the driver's own words: a block that is not this
+  // contract's (no `type`, or one the folder does not allow) is conversion
+  // work for a person, and a slide deck is not a document at all. Neither is
+  // left to mark, so the end-of-run check that the codemod is done still holds.
+  if (r.needsConversion.length) {
+    note(
+      `${r.needsConversion.length} skipped file(s) need conversion — an existing block with no \`type\`, or a \`type\` this folder does not allow. Not a backfill: rewrite the block by hand, then re-run:`
+    );
+    for (const [rel, why] of r.needsConversion) say(`       ${rel}  (${why})`);
+  }
+  if (r.slideDecks.length) {
+    note(
+      `${r.slideDecks.length} file(s) look like slide decks rather than documents — consider \`lint.exclude\`:`
+    );
+    for (const rel of r.slideDecks) say(`       ${rel}`);
+    say(`       See ${ctx.docsRootName}/SCHEMA.md § "Files that are not documentation".`);
+  }
   // Its own count, never folded into "skipped": a bare document in a folder
   // the codemod has no type for is a lint finding waiting to happen.
   if (r.untyped.length) {
@@ -907,8 +1018,10 @@ function writeConfig(ctx: Ctx): void {
     return;
   }
   ctx.wrote = true;
-  writeFileSync(ctx.configPath, `${JSON.stringify(cfg, null, 2)}\n`);
-  ok(`added ${added.join(", ")} — every existing key left as it was`);
+  // Keys are added, so the text cannot be patched in place; the re-serialisation
+  // keeps the file's own indent at least.
+  writeFileSync(ctx.configPath, reserialiseLike(cfg, readFileSync(ctx.configPath, "utf8")));
+  ok(`added ${added.join(", ")} — every existing key left as it was, indent kept`);
 }
 
 function report(ctx: Ctx): void {
@@ -970,24 +1083,24 @@ function bumpVersion(ctx: Ctx, version: string): void {
     }
   }
 
-  // Parsed and re-serialised, not regex-substituted: `.project-docs.json` is
-  // theirs, and a line-based expression rewrote every nested `"version"` in it.
+  // Patched in the file's own text and verified by parsing, not regex-
+  // substituted: `.project-docs.json` is theirs. A line-based expression
+  // rewrote every nested `"version"` in it, and a re-serialisation rewrote its
+  // formatting — an adopter's Biome collapsed a short array to one line and the
+  // run expanded it again, failing their gate on a file nobody had edited.
   if (!existsSync(ctx.configPath)) {
     note(".project-docs.json is not there — nothing to set");
     return;
   }
-  // Written only when the value moves. `.project-docs.json` is theirs, and a
-  // re-serialisation of a hand-formatted file is a diff for nothing.
-  const cfg = JSON.parse(readFileSync(ctx.configPath, "utf8"));
-  const configBefore = cfg.version;
-  if (configBefore === version) {
+  // Written only when the value moves.
+  const before = readFileSync(ctx.configPath, "utf8");
+  if (JSON.parse(before).version === version) {
     ok(`.project-docs.json already at ${version}`);
     return;
   }
-  cfg.version = version;
   ctx.wrote = true;
-  writeFileSync(ctx.configPath, `${JSON.stringify(cfg, null, 2)}\n`);
-  ok(`.project-docs.json set to ${version}`);
+  const how = writeVersionInto(ctx.configPath, before, version);
+  ok(`.project-docs.json set to ${version} — ${how}`);
 }
 
 function cleanup(ctx: Ctx): void {

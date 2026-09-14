@@ -153,3 +153,29 @@ running it:
   `undeclaredFolders` unit test with all four inert shapes).
 - `bumpVersion` reports a README it could not set with `·`, and I9 fails the run
   (unchanged witness, review item 6).
+
+## Branch `fix/story-loom-feedback-round-1`
+
+Additions made while landing story-loom's first-consumer issues. Each test below
+was run red against the script as it stood before the fix, then green after; the
+observation column is what the red run printed.
+
+### #167 — `.project-docs.json` keeps its bytes when only `version` moves
+
+No new stop. The version phase in both scripts now patches the top-level
+`"version"` in the file's own text, parses the result and checks it against the
+intended object before writing; when there is no top-level `"version"` to patch
+it re-serialises in the file's own indent and the phase line says so. The
+existing v2.6 end-of-run invariant (`.project-docs.json version is …, not …`)
+still covers the written value, unchanged.
+
+| Test (`describe("#167 — …")`, both files)                                                          | Red observation, before the fix                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v2.6 `a Biome-style file, committed: the run changes the version line and no other`                | 8 changed lines, not 1: `"skip": ["_archive", "superpowers"]` expanded to four lines                                                                              |
+| v2.6 `a nested version ahead of the top-level one, and a value that reads version, are left alone` | `"custom": { "version": "keep-me" }` expanded to three lines; every following line shifted                                                                        |
+| v2.6 `when the key cannot be patched in place the file is re-serialised, the phase says so, …`     | phase line `set to 8.0.0` with no `re-serialised, indent kept` suffix; a 4-space file came back 2-space                                                           |
+| v2.6 `the config phase adding keys to a tab-indented file keeps the tabs`                          | no `indent kept` in the phase line; tabs replaced by two spaces                                                                                                   |
+| v2.9 `a Biome-style file: the run changes the version line and no other`                           | the `skip` array expanded, as above                                                                                                                               |
+| v2.9 `a file already at the release is not written at all`                                         | a 4-space file already at `9.9.9` came back 2-space — the phase wrote even when the value had not moved                                                           |
+| v2.9 `when the key cannot be patched in place the file is re-serialised, the phase says so, …`     | phase line `set to 9.9.9` with no suffix; 4-space file came back 2-space                                                                                          |
+| v2.6 `patchTopLevelVersion` table (14 shapes) and `the v2.9 script's copy agrees on every case`    | written after the helper existed — a missing named export fails the file at link time, not at the assertion — so these pin behaviour rather than witness a defect |

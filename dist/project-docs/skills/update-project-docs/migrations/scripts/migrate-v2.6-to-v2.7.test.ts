@@ -29,32 +29,45 @@ import { DEFAULT_CONFIG } from "../../../../../../scripts/pdocs/docs-lint/config
 import { buildRegistry } from "../../../../../../scripts/pdocs/lint/registry.ts";
 import {
   isSeeded,
+  patchTopLevelVersion,
+  reserialiseLike,
   seededIn,
   undeclaredFolders,
 } from "./migrate-v2.6-to-v2.7.ts";
-import { isSeeded as v29IsSeeded } from "./migrate-v2.8-to-v2.9.ts";
 import {
+  isSeeded as v29IsSeeded,
+  patchTopLevelVersion as v29Patch,
+  reserialiseLike as v29Reserialise,
+} from "./migrate-v2.8-to-v2.9.ts";
+import {
+  CONTRACT_BASENAMES as LINT_CONTRACT_BASENAMES,
   DURABLE_TYPE as LINT_DURABLE,
   PROJECT_FILE_TYPE as LINT_PROJECT_FILE,
   PROJECT_SPEC,
+  RENDERER_KEYS as LINT_RENDERER_KEYS,
   ROOT_PAGE_TYPE as LINT_ROOT_PAGE,
   SPEC,
+  isTemplate as lintIsTemplate,
 } from "../../../../../../scripts/pdocs/lint/rules.ts";
 import {
   DURABLE_TYPE,
   LIFECYCLE,
   NO_LIFECYCLE,
   PROJECT_FILE_TYPE,
+  RENDERER_KEYS,
   ROOT_PAGE_TYPE,
   STATUS_MAP,
   WORKBENCH_TYPE,
   derive,
   frontmatterFor,
+  isContractPage,
   lifecycleOf,
   UNKNOWN_VERSION,
   docsVersionOf,
   main,
+  runCodemod,
   stripConsumedMetadata,
+  tagsOf,
   titleOf,
   typeOf,
 } from "./migrate-v2.6-to-v2.7.codemod.ts";
@@ -81,6 +94,18 @@ function run(root: string, args: string[] = []): number {
   console.log = () => {};
   try {
     return main(args, root);
+  } finally {
+    console.log = real;
+  }
+}
+
+/** Run it and keep what it printed, for the tests that are about the summary. */
+function runCapturing(root: string, args: string[] = []): { code: number; out: string } {
+  const real = console.log;
+  const lines: string[] = [];
+  console.log = (...a: unknown[]) => lines.push(a.map(String).join(" "));
+  try {
+    return { code: main(args, root), out: lines.join("\n") };
   } finally {
     console.log = real;
   }
@@ -358,6 +383,10 @@ describe("the copied tables equal the ones the lint enforces", () => {
   // A status that maps to a value the vocabulary does not contain would write a
   // document the lint then rejects — the migration's own output failing its own
   // gate, which is the worst possible first impression.
+  test("the slide-renderer keys `pdocs report` looks for", () => {
+    expect(RENDERER_KEYS).toEqual(LINT_RENDERER_KEYS);
+  });
+
   test("every mapped status lands inside its type's vocabulary", () => {
     for (const [type, map] of Object.entries(STATUS_MAP))
       for (const [raw, mapped] of Object.entries(map))
@@ -395,12 +424,47 @@ describe("typeOf — position declares the type", () => {
     ["README.md"],
     ["memories/README.md"],
     ["memories/TEMPLATE.md"],
+    ["specifications/TEMPLATE-domain.md"],
+    ["investigations/YYYY-MM-DD-TEMPLATE-investigation.md"],
     ["projects/TEMPLATES/PROPOSAL.template.md"],
     ["SCHEMA.md"],
     ["superpowers/plans/a.md"],
     ["AGENTS.md"],
   ])("%s is not ours to touch", (rel) => {
     expect(typeOf(rel)).toBeNull();
+  });
+
+  // A substring match on "template" made a specification named `templates.md`
+  // the one document the codemod left bare — and then invisible to the lint
+  // that would have said so. A template is an exact shape, not a word.
+  test.each([
+    ["specifications/templates.md", "specification"],
+    ["specifications/experience-engine/templates.md", "specification"],
+    ["playbooks/email-templates.md", "playbook"],
+    ["reports/2026-09-14-template-library.md", "report"],
+  ])("%s → %s, a document whose name merely contains the word", (rel, expected) => {
+    expect(typeOf(rel)).toBe(expected);
+  });
+
+  test("the copied template rule equals the lint's, name for name", () => {
+    const names = [
+      "TEMPLATE.md",
+      "TEMPLATE-domain.md",
+      "YYYY-MM-DD-TEMPLATE-report.md",
+      "PLAN.template.md",
+      "projects/TEMPLATES/x.md",
+      "templates.md",
+      "email-templates.md",
+      "TEMPLATES.md",
+      "README.md",
+      "SCHEMA.md",
+      "control.md",
+    ];
+    for (const name of names)
+      expect({ name, contract: isContractPage(name) }).toEqual({
+        name,
+        contract: LINT_CONTRACT_BASENAMES.has(basename(name)) || lintIsTemplate(name),
+      });
   });
 });
 
@@ -472,6 +536,57 @@ describe("lifecycleOf — the bold status line it is about to remove", () => {
   test("a frozen type never gets one", () => {
     expect(lifecycleOf("**Status:** Completed\n", "session").value).toBeNull();
     expect(lifecycleOf("**Status:** Completed\n", "memory").value).toBeNull();
+  });
+});
+
+// Five of story-loom's 161 documents came out with `tags:` built from sentence
+// fragments — `[clickable, tag, chips, licking, adds, …]` — because the label
+// was matched anywhere in a line and every lowercase run after it was a token.
+// The values pass the lint, so nothing downstream would ever have said so.
+describe("tagsOf — only what is already written down as a tag", () => {
+  test("a body bullet that happens to say **Tags** is prose, not metadata", () => {
+    const body =
+      "# Gallery filters\n\n**Status:** Draft\n\n## Behaviour\n\n" +
+      "- **Tags**: Clickable tag chips: Clicking adds or removes the tag from the active gallery filters.\n";
+    expect(tagsOf(body)).toEqual([]);
+  });
+
+  // The token rule alone would accept this one: real backticked tags, in a
+  // sentence, outside the metadata paragraph. Only the anchoring rejects it.
+  test("backticked tokens after a **Tags:** in body prose are still prose", () => {
+    expect(
+      tagsOf(
+        "# Filters\n\n**Status:** Draft\n\nThe UI shows a **Tags:** row with `#chips` and `#filters`.\n"
+      )
+    ).toEqual([]);
+  });
+
+  test("a bold Tags line whose value is prose rather than tokens yields nothing", () => {
+    expect(tagsOf("# A\n\n**Tags:** Clickable tag chips, and what clicking does\n")).toEqual([]);
+  });
+
+  test("the packed Prettier form keeps working", () => {
+    expect(
+      tagsOf("# A\n\n**Date:** 2026-02-15 **Tags:** `#migrations` `#agent-execution`\n")
+    ).toEqual(["migrations", "agent-execution"]);
+  });
+
+  test("the line-start form, backticked or bare-hash", () => {
+    expect(tagsOf("# A\n\n**Tags:** `#a-tag` `b-tag`\n")).toEqual(["a-tag", "b-tag"]);
+    expect(tagsOf("# A\n\n**Tags:** #a-tag #b-tag\n")).toEqual(["a-tag", "b-tag"]);
+  });
+
+  test("a capitalised token is lowered whole, not truncated to its lowercase tail", () => {
+    expect(tagsOf("# A\n\n**Tags:** `#Clicking` `#AgentExecution`\n")).toEqual([
+      "clicking",
+      "agentexecution",
+    ]);
+  });
+
+  test("a wrapped metadata paragraph is read across its lines", () => {
+    expect(
+      tagsOf("# A\n\n**Date:** 2026-02-15 **Tags:** `#one`\n`#two` `#three`\n\nBody.\n")
+    ).toEqual(["one", "two", "three"]);
   });
 });
 
@@ -552,6 +667,22 @@ describe("the whole script, on a fixture repository", () => {
     expect(readFileSync(join(root, "docs/README.md"), "utf8")).toBe(readme);
   });
 
+  test("a real page named templates.md is marked like the page beside it", () => {
+    const root = fixture({
+      "docs/specifications/control.md": "# Control\n\nText.\n",
+      "docs/specifications/templates.md":
+        "# Templates\n\n**Status:** Draft\n\nText.\n",
+    });
+    expect(run(root)).toBe(0);
+    for (const rel of ["control.md", "templates.md"]) {
+      const out = readFileSync(join(root, "docs/specifications", rel), "utf8");
+      expect({ rel, marked: out.startsWith("---\ntype: specification\n") }).toEqual({
+        rel,
+        marked: true,
+      });
+    }
+  });
+
   test("_archive is not touched", () => {
     const old = "# Old thing\n\n**Status:** Completed\n";
     const root = fixture({ "docs/projects/_archive/y/proposal.md": old });
@@ -618,6 +749,124 @@ describe("the whole script, on a fixture repository", () => {
   });
 });
 
+// The codemod skips any file that already opens with `---`, which is right,
+// but it cannot tell "already migrated" from "carries a frontmatter block from
+// some other system". Story-loom had four of the second kind — an older memory
+// format with `name:` and `type: project` — and they surfaced only later, in
+// `pdocs report`, as three ordinary missing-field rows each, indistinguishable
+// from documents that merely want a backfill. They need a CONVERSION, and the
+// difference has to be visible where the skip happens.
+describe("a skipped file whose block is not this contract's is named, not hidden", () => {
+  const foreign =
+    "---\nname: auth-flows-implementation\ndescription: How auth flows are wired.\ntags: [auth, betterauth]\ntype: project\n---\n\n# Auth flows\n";
+  const typeless = "---\nname: cache-notes\ntags: [cache]\n---\n\n# Cache notes\n";
+  const marked =
+    "---\ntype: proposal\ntitle: Already\nstatus: stable\ngenerated: { by: unknown, at: 2026-01-01 }\n---\n\n# Already\n";
+
+  const tree = () =>
+    fixture({
+      "docs/memories/auth-flows.md": foreign,
+      "docs/memories/cache-notes.md": typeless,
+      "docs/projects/x/proposal.md": marked,
+      "docs/memories/TEMPLATE.md": "---\ntype: memory\ntitle: \"[Title]\"\n---\n\n# [Title]\n",
+      "docs/memories/README.md": "# Memories\n",
+    });
+
+  test("runCodemod counts them separately, with the reason, and leaves them untouched", () => {
+    const root = tree();
+    const r = runCodemod({ repoRoot: root, docsRootName: "docs", exclude: [], dryRun: false });
+    expect(r.needsConversion).toEqual([
+      ["docs/memories/auth-flows.md", "type: project — its position says memory"],
+      ["docs/memories/cache-notes.md", "no type"],
+    ]);
+    // Still skipped: naming is the whole fix, conversion is a separate question.
+    expect(r.skipped).toContain("docs/memories/auth-flows.md");
+    expect(r.skipped).toContain("docs/memories/cache-notes.md");
+    expect(readFileSync(join(root, "docs/memories/auth-flows.md"), "utf8")).toBe(foreign);
+    expect(readFileSync(join(root, "docs/memories/cache-notes.md"), "utf8")).toBe(typeless);
+  });
+
+  test("a quoted type is read unquoted, the way the lint's parser reads it", () => {
+    const root = fixture({
+      "docs/memories/dq.md": '---\ntype: "memory"\ntitle: DQ\n---\n\n# DQ\n',
+      "docs/memories/sq.md": "---\ntype: 'memory'\ntitle: SQ\n---\n\n# SQ\n",
+      "docs/memories/wrong.md": '---\ntype: "project"\ntitle: W\n---\n\n# W\n',
+    });
+    const r = runCodemod({ repoRoot: root, docsRootName: "docs", exclude: [], dryRun: true });
+    expect(r.needsConversion).toEqual([
+      ["docs/memories/wrong.md", "type: project — its position says memory"],
+    ]);
+  });
+
+  test("a block that already carries the right type is not conversion work, and neither is a template's", () => {
+    const r = runCodemod({ repoRoot: tree(), docsRootName: "docs", exclude: [], dryRun: true });
+    const named = r.needsConversion.map(([rel]) => rel);
+    expect(named).not.toContain("docs/projects/x/proposal.md");
+    expect(named).not.toContain("docs/memories/TEMPLATE.md");
+  });
+
+  test("the summary names them under their own count", () => {
+    const { code, out } = runCapturing(tree());
+    expect(code).toBe(0);
+    expect(out).toContain("2 skipped file(s) need conversion");
+    expect(out).toContain("docs/memories/auth-flows.md");
+    expect(out).toContain("type: project — its position says memory");
+    expect(out).toContain("docs/memories/cache-notes.md");
+    expect(out).toContain("no type");
+  });
+
+  test("and says nothing when there are none", () => {
+    const { out } = runCapturing(fixture({ "docs/projects/x/proposal.md": marked }));
+    expect(out).not.toContain("need conversion");
+  });
+
+  // A Slidev or Marp deck has a frontmatter block, so the skip sees "already
+  // marked"; it has no `type`, so the report sees "needs a type"; and an agent
+  // working that list would write `type: artifact` into a deck. SCHEMA.md
+  // § "Files that are not documentation" is the answer, and it has to be
+  // reachable from here.
+  const slidev =
+    "---\ntheme: default\ntitle: Context Library Gap Analysis\ncolorSchema: dark\nhighlighter: shiki\nlayout: cover\n---\n\n# Slide one\n";
+  const marp = "---\nmarp: true\npaginate: true\n---\n\n# Slide one\n";
+
+  test("a block with no type but a renderer's keys is a likely slide deck, not conversion work", () => {
+    const root = fixture({
+      "docs/projects/x/artifacts/slides.md": slidev,
+      "docs/projects/x/artifacts/deck.md": marp,
+      "docs/memories/cache-notes.md": typeless,
+    });
+    const r = runCodemod({ repoRoot: root, docsRootName: "docs", exclude: [], dryRun: true });
+    expect(r.slideDecks).toEqual([
+      "docs/projects/x/artifacts/deck.md",
+      "docs/projects/x/artifacts/slides.md",
+    ]);
+    expect(r.needsConversion).toEqual([["docs/memories/cache-notes.md", "no type"]]);
+  });
+
+  test("the summary sets them apart and points at lint.exclude and the SCHEMA section", () => {
+    const { out } = runCapturing(fixture({ "docs/projects/x/artifacts/slides.md": slidev }));
+    expect(out).toContain(
+      "1 file(s) look like slide decks rather than documents — consider `lint.exclude`:"
+    );
+    expect(out).toContain("docs/projects/x/artifacts/slides.md");
+    expect(out).toContain('See docs/SCHEMA.md § "Files that are not documentation".');
+    expect(out).not.toContain("need conversion");
+  });
+
+  test("a deck already in lint.exclude is not mentioned", () => {
+    const { out } = runCapturing(
+      fixture({
+        ".project-docs.json": JSON.stringify({
+          docsRoot: "docs",
+          lint: { exclude: ["docs/projects/*/artifacts/*-slides.md"] },
+        }),
+        "docs/projects/x/artifacts/gap-slides.md": slidev,
+      })
+    );
+    expect(out).not.toContain("slide decks");
+  });
+});
+
 describe("frontmatterFor", () => {
   test("omits what it does not know rather than inventing it", () => {
     const block = frontmatterFor({
@@ -643,6 +892,68 @@ describe("frontmatterFor", () => {
       tags: [],
     });
     expect(block).toContain('title: "Sync: the hard parts"');
+  });
+
+  test("writes no tags for a document whose only Tags line is prose", () => {
+    const root = fixture({
+      "docs/interaction-design/gallery.md":
+        "# Gallery filters\n\n**Status:** Draft\n\n## Behaviour\n\n" +
+        "- **Tags**: Clickable tag chips: Clicking adds or removes the tag from the active gallery filters.\n",
+    });
+    run(root);
+    const out = readFileSync(join(root, "docs/interaction-design/gallery.md"), "utf8");
+    expect(out).toContain("type: interaction");
+    expect(out).not.toContain("tags:");
+  });
+
+  // Prettier formats the YAML in Markdown frontmatter, and it writes a scalar
+  // that holds a double quote in SINGLE quotes. The codemod wrote
+  // `"AudioSidebar \"Select a voice\" tooltip"`, so every such title was a
+  // diff on a file the migration had just touched — and story-loom's
+  // lint-staged `prettier --check` refused the migration commit on its own
+  // output.
+  test("a title holding a double quote is single-quoted, the way Prettier writes it", () => {
+    const block = frontmatterFor({
+      type: "memory",
+      title: 'AudioSidebar "Select a voice" tooltip likely dead on a disabled button',
+      lifecycle: null,
+      unmappedStatus: null,
+      date: "2026-01-01",
+      tags: [],
+    });
+    expect(block).toContain(
+      `title: 'AudioSidebar "Select a voice" tooltip likely dead on a disabled button'`
+    );
+  });
+
+  test("a title holding both kinds of quote stays double-quoted, escaped", () => {
+    const block = frontmatterFor({
+      type: "memory",
+      title: `Don't say "no": the hard parts`,
+      lifecycle: null,
+      unmappedStatus: null,
+      date: "2026-01-01",
+      tags: [],
+    });
+    expect(block).toContain(`title: "Don't say \\"no\\": the hard parts"`);
+  });
+
+  test("and `prettier --check`, with default options, accepts what the codemod wrote", () => {
+    const root = fixture({
+      "docs/memories/tooltip.md":
+        '# AudioSidebar "Select a voice" tooltip likely dead on a disabled button\n\n**Date:** 2026-02-15 **Tags:** `#audio` `#a11y`\n\nBody.\n',
+    });
+    expect(run(root)).toBe(0);
+    // Run from the fixture, which has no `.prettierrc`, so this is Prettier as
+    // an adopter with no config would run it.
+    const r = Bun.spawnSync(
+      [join(REPO_ROOT, "node_modules/.bin/prettier"), "--check", "docs/memories/tooltip.md"],
+      { cwd: root, stdout: "pipe", stderr: "pipe" }
+    );
+    expect({
+      code: r.exitCode,
+      file: readFileSync(join(root, "docs/memories/tooltip.md"), "utf8"),
+    }).toEqual({ code: 0, file: expect.stringContaining("title: '") });
   });
 
   test("carries tags across when the document already had them", () => {
@@ -1899,12 +2210,16 @@ describe("guards that must be able to fire", () => {
     expect(migrate(root, ["--dry-run"]).exitCode).toBe(1);
   });
 
+  // The three below inject a mutation into the version phase's write. Since
+  // #167 that write is `writeVersionInto`, whose `intended` object is what the
+  // in-place patch is verified against — a mutated `intended` fails that check,
+  // so the fallback re-serialises and writes the mutation, which is the point.
   test("invariant: a folder the lint reads that the config on disk leaves undeclared is caught", () => {
     const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
       script: patchedScript([
         [
-          "  cfg.version = version;\n",
-          '  cfg.version = version; cfg.lint.workbench = cfg.lint.workbench.filter((w: string) => w !== "cycles");\n',
+          "  intended.version = version;\n",
+          '  intended.version = version; (intended.lint as any).workbench = (intended.lint as any).workbench.filter((w: string) => w !== "cycles");\n',
         ],
       ]),
     });
@@ -2008,7 +2323,7 @@ describe("guards that must be able to fire", () => {
   test("invariant: a later phase flipping lint.adopting off is caught", () => {
     const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
       script: patchedScript([
-        ["  cfg.version = version;\n", "  cfg.version = version; cfg.lint.adopting = false;\n"],
+        ["  intended.version = version;\n", "  intended.version = version; (intended.lint as any).adopting = false;\n"],
       ]),
     });
     expect(r.exitCode).toBe(1);
@@ -2018,7 +2333,7 @@ describe("guards that must be able to fire", () => {
   test("invariant: a config version that is not the scaffold's is caught", () => {
     const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
       script: patchedScript([
-        ["  cfg.version = version;\n", '  cfg.version = "0.0.0";\n'],
+        ["  intended.version = version;\n", '  intended.version = "0.0.0";\n'],
       ]),
     });
     expect(r.exitCode).toBe(1);
@@ -2134,5 +2449,210 @@ describe("wiring witnesses — each phase's call site, neutered", () => {
     if (at) roots.push(resolve(at, ".."));
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("the generated scaffold is still on disk — the cleanup phase removes it");
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// #167 — `.project-docs.json` is theirs: a run that moves `version` moves that
+// one line and nothing else. The file used to come back re-serialised in the
+// script's own style, so a Biome-formatted file (short arrays on one line)
+// failed the adopter's own gate one commit after it had been formatted.
+// ---------------------------------------------------------------------------------------
+
+/** The file as Biome leaves it: 2-space, short arrays collapsed, long ones expanded. */
+const BIOME_STYLE_CONFIG = `{
+  "docsRoot": "docs",
+  "version": "6.3.0",
+  "lint": {
+    "adopting": true,
+    "exclude": [],
+    "durable": [
+      "architecture",
+      "specifications",
+      "interaction-design",
+      "playbooks",
+      "lessons-learned",
+      "memories"
+    ],
+    "workbench": [
+      "backlog",
+      "briefs",
+      "investigations",
+      "projects",
+      "reports",
+      "fragments",
+      "cycles"
+    ],
+    "types": {},
+    "skip": ["_archive", "superpowers"]
+  }
+}
+`;
+
+/** The lines that differ between two texts, as [index, before, after]. */
+const changedLines = (before: string, after: string): Array<[number, string, string]> => {
+  const a = before.split("\n");
+  const b = after.split("\n");
+  const out: Array<[number, string, string]> = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++)
+    if (a[i] !== b[i]) out.push([i, a[i] ?? "<none>", b[i] ?? "<none>"]);
+  return out;
+};
+
+describe("#167 — .project-docs.json keeps its bytes when only `version` moves", () => {
+  test("a Biome-style file, committed: the run changes the version line and no other", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ...PROPOSAL,
+      ".project-docs.json": BIOME_STYLE_CONFIG,
+    });
+    const cfgPath = join(root, ".project-docs.json");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    const after = readFileSync(cfgPath, "utf8");
+    expect(changedLines(BIOME_STYLE_CONFIG, after)).toEqual([
+      [2, '  "version": "6.3.0",', `  "version": "${target()}",`],
+    ]);
+    expect(after).toContain('"skip": ["_archive", "superpowers"]');
+    expect(readJson(cfgPath).version).toBe(target());
+    expect(r.out).toContain(`.project-docs.json set to ${target()} — that one key; every other byte as it was`);
+    // The config phase had nothing to add, so it is the version phase alone that wrote.
+    expect(r.out).toContain("already complete — nothing to add");
+  });
+
+  test("a nested `version` ahead of the top-level one, and a value that reads `version`, are left alone", () => {
+    const text = BIOME_STYLE_CONFIG.replace(
+      '  "docsRoot": "docs",\n',
+      '  "custom": { "version": "keep-me" },\n  "note": "version",\n  "docsRoot": "docs",\n'
+    );
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ...PROPOSAL,
+      ".project-docs.json": text,
+    });
+    const cfgPath = join(root, ".project-docs.json");
+    expect(migrate(root).exitCode).toBe(0);
+    const after = readFileSync(cfgPath, "utf8");
+    expect(changedLines(text, after)).toEqual([
+      [4, '  "version": "6.3.0",', `  "version": "${target()}",`],
+    ]);
+    const cfg = readJson(cfgPath);
+    expect(cfg.custom.version).toBe("keep-me");
+    expect(cfg.note).toBe("version");
+  });
+
+  test("when the key cannot be patched in place the file is re-serialised, the phase says so, and the indent is kept", () => {
+    // `"version"` is `"version"` to JSON.parse and to nothing that reads
+    // the text — the one shape a valid file can take that the patch must
+    // decline, so this is the fallback's witness.
+    const text = `${JSON.stringify(JSON.parse(BIOME_STYLE_CONFIG), null, 4)}\n`.replace(
+      '"version"',
+      '"\\u0076ersion"'
+    );
+    expect(JSON.parse(text).version).toBe("6.3.0");
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ...PROPOSAL,
+      ".project-docs.json": text,
+    });
+    const cfgPath = join(root, ".project-docs.json");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain(
+      `.project-docs.json set to ${target()} — re-serialised, indent kept: no top-level "version" to patch in place`
+    );
+    const after = readFileSync(cfgPath, "utf8");
+    expect(readJson(cfgPath).version).toBe(target());
+    expect(after.startsWith('{\n    "docsRoot"')).toBe(true);
+  });
+
+  test("the config phase adding keys to a tab-indented file keeps the tabs", () => {
+    const text = `{\n\t"docsRoot": "docs",\n\t"custom": {\n\t\t"version": "keep-me"\n\t}\n}\n`;
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ...PROPOSAL,
+      ".project-docs.json": text,
+    });
+    const cfgPath = join(root, ".project-docs.json");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("every existing key left as it was, indent kept");
+    const after = readFileSync(cfgPath, "utf8");
+    expect(after.startsWith('{\n\t"docsRoot": "docs",\n\t"custom": {\n\t\t"version": "keep-me"\n\t},')).toBe(true);
+    expect(after.endsWith("\n")).toBe(true);
+    const cfg = readJson(cfgPath);
+    expect(cfg.custom.version).toBe("keep-me");
+    expect(cfg.lint.adopting).toBe(true);
+    expect(cfg.version).toBe(target());
+  });
+});
+
+describe("#167 — patchTopLevelVersion, and the v2.9 copy of it", () => {
+  /** Every shape the patch must handle; the pin below runs each through both copies. */
+  const CASES: Array<[string, string, string | null]> = [
+    ["2-space, first key", '{\n  "version": "1",\n  "a": 1\n}\n', '{\n  "version": "2",\n  "a": 1\n}\n'],
+    ["4-space, last key, no final newline", '{\n    "a": [1, 2],\n    "version": "1"\n}', '{\n    "a": [1, 2],\n    "version": "2"\n}'],
+    ["tabs", '{\n\t"version":\t"1"\n}\n', '{\n\t"version":\t"2"\n}\n'],
+    ["minified", '{"a":{"version":"x"},"version":"1"}', '{"a":{"version":"x"},"version":"2"}'],
+    ["a nested key before the top-level one", '{\n  "c": { "version": "keep" },\n  "version": "1"\n}\n', '{\n  "c": { "version": "keep" },\n  "version": "2"\n}\n'],
+    ["a value that reads version", '{\n  "note": "version",\n  "version": "1"\n}\n', '{\n  "note": "version",\n  "version": "2"\n}\n'],
+    ["an escaped quote in an earlier value", '{\n  "t": "say \\"version\\": no",\n  "version": "1"\n}\n', '{\n  "t": "say \\"version\\": no",\n  "version": "2"\n}\n'],
+    ["a null value", '{ "version": null, "a": 1 }', '{ "version": "2", "a": 1 }'],
+    ["a number value", '{ "version": 7 }', '{ "version": "2" }'],
+    ["the key inside an array element", '{ "list": ["version"], "version": "1" }', '{ "list": ["version"], "version": "2" }'],
+    ["no top-level key", '{ "a": { "version": "1" } }', null],
+    ["a key spelled with an escape", '{ "\\u0076ersion": "1" }', null],
+    ["an object value", '{ "version": { "x": 1 } }', null],
+    ["a top-level array", '["version", "1"]', null],
+  ];
+
+  test.each(CASES)("%s", (_name, before, after) => {
+    const patched = patchTopLevelVersion(before, "2");
+    expect(patched).toBe(after);
+    if (after !== null) {
+      const want = JSON.parse(before);
+      want.version = "2";
+      expect(JSON.parse(patched as string)).toEqual(want);
+    }
+  });
+
+  test("the v2.9 script's copy agrees on every case, and so does reserialiseLike", () => {
+    for (const [, before] of CASES) expect(v29Patch(before, "2")).toBe(patchTopLevelVersion(before, "2"));
+    for (const before of ['{\n    "a": 1\n}\n', '{\n\t"a": 1\n}', "{}", '{"a":1}'])
+      expect(v29Reserialise({ a: 1, version: "2" }, before)).toBe(reserialiseLike({ a: 1, version: "2" }, before));
+  });
+
+  test("reserialiseLike takes the indent and the final newline from the file", () => {
+    expect(reserialiseLike({ a: 1 }, '{\n    "z": 0\n}\n')).toBe('{\n    "a": 1\n}\n');
+    expect(reserialiseLike({ a: 1 }, '{\n\t"z": 0\n}')).toBe('{\n\t"a": 1\n}');
+    expect(reserialiseLike({ a: 1 }, "{}")).toBe('{\n  "a": 1\n}');
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// The codemod's two newest buckets (#165 needsConversion, #169 slideDecks) are
+// printed by the script's phase 5 as their own lines, in the driver's words —
+// never folded into "skipped". Both are "nothing left to mark", so the
+// end-of-run invariant that the codemod has nothing left to do still holds.
+// ---------------------------------------------------------------------------------------
+
+describe("phase 5 prints the codemod's needsConversion and slideDecks buckets", () => {
+  test("a foreign-frontmatter file and a Slidev deck each get their own lines, and the run still completes", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ...PROPOSAL,
+      "docs/playbooks/deploy.md": "---\nowner: ops\n---\n\n# Deploy\n\nHow.\n",
+      "docs/reports/2026-09-01-deck.md": "---\ntheme: seriph\nlayout: cover\n---\n\n# Deck\n",
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("Migration complete.");
+    expect(r.out).toContain(
+      "1 skipped file(s) need conversion — an existing block with no `type`, or a `type` this folder does not allow. Not a backfill: rewrite the block by hand, then re-run:"
+    );
+    expect(r.out).toContain("docs/playbooks/deploy.md  (no type)");
+    expect(r.out).toContain(
+      "1 file(s) look like slide decks rather than documents — consider `lint.exclude`:"
+    );
+    expect(r.out).toContain("docs/reports/2026-09-01-deck.md");
+    expect(r.out).toContain('See docs/SCHEMA.md § "Files that are not documentation".');
+    // Neither file was marked: both blocks are left exactly as they were.
+    expect(readFileSync(join(root, "docs/playbooks/deploy.md"), "utf8")).toStartWith("---\nowner: ops\n---\n");
+    expect(readFileSync(join(root, "docs/reports/2026-09-01-deck.md"), "utf8")).toStartWith("---\ntheme: seriph\n");
   });
 });

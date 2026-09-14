@@ -279,6 +279,27 @@ docs/
 
 ## Version History
 
+### 3.11.0 (2026-09-14)
+
+**The first consumer's feedback, verified and landed.** Story-loom adopted 8.0.0
+and filed nine issues; every claim was reproduced here before scoping, and each
+fix landed as its own commit closing its issue.
+
+- A template is an exact shape, never a substring of the name: a real page
+  called `templates.md` is linted like the page beside it,
+  `pdocs check --format json` names what it skipped as templates, and `seed.ts`
+  and the lint decide "template" by one rule (#163).
+- The v2.6 codemod derives tags only from the metadata paragraph and only from
+  real tokens, names skipped files whose frontmatter is not this contract's,
+  writes YAML Prettier leaves alone, and sets a slide deck apart with a pointer
+  at `lint.exclude` (#164, #165, #168, #169).
+- Both migration scripts patch `version` in `.project-docs.json` in place; the
+  file's bytes are the project's (#167).
+- `update-project-docs` § Step 7 runs the project's own formatter on
+  `scripts/pdocs/` in check mode; the guide names the docs gate `docs:check` and
+  shows how to compose it with an existing `check`; the v2.5 precondition is
+  silent under zsh (#166, #170, #171).
+
 ### 3.10.0 (2026-09-13)
 
 **The migration every consuming project has to run is a script.**

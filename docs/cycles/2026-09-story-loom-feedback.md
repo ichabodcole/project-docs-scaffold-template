@@ -45,3 +45,5 @@ that is the second branch this cycle exists to hold.
 _Written at close._
 
 ## Sessions
+
+- fix/story-loom-feedback-round-1 (landed 2026-09-14)

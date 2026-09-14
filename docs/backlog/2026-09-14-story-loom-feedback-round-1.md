@@ -40,6 +40,13 @@ fixes to `rules.ts` and the codemod ship in the scaffold payload; a consumer
 already on 8.0.0 receives them only through
 [v2.9 → v2.10](./2026-09-14-v2.9-to-v2.10-refresh-the-owned-files.md).
 
+## Status
+
+Landed on `develop` 2026-09-14 as sixteen commits on
+`fix/story-loom-feedback-round-1`, one per issue plus three follow-ons and the
+3.11.0 bump. The issues close when `develop` reaches `main`; the item is done
+when that release is cut.
+
 ## Done when
 
 All nine issues closed by commits on `develop`, the plugin bumped, and the

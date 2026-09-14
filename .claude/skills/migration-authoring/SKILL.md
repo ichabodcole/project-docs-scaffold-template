@@ -132,9 +132,13 @@ v2.9 migration does; describe it, do not reinvent it.
 - **Version markers belong to a phase.** Both markers — `docs_version` in
   `docs/README.md` and `version` in `.project-docs.json` — set together from the
   scaffold's version, reported separately, and with a distinct line for "no such
-  line" versus "already at that value". The JSON is parsed and re-serialised,
-  never regex-substituted: a line-based `sed` rewrote every nested `"version"`
-  in a file the ownership table classifies as theirs.
+  line" versus "already at that value". `.project-docs.json` is theirs, so its
+  bytes are preserved: patch the one top-level `version` key in the file's own
+  text, parse the result and check it equals the intended object, and only if
+  that fails re-serialise in the file's own indent and say so in the phase line.
+  Never a line-based `sed` — one rewrote every nested `"version"` — and never a
+  whole-file `JSON.stringify` — one expanded every array a project's formatter
+  had collapsed (#167).
 - **An end-of-run invariant check**, inside the program, for anything the phase
   ordering guarantees. `manifestMatchesDisk` is the model: after every phase,
   every recorded hash must still match the bytes on disk, and a mismatch fails
@@ -323,7 +327,8 @@ cannot pass is the defect, not the reference.
       whose work is already done says so and continues.
 - [ ] **Counts parse structure**, never pattern-match.
 - [ ] **Both version markers are set by one phase**, reported separately, and
-      the JSON is parsed and re-serialised.
+      `.project-docs.json` keeps its bytes: the one key is patched in place, the
+      result parse-verified, re-serialisation only as a reported fallback.
 - [ ] **An end-of-run invariant check runs inside the program** for anything the
       phase ordering guarantees.
 - [ ] **The script imports nothing from the tree it migrates.** Any copied table

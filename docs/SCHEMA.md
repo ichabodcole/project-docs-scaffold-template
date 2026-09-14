@@ -321,11 +321,16 @@ rule that decides between them is: **does shipped tooling read it?** A fourth,
 **structural**, covers files that carry no content at all — the `.gitkeep`
 placeholders holding empty `_archive/` directories open.
 
-| Class      | What a migration does                     | Which files                                                                                                                    |
-| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                  |
-| **Seeded** | Updates only while you have not edited it | every template — any `.md` whose name contains `TEMPLATE`, plus every `*.template.md`                                          |
-| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write |
+| Class      | What a migration does                     | Which files                                                                                                                                                                                                                |
+| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                                                                                                              |
+| **Seeded** | Updates only while you have not edited it | every template, by exact name: `TEMPLATE.md`, `TEMPLATE-<variant>.md`, `YYYY-MM-DD-TEMPLATE-<type>.md`, `<name>.template.md`, and anything under a `TEMPLATES/` directory; plus every path `docs/.pdocs-seed.json` records |
+| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write                                                                                             |
+
+`.project-docs.json` is **theirs** with one exception a migration names when it
+happens: it sets the top-level `version` there, patched in place in the file's
+own text so your formatting is kept, and adds a key only when a first adoption
+finds it missing. Nothing else in the file is written.
 
 `docs/index.md` is **theirs** even though the scaffold ships a skeleton: it is
 your catalog of your own pages, and no migration copies over it. It is one of
@@ -345,8 +350,14 @@ it back without asking. Change behaviour through `.project-docs.json` instead �
 it is yours, and it is where the tiers, the exclusions and your own `types`
 live.
 
-**Seeded** files are installed once and then negotiated. `docs/.pdocs-seed.json`
-records the sha256 of each one as installed. A migration compares:
+**Seeded** files are installed once and then negotiated. The five name shapes
+are exact, not a substring match: a page named `templates.md` is a document and
+is linted as one. The `v2.8-to-v2.9` adoption recorded templates by an older
+rule — any `.md` whose name contains `TEMPLATE`, plus every `*.template.md` —
+which names the same files as the five shapes on every template the scaffold
+ships; and a recorded path stays seeded whatever it is called, because the
+manifest is consulted alongside the shapes. `docs/.pdocs-seed.json` records the
+sha256 of each one as installed. A migration compares:
 
 | On disk                     | What happens                                             |
 | --------------------------- | -------------------------------------------------------- |

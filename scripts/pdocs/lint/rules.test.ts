@@ -242,6 +242,119 @@ describe("the thin tier — presence and vocabulary", () => {
   });
 });
 
+// A substring match on "template" made a real specification named
+// `templates.md` invisible to every tier — no frontmatter check, no links, no
+// graph node, never an ORPHAN — and nothing said so. The set is exact now: the
+// shapes the scaffold ships, plus whatever the seed manifest records.
+describe("what counts as a template — exact shapes, never a substring", () => {
+  test("the shapes the scaffold ships", () => {
+    for (const name of [
+      "TEMPLATE.md",
+      "TEMPLATE-domain.md",
+      "TEMPLATE-overview.md",
+      "YYYY-MM-DD-TEMPLATE-investigation.md",
+      "YYYY-MM-DD-TEMPLATE-report.md",
+      "PLAN.template.md",
+      "DEV_KICKOFF.template.md",
+      "docs/projects/TEMPLATES/anything.md",
+    ])
+      expect({ name, template: isTemplate(name) }).toEqual({ name, template: true });
+  });
+
+  test("a real page whose name merely contains the word", () => {
+    for (const name of [
+      "templates.md",
+      "email-templates.md",
+      "template-library.md",
+      "2026-09-14-templates.md",
+      "TEMPLATES.md",
+      "docs/specifications/experience-engine/templates.md",
+    ])
+      expect({ name, template: isTemplate(name) }).toEqual({ name, template: false });
+  });
+
+  test("every template the registry declares is template-shaped", () => {
+    const missed: string[] = [];
+    for (const row of buildRegistry(DEFAULT_CONFIG)) {
+      if (row.template === null || row.externalTemplate) continue;
+      for (const t of [row.template].flat()) if (!isTemplate(t)) missed.push(t);
+    }
+    expect(missed).toEqual([]);
+  });
+
+  test("a specification named templates.md is linted like the page beside it", () => {
+    const ctx = fixture({
+      "docs/specifications/control.md": "# Control\n\nNo frontmatter.\n",
+      "docs/specifications/templates.md":
+        "# Templates\n\n**Status:** Draft\n\nNo frontmatter either.\n",
+    });
+    const problems = libraryFieldChecks(ctx);
+    expect(problems).toContain(
+      "NO FRONTMATTER docs/specifications/control.md  (see docs/SCHEMA.md)"
+    );
+    expect(problems).toContain(
+      "NO FRONTMATTER docs/specifications/templates.md  (see docs/SCHEMA.md)"
+    );
+    expect(reportLines(ctx).join("\n")).toContain(
+      "2 missing field(s) across 2 of 2 document(s)"
+    );
+  });
+
+  test("and on the workbench", () => {
+    const ctx = fixture({
+      "docs/reports/2026-09-14-templates.md": "# Templates\n\nNo frontmatter.\n",
+    });
+    expect(thinTier(ctx)).toContain(
+      "NO FRONTMATTER docs/reports/2026-09-14-templates.md  (see docs/SCHEMA.md)"
+    );
+  });
+
+  test("and the graph walks it, so it can be an orphan", () => {
+    const ctx = fixture({
+      "docs/index.md":
+        fm({
+          type: "index",
+          title: "Catalog",
+          description: "The catalog.",
+          tags: "[catalog]",
+          status: "stable",
+          generated: GENERATED,
+        }) + "# Catalog\n",
+      "docs/memories/templates.md":
+        fm({
+          type: "memory",
+          title: "Templates",
+          description: "About templates.",
+          tags: "[a-tag]",
+          status: "stable",
+          generated: GENERATED,
+        }) + "# Templates\n",
+      "docs/SCHEMA.md": "# Contract\n",
+    });
+    expect(
+      graphTier(ctx).problems.some((p) => p.includes("templates.md"))
+    ).toBe(true);
+  });
+
+  test("a path the seed manifest records is a template, whatever it is called", () => {
+    const form = "# [Title]\n\nSee [x](./nowhere.md).\n";
+    const unseeded = fixture({ "docs/memories/FORM.md": form });
+    expect(libraryFieldChecks(unseeded)).toContain(
+      "NO FRONTMATTER docs/memories/FORM.md  (see docs/SCHEMA.md)"
+    );
+
+    const seeded = fixture({
+      "docs/memories/FORM.md": form,
+      "docs/.pdocs-seed.json": JSON.stringify({
+        version: "8.0.0",
+        files: { "memories/FORM.md": "0".repeat(64) },
+      }),
+    });
+    expect(libraryFieldChecks(seeded)).toEqual([]);
+    expect(reportLines(seeded).join("\n")).toContain("across 0 of 0 document(s)");
+  });
+});
+
 describe("lint.exclude — files that are not documentation", () => {
   // A Slidev deck is a program that happens to be Markdown: `theme`,
   // `paginate` and `layout` belong to the slide renderer, not to this schema.
@@ -635,6 +748,57 @@ describe("--report", () => {
     expect(
       libraryFieldChecks(ctx).some((p) => p.startsWith("NO FRONTMATTER"))
     ).toBe(true);
+  });
+
+  // SCHEMA.md § "Files that are not documentation" describes the Slidev/Marp
+  // case and gives `lint.exclude` as the answer, but a deck reached this
+  // report as a bare `type` row, indistinguishable from a document that wants
+  // a `type` written — and an agent working the list mechanically would write
+  // `type: artifact` into a deck. The answer has to be reachable from where
+  // the problem appears.
+  describe("a file whose frontmatter belongs to a slide renderer", () => {
+    const slidev =
+      "---\ntheme: default\ntitle: Context Library Gap Analysis\ncolorSchema: dark\nhighlighter: shiki\nlayout: cover\n---\n\n# Slide one\n";
+    const marp = "---\nmarp: true\npaginate: true\n---\n\n# Slide one\n";
+    const typeless = "---\ntitle: Notes\n---\n\n# Notes\n";
+
+    test("is set apart, pointing at lint.exclude and the SCHEMA section", () => {
+      const ctx = fixture({
+        "docs/projects/x/artifacts/slides.md": slidev,
+        "docs/projects/x/artifacts/deck.md": marp,
+        "docs/projects/x/artifacts/notes.md": typeless,
+      });
+      const out = reportLines(ctx).join("\n");
+      expect(out).toContain(
+        "2 file(s) look like slide decks rather than documents — consider `lint.exclude`:"
+      );
+      expect(out).toContain("docs/projects/x/artifacts/slides.md");
+      expect(out).toContain("docs/projects/x/artifacts/deck.md");
+      expect(out).toContain(
+        'See docs/SCHEMA.md § "Files that are not documentation".'
+      );
+      // The deck is not in the worklist: it is not a document with blanks.
+      expect(out).toContain("type  (1)");
+      expect(out).toContain("4 missing field(s) across 1 of 3 document(s)");
+      expect(out.split("\n").filter((l) => l.includes("slides.md"))).toHaveLength(1);
+    });
+
+    test("a deck that carries a type is a document that says so, and is not second-guessed", () => {
+      const ctx = fixture({
+        "docs/projects/x/artifacts/slides.md": slidev.replace("---\n", "---\ntype: artifact\n"),
+      });
+      expect(reportLines(ctx).join("\n")).not.toContain("slide decks");
+    });
+
+    test("an excluded deck is not mentioned at all", () => {
+      const ctx = fixture(
+        { "docs/projects/x/artifacts/slides.md": slidev },
+        { exclude: ["docs/projects/*/artifacts/*-slides.md", "docs/projects/x/artifacts/slides.md"] }
+      );
+      const out = reportLines(ctx).join("\n");
+      expect(out).not.toContain("slide decks");
+      expect(out).toContain("0 missing field(s)");
+    });
   });
 });
 
