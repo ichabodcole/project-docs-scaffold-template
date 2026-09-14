@@ -87,7 +87,8 @@ bump, and run the script for real on `dreamwood/media-forge`.
       fixtures and the guard tests
 - [x] Phase 1 — skill rewrite and routing corrections (`c2e4881`)
 - [x] Phase 2 — fixtures A0, A1, B seeded and B unseeded (`3448277`)
-- [ ] Phase 3 — the v2.6-to-v2.7 script, guide and tests
+- [x] Phase 3 — the v2.6-to-v2.7 script, guide and tests (`17be36b`; guards
+      record in `artifacts/`)
 - [ ] Phase 4 — legacy banners, precondition, table, § Step 7 collapse
 - [ ] Phase 5 — version bump, dist rebuild, gate
 - [ ] Phase 6 — the MediaForge run
