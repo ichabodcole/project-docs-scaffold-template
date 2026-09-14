@@ -11,18 +11,28 @@
 // those repositories cannot take.
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { DEFAULT_CONFIG } from "../../../../../../scripts/pdocs/docs-lint/config.ts";
+import { buildRegistry } from "../../../../../../scripts/pdocs/lint/registry.ts";
+import {
+  isSeeded,
+  seededIn,
+  undeclaredFolders,
+} from "./migrate-v2.6-to-v2.7.ts";
+import { isSeeded as v29IsSeeded } from "./migrate-v2.8-to-v2.9.ts";
 import {
   DURABLE_TYPE as LINT_DURABLE,
   PROJECT_FILE_TYPE as LINT_PROJECT_FILE,
@@ -47,7 +57,7 @@ import {
   stripConsumedMetadata,
   titleOf,
   typeOf,
-} from "./migrate-v2.6-to-v2.7.ts";
+} from "./migrate-v2.6-to-v2.7.codemod.ts";
 
 const roots: string[] = [];
 afterAll(() => {
@@ -647,6 +657,34 @@ describe("frontmatterFor", () => {
   });
 });
 
+describe("the standalone driver's own guard — a dirty docs/ without --force", () => {
+  /** `main` with its output captured rather than silenced. */
+  function runCapturing(root: string, args: string[] = []): { code: number; out: string } {
+    const real = console.log;
+    const lines: string[] = [];
+    console.log = (...a: unknown[]) => lines.push(a.join(" "));
+    try {
+      return { code: main(args, root), out: lines.join("\n") };
+    } finally {
+      console.log = real;
+    }
+  }
+
+  test("refuses a dirty docs/ and names the way out; --force and --dry-run go through", () => {
+    const root = fixture({ "docs/memories/a.md": "# A\n\n**Status:** Done\n" });
+    commitAll(root, "a document");
+    writeFileSync(join(root, "docs/memories/a.md"), "# A\n\nEdited, uncommitted.\n");
+    const refused = runCapturing(root);
+    expect(refused.code).toBe(1);
+    expect(refused.out).toContain("docs/ has uncommitted changes.");
+    expect(refused.out).toContain("--force");
+    expect(readFileSync(join(root, "docs/memories/a.md"), "utf8")).not.toContain("type: memory");
+    expect(runCapturing(root, ["--dry-run"]).code).toBe(0);
+    expect(runCapturing(root, ["--force"]).code).toBe(0);
+    expect(readFileSync(join(root, "docs/memories/a.md"), "utf8")).toContain("type: memory");
+  });
+});
+
 describe("the version marker is carried forward, never invented", () => {
   test("reads `docs_version` out of the docs README", () => {
     const root = fixture({
@@ -805,5 +843,1127 @@ describe("fixtures — the generated trees the whole-script tests run against", 
     );
     expect(config.version).toBe("6.3.0");
     expect(config.lint.adopting).toBe(true);
+  });
+});
+
+// ─── Phase 3: the whole migration ────────────────────────────────────────────
+//
+// Everything above tests the codemod as a unit. From here the subject is
+// `migrate-v2.6-to-v2.7.ts` — nine phases, one command — run as a process
+// against the generated fixtures, exactly as an adopter runs it. Three things
+// the plan requires of this section, in its words: every guard has a test that
+// was WATCHED FAILING (break the guarded thing, see exit 1 and the reason,
+// restore); every phase has a WIRING WITNESS (neuter its call site in a
+// disposable copy, expect the end-to-end run to fail); and fixture B — the
+// orphaned tree — goes through the SAME command with no flag, which is what
+// decides § Step 7's repair path.
+
+const SCRIPT = join(import.meta.dir, "migrate-v2.6-to-v2.7.ts");
+const CODEMOD = join(import.meta.dir, "migrate-v2.6-to-v2.7.codemod.ts");
+const V29_SCRIPT = join(import.meta.dir, "migrate-v2.8-to-v2.9.ts");
+
+/** The release the current scaffold carries — what both markers end at. */
+const target = () => docsVersionOf(generatedScaffolds().current, "docs");
+
+interface Run {
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  out: string;
+}
+
+/**
+ * Run the script as a process. The current generated scaffold is passed with
+ * `--scaffold-dir` unless `scaffold` is given (`null` omits the flag, so the
+ * script fetches — or tries to). Nothing here calls `main` in-process: the
+ * exit code is the contract, and only a process has one.
+ */
+function migrate(
+  root: string,
+  args: string[] = [],
+  o: {
+    script?: string;
+    env?: Record<string, string>;
+    scaffold?: string | null;
+    bun?: string;
+  } = {}
+): Run {
+  const scaffold =
+    o.scaffold === undefined ? generatedScaffolds().current : o.scaffold;
+  const r = Bun.spawnSync(
+    [
+      o.bun ?? "bun",
+      o.script ?? SCRIPT,
+      "--root",
+      root,
+      ...(scaffold ? ["--scaffold-dir", scaffold] : []),
+      ...args,
+    ],
+    { stdout: "pipe", stderr: "pipe", env: { ...process.env, ...o.env } }
+  );
+  const stdout = r.stdout.toString();
+  const stderr = r.stderr.toString();
+  return { exitCode: r.exitCode, stdout, stderr, out: stdout + stderr };
+}
+
+/** Add files to a fixture and commit them, so the tree stays clean. */
+function withFiles(root: string, files: Record<string, string>): string {
+  for (const [rel, body] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, rel)), { recursive: true });
+    writeFileSync(join(root, rel), body);
+  }
+  commitAll(root, "fixture additions");
+  return root;
+}
+
+/** Every file's sha256, `.git/` excluded — what "byte-identical" means here. */
+function treeDigest(root: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === ".git") continue;
+      const abs = join(dir, entry.name);
+      if (entry.isDirectory()) walk(abs);
+      else
+        out[relative(root, abs)] = createHash("sha256")
+          .update(readFileSync(abs))
+          .digest("hex");
+    }
+  };
+  walk(root);
+  return out;
+}
+
+/** A document the codemod has something to do with. */
+const PROPOSAL = {
+  "docs/projects/sync/proposal.md":
+    "# Proposal: Sync engine\n\n**Status:** Approved (in flight) **Created:** 2026-03-01\n\n---\n\n## Overview\n\nText.\n",
+};
+
+const readJson = (abs: string) => JSON.parse(readFileSync(abs, "utf8"));
+
+/**
+ * A stub CLI answering only what the script asks of it: `report` prints a
+ * worklist and `check` exits 0, each overridable by an environment variable so
+ * the phases that read them can be made to fail.
+ */
+const STUB_CLI = `const a = process.argv.slice(2);
+if (a[0] === "report") { console.log("stub worklist"); process.exit(Number(process.env.CLI_REPORT_EXIT ?? 0)); }
+if (a[0] === "check") process.exit(Number(process.env.CLI_CHECK_EXIT ?? 0));
+process.exit(0);
+`;
+
+/**
+ * A hand-built scaffold with only the parts the script reads, each removable
+ * so one guard at a time can be tripped. The generated scaffold is the subject
+ * of the full-run tests; this is for the guards, where a missing piece has to
+ * be a scaffold defect rather than a fixture accident.
+ */
+function stubScaffold(
+  o: {
+    schemaMarker?: boolean;
+    readme?: string | null;
+    index?: boolean;
+    cyclesReadme?: boolean;
+    template?: string | null;
+    cli?: boolean;
+  } = {}
+): string {
+  const s = mkdtempSync(join(tmpdir(), "migrate-v27-stub-"));
+  roots.push(s);
+  const files: Record<string, string> = {
+    "docs/SCHEMA.md": `# Schema\n\n${o.schemaMarker === false ? "" : "## Who owns which file\n"}`,
+  };
+  const readme =
+    o.readme === undefined
+      ? '---\ndocs_version: "9.9.9" # x-release-please-version\n---\n\n# Documentation\n'
+      : o.readme;
+  if (readme !== null) files["docs/README.md"] = readme;
+  if (o.index !== false)
+    files["docs/index.md"] = "---\ntype: index\n---\n\n# Catalog\n";
+  if (o.cyclesReadme !== false) files["docs/cycles/README.md"] = "# Cycles\n";
+  const template =
+    o.template === undefined ? "---\ntype: cycle\n---\n\n# Cycle\n" : o.template;
+  if (template !== null) files["docs/cycles/TEMPLATE.md"] = template;
+  if (o.cli !== false) files["scripts/pdocs/cli.ts"] = STUB_CLI;
+  else files["scripts/pdocs/other.ts"] = "// no cli here\n";
+  for (const [rel, body] of Object.entries(files)) {
+    mkdirSync(dirname(join(s, rel)), { recursive: true });
+    writeFileSync(join(s, rel), body);
+  }
+  return s;
+}
+
+/**
+ * A `cookiecutter` on PATH that does what the mode says, so the generate path
+ * of phase 2 — and every guard on it — runs without the network. `copy`
+ * produces a real scaffold by copying the generated current one.
+ */
+function stubCookiecutter(
+  mode: "fail" | "two" | "empty" | "copy",
+  source: string = generatedScaffolds().current
+): string {
+  const dir = mkdtempSync(join(tmpdir(), "migrate-v27-stubcc-"));
+  roots.push(dir);
+  const bin = join(dir, "cookiecutter");
+  writeFileSync(
+    bin,
+    `#!/bin/sh
+out=""
+while [ $# -gt 0 ]; do
+  if [ "$1" = "-o" ]; then out="$2"; shift; fi
+  shift
+done
+case "${mode}" in
+  fail) echo "stub cookiecutter: boom" >&2; exit 3 ;;
+  two) mkdir -p "$out/a" "$out/b" ;;
+  empty) mkdir -p "$out/only" ;;
+  copy) cp -R "${source}" "$out/my-project" ;;
+esac
+exit 0
+`
+  );
+  chmodSync(bin, 0o755);
+  return `${dir}:${process.env.PATH}`;
+}
+
+/** Where a generated (not supplied) scaffold went, from the phase-2 line. */
+const generatedAt = (r: Run): string | null =>
+  /✓ generated at (.+)$/m.exec(r.out)?.[1] ?? null;
+
+/**
+ * A disposable copy of the script with one edit applied — the neutered call
+ * site, or a sub-check removed — beside a copy of the codemod so its import
+ * resolves. Throws if the text to edit is not in the script, so a refactor
+ * that renames a call site fails the witness loudly rather than neutering
+ * nothing and passing.
+ */
+function patchedScript(edits: Array<[string, string]>): string {
+  const dir = mkdtempSync(join(tmpdir(), "migrate-v27-patched-"));
+  roots.push(dir);
+  let src = readFileSync(SCRIPT, "utf8");
+  for (const [find, replace] of edits) {
+    if (!src.includes(find))
+      throw new Error(`not in the script, so nothing was neutered: ${find}`);
+    src = src.replace(find, replace);
+  }
+  const copy = join(dir, basename(SCRIPT));
+  writeFileSync(copy, src);
+  cpSync(CODEMOD, join(dir, basename(CODEMOD)));
+  return copy;
+}
+
+const neutered = (callSite: string) =>
+  patchedScript([[callSite, `/* neutered: ${callSite.trim()} */`]]);
+
+describe("the copied predicate equals the v2.9 one, and covers the registry", () => {
+  test("isSeeded agrees with migrate-v2.8-to-v2.9's on every name in the current scaffold", () => {
+    const names = new Set<string>();
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) walk(join(dir, entry.name));
+        else names.add(entry.name);
+      }
+    };
+    walk(join(generatedScaffolds().current, "docs"));
+    // Distinct basenames: the READMEs collapse to one, the templates do not.
+    expect(names.size).toBeGreaterThan(15);
+    for (const name of names)
+      expect({ name, seeded: isSeeded(name) }).toEqual({
+        name,
+        seeded: v29IsSeeded(name),
+      });
+  });
+
+  test("every template the registry declares is one the templates phase would install", () => {
+    const declared: string[] = [];
+    for (const row of buildRegistry(DEFAULT_CONFIG)) {
+      if (row.template === null || row.externalTemplate) continue;
+      for (const t of Array.isArray(row.template) ? row.template : [row.template])
+        declared.push(t);
+    }
+    expect(declared.length).toBeGreaterThan(0);
+    expect(declared.filter((t) => !isSeeded(basename(t)))).toEqual([]);
+  });
+
+  test("seededIn finds the scaffold's nineteen, and nothing under _archive", () => {
+    const found = seededIn(join(generatedScaffolds().current, "docs"));
+    expect(found).toContain("cycles/TEMPLATE.md");
+    expect(found).toContain("projects/TEMPLATES/PROPOSAL.template.md");
+    expect(found).toContain("reports/YYYY-MM-DD-TEMPLATE-report.md");
+    expect(found.some((f) => f.includes("_archive"))).toBe(false);
+  });
+});
+
+describe("undeclaredFolders — what the preflight stops on", () => {
+  test("names A0's folder as judged, and nothing on A1", () => {
+    const a0 = fixtureA({ undeclaredFolder: true });
+    expect(undeclaredFolders(join(a0, "docs"), null, a0).judged).toEqual([
+      UNDECLARED_FOLDER,
+    ]);
+    const a1 = fixtureA({ undeclaredFolder: false });
+    expect(undeclaredFolders(join(a1, "docs"), null, a1)).toEqual({
+      judged: [],
+      inert: [],
+    });
+  });
+
+  test("a folder declared in a tier, or skipped, is not undeclared", () => {
+    const root = fixtureA({ undeclaredFolder: true });
+    const docs = join(root, "docs");
+    const wb = [...DEFAULT_CONFIG.lint.workbench, UNDECLARED_FOLDER];
+    expect(undeclaredFolders(docs, { lint: { workbench: wb } }, root).judged).toEqual([]);
+    expect(
+      undeclaredFolders(docs, { lint: { skip: ["_archive", UNDECLARED_FOLDER] } }, root).judged
+    ).toEqual([]);
+    // A tier array REPLACES the default list — the failure the preflight
+    // message warns about, reproduced: declare only the new folder and every
+    // default folder becomes undeclared.
+    expect(
+      undeclaredFolders(docs, { lint: { workbench: [UNDECLARED_FOLDER] } }, root).judged
+    ).toContain("backlog");
+  });
+
+  test("a folder the lint would read nothing from is inert: empty, markdown-less, skipped underneath, or excluded", () => {
+    const root = fixtureA({ undeclaredFolder: false });
+    mkdirSync(join(root, "docs/empty"));
+    mkdirSync(join(root, "docs/.obsidian"));
+    writeFileSync(join(root, "docs/.obsidian/workspace.json"), "{}\n");
+    mkdirSync(join(root, "docs/old/_archive"), { recursive: true });
+    writeFileSync(join(root, "docs/old/_archive/gone.md"), "# Gone\n");
+    mkdirSync(join(root, "docs/decks"));
+    writeFileSync(join(root, "docs/decks/talk.md"), "---\nmarp: true\n---\n");
+    const config = { lint: { exclude: ["docs/decks/**"] } };
+    expect(undeclaredFolders(join(root, "docs"), config, root)).toEqual({
+      judged: [],
+      inert: [".obsidian", "decks", "empty", "old"],
+    });
+    // The same dot folder with a markdown file in it IS read, and is judged.
+    writeFileSync(join(root, "docs/.obsidian/note.md"), "# Note\n");
+    expect(undeclaredFolders(join(root, "docs"), config, root).judged).toEqual([
+      ".obsidian",
+    ]);
+  });
+});
+
+// ─── The whole migration, phase by phase, on each fixture ────────────────────
+
+type Kind = "A1" | "B seeded" | "B unseeded";
+
+interface Outcome {
+  root: string;
+  run: Run;
+  manifestBefore: string | null;
+}
+
+const outcomes = new Map<Kind, Outcome>();
+
+/** One real run per fixture, shared by the phase tests that read its output. */
+function migrated(kind: Kind): Outcome {
+  const have = outcomes.get(kind);
+  if (have) return have;
+  const root =
+    kind === "A1"
+      ? fixtureA({ undeclaredFolder: false })
+      : fixtureB({ seeded: kind === "B seeded" });
+  withFiles(root, PROPOSAL);
+  const manifest = join(root, "docs/.pdocs-seed.json");
+  const manifestBefore = existsSync(manifest)
+    ? readFileSync(manifest, "utf8")
+    : null;
+  const o = { root, run: migrate(root), manifestBefore };
+  outcomes.set(kind, o);
+  return o;
+}
+
+for (const kind of ["A1", "B seeded", "B unseeded"] as Kind[]) {
+  const fresh = kind === "A1";
+  describe(`the whole migration on ${kind}${fresh ? " (a v2.6 tree)" : " (the orphaned tree — the same command, no flag)"}`, () => {
+    test("exits 0 with the gate off and the worklist printed", () => {
+      const { root, run } = migrated(kind);
+      expect(run.exitCode).toBe(0);
+      expect(run.out).toContain("Migration complete.");
+      expect(run.out).toContain("The gate is off");
+      expect(readJson(join(root, ".project-docs.json")).lint.adopting).toBe(true);
+    });
+
+    test("phase 1 — preflight: a project-docs tree, tools present, git clean, every folder in a tier", () => {
+      const { run } = migrated(kind);
+      expect(run.out).toContain("[1/9] Preflight");
+      expect(run.out).toContain("git tree clean");
+      expect(run.out).toContain("every folder under docs/ the lint reads is in a tier or skipped");
+    });
+
+    test("phase 2 — scaffold: the supplied one is used", () => {
+      expect(migrated(kind).run.out).toContain(
+        `✓ using ${generatedScaffolds().current}`
+      );
+    });
+
+    test("phase 3 — layer: scripts/pdocs/ is installed on every fixture, and the rest says what it found", () => {
+      const { root, run } = migrated(kind);
+      // THE ORPHANED TREE'S WHOLE POINT. On seeded B the v2.9 script's adopt
+      // phase would early-return on a matching manifest; the layer install
+      // here is a separate phase with its own precondition, and it fires.
+      expect(run.out).toContain("scripts/pdocs/ installed (");
+      expect(existsSync(join(root, "scripts/pdocs/cli.ts"))).toBe(true);
+      if (fresh) {
+        expect(run.out).toContain("docs/SCHEMA.md installed");
+        expect(run.out).toContain("docs/index.md installed");
+        expect(run.out).toContain("docs/cycles/ created, with its README.md");
+      } else {
+        expect(run.out).toContain("docs/SCHEMA.md already identical to the scaffold's");
+        expect(run.out).toContain("docs/index.md is there — left alone, it is yours");
+        expect(run.out).toContain("every category folder the scaffold ships is already here");
+      }
+      expect(existsSync(join(root, "docs/SCHEMA.md"))).toBe(true);
+      expect(existsSync(join(root, "docs/cycles/README.md"))).toBe(true);
+    });
+
+    test("phase 4 — templates: installed and replaced on a v2.6 tree, already in place on the orphaned one", () => {
+      const { root, run } = migrated(kind);
+      expect(run.out).toContain(
+        fresh
+          ? "1 installed, 18 replaced (a v2.6 template has no frontmatter block), 0 already in place, 0 kept"
+          : "0 installed, 0 replaced, 19 already in place, 0 kept"
+      );
+      for (const rel of seededIn(join(generatedScaffolds().current, "docs")))
+        expect({
+          rel,
+          frontmatter: readFileSync(join(root, "docs", rel), "utf8").startsWith("---\n"),
+        }).toEqual({ rel, frontmatter: true });
+    });
+
+    test("phase 5 — frontmatter: the documents gain a block, description is never written", () => {
+      const { root, run } = migrated(kind);
+      // A1 also has PROJECT_MANIFESTO.md to mark; on B the current scaffold's
+      // copy — already marked — sits over it.
+      expect(run.out).toContain(
+        fresh ? "2 document(s) gained frontmatter" : "1 document(s) gained frontmatter"
+      );
+      const proposal = readFileSync(join(root, "docs/projects/sync/proposal.md"), "utf8");
+      expect(proposal).toContain("type: proposal");
+      expect(proposal).toContain("lifecycle: approved");
+      expect(proposal).not.toContain("description:");
+      expect(proposal).not.toContain("**Status:**");
+    });
+
+    test("phase 6 — config: created with lint.adopting true and the version carried, not invented", () => {
+      const { root, run } = migrated(kind);
+      expect(run.out).toContain("created — lint.adopting: true");
+      // A1's README says 6.3.0; B's docs/ came from the current scaffold.
+      expect(run.out).toContain(
+        `version ${fresh ? "6.3.0" : target()} carried from docs/README.md`
+      );
+      const cfg = readJson(join(root, ".project-docs.json"));
+      expect(cfg.docsRoot).toBe("docs");
+      expect(cfg.lint.durable).toEqual(Object.keys(DURABLE_TYPE));
+    });
+
+    test("phase 7 — report: pdocs report is run from the migrated tree and printed", () => {
+      const { run } = migrated(kind);
+      expect(run.out).toContain("[7/9] The worklist");
+      expect(run.out).toContain("`pdocs report --format text` — the backfill's worklist");
+      expect(run.out).toContain("missing field(s)");
+      expect(run.out).toContain("description");
+      expect(run.out).toContain("proposal.md");
+    });
+
+    test("phase 8 — version markers: both end at the scaffold's release, reported separately", () => {
+      const { root, run } = migrated(kind);
+      expect(run.out).toContain(
+        fresh
+          ? `docs/README.md set to ${target()}`
+          : `docs/README.md already at ${target()}`
+      );
+      expect(run.out).toContain(
+        fresh
+          ? `.project-docs.json set to ${target()}`
+          : `.project-docs.json already at ${target()}`
+      );
+      expect(docsVersionOf(root, "docs")).toBe(target());
+      expect(readJson(join(root, ".project-docs.json")).version).toBe(target());
+    });
+
+    test("phase 9 — cleanup: a supplied scaffold is left in place", () => {
+      const { run } = migrated(kind);
+      expect(run.out).toContain("scaffold was supplied with --scaffold-dir — left in place");
+      expect(existsSync(join(generatedScaffolds().current, "docs/SCHEMA.md"))).toBe(true);
+    });
+
+    test("the installed gate reads the result: pdocs check reports the missing descriptions and exits 0", () => {
+      const { root } = migrated(kind);
+      const check = Bun.spawnSync(
+        ["bun", "scripts/pdocs/cli.ts", "check", "--format", "text"],
+        { cwd: root, stdout: "pipe", stderr: "pipe" }
+      );
+      expect(check.exitCode).toBe(0);
+      const o = check.stdout.toString();
+      expect(o).toContain("exiting 0");
+      expect(o).toContain("lint.adopting");
+      expect(o).toContain("description");
+    });
+
+    if (kind === "B seeded")
+      test("the manifest it arrived with is untouched, and the v2.9 script's adopt phase then early-returns on it", () => {
+        const { root, manifestBefore } = migrated(kind);
+        expect(readFileSync(join(root, "docs/.pdocs-seed.json"), "utf8")).toBe(
+          manifestBefore as string
+        );
+        const v29 = Bun.spawnSync(
+          ["bun", V29_SCRIPT, "--root", root, "--scaffold-dir", generatedScaffolds().current, "--skip-format"],
+          { stdout: "pipe", stderr: "pipe" }
+        );
+        expect(v29.exitCode).toBe(0);
+        expect(v29.stdout.toString()).toContain("every recorded hash still matches");
+      });
+    else
+      test("the hand-off: the v2.9 script runs next, on the tree this one leaves", () => {
+        const { root } = migrated(kind);
+        expect(existsSync(join(root, "docs/.pdocs-seed.json"))).toBe(false);
+        const v29 = Bun.spawnSync(
+          ["bun", V29_SCRIPT, "--root", root, "--scaffold-dir", generatedScaffolds().current, "--skip-format"],
+          { stdout: "pipe", stderr: "pipe" }
+        );
+        expect(v29.exitCode).toBe(0);
+        expect(Object.keys(readJson(join(root, "docs/.pdocs-seed.json")).files).length).toBe(19);
+      });
+  });
+}
+
+describe("fixture B decides Decision 2", () => {
+  test("both B variants pass through the same command with no repair flag", () => {
+    expect(migrated("B seeded").run.exitCode).toBe(0);
+    expect(migrated("B unseeded").run.exitCode).toBe(0);
+    expect(existsSync(join(migrated("B seeded").root, "scripts/pdocs/cli.ts"))).toBe(true);
+    expect(existsSync(join(migrated("B unseeded").root, "scripts/pdocs/cli.ts"))).toBe(true);
+  });
+});
+
+describe("A0 — the preflight stop", () => {
+  test("names the undeclared folder, says how to declare or skip it, exits 1, and writes nothing", () => {
+    const root = fixtureA({ undeclaredFolder: true });
+    const before = treeDigest(root);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: 1 folder(s) under docs/ hold markdown and are in no lint tier and not skipped");
+    expect(r.out).toContain(`docs/${UNDECLARED_FOLDER}/`);
+    expect(r.out).toContain('"workbench":');
+    expect(r.out).toContain('"skip":');
+    expect(r.out).toContain("Nothing was written.");
+    expect(r.out).not.toContain("[2/9]");
+    expect(treeDigest(root)).toEqual(before);
+  });
+
+  test("--dry-run stops there too, and is byte-identical", () => {
+    const root = fixtureA({ undeclaredFolder: true });
+    const before = treeDigest(root);
+    const r = migrate(root, ["--dry-run"]);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain(`docs/${UNDECLARED_FOLDER}/`);
+    expect(treeDigest(root)).toEqual(before);
+  });
+});
+
+describe("idempotence and dry run", () => {
+  test("--dry-run on A1 reports every phase's plan and leaves the tree byte-identical", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL);
+    const before = treeDigest(root);
+    const r = migrate(root, ["--dry-run"]);
+    expect(r.exitCode).toBe(0);
+    for (const line of [
+      "would install scripts/pdocs/",
+      "would install docs/SCHEMA.md",
+      "would create docs/cycles/ with its README.md",
+      "would install docs/cycles/TEMPLATE.md",
+      "would replace docs/playbooks/TEMPLATE.md",
+      "would mark docs/projects/sync/proposal.md  type: proposal, lifecycle: approved",
+      "would create it — lint.adopting: true",
+      "would run `pdocs report --format text`",
+      `would set both markers to ${target()}`,
+      "Dry run complete — nothing was changed.",
+    ])
+      expect(r.out).toContain(line);
+    expect(treeDigest(root)).toEqual(before);
+    expect(existsSync(join(root, ".project-docs.json"))).toBe(false);
+  });
+
+  test("a second run on a migrated A1 verifies rather than rewrites", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL);
+    expect(migrate(root).exitCode).toBe(0);
+    commitAll(root, "the migration");
+    const after = treeDigest(root);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    for (const line of [
+      "scripts/pdocs/ already installed and identical to the scaffold's",
+      "docs/SCHEMA.md already identical to the scaffold's",
+      "docs/index.md is there — left alone, it is yours",
+      "19 already in place",
+      "nothing to mark — every document already has a frontmatter block",
+      "lint.adopting already true — this project is mid-adoption",
+      "already complete — nothing to add",
+      `docs/README.md already at ${target()}`,
+      `.project-docs.json already at ${target()}`,
+    ])
+      expect(r.out).toContain(line);
+    expect(treeDigest(root)).toEqual(after);
+  });
+
+  test("a dirty tree is reported, not enforced", () => {
+    const root = fixtureA({ undeclaredFolder: false });
+    writeFileSync(join(root, "docs/memories/wip.md"), "# WIP\n");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("working tree is dirty (1 path(s))");
+  });
+
+  test("an existing .project-docs.json gains only what it lacks", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ".project-docs.json": JSON.stringify(
+        { docsRoot: "docs", custom: { version: "keep-me" }, lint: { types: { runbooks: "runbook" }, workbench: [...DEFAULT_CONFIG.lint.workbench] } },
+        null,
+        2
+      ),
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("added lint.adopting: true, lint.exclude, lint.durable, lint.skip, version: 6.3.0 — every existing key left as it was");
+    const cfg = readJson(join(root, ".project-docs.json"));
+    expect(cfg.custom.version).toBe("keep-me");
+    expect(cfg.lint.types).toEqual({ runbooks: "runbook" });
+    expect(cfg.lint.adopting).toBe(true);
+    expect(cfg.lint.durable).toEqual(Object.keys(DURABLE_TYPE));
+    expect(cfg.version).toBe(target());
+  });
+
+  test("a generated scaffold is removed by a dry run and by a real run", () => {
+    const PATH = stubCookiecutter("copy");
+    for (const args of [["--dry-run"], []]) {
+      const root = fixtureA({ undeclaredFolder: false });
+      const r = migrate(root, args, { scaffold: null, env: { PATH } });
+      expect(r.exitCode).toBe(0);
+      const at = generatedAt(r);
+      expect(at).not.toBeNull();
+      expect(r.out).toContain("generated scaffold removed");
+      expect(existsSync(at as string)).toBe(false);
+    }
+  });
+});
+
+describe("bad invocation exits 2, not 1", () => {
+  // Every case names a disposable root (or a dry run against one), so a parser
+  // guard that stopped firing could never reach this repository's own tree —
+  // the default `--root` is the current directory, and `bun test` runs here.
+  const bare = () => {
+    const d = mkdtempSync(join(tmpdir(), "migrate-v27-bare-"));
+    roots.push(d);
+    return d;
+  };
+  test.each([
+    ["an unknown flag", () => ["--root", bare(), "--nope"], "unknown argument"],
+    ["--root without a value", () => ["--root"], "--root needs a value"],
+    [
+      "--root with an empty value",
+      () => ["--root", "", "--dry-run", "--scaffold-dir", stubScaffold()],
+      "--root was given an empty value",
+    ],
+    [
+      "--scaffold-dir with an empty value",
+      () => ["--root", bare(), "--scaffold-dir", ""],
+      "--scaffold-dir was given an empty value",
+    ],
+    [
+      "--scaffold-dir followed by another flag",
+      () => ["--root", bare(), "--scaffold-dir", "--dry-run"],
+      "--scaffold-dir needs a value",
+    ],
+  ])("%s", (_name, args, reason) => {
+    const r = Bun.spawnSync(["bun", SCRIPT, ...args()], { stdout: "pipe", stderr: "pipe" });
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr.toString()).toContain(reason);
+  });
+});
+
+// ─── Every guard, made to fire ───────────────────────────────────────────────
+//
+// One test per `fail(` site in the script (the invariant check counts one per
+// line it can produce). Each breaks the guarded thing and asserts exit 1 and
+// the reason text. The observation that each one was watched failing — the
+// guard removed from a copy, the test going red, the copy discarded — is in
+// the project's session note under `Guards watched failing`, one line per
+// test name below.
+
+describe("guards that must be able to fire", () => {
+  test("preflight: a .project-docs.json that is not valid JSON stops the run", () => {
+    const root = fixtureA({ undeclaredFolder: false });
+    writeFileSync(join(root, ".project-docs.json"), "{ not json");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: .project-docs.json is not valid JSON");
+  });
+
+  test("preflight: a docsRoot naming a directory that is not there stops the run", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ".project-docs.json": '{ "docsRoot": "documentation" }\n',
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: no documentation/ at");
+    expect(r.out).toContain("docsRoot names a directory that is not there");
+  });
+
+  test("preflight: a tree with no docs/README.md is not a project-docs tree", () => {
+    const root = fixtureA({ undeclaredFolder: false });
+    rmSync(join(root, "docs/README.md"));
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: no docs/README.md at");
+    expect(r.out).toContain("not a project-docs tree");
+  });
+
+  test("preflight: a docs/ that is not there at all is not a project-docs tree", () => {
+    const root = mkdtempSync(join(tmpdir(), "migrate-v27-bare-"));
+    roots.push(root);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: no docs/ at");
+    expect(r.out).toContain("this is not a project-docs tree");
+  });
+
+  test("preflight: a README with no docs_version is pre-2.0 and stops the run", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      "docs/README.md": "# Documentation\n\nNo marker here.\n",
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: docs/README.md carries no docs_version line");
+    expect(r.out).toContain("v1-to-v2 comes first");
+  });
+
+  test("preflight: bun off PATH stops the run, even though the script itself is running under it", () => {
+    const bun = Bun.which("bun") as string;
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      bun,
+      env: { PATH: "/usr/bin:/bin" },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: bun is not on PATH");
+  });
+
+  test("preflight: cookiecutter missing with no --scaffold-dir stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: null,
+      env: { PATH: `${dirname(Bun.which("bun") as string)}:/usr/bin:/bin` },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: cookiecutter is not installed, and no --scaffold-dir");
+  });
+
+  test("preflight: an undeclared docs-root folder stops the run (A0)", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: true }));
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("in no lint tier and not skipped");
+    expect(r.out).toContain(`docs/${UNDECLARED_FOLDER}/`);
+  });
+
+  test("scaffold: a --scaffold-dir that is not a generated project root stops the run", () => {
+    const notARoot = mkdtempSync(join(tmpdir(), "migrate-v27-notroot-"));
+    roots.push(notARoot);
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], { scaffold: notARoot });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("is not a generated project root");
+  });
+
+  test("scaffold: cookiecutter exiting non-zero stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: null,
+      env: { PATH: stubCookiecutter("fail") },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: cookiecutter failed (exit 3)");
+    expect(r.out).toContain("stub cookiecutter: boom");
+  });
+
+  test("scaffold: more than one generated project stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: null,
+      env: { PATH: stubCookiecutter("two") },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("expected one generated project in");
+    expect(r.out).toContain("found 2");
+  });
+
+  test("scaffold: a generated project missing SCHEMA.md or scripts/pdocs/ stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: null,
+      env: { PATH: stubCookiecutter("empty") },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("is missing docs/SCHEMA.md or scripts/pdocs/");
+  });
+
+  test("scaffold version: a scaffold with no docs/README.md stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ readme: null }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: the scaffold has no docs/README.md at");
+  });
+
+  test("scaffold version: an unreadable version stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ readme: "---\ndocs_version: not-a-version\n---\n" }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("could not read a version from the scaffold's docs/README.md");
+  });
+
+  test("layer: a scaffold whose scripts/pdocs/ has no cli.ts stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ cli: false }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: scripts/pdocs/cli.ts did not arrive");
+  });
+
+  test("layer: a SCHEMA.md without the ownership section is older than v2.9 and stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ schemaMarker: false }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain('docs/SCHEMA.md is missing "Who owns which file"');
+  });
+
+  test("layer: a scaffold with no docs/index.md stops the run on a tree that has none", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ index: false }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: the scaffold has no docs/index.md");
+  });
+
+  test("layer: a new category folder without a README.md in the scaffold stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ cyclesReadme: false }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: the scaffold has no README.md for docs/cycles/");
+  });
+
+  test("templates: a scaffold that ships no templates stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ template: null }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: the scaffold ships no templates");
+  });
+
+  test("templates: a scaffold template without a frontmatter block is older than v2.7 and stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold({ template: "# Cycle\n\nNo frontmatter.\n" }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("docs/cycles/TEMPLATE.md has no frontmatter block — the scaffold is older than v2.7");
+  });
+
+  test("preflight: an existing lint.adopting: false is a finished adoption and stops the run before anything is written", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ".project-docs.json": '{ "docsRoot": "docs", "lint": { "adopting": false } }\n',
+    });
+    const before = treeDigest(root);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: lint.adopting is false in .project-docs.json — the gate is on, so this tree has finished adopting");
+    expect(r.out).toContain("v2.8-to-v2.9's job");
+    expect(r.out).toContain("Nothing was written.");
+    expect(r.out).not.toContain("[2/9]");
+    expect(treeDigest(root)).toEqual(before);
+  });
+
+  test("a stop after a writing phase says the tree may be partly migrated; a preflight stop says nothing was written", () => {
+    const late = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold(),
+      env: { CLI_REPORT_EXIT: "4" },
+    });
+    expect(late.exitCode).toBe(1);
+    expect(late.out).toContain("The tree may be partly migrated. Re-running is safe");
+    expect(late.out).not.toContain("Nothing was written.");
+    const early = migrate(fixtureA({ undeclaredFolder: true }));
+    expect(early.exitCode).toBe(1);
+    expect(early.out).toContain("Nothing was written.");
+    expect(early.out).not.toContain("partly migrated");
+  });
+
+  test("scaffold: a stop after phase 2 does not leave the generated scaffold's temp dir behind", () => {
+    // A stub cookiecutter copies a stub scaffold whose CLI fails the report,
+    // so the run generates, gets to phase 7, and stops there.
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: null,
+      env: { PATH: stubCookiecutter("copy", stubScaffold()), CLI_REPORT_EXIT: "4" },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: `pdocs report` exited 4");
+    const at = generatedAt(r);
+    expect(at).not.toBeNull();
+    expect(existsSync(dirname(at as string))).toBe(false);
+  });
+
+  test("layer: a category folder the scaffold would create that is in no tier of the project's config stops the run before writing", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ".project-docs.json": JSON.stringify(
+        { docsRoot: "docs", lint: { workbench: DEFAULT_CONFIG.lint.workbench.filter((w) => w !== "cycles") } },
+        null,
+        2
+      ),
+    });
+    const before = treeDigest(root);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: 1 category folder(s) the scaffold ships would be created under docs/ but are in no lint tier");
+    expect(r.out).toContain("docs/cycles/");
+    expect(r.out).toContain('"workbench":');
+    expect(r.out).toContain("Nothing was written.");
+    expect(treeDigest(root)).toEqual(before);
+    // The dry run stops there too.
+    expect(migrate(root, ["--dry-run"]).exitCode).toBe(1);
+  });
+
+  test("invariant: a folder the lint reads that the config on disk leaves undeclared is caught", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: patchedScript([
+        [
+          "  cfg.version = version;\n",
+          '  cfg.version = version; cfg.lint.workbench = cfg.lint.workbench.filter((w: string) => w !== "cycles");\n',
+        ],
+      ]),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("hold markdown the lint reads and are in no tier of the .project-docs.json on disk");
+    expect(r.out).toContain("docs/cycles/");
+  });
+
+  test("preflight: an empty undeclared folder and a markdown-less dot folder are reported, not stopped; a dot folder with a .md is", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      "docs/.obsidian/workspace.json": "{}\n",
+    });
+    mkdirSync(join(root, "docs/empty"));
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("· docs/.obsidian/ is in no tier, and holds no markdown the lint reads — nothing to declare");
+    expect(r.out).toContain("· docs/empty/ is in no tier, and holds no markdown the lint reads — nothing to declare");
+
+    const judged = withFiles(fixtureA({ undeclaredFolder: false }), {
+      "docs/.obsidian/note.md": "# Note\n",
+    });
+    const s = migrate(judged);
+    expect(s.exitCode).toBe(1);
+    expect(s.out).toContain("docs/.obsidian/");
+    expect(s.out).toContain("in no lint tier and not skipped");
+  });
+
+  test("preflight: a folder whose markdown a lint.exclude glob covers is not a stop", () => {
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      ".project-docs.json": '{ "docsRoot": "docs", "lint": { "exclude": ["docs/decks/**"] } }\n',
+      "docs/decks/talk.md": "---\nmarp: true\n---\n\n# Deck\n",
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("· docs/decks/ is in no tier, and holds no markdown the lint reads");
+  });
+
+  test("templates: a template that already carries a frontmatter block is kept and named, manifest or no manifest", () => {
+    const mine = "---\ntype: playbook\ntitle: Mine\n---\n\n# My playbook template\n";
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      "docs/playbooks/TEMPLATE.md": mine,
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("· kept docs/playbooks/TEMPLATE.md — it already carries a frontmatter block and is not the scaffold's");
+    expect(r.out).toContain("17 replaced (a v2.6 template has no frontmatter block), 0 already in place, 1 kept");
+    expect(readFileSync(join(root, "docs/playbooks/TEMPLATE.md"), "utf8")).toBe(mine);
+  });
+
+  test("main: an unexpected exception is still exit 1 with a named reason", () => {
+    // `scripts/pdocs` as a FILE: cpSync cannot copy a directory over it.
+    const root = withFiles(fixtureA({ undeclaredFolder: false }), {
+      "scripts/pdocs": "not a directory\n",
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: unexpected failure —");
+    expect(r.out).not.toContain("    at ");
+  });
+
+  test("report: scripts/pdocs/cli.ts absent when the report runs stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    installLayer(ctx);\n"),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: scripts/pdocs/cli.ts is not there — the layer phase did not install it");
+  });
+
+  test("report: pdocs report exiting non-zero stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold(),
+      env: { CLI_REPORT_EXIT: "4" },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: `pdocs report` exited 4");
+  });
+
+  test("invariant: pdocs check exiting non-zero on the result stops the run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      scaffold: stubScaffold(),
+      env: { CLI_CHECK_EXIT: "9" },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("the migration's own invariants do not hold");
+    expect(r.out).toContain("`pdocs check` exits 9 on the migrated tree");
+  });
+
+  test("invariant: a document added after the report was read stops the run — the self-check is WIRED", () => {
+    // The seam: a bare document lands between the report phase and the
+    // version phase. Only a wired end-of-run check can see it.
+    const r = migrate(withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL), [], {
+      env: { PDOCS_MIGRATE_TEST_MUTATE: "memories/late.md" },
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("the migration's own invariants do not hold");
+    expect(r.out).toContain("1 document(s) still have no frontmatter block after the run");
+    expect(r.out).toContain("docs/memories/late.md");
+    expect(r.out).toContain("the worklist printed by the report phase no longer matches the tree");
+  });
+
+  test("invariant: a later phase flipping lint.adopting off is caught", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: patchedScript([
+        ["  cfg.version = version;\n", "  cfg.version = version; cfg.lint.adopting = false;\n"],
+      ]),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain(".project-docs.json has lint.adopting false, not true");
+  });
+
+  test("invariant: a config version that is not the scaffold's is caught", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: patchedScript([
+        ["  cfg.version = version;\n", '  cfg.version = "0.0.0";\n'],
+      ]),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain(`.project-docs.json version is "0.0.0", not ${target()}`);
+  });
+});
+
+// ─── Wiring witnesses ────────────────────────────────────────────────────────
+//
+// A unit test of a phase never shows that anything calls it. Each test below
+// neuters one phase's call site in a disposable copy of the script and expects
+// the end-to-end run to fail — or, for the preflight, to stop failing where it
+// must fail.
+
+describe("wiring witnesses — each phase's call site, neutered", () => {
+  test("phase 1 preflight: neutered, A0 is written to and only the end-of-run check catches it", () => {
+    // Intact, the preflight stops A0 before anything is written. Neutered,
+    // every phase runs — the tree gains the layer — and the undeclared folder
+    // is caught only by the invariant at the end, after the writes.
+    const intact = migrate(fixtureA({ undeclaredFolder: true }));
+    expect(intact.exitCode).toBe(1);
+    expect(intact.out).not.toContain("[2/9]");
+    const root = fixtureA({ undeclaredFolder: true });
+    const r = migrate(root, [], { script: neutered("\n    preflight(ctx);\n") });
+    expect(r.out).not.toContain("[1/9]");
+    expect(r.out).toContain("[9/9]");
+    expect(existsSync(join(root, "scripts/pdocs/cli.ts"))).toBe(true);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("in no tier of the .project-docs.json on disk");
+    expect(r.out).toContain(`docs/${UNDECLARED_FOLDER}/`);
+    expect(r.out).toContain("The tree may be partly migrated");
+  });
+
+  test("phase 2 scaffold: neutered, there is nothing to read a version from", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    ctx.scaffoldDir = getScaffold(ctx);\n"),
+    });
+    expect(r.exitCode).toBe(1);
+    // Not a cwd-relative read of docs/README.md — this repository has one,
+    // and a `join("", ...)` would have found it and reported ITS version.
+    expect(r.out).toContain("STOPPED: no scaffold to read a version from — the scaffold phase did not run");
+  });
+
+  test("phase 3 layer: neutered, the report has no CLI to run", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    installLayer(ctx);\n"),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("scripts/pdocs/cli.ts is not there");
+  });
+
+  test("phase 4 templates: neutered, the invariant names the bare and missing templates", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    installTemplates(ctx, templates);\n"),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("docs/cycles/TEMPLATE.md is missing — the templates phase installs");
+    expect(r.out).toContain("docs/playbooks/TEMPLATE.md has no frontmatter block — the templates phase replaces");
+  });
+
+  test("phase 5 frontmatter: neutered, the invariant finds documents still bare", () => {
+    const r = migrate(withFiles(fixtureA({ undeclaredFolder: false }), PROPOSAL), [], {
+      script: neutered("\n    frontmatter(ctx);\n"),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("2 document(s) still have no frontmatter block after the run");
+    expect(r.out).toContain("docs/projects/sync/proposal.md");
+  });
+
+  test("phase 6 config: neutered, the real CLI refuses the tree at the report, and the invariant names the phase", () => {
+    // The real CLI exits 5 on a tree with no .project-docs.json, so with the
+    // generated scaffold the run stops one phase later, at the report.
+    const real = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    writeConfig(ctx);\n"),
+    });
+    expect(real.exitCode).toBe(1);
+    expect(real.out).toContain("STOPPED: `pdocs report` exited 5");
+    expect(real.out).toContain("no .project-docs.json");
+    // A CLI that does not refuse lets the run reach the end-of-run check,
+    // which names the phase.
+    const stub = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    writeConfig(ctx);\n"),
+      scaffold: stubScaffold(),
+    });
+    expect(stub.exitCode).toBe(1);
+    expect(stub.out).toContain(".project-docs.json is not there — the config phase must run");
+  });
+
+  test("phase 7 report: neutered, the invariant says the worklist was never read", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    report(ctx);\n"),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("the report phase did not run");
+  });
+
+  test("phase 8 version: neutered, both markers are found short of the scaffold's release", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    bumpVersion(ctx, version);\n"),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain(`docs/README.md docs_version is 6.3.0, not ${target()}`);
+    expect(r.out).toContain(`.project-docs.json version is "6.3.0", not ${target()}`);
+  });
+
+  test("phase 9 cleanup: neutered, the generated scaffold is found still on disk", () => {
+    const r = migrate(fixtureA({ undeclaredFolder: false }), [], {
+      script: neutered("\n    cleanup(ctx);\n"),
+      scaffold: null,
+      env: { PATH: stubCookiecutter("copy") },
+    });
+    const at = generatedAt(r);
+    if (at) roots.push(resolve(at, ".."));
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("the generated scaffold is still on disk — the cleanup phase removes it");
   });
 });

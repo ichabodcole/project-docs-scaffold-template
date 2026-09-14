@@ -94,10 +94,15 @@ v2.9 migration does; describe it, do not reinvent it.
   is false for this tree reports that and continues, so the same command serves
   a fresh tree and a partly-migrated one.
 - **Preflight** confirms this is a project-docs tree (`.project-docs.json`,
-  `docsRoot` resolves), the tools exist (`bun`, `cookiecutter` unless
+  `docsRoot` resolves — or, for a migration that _installs_
+  `.project-docs.json`, `docs/README.md` with a `docs_version` line, since the
+  config is what the run writes), the tools exist (`bun`, `cookiecutter` unless
   `--scaffold-dir`), and reports a dirty git tree. Reported, not enforced — it
   is the adopter's repository, and the report is what keeps this migration's
-  changes separable from theirs.
+  changes separable from theirs. A preflight may also stop on a condition the
+  adopter must decide before anything is written — v2.6's tier check names every
+  docs-root folder the lint would silently read as library — and a stop there
+  prints the exact lines that resolve it.
 - **Scaffold** generates into a private temp directory (`mkdtempSync`), never
   into the project, and verifies the generated root has `docs/SCHEMA.md` and
   `scripts/pdocs/`. **A dry run generates it too** — without one the version
@@ -105,10 +110,18 @@ v2.9 migration does; describe it, do not reinvent it.
   tree. Cleanup removes it in both modes.
 - **Copy phases copy from the scaffold and verify arrival.** `cpSync` from the
   generated root, then check a file or marker that only the new version carries
-  (v2.9: `seed.ts` present, both new `SCHEMA.md` sections present). State
-  whether the copy merges or replaces; classify each path by `docs/SCHEMA.md` §
-  "Who owns which file" — **owned** is replaced, **seeded** is negotiated by
-  hash, **theirs** is never written.
+  (v2.9: `seed.ts` present, both new `SCHEMA.md` sections present). A
+  single-path copy checks a marker or the file's existence right after the copy,
+  and the test that watches it fail supplies a `--scaffold-dir` that lacks the
+  file (v2.6: a `scripts/pdocs/` with no `cli.ts`). A phase that copies many
+  files (v2.6: every template) may leave per-file arrival to the end-of-run
+  invariant, provided the invariant checks every file the phase wrote — then the
+  phase itself checks the source (a frontmatter block on each scaffold template)
+  and the invariant checks the destination. State whether the copy merges or
+  replaces; classify each path by `docs/SCHEMA.md` § "Who owns which file" —
+  **owned** is replaced, **seeded** is negotiated by hash, **theirs** is never
+  written. A first-adoption migration installs a **theirs** file that is absent
+  (v2.6: the `index.md` skeleton) and says so; it still never overwrites one.
 - **Counts parse structure.** A count of manifest entries is
   `Object.keys(JSON.parse(...)).length`, never `grep -c`. `grep -c '": "'` on
   the manifest matched its own `version` line, so an empty manifest counted 1
@@ -147,7 +160,13 @@ v2.9 migration does; describe it, do not reinvent it.
   fail is redesigned, not annotated.
 - **A wiring witness** for every claim that a function is called: neuter the
   call site in a disposable copy and expect the end-to-end run to fail. v2.9's
-  `"the self-check is WIRED, not merely exported"` is the shape.
+  `"the self-check is WIRED, not merely exported"` is the shape. One witness per
+  phase, made by copying the script (and any sibling module it imports, so the
+  import still resolves) to a temp directory and replacing the one call line —
+  and the copy must throw if the line is not found, or a renamed call site
+  neuters nothing and passes. A phase whose absence lets a run _succeed_ that
+  should have stopped — the preflight — is witnessed the other way round: the
+  neutered copy exits 0 where the intact script exits 1.
 - **The already-done path and the dry run**: a second run verifies rather than
   rewrites; `--dry-run` leaves the tree byte-identical.
 - **The bad-invocation path** exits 2, not 1.
@@ -172,6 +191,11 @@ because there are none. Headings, in the v2.9 order:
   literal path, and the prose says so.
 - `## What it does, phase by phase` — one numbered entry per `step()` in the
   script, in the script's order, naming what stops the run.
+- `## After the script` — only when the migration hands work to a person that no
+  script can do (v2.6: the backfill, the catalog, turning the gate on, a cycle).
+  Numbered `###` subsections in the order they must happen, each saying why it
+  sits where it does. These are not migration steps and carry no `[Agent]`
+  label; they are what the script's last line hands off to.
 - `## What it cannot check` — what a person must confirm: that the result is
   committed, that a sentence is true, that a chosen thing is the right one. v2.9
   carries this as the last bullets of its Verification section; either placement
@@ -253,13 +277,20 @@ pass is the defect, not the reference.
       `|| { echo "..."; exit 1; }`; each script check throws. Nothing ends in
       `&& echo "ok" || echo "STOP"`.
 - [ ] **The precondition is a shell test that is true when work remains**, in
-      the `Applies If` cell of `## Available Migrations`. A script tests it
-      again in its first phase; a guide may repeat it in prose. Where a file
-      name is ambiguous, test content: `[ -f docs/lint.ts ]` is true on a
-      project with its own unrelated `docs/lint.ts`.
+      the `Applies If` cell of `## Available Migrations`. `Applies If` routes;
+      it is not what a script re-tests. Each script phase tests its own
+      precondition and reports already-done (v2.9's adopt phase: "already
+      exists"; v2.6's layer phase: "already installed and identical"), and a
+      guide repeats the precondition in prose. Where a file name is ambiguous,
+      test content: `[ -f docs/lint.ts ]` is true on a project with its own
+      unrelated `docs/lint.ts`. Where a tree can have part of what the migration
+      installs, the test names every part (v2.6: `docs/SCHEMA.md` or
+      `scripts/pdocs/cli.ts` missing).
 - [ ] **Files that land come from a generated scaffold and are verified on
-      arrival** — a marker only the new version carries, or a per-file `ls`.
-      Inline content only when no scaffold can be generated.
+      arrival** — a marker only the new version carries or, for a single path,
+      its existence after the copy; a phase that writes many files may leave
+      arrival to the end-of-run invariant when the invariant checks every file
+      it wrote. Inline content only when no scaffold can be generated.
 - [ ] **Overwrite or merge is stated per path**, by ownership: owned is
       replaced, seeded is negotiated by hash, theirs is never written.
 - [ ] **What it cannot check is named** — a commit, a sentence's truth, a choice

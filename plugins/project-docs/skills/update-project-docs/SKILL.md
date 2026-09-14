@@ -136,12 +136,13 @@ For each migration file:
    `migrations/scripts/` that handles mechanical steps. Run `--dry-run` first to
    preview, then run without the flag. Only content-editing steps (flowchart
    updates, README prose) remain for the agent. The `.sh` scripts run with
-   `bash`; `migrate-v2.6-to-v2.7.ts` runs with `bun`, and the guide's step 2
-   installs it. **A script-shaped migration has no steps to follow** — its guide
-   carries a `## This migration is a script` section: read the guide, run the
-   script with `--dry-run`, read the plan it prints, run it without the flag,
-   and read the output lines its `## Verification` section names — the exit code
-   is the check.
+   `bash`; the `.ts` scripts run with `bun`, which must already be on PATH —
+   `migrate-v2.6-to-v2.7.ts` checks for it and stops if it is not. **A
+   script-shaped migration has no steps to follow** — its guide carries a
+   `## This migration is a script` section: read the guide, run the script with
+   `--dry-run`, read the plan it prints, run it without the flag, and read the
+   output lines its `## Verification` section names — the exit code is the
+   check.
 3. Verify: the checklist at the end of a guide, or the output lines and exit 0
    of a script
 4. Move to the next migration
