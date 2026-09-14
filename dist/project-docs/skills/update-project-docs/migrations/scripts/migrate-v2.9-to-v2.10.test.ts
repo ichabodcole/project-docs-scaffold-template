@@ -627,7 +627,14 @@ describe("fixtures — the generated trees the whole-script tests run against", 
     for (const t of FIXED_TEMPLATES) expect(moved()).toContain(t);
     const o = treeDigest(fixtureO());
     const n = treeDigest(generatedScaffolds().current);
-    const differ = Object.keys(o).filter((k) => o[k] !== n[k]).sort();
+    // release-please rewrites the version markers on every release branch —
+    // docs/README.md's docs_version and .project-docs.json's version — so they
+    // differ from the tag whenever a release is pending. They are not what this
+    // test is about (the markers phase has its own), so they are set aside.
+    const RELEASE_MARKERS = new Set(["docs/README.md", ".project-docs.json"]);
+    const differ = Object.keys(o)
+      .filter((k) => o[k] !== n[k] && !RELEASE_MARKERS.has(k))
+      .sort();
     expect(differ).toEqual(
       [
         "docs/.pdocs-seed.json",
