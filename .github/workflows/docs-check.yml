@@ -35,6 +35,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the v2.6 migration's fixtures build a real v2.6 tree
+          # from `git archive` of the last pre-frontmatter release tag, which a
+          # depth-1 checkout does not carry.
+          fetch-depth: 0
+      # The same fixtures generate that tree with cookiecutter, and throw
+      # rather than skip without it — a suite that quietly stops testing the
+      # migration is worse than one that fails here.
+      - run: pipx install cookiecutter
       - uses: oven-sh/setup-bun@v2
         with:
           # Pinned to the version this repo develops against. Floating on
