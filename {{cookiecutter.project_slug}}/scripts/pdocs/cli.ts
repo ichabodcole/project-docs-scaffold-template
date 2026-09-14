@@ -440,7 +440,7 @@ export function parseArgs(
  * release-please rewrites the literal below via the marker comment, the same
  * way anthill's CLI carries its own.
  */
-const VERSION = "7.0.0"; // x-release-please-version
+const VERSION = "8.0.0"; // x-release-please-version
 
 export function version(): string {
   return VERSION;
