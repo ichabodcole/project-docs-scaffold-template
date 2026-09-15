@@ -256,8 +256,8 @@ of the project's own that reaches `scripts/` is not that case: the layer
 typechecks under a Bun-shaped config (`allowImportingTsExtensions`,
 `types: ["bun"]`) with `strict` and `noUncheckedIndexedAccess` on, and a
 consumer typechecking it is how #176 was found. The line is about an `include` a
-migration wrote, and the fix is to take that entry out, not to exclude the
-directory.
+migration wrote: take that entry out. If the entry is your own, the `FAIL` is
+spurious — leave it, and do not exclude the directory.
 
 A `FAIL` on a formatter line means the project's own formatting rules have
 claimed delivered code. `scripts/pdocs/` is **owned** — replaced wholesale on
