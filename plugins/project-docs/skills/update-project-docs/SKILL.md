@@ -251,7 +251,13 @@ project has, and one version value in both markers. A `FAIL` on either artefact
 line means an older scaffold's development setup is still installed: the CLI's
 own tests running in the project's suite, or its files being typechecked under a
 `tsconfig` they were never written for.
-[v2.7-to-v2.8](migrations/v2.7-to-v2.8.md)'s step 6 removes both.
+[v2.7-to-v2.8](migrations/v2.7-to-v2.8.md)'s step 6 removes both. A `tsconfig`
+of the project's own that reaches `scripts/` is not that case: the layer
+typechecks under a Bun-shaped config (`allowImportingTsExtensions`,
+`types: ["bun"]`) with `strict` and `noUncheckedIndexedAccess` on, and a
+consumer typechecking it is how #176 was found. The line is about an `include` a
+migration wrote, and the fix is to take that entry out, not to exclude the
+directory.
 
 A `FAIL` on a formatter line means the project's own formatting rules have
 claimed delivered code. `scripts/pdocs/` is **owned** — replaced wholesale on
