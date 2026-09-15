@@ -140,8 +140,8 @@ export function slug(h: string): string {
 export function headingSlugsOf(text: string): Set<string> {
   const s = new Set<string>();
   for (const line of stripFences(text).split("\n")) {
-    const m = /^#+\s+(.*)$/.exec(line);
-    if (m) s.add(slug(m[1]));
+    const heading = /^#+\s+(.*)$/.exec(line)?.[1];
+    if (heading !== undefined) s.add(slug(heading));
   }
   return s;
 }
@@ -205,7 +205,7 @@ export function stripInlineComment(v: string): string {
       !inSingle &&
       !inDouble &&
       i > 0 &&
-      /\s/.test(v[i - 1])
+      /\s/.test(v.charAt(i - 1))
     ) {
       return v.slice(0, i);
     }
@@ -296,10 +296,12 @@ export function parseFrontmatter(fm: string): Map<string, string> {
   };
   for (const line of fm.split("\n")) {
     const m = /^([A-Za-z_][\w-]*):\s*(.*)$/.exec(line);
-    if (m) {
+    const k = m?.[1];
+    const v = m?.[2];
+    if (k !== undefined && v !== undefined) {
       flush();
-      key = m[1];
-      buf = [m[2]];
+      key = k;
+      buf = [v];
     } else if (key && /^\s+\S/.test(line)) {
       buf.push(line.trim());
     }
@@ -394,9 +396,11 @@ export function checkLinks(
   // longer looks like one. `docs/wiki/site/markdown.ts` learned the same form; a linter that
   // disagrees with the renderer about what a link is will pass pages that render broken.
   for (const m of stripCode(body).matchAll(/\]\((<[^>]*>|[^)]+)\)/g)) {
-    const target = (m[1] as string).trim().replace(/^<(.*)>$/, "$1");
+    const link = m[1];
+    if (link === undefined) continue;
+    const target = link.trim().replace(/^<(.*)>$/, "$1");
     if (/^https?:\/\//.test(target) || target.startsWith("mailto:")) continue;
-    const [pathPart, anchor] = target.split("#");
+    const [pathPart = "", anchor] = target.split("#");
     let filePath: string;
     if (pathPart === "") {
       filePath = file; // same-file anchor
@@ -493,9 +497,9 @@ export function collectDocsLint(
   for (const f of files) {
     const raw = readFileSync(f, "utf8");
     body.set(f, raw);
-    const m = /^---\n([\s\S]*?)\n---/.exec(raw);
-    if (m) frontmatter.set(f, m[1]);
-    meta.set(f, m ? parseFrontmatter(m[1]) : new Map());
+    const fm = /^---\n([\s\S]*?)\n---/.exec(raw)?.[1];
+    if (fm !== undefined) frontmatter.set(f, fm);
+    meta.set(f, fm !== undefined ? parseFrontmatter(fm) : new Map());
   }
 
   const fieldsOf = (f: string): Map<string, string> => meta.get(f) ?? new Map();

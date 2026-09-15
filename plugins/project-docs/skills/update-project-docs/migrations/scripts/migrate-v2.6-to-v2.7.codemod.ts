@@ -511,7 +511,7 @@ export function docsVersionOf(repoRoot: string, docsRoot: string): string {
   const m = /^docs_version:\s*["']?([^"'\s#]+)/m.exec(
     readFileSync(readme, "utf8")
   );
-  return m ? m[1] : UNKNOWN_VERSION;
+  return m?.[1] ?? UNKNOWN_VERSION;
 }
 
 /**
