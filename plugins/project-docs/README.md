@@ -279,6 +279,27 @@ docs/
 
 ## Version History
 
+### 3.12.1 (2026-09-15)
+
+**The owned layer typechecks under `noUncheckedIndexedAccess`.** A consumer
+whose `tsconfig` reaches `scripts/pdocs/` with that flag on got seven errors,
+all in the docs lint — regex captures, a string index and a `split` destructure
+read as `string | undefined` — and the same flag upstream found an eighth in the
+v2.6 codemod. Each site is narrowed with a guard, none with a `!`, and this
+repository's own `tsconfig` now sets the flag so `npm run typecheck` gates the
+class; the flag was watched failing on one restored site. The layer is also
+clean under Biome 2.x's recommended rules: an assignment-in-expression in
+`graph.ts` and an unused import in `cli.ts` (#176).
+
+**"Exclude `scripts/pdocs/` from your formatter" is a step, not a
+parenthetical.** A consumer's agent did not find it inside phase 3's
+description, so
+[v2.6-to-v2.7](skills/update-project-docs/migrations/v2.6-to-v2.7.md) and
+[v2.9-to-v2.10](skills/update-project-docs/migrations/v2.9-to-v2.10.md) each
+carry it as a numbered item under `## After the script`, naming the Prettier,
+Biome and ESLint lines and the reason: the directory is replaced byte for byte
+on every refresh.
+
 ### 3.12.0 (2026-09-14)
 
 **The 3.11.0 fixes reach a project that already has the layer.**
