@@ -180,3 +180,7 @@ What has been happening lately, for a cold start. — see
   — The first migration written under the rewritten skill by an outside author
   used the seed verdicts for real, stops after the refresh when the newer lint
   finds what the older one hid, and grew the skill in seven more places.
+- [The owned layer must typecheck under any consumer's strict flags](./memories/2026-09-15-owned-layer-under-a-strict-consumer.md)
+  — Spellbook's tsconfig enabled noUncheckedIndexedAccess and the delivered CLI
+  failed under it; the flag now lives upstream so CI gates the class, and the
+  guides say what a consumer's tools may and may not touch.
