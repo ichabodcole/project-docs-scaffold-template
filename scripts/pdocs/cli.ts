@@ -21,7 +21,7 @@
 // `envelope.ts`. This file is only about getting to the right command with the
 // right arguments, and about turning a thrown `CliError` into a status.
 
-import { existsSync, readFileSync, statSync, writeSync } from "node:fs";
+import { existsSync, statSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isatty } from "node:tty";
 import { type Ctx, context } from "./lint/rules.ts";

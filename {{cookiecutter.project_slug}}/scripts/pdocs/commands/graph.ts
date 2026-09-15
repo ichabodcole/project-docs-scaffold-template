@@ -60,7 +60,11 @@ export function graphData(pages: Page[]): GraphData {
   const tags: Record<string, string[]> = {};
   for (const page of pages) {
     byType[page.type] = (byType[page.type] ?? 0) + 1;
-    for (const tag of page.tags) (tags[tag] ??= []).push(page.path);
+    for (const tag of page.tags) {
+      const paths = tags[tag] ?? [];
+      paths.push(page.path);
+      tags[tag] = paths;
+    }
   }
 
   const sortedKeys = <T>(o: Record<string, T>): Record<string, T> =>
