@@ -15,6 +15,7 @@ scope:
   [
     backlog/2026-09-14-story-loom-feedback-round-1,
     backlog/2026-09-14-v2.9-to-v2.10-refresh-the-owned-files,
+    backlog/2026-09-15-spellbook-feedback-round-1,
   ]
 after: [] # cycles or projects this one waits on
 generated: { by: claude-fable-5-1, at: 2026-09-14 }
@@ -39,6 +40,10 @@ that is the second branch this cycle exists to hold.
 - [v2.9 → v2.10: refresh the owned files](../backlog/2026-09-14-v2.9-to-v2.10-refresh-the-owned-files.md)
   — the migration that carries the fixes to a consumer, and the first real use
   of seeded-template reconciliation.
+- [Spellbook feedback, round 1: twelve items](../backlog/2026-09-15-spellbook-feedback-round-1.md)
+  — added 2026-09-15: the second consumer's round, worked as one branch under
+  the same cycle because it is the same kind of work and the release that closes
+  it is the one this cycle was already waiting for.
 
 ## Outcome
 
