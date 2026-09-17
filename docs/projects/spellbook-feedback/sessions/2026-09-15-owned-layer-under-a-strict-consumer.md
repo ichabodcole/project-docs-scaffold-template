@@ -83,6 +83,27 @@ new test owed, since Bun does not typecheck and the guard is the flag plus CI's
 instruction for both the migration-written and the project's own `include`,
 landed as `c90dd6f`.
 
+## Why it had to be fixed upstream: the coverage ward
+
+The obvious consumer shortcut — exclude `scripts/pdocs/` from `tsc` — is not
+open to every consumer, and it was not open to this one. Spellbook's
+`type-check-ward` asserts that **every file was examined**, precisely so an
+exclusion cannot pass for a clean result: with the directory excluded its
+coverage cell read `644 examined of 661` and went red. A consumer that checks
+coverage has two exits from a type error in the owned layer — a local patch the
+next refresh overwrites, or an upstream fix — so the layer has to typecheck
+under the consumer's flags. "Exclude it" is advice for formatters and linters,
+which is what the guides now say; it is not an answer for `tsc`.
+
+## Where it landed downstream
+
+Spellbook took the fixed layer from a `develop`-generated scaffold via
+`--scaffold-dir`, ran v2.8 → v2.9 without reverting it, and landed the whole
+upgrade on its `develop` at `49b4d0b9` (fast-forward, nine commits); CI went
+green on the follow-up `eb012b7f`. Ward `0 errors · 661 of 661 files examined`,
+`lint.adopting: false`, gate enforcing. The friction it reported on the way is
+[backlog: Spellbook feedback, round 1](../../../backlog/2026-09-15-spellbook-feedback-round-1.md).
+
 ## Deliberately not done
 
 - **The other strict flags.** `exactOptionalPropertyTypes` (one site) and
