@@ -288,8 +288,8 @@ order the text names them. A backfill split across workers shards that array
 instead of parsing `check`'s messages. The text output is byte-identical.
 
 **A link may leave `docs/`; it may not leave the repository.** Under the docs
-root a target that resolves outside the repository root — a sibling checkout, an
-absolute path under a home directory — is `MISSING FILE` even when the file is
+root a target that resolves outside the git repository — a sibling checkout — or
+is an absolute path, wherever it lands, is `MISSING FILE` even when the file is
 on disk, and the row says why. Such a link passed on the machine that wrote it
 and failed first in CI; now it fails locally. `docs/SCHEMA.md` hard rule 2
 states it. The tracked pages outside the docs root keep the existence-only

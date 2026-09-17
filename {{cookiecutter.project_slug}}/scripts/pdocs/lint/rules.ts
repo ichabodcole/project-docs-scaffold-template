@@ -19,8 +19,16 @@
 // carrying its own copy. `scripts/pdocs/docs-lint/` is a copy of a portable
 // core and stays that way.
 
-import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { type ProjectDocsConfig, loadConfig } from "../docs-lint/config.ts";
 import {
   type DocsLintReport,
@@ -63,6 +71,41 @@ export interface Ctx {
 export function context(repoRoot: string): Ctx {
   const config = loadConfig(repoRoot);
   return { repoRoot, docsRoot: join(repoRoot, config.docsRoot), config };
+}
+
+const boundaries = new Map<string, string>();
+
+/**
+ * The directory a link may not leave: the GIT repository, not `ctx.repoRoot`.
+ *
+ * `ctx.repoRoot` is where `.project-docs.json` sits, and in a monorepo that is
+ * `packages/app/` — a link from there to the monorepo's `CONTRIBUTING.md`
+ * resolves in every checkout and is not the machine-specific link this rule
+ * exists to catch. So: git's top level, when it contains `ctx.repoRoot`;
+ * otherwise `ctx.repoRoot` itself (no git, or an environment naming some other
+ * repository). Returned in `ctx.repoRoot`'s own spelling — git answers with the
+ * real path, and `/tmp` is a symlink on macOS.
+ */
+export function linkBoundary(ctx: Ctx): string {
+  const cached = boundaries.get(ctx.repoRoot);
+  if (cached !== undefined) return cached;
+  let boundary = ctx.repoRoot;
+  const out = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
+    cwd: ctx.repoRoot,
+  });
+  const top = out.success ? new TextDecoder().decode(out.stdout).trim() : "";
+  if (top && existsSync(top)) {
+    const rel = relative(realpathSync(top), realpathSync(ctx.repoRoot));
+    const nested =
+      rel !== "" &&
+      rel !== ".." &&
+      !rel.startsWith(`..${sep}`) &&
+      !isAbsolute(rel);
+    if (nested)
+      boundary = resolve(ctx.repoRoot, ...rel.split(sep).map(() => ".."));
+  }
+  boundaries.set(ctx.repoRoot, boundary);
+  return boundary;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -135,7 +178,10 @@ export function templatePaths(ctx: Ctx): string[] {
   const isTpl = templateTest(ctx);
   const excluded = excluder(ctx);
   const out: string[] = [];
-  for (const path of walkMarkdown(ctx.docsRoot, new Set(ctx.config.lint.skip))) {
+  for (const path of walkMarkdown(
+    ctx.docsRoot,
+    new Set(ctx.config.lint.skip)
+  )) {
     const rel = relative(ctx.repoRoot, path);
     if (isTpl(path) && !excluded(rel)) out.push(rel);
   }
@@ -165,13 +211,7 @@ export function excluder(ctx: Ctx): (repoRelative: string) => boolean {
  * purpose is to notice drift. See `registry.ts` for why the dependency runs the
  * way it does rather than the other way.
  */
-export {
-  DURABLE_TYPE,
-  PROJECT_FILE_TYPE,
-  PROJECT_SPEC,
-  ROOT_PAGE_TYPE,
-  SPEC,
-};
+export { DURABLE_TYPE, PROJECT_FILE_TYPE, PROJECT_SPEC, ROOT_PAGE_TYPE, SPEC };
 
 /** Library types carry no lifecycle: a living page is current or it is not, and `status` says which. */
 export const DURABLE_TYPES = [
@@ -430,7 +470,7 @@ export function thinTier(ctx: Ctx): string[] {
     // the contracts and cross-link each other constantly. Templates are the one
     // exception: their links are placeholders.
     if (!isTpl(path)) {
-      for (const bad of checkLinks(path, raw, { repoRoot: ctx.repoRoot })
+      for (const bad of checkLinks(path, raw, { repoRoot: linkBoundary(ctx) })
         .problems) {
         problems.push(
           bad.kind === "MISSING FILE"
@@ -614,7 +654,7 @@ export function graphTier(ctx: Ctx): DocsLintReport {
   return collectDocsLint({
     root: ctx.docsRoot,
     // A library page may link out of the docs root, not out of the repository.
-    repoRoot: ctx.repoRoot,
+    repoRoot: linkBoundary(ctx),
     // A type this project declared is a known type. Passing only the built-in
     // list here made a declared durable folder report `BAD type` even though
     // the registry and both position resolvers had accepted it — the third
@@ -628,7 +668,8 @@ export function graphTier(ctx: Ctx): DocsLintReport {
     dateField: "generated",
     allowDateOnly: true,
     skipFiles: (rel) =>
-      isTpl(join(ctx.docsRoot, rel)) || excluded(join(ctx.config.docsRoot, rel)),
+      isTpl(join(ctx.docsRoot, rel)) ||
+      excluded(join(ctx.config.docsRoot, rel)),
     isContractPage: (rel) => CONTRACT_BASENAMES.has(basename(rel)),
     extraChecks: hookChecks,
   });
@@ -808,7 +849,13 @@ function missingFields(ctx: Ctx): {
       // `MISSING FILE` and `MISSING ANCHOR` share the prefix and are not fields: a
       // broken link is a defect to fix, not a blank to fill, and listing it here
       // would put it in the one report that never fails.
-      const m = /^(?:MISSING|NO) (?!FILE|ANCHOR)(\S+)\s+(\S+)/.exec(problem);
+      // The path runs to the end of the row or to the two-space `  (hint)`,
+      // not to the first space: `has space.md` is a legal name, and a record
+      // that truncates it hands a worker a file that does not exist.
+      const m =
+        /^(?:MISSING|NO) (?!FILE|ANCHOR)(\S+)\s+(.+?)(?: {2}\(.*)?$/.exec(
+          problem
+        );
       if (m)
         note(
           m[1] === "FRONTMATTER" ? "frontmatter" : (m[1] as string),
@@ -828,7 +875,8 @@ function missingFields(ctx: Ctx): {
     const m = /^---\n([\s\S]*?)\n---/.exec(
       readFileSync(join(ctx.repoRoot, rel), "utf8")
     );
-    if (m && looksLikeSlideDeck(parseFrontmatter(m[1] as string))) decks.push(rel);
+    if (m && looksLikeSlideDeck(parseFrontmatter(m[1] as string)))
+      decks.push(rel);
   }
   for (const [field, rels] of [...missing]) {
     const kept = rels.filter((r) => !decks.includes(r));

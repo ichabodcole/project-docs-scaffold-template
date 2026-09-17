@@ -55,16 +55,23 @@ export interface LintReport {
 }
 
 /**
- * Of what `linkProblemsFor` is handed, what it actually reads: not the docs
- * root, which the two tiers walk, and not the generated CHANGELOG.
+ * Of the tracked pages, the ones `linkProblemsFor` reads.
  *
- * Both skips are private constants of `unlinted-links.ts`, which is ported
- * verbatim and exports neither, so they are restated here to COUNT by and for
- * nothing else. `collect — the outside corpus` in `rules.test.ts` holds the
- * count to what that file reads, so the two cannot drift quietly.
+ * Not the docs root: the two tiers walk it, and a page handed to both is
+ * reported twice. `unlinted-links.ts` skips that for itself only when the docs
+ * root is spelled `docs/` — a private constant of a file ported verbatim — so
+ * the caller takes the real one out here. Its other two skips are restated to
+ * COUNT by and for nothing else: the generated CHANGELOG, and that same literal
+ * `docs/`, which under a docs root of another name means a tracked `docs/`
+ * folder is read by nobody. `collect — the outside corpus` in `rules.test.ts`
+ * holds the count to what is read.
  */
 function readOutside(ctx: Ctx, rel: string): boolean {
-  return rel !== "CHANGELOG.md" && !rel.startsWith(`${ctx.config.docsRoot}/`);
+  return (
+    rel !== "CHANGELOG.md" &&
+    !rel.startsWith("docs/") &&
+    !rel.startsWith(`${ctx.config.docsRoot}/`)
+  );
 }
 
 /**
@@ -87,7 +94,7 @@ export function collect(ctx: Ctx): LintReport {
   // instruction in someone else's repository. `lint.exclude` takes a file out.
   const excluded = excluder(ctx);
   const tracked = trackedMarkdown(ctx.repoRoot).filter(
-    (p) => !isTpl(p) && !excluded(p)
+    (p) => !isTpl(p) && !excluded(p) && !p.startsWith(`${ctx.config.docsRoot}/`)
   );
 
   const workbench = [

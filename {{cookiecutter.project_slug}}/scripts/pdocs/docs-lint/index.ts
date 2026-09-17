@@ -386,7 +386,7 @@ function within(root: string, path: string): boolean {
 
 /** What a caller appends to a `MISSING FILE` whose `outside` is set. */
 export const OUTSIDE_REPOSITORY =
-  "  (leaves the repository — it resolves on this machine and in no other checkout)";
+  "  (not portable: absolute, or leaves the repository — it resolves on this machine and in no other checkout)";
 
 /**
  * Does an EXISTING `path` sit outside the repository at `root`?
@@ -429,7 +429,7 @@ function climbsOut(root: string, fromDir: string, pathPart: string): boolean {
  *
  * A page may link out of its own TREE — a rule page citing a checker in `src/`, a report citing
  * the wiki — and that is a link like any other. It may not link out of the REPOSITORY: pass
- * `repoRoot` and a target that resolves outside it — or climbs above it and comes back in
+ * `repoRoot` and a target that is an absolute path, or resolves outside it — or climbs above it and comes back in
  * through the checkout's own folder name — is `MISSING FILE` whatever is on disk. A sibling
  * checkout or a path under someone's home directory exists on the machine that wrote the
  * link and nowhere else, so an existence check passes locally and fails first in CI.
@@ -475,9 +475,12 @@ export function checkLinks(
         problems.push({ kind: "MISSING FILE", target });
         continue;
       }
+      // An absolute target is refused wherever it lands: `/Users/you/repo/a.md`
+      // is inside the repository on one machine and nowhere on the next.
       if (
         opts.repoRoot !== undefined &&
-        (climbsOut(opts.repoRoot, dirname(file), pathPart) ||
+        (isAbsolute(pathPart) ||
+          climbsOut(opts.repoRoot, dirname(file), pathPart) ||
           leavesRepository(opts.repoRoot, filePath))
       ) {
         problems.push({ kind: "MISSING FILE", target, outside: true });

@@ -219,10 +219,11 @@ summary: _N tracked page(s) outside `docs/`, links only_. A `lint.exclude` glob
 takes a file out of that corpus. `templates[]` is every file under the docs root
 the lint skipped as a template.
 
-Under the docs root a link target that resolves **outside the repository** — a
-sibling checkout, an absolute path, a relative path that climbs above the root
-and back in — is `MISSING FILE` even when it exists on disk; the message ends
-`(leaves the repository — …)`.
+Under the docs root a link target that is **not portable** — an absolute path, a
+sibling checkout, a relative path that climbs above the repository and back in —
+is `MISSING FILE` even when it exists on disk; the message ends
+`(not portable: …)`. The repository is git's top level, so in a monorepo a link
+above `.project-docs.json` and inside the git repository passes.
 
 Exits **0** clean, **9** dirty. Under `lint.adopting: true` in
 `.project-docs.json` a dirty tree still exits 0 and `adopting` says why.

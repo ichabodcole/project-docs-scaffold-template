@@ -318,12 +318,14 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
    verified exist. The lint checks both. **A link may leave `docs/`; it may not
    leave the repository.** `../../src/sync.ts` resolves in every checkout. A
    sibling checkout (`../../../other-repo/plan.md`) or an absolute path
-   (`/Users/you/Projects/other-repo`) exists on the machine that wrote it and
-   nowhere else, so under `docs/` a target that resolves outside the repository
-   root — or climbs above it and comes back in through the checkout's own folder
-   name — is `MISSING FILE` even when the file is on your disk: the failure you
-   would otherwise meet first in CI. Name the other repository in prose, or link
-   its URL.
+   (`/Users/you/Projects/other-repo`, or one into this repository) exists on the
+   machine that wrote it and nowhere else, so under `docs/` a target that is
+   absolute, or resolves outside the repository — or climbs above it and comes
+   back in through the checkout's own folder name — is `MISSING FILE` even when
+   the file is on your disk: the failure you would otherwise meet first in CI.
+   The repository is git's top level, so in a monorepo a link above
+   `.project-docs.json` still resolves. Name another repository in prose, or
+   link its URL.
 3. **Frontmatter on every document.** `type` is mandatory; the rest is the table
    above.
 4. **A library page gets one line in `index.md`** — link plus its `description`,

@@ -92,8 +92,12 @@ describe("what childEnv cannot reach, so nobody tries", () => {
   test("an env-less spawn does not see a variable deleted from process.env", () => {
     const probe = ["sh", "-c", 'printf %s "${PDOCS_ENV_PROBE-unset}"'];
     withEnv({ PDOCS_ENV_PROBE: "late" }, () => {
-      expect(Bun.spawnSync(probe, { env: undefined }).stdout.toString()).toBe("unset");
-      expect(Bun.spawnSync(probe, { env: childEnv() }).stdout.toString()).toBe("late");
+      expect(Bun.spawnSync(probe, { env: undefined }).stdout.toString()).toBe(
+        "unset"
+      );
+      expect(Bun.spawnSync(probe, { env: childEnv() }).stdout.toString()).toBe(
+        "late"
+      );
     });
   });
 });
@@ -106,7 +110,9 @@ describe("the list is git's, not ours", () => {
     });
     const gits = r.stdout.toString().split("\n").filter(Boolean);
     expect(gits.length).toBeGreaterThan(0);
-    expect(gits.filter((g) => !(GIT_LOCAL_ENV as readonly string[]).includes(g))).toEqual([]);
+    expect(
+      gits.filter((g) => !(GIT_LOCAL_ENV as readonly string[]).includes(g))
+    ).toEqual([]);
   });
 });
 
@@ -150,10 +156,25 @@ export function callText(src: string, open: number): string {
   return src.slice(open, i + 1);
 }
 
-/** Every `spawnSync(` / `Bun.spawn(` in one file, as `{ line, text }`. */
+/**
+ * Every call that starts a child, in one file, as `{ line, text }`: node's
+ * `spawn`/`spawnSync`/`exec`/`execSync`/`execFile`/`execFileSync`, called bare
+ * (a `.exec(` is a regex's), and `Bun.spawn`/`Bun.spawnSync`. A Bun shell
+ * template (`` $`…` ``) has nowhere to put an `env` inline, so it is reported
+ * with its own text and can never pass.
+ */
 export function spawnCalls(src: string): { line: number; text: string }[] {
   const calls: { line: number; text: string }[] = [];
-  for (const m of src.matchAll(/\b(?:spawnSync|Bun\.spawn)\(/g)) {
+  for (const m of src.matchAll(/(?:(?<![.\w$])|\bBun\.)\$`/g)) {
+    const at = m.index ?? 0;
+    const lineStart = src.lastIndexOf("\n", at) + 1;
+    const lead = src.slice(lineStart, at).trimStart();
+    if (lead.startsWith("//") || lead.startsWith("*")) continue;
+    calls.push({ line: src.slice(0, at).split("\n").length, text: "$`" });
+  }
+  for (const m of src.matchAll(
+    /(?:(?<![.\w])(?:spawn|exec|execFile)(?:Sync)?|\bBun\.spawn(?:Sync)?)\(/g
+  )) {
     const at = m.index ?? 0;
     const lineStart = src.lastIndexOf("\n", at) + 1;
     const lead = src.slice(lineStart, at).trimStart();
@@ -174,16 +195,32 @@ describe("every spawn in every test file goes through childEnv", () => {
 
   test("the scan finds the spawns it is supposed to be reading", () => {
     expect(files.length).toBeGreaterThan(10);
-    const cli = readFileSync(join(REPO_ROOT, "scripts/pdocs/cli.test.ts"), "utf8");
+    const cli = readFileSync(
+      join(REPO_ROOT, "scripts/pdocs/cli.test.ts"),
+      "utf8"
+    );
     expect(spawnCalls(cli).length).toBeGreaterThan(3);
   });
 
   test("the scan can fail: a spawn with a bare environment is reported", () => {
     const bare = 'const r = Bun.spawnSync(["git", "init"], { cwd: root });\n';
-    const spread = "Bun.spawnSync(cmd, { env: { ...process.env, A: `${f(1)})` } });\n";
-    const clean = 'Bun.spawnSync(["git", "init"], { cwd: ")", env: childEnv() });\n';
-    const bad = (s: string) => spawnCalls(s).filter((c) => !c.text.includes("childEnv("));
+    const spread =
+      "Bun.spawnSync(cmd, { env: { ...process.env, A: `${f(1)})` } });\n";
+    const clean =
+      'Bun.spawnSync(["git", "init"], { cwd: ")", env: childEnv() });\n';
+    const bad = (s: string) =>
+      spawnCalls(s).filter((c) => !c.text.includes("childEnv("));
     expect(bad(bare).length).toBe(1);
+    for (const form of [
+      'execSync("git init", { cwd: root });\n',
+      'execFileSync("git", ["init"], { cwd: root });\n',
+      'const p = spawn("git", ["init"]);\n',
+      "await $`git init`;\n",
+      "await Bun.$`git init`;\n",
+    ])
+      expect(bad(form).length).toBe(1);
+    // A regex's `.exec(` starts nothing.
+    expect(spawnCalls('const m = /^a/.exec("a");\n')).toEqual([]);
     expect(bad(spread).length).toBe(1);
     expect(bad(clean)).toEqual([]);
   });

@@ -339,7 +339,7 @@ function preflight(o: Options): Ctx {
 
   if (!o.scaffold && !have("cookiecutter"))
     fail(
-      "cookiecutter is not installed, and no --scaffold <path> was given. Install it, or generate the scaffold yourself and pass its path."
+      "cookiecutter is not installed, and no --scaffold-dir <path> was given. Install it, or generate the scaffold yourself and pass its path."
     );
   // NOT a downgrade-and-continue. Formatting has to happen before the hashes
   // are taken, so "carried on without it" silently produces a manifest this
@@ -377,7 +377,7 @@ function getScaffold(ctx: Ctx): string {
     const s = resolve(ctx.scaffold);
     if (!existsSync(join(s, "docs/SCHEMA.md")) || !existsSync(join(s, "scripts/pdocs")))
       fail(
-        `--scaffold ${s} is not a generated project root (expected docs/SCHEMA.md and scripts/pdocs/ inside it).`
+        `--scaffold-dir ${s} is not a generated project root (expected docs/SCHEMA.md and scripts/pdocs/ inside it).`
       );
     ok(`using ${s}`);
     return s;
@@ -658,7 +658,7 @@ function bumpVersion(ctx: Ctx, version: string): void {
 function cleanup(ctx: Ctx): void {
   step(8, "Clean up");
   if (ctx.scaffold) {
-    note("scaffold was supplied with --scaffold — left in place");
+    note("scaffold was supplied with --scaffold-dir — left in place");
     return;
   }
   // A dry run generates a scaffold now, so it has one to remove. Leaving it
