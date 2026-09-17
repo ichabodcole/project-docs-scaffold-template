@@ -48,6 +48,14 @@ kept byte-identical by contract, so it does not pass one and the outside- docs
 corpus keeps today's existence-only check. Spellbook's three failures were all
 inside `docs/`, so the rule reaches the case that happened.
 
+**A thirteenth, found opening the branch.** `git commit -a` exports
+`GIT_INDEX_FILE` to the pre-commit hook, the test suite's temporary repositories
+inherit it, and `git ls-files` inside them reads this repository's index: 43
+tests fail in the hook and none fail outside it. Reproduce with
+`cp .git/index /tmp/idx && GIT_INDEX_FILE=/tmp/idx bun test scripts/pdocs/cli.test.ts`.
+The fix is in `scripts/pdocs/test-env.ts`, which exists for exactly this shape
+(hook red, CI green): strip git's hook variables from every spawned child.
+
 **Not in this item.** `noPropertyAccessFromIndexSignature` (16 sites) and
 `exactOptionalPropertyTypes` (1) on the owned layer — no consumer has them on.
 
