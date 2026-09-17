@@ -88,6 +88,16 @@ After the fixes: `npm run check` exit 0 with 1231 tests, `npm run typecheck`
 exit 0, the full suite green under an inherited `GIT_INDEX_FILE`, and the three
 rewritten snippets run in a scratch repository.
 
+**Re-review of the fixes**, same reviewer, resumed with its context: **Ready to
+merge: Yes.** Its log, quoted: "`npm run check` exit 0: 1231 pass, 0 fail";
+"`GIT_INDEX_FILE=<copy> bun test` exit 0"; "`check` on `mono/packages/app` via
+`/private/tmp` and via `/tmp` … on a no-git copy, and on a nested-repository
+copy"; "a 19-link page in `t12` on HEAD and on `develop`"; release probe "four
+runs … leftover directories counted at 0"; six mutations, four red. The two that
+stayed green, a truncation on a path containing two spaces then `(`, and a
+pre-existing crash when `check` inherits `GIT_DIR`, are
+[a backlog item](../../../backlog/2026-09-17-check-inherits-git-hook-variables.md).
+
 ## Deliberately not done
 
 - `N file(s) written` in the v2.7, v2.9 and v2.10 scripts counts the files that
