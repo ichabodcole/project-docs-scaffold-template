@@ -16,10 +16,12 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { childEnv } from "../../../../../../scripts/pdocs/test-env.ts";
 
 import { manifestMatchesDisk } from "./migrate-v2.8-to-v2.9.ts";
 
@@ -88,7 +90,7 @@ function project(
 const run = (root: string, sc: string, ...args: string[]) =>
   Bun.spawnSync(
     ["bun", SCRIPT, "--root", root, "--scaffold", sc, "--skip-format", ...args],
-    { stdout: "pipe", stderr: "pipe" }
+    { stdout: "pipe", stderr: "pipe", env: childEnv() }
   );
 
 const out = (r: ReturnType<typeof run>) =>
@@ -196,9 +198,9 @@ describe("guards that must be able to fire", () => {
   });
 
   test("a bad invocation exits 2, not 1", () => {
-    const bad = Bun.spawnSync(["bun", SCRIPT, "--root"], { stdout: "pipe", stderr: "pipe" });
+    const bad = Bun.spawnSync(["bun", SCRIPT, "--root"], { stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(bad.exitCode).toBe(2);
-    const unknown = Bun.spawnSync(["bun", SCRIPT, "--nope"], { stdout: "pipe", stderr: "pipe" });
+    const unknown = Bun.spawnSync(["bun", SCRIPT, "--nope"], { stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(unknown.exitCode).toBe(2);
   });
 });
@@ -222,6 +224,73 @@ describe("idempotence and dry run", () => {
     expect(out(r)).toContain("would record 1 template");
     expect(() => manifest(p)).toThrow();
     expect(readFileSync(join(p, ".project-docs.json"), "utf8")).toBe(before);
+  });
+});
+
+describe("phase 3 says what happened to the bytes, not that a marker is present", () => {
+  const owned = (root: string) => ({
+    cli: readFileSync(join(root, "scripts/pdocs/cli.ts"), "utf8"),
+    seed: readFileSync(join(root, "scripts/pdocs/seed.ts"), "utf8"),
+    schema: readFileSync(join(root, "docs/SCHEMA.md"), "utf8"),
+  });
+
+  test("a tree without the layer: refreshed and replaced, and the scaffold's bytes are on disk", () => {
+    const p = project(TPL);
+    const sc = scaffold();
+    const r = run(p, sc);
+    expect(r.exitCode).toBe(0);
+    expect(out(r)).toContain("✓ scripts/pdocs/ refreshed (2 file(s) written; seed.ts present)");
+    expect(out(r)).toContain("✓ docs/SCHEMA.md replaced (owned; both new sections present)");
+    expect(out(r)).not.toContain("already identical");
+    expect(owned(p)).toEqual(owned(sc));
+  });
+
+  test("a tree that already has those bytes: already identical, and nothing is written", () => {
+    const p = project(TPL);
+    const sc = scaffold();
+    expect(run(p, sc).exitCode).toBe(0);
+    const stamp = () =>
+      ["scripts/pdocs/cli.ts", "scripts/pdocs/seed.ts", "docs/SCHEMA.md"].map(
+        (f) => statSync(join(p, f)).mtimeMs
+      );
+    const before = stamp();
+
+    const r = run(p, sc);
+    expect(r.exitCode).toBe(0);
+    expect(out(r)).toContain("✓ scripts/pdocs/ already identical to the scaffold's (seed.ts present)");
+    expect(out(r)).toContain(
+      "✓ docs/SCHEMA.md already identical to the scaffold's (both new sections present)"
+    );
+    expect(out(r)).not.toContain("scripts/pdocs/ refreshed");
+    expect(out(r)).not.toContain("SCHEMA.md replaced");
+    expect(stamp()).toEqual(before);
+  });
+
+  test("one owned file a formatter rewrote: that file is counted, and restored", () => {
+    const p = project(TPL);
+    const sc = scaffold();
+    expect(run(p, sc).exitCode).toBe(0);
+    writeFileSync(join(p, "scripts/pdocs/seed.ts"), 'export const MARKER = "seed";\n');
+
+    const r = run(p, sc);
+    expect(r.exitCode).toBe(0);
+    expect(out(r)).toContain("✓ scripts/pdocs/ refreshed (1 file(s) written; seed.ts present)");
+    expect(out(r)).toContain("✓ docs/SCHEMA.md already identical to the scaffold's");
+    expect(owned(p)).toEqual(owned(sc));
+  });
+
+  test("--dry-run plans by the same comparison", () => {
+    const p = project(TPL);
+    const sc = scaffold();
+    const fresh = run(p, sc, "--dry-run");
+    expect(out(fresh)).toContain("would refresh scripts/pdocs/ (2 file(s) to write: cli.ts, seed.ts)");
+    expect(out(fresh)).toContain("would replace docs/SCHEMA.md (owned)");
+
+    expect(run(p, sc).exitCode).toBe(0);
+    const again = run(p, sc, "--dry-run");
+    expect(out(again)).toContain("scripts/pdocs/ is already identical to the scaffold's");
+    expect(out(again)).toContain("docs/SCHEMA.md is already identical to the scaffold's");
+    expect(out(again)).not.toContain("would re");
   });
 });
 
@@ -262,7 +331,7 @@ describe("the verify phase can fail", () => {
     const p = project(TPL);
     const r = Bun.spawnSync(
       ["bun", SCRIPT, "--root", p, "--scaffold", scaffold(), "--skip-format"],
-      { stdout: "pipe", stderr: "pipe", env: { ...process.env, CLI_CHECK_EXIT: "9" } }
+      { stdout: "pipe", stderr: "pipe", env: childEnv({ CLI_CHECK_EXIT: "9" }) }
     );
     expect(r.exitCode).toBe(1);
     expect(r.stdout.toString() + r.stderr.toString()).toContain("`pdocs check` exits 9");
@@ -304,7 +373,7 @@ describe("guards that had no witness", () => {
       {
         stdout: "pipe",
         stderr: "pipe",
-        env: { ...process.env, PDOCS_MIGRATE_TEST_MUTATE: "playbooks/TEMPLATE.md" },
+        env: childEnv({ PDOCS_MIGRATE_TEST_MUTATE: "playbooks/TEMPLATE.md" }),
       }
     );
     expect(r.exitCode).toBe(1);
@@ -364,10 +433,9 @@ describe("guards that had no witness", () => {
       stderr: "pipe",
       // bun must stay reachable (it runs the script); only npx is removed.
       // bun and sh must stay reachable; only the Node/npx directory is removed.
-      env: {
-        ...process.env,
+      env: childEnv({
         PATH: `${dirname(Bun.which("bun") ?? "/bin/bun")}:/usr/bin:/bin`,
-      },
+      }),
     });
     expect(r.exitCode).toBe(1);
     expect(r.stdout.toString() + r.stderr.toString()).toContain("--skip-format");
@@ -377,6 +445,7 @@ describe("guards that had no witness", () => {
     const r = Bun.spawnSync(["bun", SCRIPT, "--root", "", "--skip-format"], {
       stdout: "pipe",
       stderr: "pipe",
+      env: childEnv(),
     });
     expect(r.exitCode).toBe(2);
   });
@@ -385,7 +454,7 @@ describe("guards that had no witness", () => {
     const p = project(TPL);
     const r = Bun.spawnSync(
       ["bun", SCRIPT, "--root", p, "--scaffold-dir", scaffold(), "--skip-format"],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe", env: childEnv() }
     );
     expect(r.exitCode).toBe(0);
   });

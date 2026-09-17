@@ -25,6 +25,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
+import { childEnv } from "../../../../../../scripts/pdocs/test-env.ts";
 import { DEFAULT_CONFIG } from "../../../../../../scripts/pdocs/docs-lint/config.ts";
 import { buildRegistry } from "../../../../../../scripts/pdocs/lint/registry.ts";
 import {
@@ -64,7 +65,6 @@ import {
   lifecycleOf,
   UNKNOWN_VERSION,
   docsVersionOf,
-  main,
   runCodemod,
   stripConsumedMetadata,
   tagsOf,
@@ -88,28 +88,34 @@ function fixture(files: Record<string, string>): string {
   return root;
 }
 
-/** Run it quietly; the script writes a progress report nobody needs in a test log. */
-function run(root: string, args: string[] = []): number {
-  const real = console.log;
-  console.log = () => {};
-  try {
-    return main(args, root);
-  } finally {
-    console.log = real;
-  }
-}
+/**
+ * The codemod's `main`, IN A CHILD, and that is the point of the indirection.
+ *
+ * `main` asks git two things — is `docs/` dirty, when was this file added — by
+ * spawning it with no `env`, and a Bun spawn with no `env` inherits the
+ * environment this process STARTED with. In a pre-commit hook that environment
+ * names this repository (`GIT_INDEX_FILE`, and `GIT_DIR` from a worktree), so
+ * called in-process the codemod reads the wrong repository's status for the
+ * fixture in front of it: green in CI, red in the hook. A child can be handed
+ * `childEnv()`; an in-process call cannot. See `scripts/pdocs/test-env.ts`.
+ */
+const CODEMOD = join(import.meta.dir, "migrate-v2.6-to-v2.7.codemod.ts");
+const CODEMOD_DRIVER =
+  `import { main } from ${JSON.stringify(CODEMOD)};\n` +
+  `process.exit(main(JSON.parse(process.argv[1] ?? "[]"), process.argv[2] ?? "."));\n`;
 
 /** Run it and keep what it printed, for the tests that are about the summary. */
 function runCapturing(root: string, args: string[] = []): { code: number; out: string } {
-  const real = console.log;
-  const lines: string[] = [];
-  console.log = (...a: unknown[]) => lines.push(a.map(String).join(" "));
-  try {
-    return { code: main(args, root), out: lines.join("\n") };
-  } finally {
-    console.log = real;
-  }
+  const r = Bun.spawnSync(["bun", "-e", CODEMOD_DRIVER, JSON.stringify(args), root], {
+    stdout: "pipe",
+    stderr: "pipe",
+    env: childEnv(),
+  });
+  return { code: r.exitCode, out: r.stdout.toString() };
 }
+
+/** Run it quietly; the script writes a progress report nobody needs in a test log. */
+const run = (root: string, args: string[] = []): number => runCapturing(root, args).code;
 
 // ─── Generated fixtures: real trees, not hand-built ones ─────────────────────
 //
@@ -152,7 +158,7 @@ interface Scaffolds {
 let scaffolds: Scaffolds | null = null;
 
 function sh(cmd: string[], cwd?: string): string {
-  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe" });
+  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe", env: childEnv() });
   if (r.exitCode !== 0)
     throw new Error(
       `${cmd.join(" ")} exited ${r.exitCode}\n${r.stderr.toString()}${r.stdout.toString()}`
@@ -200,7 +206,7 @@ function generatedScaffolds(): Scaffolds {
         "--quiet",
         `${V26_TAG}^{commit}`,
       ],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe", env: childEnv() }
     ).exitCode === 0;
   if (!tagPresent)
     throw new Error(
@@ -948,7 +954,7 @@ describe("frontmatterFor", () => {
     // an adopter with no config would run it.
     const r = Bun.spawnSync(
       [join(REPO_ROOT, "node_modules/.bin/prettier"), "--check", "docs/memories/tooltip.md"],
-      { cwd: root, stdout: "pipe", stderr: "pipe" }
+      { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() }
     );
     expect({
       code: r.exitCode,
@@ -969,18 +975,6 @@ describe("frontmatterFor", () => {
 });
 
 describe("the standalone driver's own guard — a dirty docs/ without --force", () => {
-  /** `main` with its output captured rather than silenced. */
-  function runCapturing(root: string, args: string[] = []): { code: number; out: string } {
-    const real = console.log;
-    const lines: string[] = [];
-    console.log = (...a: unknown[]) => lines.push(a.join(" "));
-    try {
-      return { code: main(args, root), out: lines.join("\n") };
-    } finally {
-      console.log = real;
-    }
-  }
-
   test("refuses a dirty docs/ and names the way out; --force and --dry-run go through", () => {
     const root = fixture({ "docs/memories/a.md": "# A\n\n**Status:** Done\n" });
     commitAll(root, "a document");
@@ -1170,7 +1164,6 @@ describe("fixtures — the generated trees the whole-script tests run against", 
 // decides § Step 7's repair path.
 
 const SCRIPT = join(import.meta.dir, "migrate-v2.6-to-v2.7.ts");
-const CODEMOD = join(import.meta.dir, "migrate-v2.6-to-v2.7.codemod.ts");
 const V29_SCRIPT = join(import.meta.dir, "migrate-v2.8-to-v2.9.ts");
 
 /** The release the current scaffold carries — what both markers end at. */
@@ -1210,7 +1203,7 @@ function migrate(
       ...(scaffold ? ["--scaffold-dir", scaffold] : []),
       ...args,
     ],
-    { stdout: "pipe", stderr: "pipe", env: { ...process.env, ...o.env } }
+    { stdout: "pipe", stderr: "pipe", env: childEnv(o.env) }
   );
   const stdout = r.stdout.toString();
   const stderr = r.stderr.toString();
@@ -1609,7 +1602,7 @@ for (const kind of ["A1", "B seeded", "B unseeded"] as Kind[]) {
       const { root } = migrated(kind);
       const check = Bun.spawnSync(
         ["bun", "scripts/pdocs/cli.ts", "check", "--format", "text"],
-        { cwd: root, stdout: "pipe", stderr: "pipe" }
+        { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() }
       );
       expect(check.exitCode).toBe(0);
       const o = check.stdout.toString();
@@ -1626,7 +1619,7 @@ for (const kind of ["A1", "B seeded", "B unseeded"] as Kind[]) {
         );
         const v29 = Bun.spawnSync(
           ["bun", V29_SCRIPT, "--root", root, "--scaffold-dir", generatedScaffolds().current, "--skip-format"],
-          { stdout: "pipe", stderr: "pipe" }
+          { stdout: "pipe", stderr: "pipe", env: childEnv() }
         );
         expect(v29.exitCode).toBe(0);
         expect(v29.stdout.toString()).toContain("every recorded hash still matches");
@@ -1637,7 +1630,7 @@ for (const kind of ["A1", "B seeded", "B unseeded"] as Kind[]) {
         expect(existsSync(join(root, "docs/.pdocs-seed.json"))).toBe(false);
         const v29 = Bun.spawnSync(
           ["bun", V29_SCRIPT, "--root", root, "--scaffold-dir", generatedScaffolds().current, "--skip-format"],
-          { stdout: "pipe", stderr: "pipe" }
+          { stdout: "pipe", stderr: "pipe", env: childEnv() }
         );
         expect(v29.exitCode).toBe(0);
         expect(Object.keys(readJson(join(root, "docs/.pdocs-seed.json")).files).length).toBe(19);
@@ -1815,7 +1808,7 @@ describe("bad invocation exits 2, not 1", () => {
       "--scaffold-dir needs a value",
     ],
   ])("%s", (_name, args, reason) => {
-    const r = Bun.spawnSync(["bun", SCRIPT, ...args()], { stdout: "pipe", stderr: "pipe" });
+    const r = Bun.spawnSync(["bun", SCRIPT, ...args()], { stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(r.exitCode).toBe(2);
     expect(r.stderr.toString()).toContain(reason);
   });

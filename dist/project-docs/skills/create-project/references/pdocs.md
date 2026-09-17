@@ -207,7 +207,22 @@ bun scripts/pdocs/cli.ts check [--root <path>] [--format text|json]
 ```
 
 `data`: `clean` (bool), `adopting` (bool), `total` (int), `problems[]` — each
-`{ tier, message }` where `tier` is `library` or `workbench`.
+`{ tier, message }` where `tier` is `library` or `workbench` — `outside` (int)
+and `templates[]`.
+
+`outside` is how many tracked Markdown files **outside the docs root** were read
+— `README.md`, `AGENTS.md`, anything `git ls-files '*.md'` lists — for links and
+anchors only. Their problems arrive in `problems[]` as `workbench`, with a path
+relative to the repository root, so a message naming a bare `DEV_KICKOFF.md`
+means the file at the root. The text rendering says the same under the workbench
+summary: _N tracked page(s) outside `docs/`, links only_. A `lint.exclude` glob
+takes a file out of that corpus. `templates[]` is every file under the docs root
+the lint skipped as a template.
+
+Under the docs root a link target that resolves **outside the repository** — a
+sibling checkout, an absolute path, a relative path that climbs above the root
+and back in — is `MISSING FILE` even when it exists on disk; the message ends
+`(leaves the repository — …)`.
 
 Exits **0** clean, **9** dirty. Under `lint.adopting: true` in
 `.project-docs.json` a dirty tree still exits 0 and `adopting` says why.
@@ -218,10 +233,29 @@ Exits **0** clean, **9** dirty. Under `lint.adopting: true` in
 bun scripts/pdocs/cli.ts report [--root <path>] [--format text|json]
 ```
 
-`data`: `lines[]` — rendered report lines. **Exits 0 however long the report
-is** — it is a summary, not a gate, so a backlog of missing fields is never a
-failure. The INVOCATION can still fail like any other: a `--root` that is not a
-directory exits 2, and a directory that is not a project-docs tree exits 5.
+`data`: `lines[]` — the rendered report, line for line what `--format text`
+prints — and `documents[]`, one `{ path, tier, missing }` per document with
+anything missing:
+
+```json
+{
+  "path": "docs/briefs/2026-09-03-intake.md",
+  "tier": "workbench",
+  "missing": ["description", "lifecycle"]
+}
+```
+
+`path` is relative to the repository root, `tier` is `library` or `workbench`,
+and `missing` names the required fields the document lacks — or the single word
+`frontmatter` when it has no block at all. Every document is listed, not the ten
+per folder the text shows, in the order the text first names it; a file the
+report calls a slide deck is in neither. To split a backfill across workers,
+shard `documents[]` — do not parse `lines[]` or `check`'s messages.
+
+**Exits 0 however long the report is** — it is a summary, not a gate, so a
+backlog of missing fields is never a failure. The INVOCATION can still fail like
+any other: a `--root` that is not a directory exits 2, and a directory that is
+not a project-docs tree exits 5.
 
 ### `graph` — the knowledge graph
 

@@ -28,6 +28,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
+import { childEnv } from "../../../../../../scripts/pdocs/test-env.ts";
 
 import {
   docsVersionOf,
@@ -98,7 +99,7 @@ function sh(cmd: string[], cwd?: string, env?: Record<string, string>): string {
     cwd,
     stdout: "pipe",
     stderr: "pipe",
-    env: env ? { ...process.env, ...env } : process.env,
+    env: childEnv(env),
   });
   if (r.exitCode !== 0)
     throw new Error(
@@ -125,7 +126,7 @@ function generatedScaffolds(): Scaffolds {
   const tagPresent =
     Bun.spawnSync(
       ["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `${V80_TAG}^{commit}`],
-      { stdout: "pipe", stderr: "pipe" }
+      { stdout: "pipe", stderr: "pipe", env: childEnv() }
     ).exitCode === 0;
   if (!tagPresent)
     throw new Error(
@@ -324,7 +325,7 @@ function migrate(
       ...(o.format ? [] : ["--skip-format"]),
       ...args,
     ],
-    { stdout: "pipe", stderr: "pipe", env: { ...process.env, ...o.env } }
+    { stdout: "pipe", stderr: "pipe", env: childEnv(o.env) }
   );
   return { exitCode: r.exitCode, out: r.stdout.toString() + r.stderr.toString() };
 }
@@ -614,7 +615,7 @@ describe("fixtures — the generated trees the whole-script tests run against", 
   });
 
   test("the Applies If test is true on O and false on N, executed as the table's shell", () => {
-    const on = (root: string) => Bun.spawnSync(["sh", "-c", APPLIES_IF], { cwd: root, stdout: "pipe", stderr: "pipe" }).exitCode;
+    const on = (root: string) => Bun.spawnSync(["sh", "-c", APPLIES_IF], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode;
     expect(on(fixtureO())).toBe(0);
     expect(on(generatedScaffolds().current)).toBe(1);
     expect(on(target())).toBe(1);
@@ -647,11 +648,11 @@ describe("fixtures — the generated trees the whole-script tests run against", 
 
   test("the story-loom page passes the old lint and fails the new one", () => {
     const o = variantRealPage();
-    const oldCheck = Bun.spawnSync(["bun", "scripts/pdocs/cli.ts", "check", "--format", "json"], { cwd: o, stdout: "pipe", stderr: "pipe" });
+    const oldCheck = Bun.spawnSync(["bun", "scripts/pdocs/cli.ts", "check", "--format", "json"], { cwd: o, stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(oldCheck.exitCode).toBe(0);
     expect(JSON.parse(oldCheck.stdout.toString()).data.total).toBe(0);
     cpSync(join(target(), "scripts/pdocs"), join(o, "scripts/pdocs"), { recursive: true });
-    const newCheck = Bun.spawnSync(["bun", "scripts/pdocs/cli.ts", "check", "--format", "json"], { cwd: o, stdout: "pipe", stderr: "pipe" });
+    const newCheck = Bun.spawnSync(["bun", "scripts/pdocs/cli.ts", "check", "--format", "json"], { cwd: o, stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(newCheck.exitCode).toBe(9);
     expect(JSON.parse(newCheck.stdout.toString()).data.total).toBe(3);
   });
@@ -948,7 +949,7 @@ describe("idempotence and dry run", () => {
   });
 
   test("--scaffold is accepted as an alias of --scaffold-dir", () => {
-    const r = Bun.spawnSync(["bun", SCRIPT, "--root", fixtureO(), "--scaffold", target(), "--skip-format", "--dry-run"], { stdout: "pipe", stderr: "pipe" });
+    const r = Bun.spawnSync(["bun", SCRIPT, "--root", fixtureO(), "--scaffold", target(), "--skip-format", "--dry-run"], { stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(r.exitCode).toBe(0);
   });
 });
@@ -989,7 +990,7 @@ describe("format before record", () => {
 // ─── Guards that must be able to fire ────────────────────────────────────────
 
 describe("bad invocation exits 2, not 1", () => {
-  const bad = (...args: string[]) => Bun.spawnSync(["bun", SCRIPT, ...args], { stdout: "pipe", stderr: "pipe" });
+  const bad = (...args: string[]) => Bun.spawnSync(["bun", SCRIPT, ...args], { stdout: "pipe", stderr: "pipe", env: childEnv() });
   test("--root without a value", () => {
     const r = bad("--root");
     expect(r.exitCode).toBe(2);
