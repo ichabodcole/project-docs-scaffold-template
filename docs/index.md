@@ -184,7 +184,6 @@ What has been happening lately, for a cold start. — see
   — Spellbook's tsconfig enabled noUncheckedIndexedAccess and the delivered CLI
   failed under it; the flag now lives upstream so CI gates the class, and the
   guides say what a consumer's tools may and may not touch.
-
 - [A link may not leave the repository, and the hook may not leak into the tests](./memories/2026-09-17-a-link-may-not-leave-the-repository.md)
   — Under the docs root a link that is absolute, or leaves git's top level, is
   MISSING FILE even when the file exists; report --format json carries
