@@ -26,8 +26,14 @@
 //    only print, so a CLI that owns its own output envelope has to re-implement
 //    the walk to get at the data. Anthill made the same split independently.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 // The shared documentation-lint + knowledge-graph core.
 //
@@ -99,6 +105,11 @@ export interface DocsLintConfig {
    * predicate.
    */
   isContractPage?: (rel: string) => boolean;
+  /**
+   * The repository `root` lives in. A link may leave `root`; with this set it
+   * may not leave the repository — see `checkLinks`. Default: not checked.
+   */
+  repoRoot?: string;
   /** Emit the graph as JSON instead of human lint output. */
   json?: boolean;
 }
@@ -359,6 +370,53 @@ export interface BrokenLink {
   target: string;
   /** The anchor that did not resolve; only set for `MISSING ANCHOR`. */
   anchor?: string;
+  /**
+   * Only set for `MISSING FILE`: the target is on THIS disk, and the link
+   * leaves the repository to reach it. The caller says so, because "missing"
+   * beside a path the reader can open is otherwise a report that looks wrong.
+   */
+  outside?: true;
+}
+
+/** Is `path` under `root`, going by how the two are spelled? */
+function within(root: string, path: string): boolean {
+  const rel = relative(root, path);
+  return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+}
+
+/** What a caller appends to a `MISSING FILE` whose `outside` is set. */
+export const OUTSIDE_REPOSITORY =
+  "  (not portable: absolute, or leaves the repository — it resolves on this machine and in no other checkout)";
+
+/**
+ * Does an EXISTING `path` sit outside the repository at `root`?
+ *
+ * Spelling first, because it is free and decides almost every link. Only a
+ * target spelled outside is resolved, and only then is the root — so a
+ * repository reached through a symlink (`/tmp` is one on macOS) does not find
+ * every absolute link into itself "outside".
+ */
+function leavesRepository(root: string, path: string): boolean {
+  if (within(root, path)) return false;
+  return !within(realpathSync(root), realpathSync(path));
+}
+
+/**
+ * Does a RELATIVE target climb above the repository on its way, wherever it
+ * lands? `../../../my-repo/AGENTS.md` from `docs/a/` comes back in — through
+ * the checkout's own folder name, which is `my-repo` on this machine and
+ * something else in CI. Counted on the link as written, since resolving it is
+ * exactly what hides the detour.
+ */
+function climbsOut(root: string, fromDir: string, pathPart: string): boolean {
+  if (isAbsolute(pathPart) || !within(root, fromDir)) return false;
+  let level = relative(root, fromDir).split(sep).filter(Boolean).length;
+  for (const segment of pathPart.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    level += segment === ".." ? -1 : 1;
+    if (level < 0) return true;
+  }
+  return false;
 }
 
 /**
@@ -369,9 +427,14 @@ export interface BrokenLink {
  * this with orphan and catalog checks that assume an `index.md`; a folder of frozen reports has
  * no catalog and no graph, and still owes its readers working links.
  *
- * Targets are resolved with no containment check, deliberately: a page linking out of its own
- * tree — a rule page citing a checker in `src/`, a report citing the wiki — is a link like any
- * other, and the failure that matters is that it does not resolve.
+ * A page may link out of its own TREE — a rule page citing a checker in `src/`, a report citing
+ * the wiki — and that is a link like any other. It may not link out of the REPOSITORY: pass
+ * `repoRoot` and a target that is an absolute path, or resolves outside it — or climbs above it and comes back in
+ * through the checkout's own folder name — is `MISSING FILE` whatever is on disk. A sibling
+ * checkout or a path under someone's home directory exists on the machine that wrote the
+ * link and nowhere else, so an existence check passes locally and fails first in CI.
+ * Without `repoRoot` the check is existence only, which is what a caller with no repository
+ * to name — `unlinted-links.ts` — still gets.
  */
 export function checkLinks(
   file: string,
@@ -380,6 +443,8 @@ export function checkLinks(
     anchorCache?: Map<string, Set<string>>;
     /** Prefer an already-read body; falls back to disk for a target outside the corpus. */
     bodyOf?: (path: string) => string;
+    /** The repository root. A target outside it does not resolve, even if it exists. */
+    repoRoot?: string;
   } = {}
 ): { outbound: string[]; problems: BrokenLink[] } {
   const anchorCache = opts.anchorCache ?? new Map<string, Set<string>>();
@@ -408,6 +473,17 @@ export function checkLinks(
       filePath = resolve(dirname(file), pathPart);
       if (!existsSync(filePath)) {
         problems.push({ kind: "MISSING FILE", target });
+        continue;
+      }
+      // An absolute target is refused wherever it lands: `/Users/you/repo/a.md`
+      // is inside the repository on one machine and nowhere on the next.
+      if (
+        opts.repoRoot !== undefined &&
+        (isAbsolute(pathPart) ||
+          climbsOut(opts.repoRoot, dirname(file), pathPart) ||
+          leavesRepository(opts.repoRoot, filePath))
+      ) {
+        problems.push({ kind: "MISSING FILE", target, outside: true });
         continue;
       }
       if (filePath.endsWith(".md")) outbound.push(filePath);
@@ -574,12 +650,16 @@ export function collectDocsLint(
 
   const outbound = new Map<string, Set<string>>();
   for (const file of files) {
-    const res = checkLinks(file, body.get(file) ?? "", { anchorCache, bodyOf });
+    const res = checkLinks(file, body.get(file) ?? "", {
+      anchorCache,
+      bodyOf,
+      repoRoot: config.repoRoot,
+    });
     outbound.set(file, new Set(res.outbound));
     for (const p of res.problems) {
       say(
         p.kind === "MISSING FILE"
-          ? `MISSING FILE   ${rel(file)}: ${p.target}`
+          ? `MISSING FILE   ${rel(file)}: ${p.target}${p.outside ? OUTSIDE_REPOSITORY : ""}`
           : `MISSING ANCHOR ${rel(file)}: ${p.target}  (#${p.anchor} not a heading)`
       );
     }

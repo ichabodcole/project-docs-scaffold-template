@@ -279,6 +279,57 @@ docs/
 
 ## Version History
 
+### 3.13.0 (2026-09-17)
+
+**`pdocs report --format json` is data.** Beside `lines[]`, unchanged,
+`data.documents[]` carries one `{ path, tier, missing }` per document with
+anything missing — every document, not the ten per folder the text names, in the
+order the text names them. A backfill split across workers shards that array
+instead of parsing `check`'s messages. The text output is byte-identical.
+
+**A link may leave `docs/`; it may not leave the repository.** Under the docs
+root a target that resolves outside the git repository — a sibling checkout — or
+is an absolute path, wherever it lands, is `MISSING FILE` even when the file is
+on disk, and the row says why. Such a link passed on the machine that wrote it
+and failed first in CI; now it fails locally. `docs/SCHEMA.md` hard rule 2
+states it. The tracked pages outside the docs root keep the existence-only
+check.
+
+**The gate says what else it read.** `check` prints _N tracked page(s) outside
+`docs/`, links only_ under the workbench summary and carries the count as
+`data.outside`, so a problem row naming a root-level file reads as what it is;
+`docs/SCHEMA.md` describes that corpus and names `lint.exclude` as the way out.
+`UNKNOWN FIELD` on a file with no `type` — another tool's file kept under
+`docs/` — points at `lint.exclude` too.
+
+**Migration guides and scripts, from a second consumer's run:**
+
+- [v2.6-to-v2.7](skills/update-project-docs/migrations/v2.6-to-v2.7.md) and
+  [v2.9-to-v2.10](skills/update-project-docs/migrations/v2.9-to-v2.10.md) move
+  the formatter and linter exclusion to a new `## Before you run it`, ahead of
+  the first command, and name the loop it prevents: the refresh restores the
+  scaffold's bytes, the project's formatter rewrites them, every later migration
+  shows a diff. Nothing is lost by excluding.
+- [v2.8-to-v2.9](skills/update-project-docs/migrations/v2.8-to-v2.9.md) and
+  v2.9-to-v2.10 say that a plain run **reverts a fix that is on the template's
+  `develop` and not yet released**, give a probe that exits non-zero, and give
+  the script's exact cookiecutter call — `install_target=New project folder`
+  included — with `--checkout` added, to pass as `--scaffold-dir`.
+- `migrate-v2.8-to-v2.9.ts` phase 3 compares bytes before it copies and reports
+  `already identical to the scaffold's` when nothing changed; `refreshed` and
+  `replaced` now mean the tree changed. The dry run names the files it would
+  write.
+- v2.6-to-v2.7 § Turn the gate on covers a husky hook that runs lint-staged:
+  `bun run docs:check` on its own line, never as a lint-staged task —
+  `pdocs check` takes no paths and exits 2 on one.
+- v2.6-to-v2.7 § The backfill: set `lifecycle` from the tree — a successor, a
+  merge — not from a missing completion marker; and format the markdown you
+  edited, not `docs/`, which may hold files another tool owns.
+
+**The post-generation hook no longer ends a successful install with "the install
+aborted above".** Both abort paths return before that line and name
+`/project-docs:update-project-docs` themselves.
+
 ### 3.12.1 (2026-09-15)
 
 **The owned layer typechecks under `noUncheckedIndexedAccess`.** A consumer

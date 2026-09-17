@@ -25,12 +25,21 @@ eight sites narrowed, the flag adopted in this repo's own `tsconfig`, and the
 **Docs:** the
 [session record](../projects/spellbook-feedback/sessions/2026-09-15-owned-layer-under-a-strict-consumer.md).
 
+**Landed downstream:** Spellbook `49b4d0b9` (the upgrade, on its `develop`), CI
+green at `eb012b7f`, with the fixed layer intact and the gate enforcing.
+
 ## What was non-obvious
 
 - **Owned code is judged by the strictest consumer, not by upstream's config.**
   The repo was green because its own `tsconfig` lacked the flag. The cheap guard
   is to adopt the consumer's flag upstream so CI witnesses the class; that is
   what the branch did, and it was watched failing first.
+- **"Just exclude the directory" is not available to a consumer that checks
+  coverage.** Spellbook's type-check ward asserts every file was examined, so
+  excluding `scripts/pdocs/` from `tsc` reds its coverage cell
+  (`644 examined of 661`) instead of passing. Its only exits were a local patch
+  the next refresh overwrites, or an upstream fix — which is why the layer must
+  typecheck under consumer flags rather than be excused from them.
 - **A consumer's `tsc` reaching the layer is not the artefact Step 7 hunts.**
   Step 7's tsconfig check exists for an `include` an older migration wrote. A
   project's own typecheck covering the directory is how this defect was found,

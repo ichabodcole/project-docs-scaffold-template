@@ -100,6 +100,19 @@ function walk(dir: string, out: string[] = []): string[] {
 const sha = (abs: string) =>
   createHash("sha256").update(readFileSync(abs)).digest("hex");
 
+/** Every file under `dir`, relative to it, sorted. */
+function filesIn(dir: string, out: string[] = [], base = dir): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const abs = join(dir, entry.name);
+    if (entry.isDirectory()) filesIn(abs, out, base);
+    else if (entry.isFile()) out.push(relative(base, abs));
+  }
+  return out.sort();
+}
+
+const sameBytes = (a: string, b: string) =>
+  existsSync(a) && existsSync(b) && sha(a) === sha(b);
+
 
 /**
  * THE INVARIANT, CHECKED BY THE PROGRAM ITSELF.
@@ -326,7 +339,7 @@ function preflight(o: Options): Ctx {
 
   if (!o.scaffold && !have("cookiecutter"))
     fail(
-      "cookiecutter is not installed, and no --scaffold <path> was given. Install it, or generate the scaffold yourself and pass its path."
+      "cookiecutter is not installed, and no --scaffold-dir <path> was given. Install it, or generate the scaffold yourself and pass its path."
     );
   // NOT a downgrade-and-continue. Formatting has to happen before the hashes
   // are taken, so "carried on without it" silently produces a manifest this
@@ -364,7 +377,7 @@ function getScaffold(ctx: Ctx): string {
     const s = resolve(ctx.scaffold);
     if (!existsSync(join(s, "docs/SCHEMA.md")) || !existsSync(join(s, "scripts/pdocs")))
       fail(
-        `--scaffold ${s} is not a generated project root (expected docs/SCHEMA.md and scripts/pdocs/ inside it).`
+        `--scaffold-dir ${s} is not a generated project root (expected docs/SCHEMA.md and scripts/pdocs/ inside it).`
       );
     ok(`using ${s}`);
     return s;
@@ -407,24 +420,50 @@ function refreshOwned(ctx: Ctx): void {
   const schemaSrc = join(ctx.scaffoldDir, "docs/SCHEMA.md");
   const schemaDst = join(ctx.docsRoot, "SCHEMA.md");
 
+  // Owned: replaced whenever it differs — code reads it. Compared first so the
+  // line says what happened to the BYTES. The checks below are of presence, and
+  // they pass on a tree that already had the v2.9 layer; "refreshed" on that
+  // tree claims a change the run did not make.
+  const cliStale = filesIn(cliSrc).filter(
+    (rel) => !sameBytes(join(cliSrc, rel), join(cliDst, rel))
+  );
+  const schemaSame = sameBytes(schemaSrc, schemaDst);
+
   if (ctx.dryRun) {
-    note(`would replace ${relative(ctx.root, cliDst)}/ and ${ctx.docsRootName}/SCHEMA.md`);
+    note(
+      cliStale.length === 0
+        ? `${relative(ctx.root, cliDst)}/ is already identical to the scaffold's`
+        : `would refresh ${relative(ctx.root, cliDst)}/ (${cliStale.length} file(s) to write: ${cliStale.join(", ")})`
+    );
+    note(
+      schemaSame
+        ? `${ctx.docsRootName}/SCHEMA.md is already identical to the scaffold's`
+        : `would replace ${ctx.docsRootName}/SCHEMA.md (owned)`
+    );
     return;
   }
 
-  cpSync(cliSrc, cliDst, { recursive: true });
+  if (cliStale.length > 0) cpSync(cliSrc, cliDst, { recursive: true });
   if (!existsSync(join(cliDst, "seed.ts")))
     fail("scripts/pdocs/seed.ts did not arrive — the scaffold is older than v2.9.");
-  ok("scripts/pdocs/ refreshed (seed.ts present)");
+  ok(
+    cliStale.length === 0
+      ? "scripts/pdocs/ already identical to the scaffold's (seed.ts present)"
+      : `scripts/pdocs/ refreshed (${cliStale.length} file(s) written; seed.ts present)`
+  );
 
-  cpSync(schemaSrc, schemaDst);
+  if (!schemaSame) cpSync(schemaSrc, schemaDst);
   const schema = readFileSync(schemaDst, "utf8");
   for (const marker of ["Who owns which file", "Declaring your own folder"])
     if (!schema.includes(marker))
       fail(
         `${ctx.docsRootName}/SCHEMA.md is missing "${marker}" — the scaffold is older than v2.9.`
       );
-  ok(`${ctx.docsRootName}/SCHEMA.md refreshed (both new sections present)`);
+  ok(
+    schemaSame
+      ? `${ctx.docsRootName}/SCHEMA.md already identical to the scaffold's (both new sections present)`
+      : `${ctx.docsRootName}/SCHEMA.md replaced (owned; both new sections present)`
+  );
 }
 
 function formatTemplates(ctx: Ctx, templates: string[]): void {
@@ -619,7 +658,7 @@ function bumpVersion(ctx: Ctx, version: string): void {
 function cleanup(ctx: Ctx): void {
   step(8, "Clean up");
   if (ctx.scaffold) {
-    note("scaffold was supplied with --scaffold — left in place");
+    note("scaffold was supplied with --scaffold-dir — left in place");
     return;
   }
   // A dry run generates a scaffold now, so it has one to remove. Leaving it

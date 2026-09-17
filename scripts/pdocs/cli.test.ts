@@ -112,7 +112,7 @@ function tree(
   }
   // Empty repo, so `trackedMarkdown` cannot wander into whatever checkout the
   // temp directory happens to live inside. Same reasoning as the golden test.
-  Bun.spawnSync(["git", "init", "-q"], { cwd: root });
+  Bun.spawnSync(["git", "init", "-q"], { cwd: root, env: childEnv() });
   return root;
 }
 

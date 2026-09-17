@@ -22,7 +22,7 @@ landed on its `develop` at `49b4d0b9`, CI green at `eb012b7f`, gate enforcing �
 the first consumer at the v2.7 guide's end state.
 
 They are one item because they ship together: one branch, one plugin bump, one
-release. None needs design work. Two touch behaviour (1, 4, 12) and get the
+release. None needs design work. Four touch behaviour (1, 4, 5, 12) and get the
 minor bump; the rest are wording and placement.
 
 ## The twelve
@@ -48,20 +48,35 @@ kept byte-identical by contract, so it does not pass one and the outside- docs
 corpus keeps today's existence-only check. Spellbook's three failures were all
 inside `docs/`, so the rule reaches the case that happened.
 
+**A thirteenth, found opening the branch.** `git commit -a` exports
+`GIT_INDEX_FILE` to the pre-commit hook, the test suite's temporary repositories
+inherit it, and `git ls-files` inside them reads this repository's index: 43
+tests fail in the hook and none fail outside it. Reproduce with
+`cp .git/index /tmp/idx && GIT_INDEX_FILE=/tmp/idx bun test scripts/pdocs/cli.test.ts`.
+The fix is in `scripts/pdocs/test-env.ts`, which exists for exactly this shape
+(hook red, CI green): strip git's hook variables from every spawned child.
+
 **Not in this item.** `noPropertyAccessFromIndexSignature` (16 sites) and
 `exactOptionalPropertyTypes` (1) on the owned layer — no consumer has them on.
 
 ## Done when
 
-- [ ] One branch lands the twelve; `project-docs` 3.13.0.
-- [ ] `report --format json` on this repository's fixture tree emits a record
+- [x] One branch lands the twelve; `project-docs` 3.13.0.
+- [x] `report --format json` on this repository's fixture tree emits a record
       per document with missing fields, and the text output is unchanged.
-- [ ] A link to an absolute path outside the repository fails `pdocs check`
+- [x] A link to an absolute path outside the repository fails `pdocs check`
       here, on a tree where that path exists.
 - [ ] The release that carries them is cut, closing the v2.9 downgrade window
       for every consumer, and posted on `spellbook-upgrade`.
 
+Landed 2026-09-17 on `feature/spellbook-feedback-round-1`, thirteen items, with
+review fixes (`9e010ce`): the link boundary is git's top level, and any absolute
+target is refused. The release is what remains.
+
 ## References
+
+- [Session record](../projects/spellbook-feedback/sessions/2026-09-17-spellbook-feedback-round-1.md)
+  for this branch.
 
 - Issue #176; Spellbook `49b4d0b9`, `eb012b7f`; channel `spellbook-upgrade`
   messages 1–23.

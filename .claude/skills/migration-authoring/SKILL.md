@@ -237,10 +237,23 @@ because there are none. Headings, in the v2.9 order:
   a run).
 - `## What's New` / `## What Moved` / `## What's Removed` — merged when the
   answer is "nothing, in either case".
+- `## Before you run it` — only when something must be true of the adopter's
+  repository **before the first command**, and the run itself cannot make it so
+  (v2.6, v2.10: `scripts/pdocs/` excluded from every formatter and linter — a
+  pre-commit formatter otherwise rewrites the owned files on the first commit
+  after the run, and the re-run stops on the dirt). It sits above `## Run it`
+  because an instruction placed under `## After the script` is read after the
+  trap it prevents. Say what to do, the mechanism that makes it matter, and why
+  it cannot wait.
 - `## Run it` — the `--dry-run` command, what to read in its output, the real
   command, what to commit; an `### Options` table; the three exit codes. Any
   shell variable in a block is either set in that block or replaced by the
-  literal path, and the prose says so.
+  literal path, and the prose says so. A migration whose refresh copies the
+  scaffold over owned files unconditionally also says here what a plain run does
+  to a tree that is AHEAD of the published template — it reverts it — with a
+  probe that exits non-zero, and the script's exact cookiecutter call
+  (`install_target=New project folder` included) with `--checkout <ref>` added
+  as the remedy (v2.9, v2.10).
 - `## What it does, phase by phase` — one numbered entry per `step()` in the
   script, in the script's order, naming what stops the run.
 - `## After the script` — only when the migration hands work to a person that no
