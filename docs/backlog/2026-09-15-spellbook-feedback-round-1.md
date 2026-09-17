@@ -22,7 +22,7 @@ landed on its `develop` at `49b4d0b9`, CI green at `eb012b7f`, gate enforcing â€
 the first consumer at the v2.7 guide's end state.
 
 They are one item because they ship together: one branch, one plugin bump, one
-release. None needs design work. Two touch behaviour (1, 4, 12) and get the
+release. None needs design work. Four touch behaviour (1, 4, 5, 12) and get the
 minor bump; the rest are wording and placement.
 
 ## The twelve
@@ -61,15 +61,22 @@ The fix is in `scripts/pdocs/test-env.ts`, which exists for exactly this shape
 
 ## Done when
 
-- [ ] One branch lands the twelve; `project-docs` 3.13.0.
-- [ ] `report --format json` on this repository's fixture tree emits a record
+- [x] One branch lands the twelve; `project-docs` 3.13.0.
+- [x] `report --format json` on this repository's fixture tree emits a record
       per document with missing fields, and the text output is unchanged.
-- [ ] A link to an absolute path outside the repository fails `pdocs check`
+- [x] A link to an absolute path outside the repository fails `pdocs check`
       here, on a tree where that path exists.
 - [ ] The release that carries them is cut, closing the v2.9 downgrade window
       for every consumer, and posted on `spellbook-upgrade`.
 
+Landed 2026-09-17 on `feature/spellbook-feedback-round-1`, thirteen items, with
+review fixes (`9e010ce`): the link boundary is git's top level, and any absolute
+target is refused. The release is what remains.
+
 ## References
+
+- [Session record](../projects/spellbook-feedback/sessions/2026-09-17-spellbook-feedback-round-1.md)
+  for this branch.
 
 - Issue #176; Spellbook `49b4d0b9`, `eb012b7f`; channel `spellbook-upgrade`
   messages 1â€“23.
