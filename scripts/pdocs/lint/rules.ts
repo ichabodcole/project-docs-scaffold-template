@@ -19,12 +19,21 @@
 // carrying its own copy. `scripts/pdocs/docs-lint/` is a copy of a portable
 // core and stays that way.
 
-import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { type ProjectDocsConfig, loadConfig } from "../docs-lint/config.ts";
 import {
   type DocsLintReport,
   type LintPage,
+  OUTSIDE_REPOSITORY,
   checkLinks,
   collectDocsLint,
   parseFrontmatter,
@@ -62,6 +71,41 @@ export interface Ctx {
 export function context(repoRoot: string): Ctx {
   const config = loadConfig(repoRoot);
   return { repoRoot, docsRoot: join(repoRoot, config.docsRoot), config };
+}
+
+const boundaries = new Map<string, string>();
+
+/**
+ * The directory a link may not leave: the GIT repository, not `ctx.repoRoot`.
+ *
+ * `ctx.repoRoot` is where `.project-docs.json` sits, and in a monorepo that is
+ * `packages/app/` — a link from there to the monorepo's `CONTRIBUTING.md`
+ * resolves in every checkout and is not the machine-specific link this rule
+ * exists to catch. So: git's top level, when it contains `ctx.repoRoot`;
+ * otherwise `ctx.repoRoot` itself (no git, or an environment naming some other
+ * repository). Returned in `ctx.repoRoot`'s own spelling — git answers with the
+ * real path, and `/tmp` is a symlink on macOS.
+ */
+export function linkBoundary(ctx: Ctx): string {
+  const cached = boundaries.get(ctx.repoRoot);
+  if (cached !== undefined) return cached;
+  let boundary = ctx.repoRoot;
+  const out = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
+    cwd: ctx.repoRoot,
+  });
+  const top = out.success ? new TextDecoder().decode(out.stdout).trim() : "";
+  if (top && existsSync(top)) {
+    const rel = relative(realpathSync(top), realpathSync(ctx.repoRoot));
+    const nested =
+      rel !== "" &&
+      rel !== ".." &&
+      !rel.startsWith(`..${sep}`) &&
+      !isAbsolute(rel);
+    if (nested)
+      boundary = resolve(ctx.repoRoot, ...rel.split(sep).map(() => ".."));
+  }
+  boundaries.set(ctx.repoRoot, boundary);
+  return boundary;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -134,7 +178,10 @@ export function templatePaths(ctx: Ctx): string[] {
   const isTpl = templateTest(ctx);
   const excluded = excluder(ctx);
   const out: string[] = [];
-  for (const path of walkMarkdown(ctx.docsRoot, new Set(ctx.config.lint.skip))) {
+  for (const path of walkMarkdown(
+    ctx.docsRoot,
+    new Set(ctx.config.lint.skip)
+  )) {
     const rel = relative(ctx.repoRoot, path);
     if (isTpl(path) && !excluded(rel)) out.push(rel);
   }
@@ -164,13 +211,7 @@ export function excluder(ctx: Ctx): (repoRelative: string) => boolean {
  * purpose is to notice drift. See `registry.ts` for why the dependency runs the
  * way it does rather than the other way.
  */
-export {
-  DURABLE_TYPE,
-  PROJECT_FILE_TYPE,
-  PROJECT_SPEC,
-  ROOT_PAGE_TYPE,
-  SPEC,
-};
+export { DURABLE_TYPE, PROJECT_FILE_TYPE, PROJECT_SPEC, ROOT_PAGE_TYPE, SPEC };
 
 /** Library types carry no lifecycle: a living page is current or it is not, and `status` says which. */
 export const DURABLE_TYPES = [
@@ -328,8 +369,18 @@ export function documentProblems(
     if (!fields.get(key)) problems.push(`MISSING ${key}   ${rel}`);
   if (lifecycle && !fields.get("lifecycle"))
     problems.push(`MISSING lifecycle   ${rel}`);
+  // The key set is closed, so a file that is somebody else's format — a draft
+  // of a Claude Code `SKILL.md`, with `name:` — cannot be made to pass by
+  // adding fields: the key that makes it what it is stays unknown. The way out
+  // is `lint.exclude`, and the row says so. ONLY when `type` is absent too: on
+  // a document that declares a type, a stray key is a key to remove, and a gate
+  // that offers exclusion beside every finding is teaching its own bypass.
+  const foreign = fields.get("type")
+    ? ""
+    : "  (not a project-docs document? add it to `lint.exclude` in .project-docs.json)";
   for (const key of fields.keys())
-    if (!allowed.has(key)) problems.push(`UNKNOWN FIELD  ${rel}: "${key}"`);
+    if (!allowed.has(key))
+      problems.push(`UNKNOWN FIELD  ${rel}: "${key}"${foreign}`);
 
   const declared = fields.get("type");
   if (declared && declared !== type)
@@ -419,10 +470,11 @@ export function thinTier(ctx: Ctx): string[] {
     // the contracts and cross-link each other constantly. Templates are the one
     // exception: their links are placeholders.
     if (!isTpl(path)) {
-      for (const bad of checkLinks(path, raw).problems) {
+      for (const bad of checkLinks(path, raw, { repoRoot: linkBoundary(ctx) })
+        .problems) {
         problems.push(
           bad.kind === "MISSING FILE"
-            ? `MISSING FILE   ${rel}: ${bad.target}`
+            ? `MISSING FILE   ${rel}: ${bad.target}${bad.outside ? OUTSIDE_REPOSITORY : ""}`
             : `MISSING ANCHOR ${rel}: ${bad.target}  (#${bad.anchor} not a heading)`
         );
       }
@@ -601,6 +653,8 @@ export function graphTier(ctx: Ctx): DocsLintReport {
   const isTpl = templateTest(ctx);
   return collectDocsLint({
     root: ctx.docsRoot,
+    // A library page may link out of the docs root, not out of the repository.
+    repoRoot: linkBoundary(ctx),
     // A type this project declared is a known type. Passing only the built-in
     // list here made a declared durable folder report `BAD type` even though
     // the registry and both position resolvers had accepted it — the third
@@ -614,7 +668,8 @@ export function graphTier(ctx: Ctx): DocsLintReport {
     dateField: "generated",
     allowDateOnly: true,
     skipFiles: (rel) =>
-      isTpl(join(ctx.docsRoot, rel)) || excluded(join(ctx.config.docsRoot, rel)),
+      isTpl(join(ctx.docsRoot, rel)) ||
+      excluded(join(ctx.config.docsRoot, rel)),
     isContractPage: (rel) => CONTRACT_BASENAMES.has(basename(rel)),
     extraChecks: hookChecks,
   });
@@ -758,30 +813,56 @@ export function looksLikeSlideDeck(
   return !fields.get("type") && RENDERER_KEYS.some((k) => fields.has(k));
 }
 
-/**
- * What is missing, grouped by field and then by folder — and never a failure.
- *
- * A gate answers "may this land"; this answers "what is left", which is a
- * different question asked at a different moment. Merging them gives a list
- * ordered by directory walk, which is the least useful order for working
- * through it.
- */
-export function reportLines(ctx: Ctx): string[] {
-  const missing = new Map<string, string[]>();
-  const note = (field: string, rel: string) =>
-    missing.set(field, [...(missing.get(field) ?? []), rel]);
+/** Which pass found a document: the same two words `pdocs check` uses. */
+export type ReportTier = "library" | "workbench";
 
-  for (const problem of [...thinTier(ctx), ...libraryFieldChecks(ctx)]) {
-    // `MISSING FILE` and `MISSING ANCHOR` share the prefix and are not fields: a
-    // broken link is a defect to fix, not a blank to fill, and listing it here
-    // would put it in the one report that never fails.
-    const m = /^(?:MISSING|NO) (?!FILE|ANCHOR)(\S+)\s+(\S+)/.exec(problem);
-    if (m)
-      note(
-        m[1] === "FRONTMATTER" ? "frontmatter" : (m[1] as string),
-        m[2] as string
-      );
-  }
+/**
+ * One document with something to backfill, as data: `path` is repo-relative,
+ * `missing` is the required fields it lacks — or the single word `frontmatter`
+ * when it has no block at all, exactly as the text report groups it.
+ */
+export interface ReportDocument {
+  path: string;
+  tier: ReportTier;
+  missing: string[];
+}
+
+/** Every missing field, by field, with the slide decks already taken out. */
+function missingFields(ctx: Ctx): {
+  missing: Map<string, string[]>;
+  tiers: Map<string, ReportTier>;
+  decks: string[];
+} {
+  const missing = new Map<string, string[]>();
+  const tiers = new Map<string, ReportTier>();
+  const note = (field: string, rel: string, tier: ReportTier) => {
+    missing.set(field, [...(missing.get(field) ?? []), rel]);
+    tiers.set(rel, tier);
+  };
+
+  const found: Array<[ReportTier, string[]]> = [
+    ["workbench", thinTier(ctx)],
+    ["library", libraryFieldChecks(ctx)],
+  ];
+  for (const [tier, problems] of found)
+    for (const problem of problems) {
+      // `MISSING FILE` and `MISSING ANCHOR` share the prefix and are not fields: a
+      // broken link is a defect to fix, not a blank to fill, and listing it here
+      // would put it in the one report that never fails.
+      // The path runs to the end of the row or to the two-space `  (hint)`,
+      // not to the first space: `has space.md` is a legal name, and a record
+      // that truncates it hands a worker a file that does not exist.
+      const m =
+        /^(?:MISSING|NO) (?!FILE|ANCHOR)(\S+)\s+(.+?)(?: {2}\(.*)?$/.exec(
+          problem
+        );
+      if (m)
+        note(
+          m[1] === "FRONTMATTER" ? "frontmatter" : (m[1] as string),
+          m[2] as string,
+          tier
+        );
+    }
 
   // A slide deck reached this list as a bare `type` row, indistinguishable from
   // a document that wants a `type` written — and an agent working the list
@@ -794,13 +875,94 @@ export function reportLines(ctx: Ctx): string[] {
     const m = /^---\n([\s\S]*?)\n---/.exec(
       readFileSync(join(ctx.repoRoot, rel), "utf8")
     );
-    if (m && looksLikeSlideDeck(parseFrontmatter(m[1] as string))) decks.push(rel);
+    if (m && looksLikeSlideDeck(parseFrontmatter(m[1] as string)))
+      decks.push(rel);
   }
   for (const [field, rels] of [...missing]) {
     const kept = rels.filter((r) => !decks.includes(r));
     if (kept.length) missing.set(field, kept);
     else missing.delete(field);
   }
+  return { missing, tiers, decks };
+}
+
+/**
+ * The worklist's one order: fields by how many documents lack them, then
+ * folders by the same, then paths by name. `reportLines` prints it and
+ * `reportDocuments` walks it, so the records arrive in the order the text
+ * names them and neither can be re-sorted without the other.
+ */
+function worklistOrder(
+  missing: ReadonlyMap<string, string[]>
+): Array<{ field: string; count: number; folders: Array<[string, string[]]> }> {
+  return [...missing]
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([field, rels]) => {
+      const byFolder = new Map<string, string[]>();
+      for (const rel of [...rels].sort()) {
+        const folder = dirname(rel);
+        byFolder.set(folder, [...(byFolder.get(folder) ?? []), rel]);
+      }
+      return {
+        field,
+        count: rels.length,
+        folders: [...byFolder].sort((a, b) => b[1].length - a[1].length),
+      };
+    });
+}
+
+/**
+ * The report as records: one per document with anything missing, none for a
+ * document that is complete or a file that looks like a slide deck.
+ *
+ * The text report rolls a folder up and names ten of its files, which is the
+ * right shape for a person and the wrong one for a backfill split across
+ * workers — that needs every path, with its fields, without parsing a line.
+ * Same findings, same order (a document sits where the text first names it,
+ * its fields in the order the text groups them); nothing here is re-derived.
+ */
+function documentsOf(
+  missing: ReadonlyMap<string, string[]>,
+  tiers: ReadonlyMap<string, ReportTier>
+): ReportDocument[] {
+  const byPath = new Map<string, ReportDocument>();
+  for (const { field, folders } of worklistOrder(missing))
+    for (const [, paths] of folders)
+      for (const path of paths) {
+        const doc = byPath.get(path) ?? {
+          path,
+          tier: tiers.get(path) ?? "workbench",
+          missing: [],
+        };
+        doc.missing.push(field);
+        byPath.set(path, doc);
+      }
+  return [...byPath.values()];
+}
+
+/**
+ * What is missing, grouped by field and then by folder — and never a failure.
+ *
+ * A gate answers "may this land"; this answers "what is left", which is a
+ * different question asked at a different moment. Merging them gives a list
+ * ordered by directory walk, which is the least useful order for working
+ * through it.
+ */
+export function reportLines(ctx: Ctx): string[] {
+  return reportWorklist(ctx).lines;
+}
+
+/** The records alone — see `documentsOf`. */
+export function reportDocuments(ctx: Ctx): ReportDocument[] {
+  return reportWorklist(ctx).documents;
+}
+
+/** Both renderings of one walk: the text `pdocs report` prints, and the records. */
+export function reportWorklist(ctx: Ctx): {
+  lines: string[];
+  documents: ReportDocument[];
+} {
+  const { missing, tiers, decks } = missingFields(ctx);
 
   const lines: string[] = [];
   const total = [...missing.values()].reduce((n, v) => n + v.length, 0);
@@ -823,18 +985,9 @@ export function reportLines(ctx: Ctx): string[] {
   // had to re-implement the check to find the file. Ten per folder is enough to
   // start; the count still tells you how much is behind them.
   const SHOWN = 10;
-  for (const [field, rels] of [...missing].sort(
-    (a, b) => b[1].length - a[1].length
-  )) {
-    lines.push(`${field}  (${rels.length})`);
-    const byFolder = new Map<string, string[]>();
-    for (const rel of rels.sort()) {
-      const folder = dirname(rel);
-      byFolder.set(folder, [...(byFolder.get(folder) ?? []), rel]);
-    }
-    for (const [folder, paths] of [...byFolder].sort(
-      (a, b) => b[1].length - a[1].length
-    )) {
+  for (const { field, count, folders } of worklistOrder(missing)) {
+    lines.push(`${field}  (${count})`);
+    for (const [folder, paths] of folders) {
       lines.push(`    ${String(paths.length).padStart(4)}  ${folder}/`);
       for (const rel of paths.slice(0, SHOWN))
         lines.push(`          ${basename(rel)}`);
@@ -854,5 +1007,5 @@ export function reportLines(ctx: Ctx): string[] {
     );
     lines.push("");
   }
-  return lines;
+  return { lines, documents: documentsOf(missing, tiers) };
 }

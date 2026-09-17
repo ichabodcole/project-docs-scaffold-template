@@ -43,6 +43,18 @@ lost, so the catalog is a hard requirement. A workbench document is found by its
 date and its folder README; it is written once, it closes, and it is never
 brought up to date — so cataloguing it would be a chore with no reader.
 
+**Outside the docs root there is a third corpus, and it has no tier.** Every
+Markdown file git tracks outside `docs/` — `README.md`, `AGENTS.md`, a
+`DEV_KICKOFF.md` left at the repository root — is read for its links and anchors
+and nothing else: no frontmatter, no `type`, no catalog. A file joins it on
+`git add`, not by being listed. Its problems print among the workbench's, with a
+path relative to the repository root like every other row — so a bare
+`DEV_KICKOFF.md` in the output is the file at the root, not one somewhere under
+`docs/` — and `check` counts the corpus under the workbench summary: _N tracked
+page(s) outside `docs/`, links only_. A file in it that is not yours to fix
+comes out with `lint.exclude`, below; the globs are relative to the repository
+root and reach this corpus too.
+
 ### Declaring your own folder
 
 The folder lists above are defaults, not a ceiling. A project that wants
@@ -123,7 +135,10 @@ Some `.md` files in a project are not documents at all. A Slidev or Marp deck is
 the clearest case: its frontmatter (`marp`, `theme`, `paginate`, `layout`)
 belongs to the slide renderer, and the file is a program that happens to be
 written in Markdown. Widening this schema's vocabulary until such a file fits
-would be describing it wrongly to make a gate quiet.
+would be describing it wrongly to make a gate quiet. A draft of another tool's
+file kept under `docs/` is the same case: a Claude Code `SKILL.md` draft carries
+`name:`, the key set here is closed, and no field you add makes `name` known —
+the lint's `UNKNOWN FIELD` row on a file with no `type` points here.
 
 List them in `lint.exclude` in `.project-docs.json`, as globs relative to the
 repository root. A matched file is invisible to every tier — no frontmatter, no
@@ -300,7 +315,17 @@ close: what shipped, what was cut, what was learned) · the sessions that landed
    (`../architecture/sync-engine.md#backpressure`). They must resolve on GitHub
    and in a bare editor — never absolute URLs into this repo. Anchors are
    GitHub-style slugs of the target heading, and you link only anchors you have
-   verified exist. The lint checks both.
+   verified exist. The lint checks both. **A link may leave `docs/`; it may not
+   leave the repository.** `../../src/sync.ts` resolves in every checkout. A
+   sibling checkout (`../../../other-repo/plan.md`) or an absolute path
+   (`/Users/you/Projects/other-repo`, or one into this repository) exists on the
+   machine that wrote it and nowhere else, so under `docs/` a target that is
+   absolute, or resolves outside the repository — or climbs above it and comes
+   back in through the checkout's own folder name — is `MISSING FILE` even when
+   the file is on your disk: the failure you would otherwise meet first in CI.
+   The repository is git's top level, so in a monorepo a link above
+   `.project-docs.json` still resolves. Name another repository in prose, or
+   link its URL.
 3. **Frontmatter on every document.** `type` is mandatory; the rest is the table
    above.
 4. **A library page gets one line in `index.md`** — link plus its `description`,

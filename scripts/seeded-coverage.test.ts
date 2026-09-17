@@ -23,6 +23,7 @@ import { buildRegistry } from "./pdocs/lint/registry.ts";
 import { DEFAULT_CONFIG } from "./pdocs/docs-lint/config.ts";
 import { isTemplate } from "./pdocs/lint/rules.ts";
 import { isSeeded } from "./pdocs/seed.ts";
+import { childEnv } from "./pdocs/test-env.ts";
 import { isSeeded as v29IsSeeded } from "../plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.8-to-v2.9.ts";
 
 const REPO = join(import.meta.dir, "..");
@@ -49,7 +50,7 @@ m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
 print(json.dumps([m._is_seeded(n) for n in ${JSON.stringify(names)}]))
 `;
-  const r = Bun.spawnSync(["python3", "-c", driver], { stdout: "pipe", stderr: "pipe" });
+  const r = Bun.spawnSync(["python3", "-c", driver], { stdout: "pipe", stderr: "pipe", env: childEnv() });
   expect(r.stderr.toString()).toBe("");
   return JSON.parse(r.stdout.toString());
 }
@@ -164,7 +165,7 @@ describe("every shipped template is Prettier-clean under default options", () =>
     }
     const r = Bun.spawnSync(
       [join(REPO, "node_modules/.bin/prettier"), "--check", ...rels],
-      { cwd: stage, stdout: "pipe", stderr: "pipe" }
+      { cwd: stage, stdout: "pipe", stderr: "pipe", env: childEnv() }
     );
     const dirty = r.stderr
       .toString()

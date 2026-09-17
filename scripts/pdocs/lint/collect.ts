@@ -40,12 +40,38 @@ export interface LintReport {
   };
   /** The workbench tier, the syntax check, the SCHEMA.md table, and the links outside `docs/`. */
   workbench: string[];
+  /**
+   * How many tracked pages OUTSIDE the docs root were read, for links only.
+   * Their problems are in `workbench`; this is what says the corpus exists, so
+   * a row naming a file nobody put under the docs root reads as what it is.
+   */
+  outside: number;
   /** `library.fieldProblems` + `library.graph.problems` + `workbench`. */
   total: number;
   /** Repo-relative paths under the docs root the lint skipped as templates. */
   templates: string[];
   /** `lint.adopting` in `.project-docs.json`: problems are reported and do not fail the gate. */
   adopting: boolean;
+}
+
+/**
+ * Of the tracked pages, the ones `linkProblemsFor` reads.
+ *
+ * Not the docs root: the two tiers walk it, and a page handed to both is
+ * reported twice. `unlinted-links.ts` skips that for itself only when the docs
+ * root is spelled `docs/` — a private constant of a file ported verbatim — so
+ * the caller takes the real one out here. Its other two skips are restated to
+ * COUNT by and for nothing else: the generated CHANGELOG, and that same literal
+ * `docs/`, which under a docs root of another name means a tracked `docs/`
+ * folder is read by nobody. `collect — the outside corpus` in `rules.test.ts`
+ * holds the count to what is read.
+ */
+function readOutside(ctx: Ctx, rel: string): boolean {
+  return (
+    rel !== "CHANGELOG.md" &&
+    !rel.startsWith("docs/") &&
+    !rel.startsWith(`${ctx.config.docsRoot}/`)
+  );
 }
 
 /**
@@ -63,6 +89,14 @@ export function collect(ctx: Ctx): LintReport {
   const graph = graphTier(ctx);
   const isTpl = templateTest(ctx);
 
+  // Everything git tracks outside the docs root: README, AGENTS, and the
+  // shipped plugin pages, where a link to a moved playbook is a broken
+  // instruction in someone else's repository. `lint.exclude` takes a file out.
+  const excluded = excluder(ctx);
+  const tracked = trackedMarkdown(ctx.repoRoot).filter(
+    (p) => !isTpl(p) && !excluded(p) && !p.startsWith(`${ctx.config.docsRoot}/`)
+  );
+
   const workbench = [
     ...thinTier(ctx),
     ...frontmatterSyntaxProblems(ctx),
@@ -73,20 +107,13 @@ export function collect(ctx: Ctx): LintReport {
     // findings only because the report has one place to put a problem — see
     // `templateProblems` for why neither belongs to a tier.
     ...templateProblems(ctx),
-    // Everything git tracks outside the docs root: README, AGENTS, and the
-    // shipped plugin pages, where a link to a moved playbook is a broken
-    // instruction in someone else's repository.
-    ...linkProblemsFor(
-      ctx.repoRoot,
-      trackedMarkdown(ctx.repoRoot).filter(
-        (p) => !isTpl(p) && !excluder(ctx)(p)
-      )
-    ),
+    ...linkProblemsFor(ctx.repoRoot, tracked),
   ];
 
   return {
     library: { fieldProblems, graph },
     workbench,
+    outside: tracked.filter((p) => readOutside(ctx, p)).length,
     total: fieldProblems.length + graph.problems.length + workbench.length,
     templates: templatePaths(ctx),
     adopting: ctx.config.lint.adopting,

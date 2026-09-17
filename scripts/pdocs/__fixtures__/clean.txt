@@ -3,5 +3,6 @@ OK — links, anchors, OKF frontmatter, catalog reachability and `related` edges
 
 ── workbench (thin tier) ───────────────────────────────
 OK — no problems.
+0 tracked page(s) outside docs/, links only  (`lint.exclude` takes one out)
 
 docs-lint: clean

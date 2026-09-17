@@ -559,6 +559,13 @@ reason why]
 
 [Merge the last two when the answer is "nothing, in either case"]
 
+## Before you run it
+
+[Only when something must be true of the adopter's repository before the first
+command and the run cannot make it so — v2.6, v2.10: `scripts/pdocs/` excluded
+from every formatter and linter. Above `## Run it`, because under `## After the
+script` it is read after the trap it prevents]
+
 ## Run it
 
 [The --dry-run command, what to read in its output, the real command, what to

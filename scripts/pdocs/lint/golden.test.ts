@@ -16,6 +16,13 @@
 // than asserting. If a golden needs updating to make this pass, the output
 // changed and that is the finding.
 //
+// RE-RECORDED ONCE SINCE, deliberately, and the diff is the whole change: one
+// line under the workbench summary naming the tracked pages outside the docs
+// root (`docs/lint.ts` read that corpus and never said so), and one fixture —
+// `SKILL.draft.md`, another tool's file under the docs root — with the rows it
+// earns, `UNKNOWN FIELD`'s pointer to `lint.exclude` among them. Every line
+// `docs/lint.ts` printed is still there, byte for byte.
+//
 // WHY THE FIXTURES ARE BUILT HERE AND NOT COMMITTED. A dirty tree of `.md`
 // inside this repository would be linted by the live gate (`main()` also walks
 // everything git tracks outside `docs/`), would fail `format:check`, and — the
@@ -159,7 +166,7 @@ function tree(
   // markdown" everywhere, which is the only answer a temp tree can give
   // deterministically. The tier itself is covered by the live capture in the
   // plan's step 1.3, not by these transcripts.
-  Bun.spawnSync(["git", "init", "-q"], { cwd: root });
+  Bun.spawnSync(["git", "init", "-q"], { cwd: root, env: childEnv() });
   return root;
 }
 
@@ -173,9 +180,9 @@ function tree(
  * stated. What `npm run docs:lint` resolves to under a real pty — text, by the
  * same resolver — is what these transcripts hold.
  */
-function lint(root: string, command = "check"): string {
+function lint(root: string, command = "check", format = "text"): string {
   const out = Bun.spawnSync(
-    ["bun", CLI, command, "--root", root, "--format", "text"],
+    ["bun", CLI, command, "--root", root, "--format", format],
     { cwd: REPO_ROOT, env: childEnv() }
   );
   const stderr = new TextDecoder().decode(out.stderr).trim();
@@ -515,6 +522,19 @@ generated: 2026-01-01
 
 A report that never got a frontmatter block.
 `,
+
+  // UNKNOWN FIELD on a file that is NOT a project-docs document: a draft of
+  // another tool's format kept under the docs root, whose own key (`name`) the
+  // closed key set can never accept. No `type`, so the row carries the pointer
+  // to `lint.exclude` — which `unknown-field.md` above, a real page with a
+  // stray key, must NOT carry.
+  "docs/projects/sample/SKILL.draft.md": `---
+name: sample-skill
+description: A draft of another tool's file, kept beside the project it serves.
+---
+
+# Sample Skill
+`,
 };
 
 // ---------------------------------------------------------------------------------------
@@ -535,6 +555,47 @@ test("`report` groups the dirty tree's missing fields", () => {
   // tier walks it. Both numbers are real; this records them rather than
   // reconciling them.
   golden("dirty-report.txt", lint(tree(DIRTY, [MISSING_TEMPLATE]), "report"));
+});
+
+test("`report --format json` carries one record per document, beside the same lines", () => {
+  const root = tree(DIRTY, [MISSING_TEMPLATE]);
+  const { data } = JSON.parse(lint(root, "report", "json")) as {
+    data: {
+      lines: string[];
+      documents: Array<{ path: string; tier: string; missing: string[] }>;
+    };
+  };
+
+  // `lines` is still the text output, line for line: the records were ADDED.
+  expect(`${data.lines.join("\n")}\n`).toBe(lint(root, "report"));
+
+  // Every document the text names, once, with every field it lacks — in the
+  // order the text first names it, fields in the order the text groups them.
+  expect(data.documents).toEqual([
+    {
+      path: "docs/briefs/missing-fields.md",
+      tier: "workbench",
+      missing: ["title", "status", "generated", "description", "lifecycle"],
+    },
+    {
+      path: "docs/projects/sample/SKILL.draft.md",
+      tier: "workbench",
+      missing: ["title", "status", "generated", "type"],
+    },
+    {
+      path: "docs/reports/no-frontmatter.md",
+      tier: "workbench",
+      missing: ["frontmatter"],
+    },
+  ]);
+
+  // The records and the headline are one count, not two that happen to agree.
+  const fields = data.documents.reduce((n, d) => n + d.missing.length, 0);
+  expect(data.lines[0]).toStartWith(
+    `${fields} missing field(s) across ${data.documents.length} of `
+  );
+  // And a clean tree has none, rather than an absent key.
+  expect(JSON.parse(lint(tree(CLEAN), "report", "json")).data.documents).toEqual([]);
 });
 
 test("two independent temp roots produce byte-identical output", () => {

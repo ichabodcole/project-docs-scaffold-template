@@ -140,7 +140,7 @@ function tree(): string {
 
   // `trackedMarkdown` shells out to git; an empty repo pins it to "nothing
   // tracked" instead of letting it find whatever checkout /tmp lives inside.
-  Bun.spawnSync(["git", "init", "-q"], { cwd: root });
+  Bun.spawnSync(["git", "init", "-q"], { cwd: root, env: childEnv() });
   return root;
 }
 

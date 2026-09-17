@@ -23,7 +23,6 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { ExitCode } from "../envelope.ts";
 import { childEnv } from "../test-env.ts";
-import { collect } from "../lint/collect.ts";
 import { context } from "../lint/rules.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
@@ -91,7 +90,7 @@ function tree(files: Record<string, string>): string {
   // `trackedMarkdown` shells out to git, and `pdocs check` calls it. An empty
   // repo pins that tier to "no tracked files" instead of letting it wander into
   // whatever checkout /tmp happens to live inside.
-  Bun.spawnSync(["git", "init", "-q"], { cwd: root });
+  Bun.spawnSync(["git", "init", "-q"], { cwd: root, env: childEnv() });
   return root;
 }
 
@@ -551,20 +550,28 @@ describe("pdocs orphans", () => {
    * `orphans` is sourced from `graphTier` precisely so it cannot compute
    * reachability a second way — but "sourced from" is a claim about the imports,
    * and imports are easy to change. This asserts the OUTPUTS agree: the set of
-   * paths the command reports is exactly the set the lint's `ORPHAN` lines name.
+   * paths the command reports is exactly the set the gate's `ORPHAN` lines name.
    *
    * If they ever disagree, the tool telling you what to fix and the gate
    * refusing to let you land are naming different files.
    */
-  test("reports exactly the paths `collect` reports as ORPHAN", () => {
-    const ctx = context(ROOT);
-    const fromLint = new Set(
-      collect(ctx)
-        .library.graph.problems.filter((p) => p.startsWith("ORPHAN"))
+  test("reports exactly the paths `check` reports as ORPHAN", () => {
+    // The gate is SPAWNED, not `collect()` called here: `collect` runs
+    // `git ls-files` with the environment this process started with, and in a
+    // pre-commit hook that environment names this repository's index — see
+    // `../test-env.ts`. `check` prints `collect`'s problems verbatim.
+    const gate = JSON.parse(
+      run(["check", "--format", "json", "--root", ROOT]).stdout
+    );
+    const docsRoot = context(ROOT).config.docsRoot;
+    const fromLint = new Set<string>(
+      gate.data.problems
+        .map((p: { message: string }) => p.message)
+        .filter((m: string) => m.startsWith("ORPHAN"))
         // `ORPHAN         playbooks/x.md  (unreachable from index.md — …)`.
         // The lint's paths are DOCS-root-relative; the command speaks
         // repo-relative, so the mapping is explicit here rather than assumed.
-        .map((p) => join(ctx.config.docsRoot, p.split(/\s+/)[1] as string))
+        .map((m: string) => join(docsRoot, m.split(/\s+/)[1] as string))
     );
 
     const out = JSON.parse(

@@ -31,7 +31,14 @@
 // CORRECT and are expected to fail against today's implementation. See the comment on each.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -81,7 +88,10 @@ const OK_FM: Record<string, string> = {
 };
 
 /** Build a page. A `null` value omits that key, so a test can drop one field from OK_FM. */
-function page(fields: Record<string, string | null>, body = "# Page\n"): string {
+function page(
+  fields: Record<string, string | null>,
+  body = "# Page\n"
+): string {
   const lines = Object.entries(fields)
     .filter((e): e is [string, string] => e[1] !== null)
     .map(([k, v]) => `${k}: ${v}`);
@@ -110,11 +120,18 @@ function lint(config: DocsLintConfig): LintRun {
   } finally {
     console.log = realLog;
   }
-  return { count, problems: config.json ? [] : lines.slice(0, -1), out: lines.join("\n") };
+  return {
+    count,
+    problems: config.json ? [] : lines.slice(0, -1),
+    out: lines.join("\n"),
+  };
 }
 
 /** The wiki's own config shape, so the tests exercise the parameters this project uses. */
-function config(root: string, overrides: Partial<DocsLintConfig> = {}): DocsLintConfig {
+function config(
+  root: string,
+  overrides: Partial<DocsLintConfig> = {}
+): DocsLintConfig {
   return {
     root,
     types: ["concept", "rule", "index"],
@@ -178,9 +195,10 @@ describe("slug", () => {
 
 describe("headingSlugsOf", () => {
   test("collects every heading level", () => {
-    const md = "# One\n## Two words\n### Three (x)\n#### Four\n##### Five\n###### Six\n";
+    const md =
+      "# One\n## Two words\n### Three (x)\n#### Four\n##### Five\n###### Six\n";
     expect([...headingSlugsOf(md)].sort()).toEqual(
-      ["one", "two-words", "three-x", "four", "five", "six"].sort(),
+      ["one", "two-words", "three-x", "four", "five", "six"].sort()
     );
   });
 
@@ -212,7 +230,9 @@ describe("headingSlugsOf", () => {
   // A span cannot fake a heading (a heading needs `#` at line start; a span starts with a
   // backtick), so no stripping is needed for this case — it simply never matches.
   test("does not treat a `#` inside an inline span as a heading", () => {
-    expect([...headingSlugsOf("# Real\n\n`# not a heading`\n")]).toEqual(["real"]);
+    expect([...headingSlugsOf("# Real\n\n`# not a heading`\n")]).toEqual([
+      "real",
+    ]);
   });
 
   // REGRESSION: the first attempt at the fence fix used `stripCode`, which also blanks INLINE
@@ -220,10 +240,12 @@ describe("headingSlugsOf", () => {
   // linked to `#choices-is-just-in-time-discovery` and all three broke at once. Heading
   // detection must strip fences ONLY.
   test("keeps backticked text in a heading's slug", () => {
-    expect([...headingSlugsOf("### `choices` is just-in-time discovery\n")]).toEqual([
-      "choices-is-just-in-time-discovery",
+    expect([
+      ...headingSlugsOf("### `choices` is just-in-time discovery\n"),
+    ]).toEqual(["choices-is-just-in-time-discovery"]);
+    expect([...headingSlugsOf("## The `--json` flag\n")]).toEqual([
+      "the---json-flag",
     ]);
-    expect([...headingSlugsOf("## The `--json` flag\n")]).toEqual(["the---json-flag"]);
   });
 });
 
@@ -322,7 +344,8 @@ describe("stripCode", () => {
   // inverted: the code reads as prose and the prose that follows reads as code. Both halves
   // are failures, and the second is the silent one.
   test("a four-backtick fence pairs with its own closer, not the next fence's", () => {
-    const md = "````markdown\n```ts\ncode\n```\n[in](./fenced.md)\n````\n\n[out](./real.md)\n";
+    const md =
+      "````markdown\n```ts\ncode\n```\n[in](./fenced.md)\n````\n\n[out](./real.md)\n";
     const out = stripCode(md);
     expect(out).not.toContain("[in](./fenced.md)");
     expect(out).toContain("[out](./real.md)");
@@ -361,7 +384,9 @@ describe("checkLinks", () => {
   });
 
   test("a missing file and a missing anchor are distinguished", () => {
-    expect(check("[x](./gone.md)")).toEqual([{ kind: "MISSING FILE", target: "./gone.md" }]);
+    expect(check("[x](./gone.md)")).toEqual([
+      { kind: "MISSING FILE", target: "./gone.md" },
+    ]);
     expect(check("[x](./target.md#nope)")).toEqual([
       { kind: "MISSING ANCHOR", target: "./target.md#nope", anchor: "nope" },
     ]);
@@ -379,20 +404,124 @@ describe("checkLinks", () => {
   // truncated mid-URL, and the fragment no longer looked like a URL — so an external citation
   // was reported as a missing local FILE.
   test("a pointy-bracket destination containing parentheses is left alone", () => {
-    expect(check("[doi](<https://doi.org/10.1016/S0010-0277(98)00034-1>)")).toEqual([]);
+    expect(
+      check("[doi](<https://doi.org/10.1016/S0010-0277(98)00034-1>)")
+    ).toEqual([]);
   });
 
   test("outbound edges name the markdown targets", () => {
-    const res = checkLinks(join(dir, "a.md"), "[x](./target.md) [y](https://example.com)");
+    const res = checkLinks(
+      join(dir, "a.md"),
+      "[x](./target.md) [y](https://example.com)"
+    );
     expect(res.outbound).toEqual([join(dir, "target.md")]);
+  });
+});
+
+describe("checkLinks — a link may leave the tree, not the repository", () => {
+  // Real files on a real disk, because the rule is about exactly that: the
+  // target EXISTS, here, and the link is broken anyway.
+  //
+  //   <base>/repo/docs/a.md      the page
+  //   <base>/repo/src/check.ts   outside `docs/`, inside the repository
+  //   <base>/sibling/notes.md    a sibling checkout: on this machine, in no clone
+  const base = mkdtempSync(join(tmpdir(), "links-repo-"));
+  const repo = join(base, "repo");
+  const page = join(repo, "docs/a.md");
+  mkdirSync(join(repo, "docs"), { recursive: true });
+  mkdirSync(join(repo, "src"), { recursive: true });
+  mkdirSync(join(base, "sibling"), { recursive: true });
+  writeFileSync(join(repo, "src/check.ts"), "export {};\n");
+  writeFileSync(join(base, "sibling/notes.md"), "# Notes\n\n## Here\n");
+  afterAll(() => rmSync(base, { recursive: true, force: true }));
+
+  const check = (body: string, repoRoot?: string) =>
+    checkLinks(page, body, { repoRoot }).problems;
+
+  test("a relative link into a sibling checkout is MISSING FILE, though the file is there", () => {
+    expect(check("[n](../../sibling/notes.md)", repo)).toEqual([
+      { kind: "MISSING FILE", target: "../../sibling/notes.md", outside: true },
+    ]);
+  });
+
+  test("so is an absolute path, and its anchor is never reached", () => {
+    const target = `${join(base, "sibling/notes.md")}#nope`;
+    expect(check(`[n](${target})`, repo)).toEqual([
+      { kind: "MISSING FILE", target, outside: true },
+    ]);
+  });
+
+  test("a link that leaves docs/ and stays in the repository resolves", () => {
+    expect(check("[c](../src/check.ts)", repo)).toEqual([]);
+  });
+
+  // Out and back in: it resolves INSIDE the repository, through the folder
+  // name this checkout happens to have. CI's checkout is named something else.
+  test("a link that climbs above the repository and comes back in is outside too", () => {
+    expect(check("[c](../../repo/src/check.ts)", repo)).toEqual([
+      {
+        kind: "MISSING FILE",
+        target: "../../repo/src/check.ts",
+        outside: true,
+      },
+    ]);
+    // …while going up and down INSIDE it is an ordinary link.
+    expect(check("[c](../docs/../src/check.ts)", repo)).toEqual([]);
+  });
+
+  test("a target that is simply absent is not called `outside`", () => {
+    expect(check("[n](../../sibling/gone.md)", repo)).toEqual([
+      { kind: "MISSING FILE", target: "../../sibling/gone.md" },
+    ]);
+  });
+
+  test("without a repoRoot the check is existence only, as it was", () => {
+    expect(check("[n](../../sibling/notes.md#here)")).toEqual([]);
+  });
+
+  test("a folder whose name merely starts like the repository's is outside it", () => {
+    mkdirSync(join(base, "repo-old"), { recursive: true });
+    writeFileSync(join(base, "repo-old/x.md"), "# X\n");
+    expect(check("[x](../../repo-old/x.md)", repo)).toEqual([
+      { kind: "MISSING FILE", target: "../../repo-old/x.md", outside: true },
+    ]);
+  });
+
+  // An absolute path INTO the repository is the same defect: `/Users/you/repo/…`
+  // is inside it on one machine and nowhere on the next.
+  test("an absolute path into the repository itself is refused too", () => {
+    const target = join(repo, "src/check.ts");
+    expect(check(`[c](${target})`, repo)).toEqual([
+      { kind: "MISSING FILE", target, outside: true },
+    ]);
+  });
+
+  // `tmpdir()` on macOS is `/var/…`, a symlink to `/private/var/…`, so one
+  // repository has two spellings. A page spelled one way under a root spelled
+  // the other is spelled outside and is really inside; only resolving both can
+  // tell.
+  test("the same repository spelled through a symlink is not outside itself", () => {
+    const alias = join(base, "alias");
+    symlinkSync(repo, alias);
+    expect(check("[c](../src/check.ts)", alias)).toEqual([]);
+    expect(check("[c](../src/check.ts)", realpathSync(repo))).toEqual([]);
+    // …and the sibling is outside under either spelling.
+    expect(check("[n](../../sibling/notes.md)", alias)).toEqual([
+      { kind: "MISSING FILE", target: "../../sibling/notes.md", outside: true },
+    ]);
   });
 });
 
 describe("parseGenerated (OKF 0.2 §5.2)", () => {
   test("reads the flow mapping the spec documents", () => {
     expect(
-      parseGenerated("{ by: reference_agent/gemini-2.5-pro, at: 2026-06-20T22:53:05Z }"),
-    ).toEqual({ by: "reference_agent/gemini-2.5-pro", at: "2026-06-20T22:53:05Z" });
+      parseGenerated(
+        "{ by: reference_agent/gemini-2.5-pro, at: 2026-06-20T22:53:05Z }"
+      )
+    ).toEqual({
+      by: "reference_agent/gemini-2.5-pro",
+      at: "2026-06-20T22:53:05Z",
+    });
   });
 
   test("tolerates the spacing an author actually types", () => {
@@ -417,7 +546,9 @@ describe("parseGenerated (OKF 0.2 §5.2)", () => {
 
 describe("parseFrontmatter", () => {
   test("reads simple key: value pairs, including the last one", () => {
-    const fields = parseFrontmatter("type: concept\ntitle: Exit codes\nstatus: current");
+    const fields = parseFrontmatter(
+      "type: concept\ntitle: Exit codes\nstatus: current"
+    );
     expect(fields.get("type")).toBe("concept");
     expect(fields.get("title")).toBe("Exit codes");
     expect(fields.get("status")).toBe("current");
@@ -425,7 +556,9 @@ describe("parseFrontmatter", () => {
   });
 
   test("accepts hyphens and underscores in keys, and a leading underscore", () => {
-    const fields = parseFrontmatter("rule_id: A1\nprobe-level: L0\n_private: x");
+    const fields = parseFrontmatter(
+      "rule_id: A1\nprobe-level: L0\n_private: x"
+    );
     expect(fields.get("rule_id")).toBe("A1");
     expect(fields.get("probe-level")).toBe("L0");
     expect(fields.get("_private")).toBe("x");
@@ -433,16 +566,18 @@ describe("parseFrontmatter", () => {
 
   test("joins continuation lines onto their key", () => {
     const fields = parseFrontmatter(
-      "description:\n  A CLI that accepts an unrecognised flag\n  cannot tell its caller.\ntype: rule",
+      "description:\n  A CLI that accepts an unrecognised flag\n  cannot tell its caller.\ntype: rule"
     );
     expect(fields.get("description")).toBe(
-      "A CLI that accepts an unrecognised flag cannot tell its caller.",
+      "A CLI that accepts an unrecognised flag cannot tell its caller."
     );
     expect(fields.get("type")).toBe("rule");
   });
 
   test("joins a continuation that starts on the key's own line", () => {
-    const fields = parseFrontmatter("description: A long sentence\n  that wraps.\ntype: rule");
+    const fields = parseFrontmatter(
+      "description: A long sentence\n  that wraps.\ntype: rule"
+    );
     expect(fields.get("description")).toBe("A long sentence that wraps.");
   });
 
@@ -461,7 +596,7 @@ describe("parseFrontmatter", () => {
     ].join("\n");
     const fields = parseFrontmatter(fm);
     expect(fields.get("related")).toBe(
-      "[ concept/exit-codes, concept/machine-mode, decision/exit-codes-below-125, ]",
+      "[ concept/exit-codes, concept/machine-mode, decision/exit-codes-below-125, ]"
     );
     expect(yamlList(fields.get("related"))).toEqual([
       "concept/exit-codes",
@@ -473,29 +608,39 @@ describe("parseFrontmatter", () => {
   });
 
   test("reads an indented YAML block sequence", () => {
-    const fields = parseFrontmatter("tags:\n  - parsing\n  - exit-codes\nstatus: current");
+    const fields = parseFrontmatter(
+      "tags:\n  - parsing\n  - exit-codes\nstatus: current"
+    );
     expect(fields.get("tags")).toBe("- parsing - exit-codes");
     expect(yamlList(fields.get("tags"))).toEqual(["parsing", "exit-codes"]);
   });
 
   test("strips a trailing `# comment`", () => {
-    expect(parseFrontmatter("type: concept # why this type").get("type")).toBe("concept");
-    expect(parseFrontmatter("updated: 2026-08-13   # bumped").get("updated")).toBe("2026-08-13");
+    expect(parseFrontmatter("type: concept # why this type").get("type")).toBe(
+      "concept"
+    );
+    expect(
+      parseFrontmatter("updated: 2026-08-13   # bumped").get("updated")
+    ).toBe("2026-08-13");
   });
 
   test("keeps a `#` that is not preceded by whitespace (YAML's actual rule)", () => {
     expect(parseFrontmatter("color: #ff0000").get("color")).toBe("#ff0000");
     expect(parseFrontmatter("anchor: exit-codes#taxonomy").get("anchor")).toBe(
-      "exit-codes#taxonomy",
+      "exit-codes#taxonomy"
     );
   });
 
   test("last duplicate key wins", () => {
-    expect(parseFrontmatter("type: concept\ntype: rule").get("type")).toBe("rule");
+    expect(parseFrontmatter("type: concept\ntype: rule").get("type")).toBe(
+      "rule"
+    );
   });
 
   test("blank lines and stray text do not become keys", () => {
-    const fields = parseFrontmatter("type: concept\n\nnot a key value pair\ntitle: X");
+    const fields = parseFrontmatter(
+      "type: concept\n\nnot a key value pair\ntitle: X"
+    );
     expect([...fields.keys()]).toEqual(["type", "title"]);
   });
 
@@ -510,14 +655,22 @@ describe("parseFrontmatter", () => {
   // `title: "Exit code #2"` became `"Exit code`, truncated and with an orphaned quote.
   // YAML only begins a comment at an UNQUOTED `#`.
   test("does not treat a `#` inside quotes as a comment", () => {
-    expect(parseFrontmatter('title: "Exit code #2"').get("title")).toBe("Exit code #2");
-    expect(parseFrontmatter("title: 'Exit code #2'").get("title")).toBe("Exit code #2");
+    expect(parseFrontmatter('title: "Exit code #2"').get("title")).toBe(
+      "Exit code #2"
+    );
+    expect(parseFrontmatter("title: 'Exit code #2'").get("title")).toBe(
+      "Exit code #2"
+    );
   });
 
   // ...but an UNQUOTED trailing comment is still a comment.
   test("still strips an unquoted trailing comment", () => {
-    expect(parseFrontmatter("type: concept # the OKF field").get("type")).toBe("concept");
-    expect(parseFrontmatter('title: "quoted" # trailing').get("title")).toBe("quoted");
+    expect(parseFrontmatter("type: concept # the OKF field").get("type")).toBe(
+      "concept"
+    );
+    expect(parseFrontmatter('title: "quoted" # trailing').get("title")).toBe(
+      "quoted"
+    );
   });
 
   // A `#` with no preceding whitespace is part of the value, matching the original semantics.
@@ -535,8 +688,12 @@ describe("parseFrontmatter", () => {
 
   // Only a MATCHED surrounding pair is stripped; inner quotes are content.
   test("leaves unmatched or interior quotes alone", () => {
-    expect(parseFrontmatter('title: "unterminated').get("title")).toBe('"unterminated');
-    expect(parseFrontmatter('title: say "hi" now').get("title")).toBe('say "hi" now');
+    expect(parseFrontmatter('title: "unterminated').get("title")).toBe(
+      '"unterminated'
+    );
+    expect(parseFrontmatter('title: say "hi" now').get("title")).toBe(
+      'say "hi" now'
+    );
   });
 
   // CHARACTERISATION: a block sequence written at column 0 is legal YAML but is not indented,
@@ -561,16 +718,40 @@ describe("parseFrontmatter", () => {
 // is that one round-trips to the other. That is the property; the individual escapes are not.
 describe("quoted scalars round-trip to their intended value", () => {
   const cases: Array<[label: string, written: string, intended: string]> = [
-    ["escaped quotes", '"\\"wrong\\" is not \\"broke\\""', '"wrong" is not "broke"'],
+    [
+      "escaped quotes",
+      '"\\"wrong\\" is not \\"broke\\""',
+      '"wrong" is not "broke"',
+    ],
     ["a colon", '"Exit codes: an API"', "Exit codes: an API"],
     ["a hash", '"Exit code #2"', "Exit code #2"],
-    ["commas", '"parsing, streams, exit codes"', "parsing, streams, exit codes"],
-    ["a quote AND a hash together", '"a \\"b\\" # not a comment"', 'a "b" # not a comment'],
+    [
+      "commas",
+      '"parsing, streams, exit codes"',
+      "parsing, streams, exit codes",
+    ],
+    [
+      "a quote AND a hash together",
+      '"a \\"b\\" # not a comment"',
+      'a "b" # not a comment',
+    ],
     ["a literal backslash", '"C:\\\\path"', "C:\\path"],
-    ["an escaped backslash before an n", '"raw \\\\n stays raw"', "raw \\n stays raw"],
+    [
+      "an escaped backslash before an n",
+      '"raw \\\\n stays raw"',
+      "raw \\n stays raw",
+    ],
     ["a tab escape", '"a\\tb"', "a\tb"],
-    ["single quotes around a colon", "'Exit codes: an API'", "Exit codes: an API"],
-    ["a doubled apostrophe in a single-quoted scalar", "'it''s fine'", "it's fine"],
+    [
+      "single quotes around a colon",
+      "'Exit codes: an API'",
+      "Exit codes: an API",
+    ],
+    [
+      "a doubled apostrophe in a single-quoted scalar",
+      "'it''s fine'",
+      "it's fine",
+    ],
   ];
 
   test.each(cases)("%s", (_label, written, intended) => {
@@ -580,13 +761,24 @@ describe("quoted scalars round-trip to their intended value", () => {
   // A multi-line value is the OTHER shape these fields take — every `description:` in the wiki
   // is Prettier-wrapped — and quoting has to survive being reassembled from several lines.
   test("a multiline quoted value joins its lines and still decodes", () => {
-    const fm = ['title: "\\"Wrong\\" and \\"broke\\"', '  are not the same failure"'].join("\n");
-    expect(parseFrontmatter(fm).get("title")).toBe('"Wrong" and "broke" are not the same failure');
+    const fm = [
+      'title: "\\"Wrong\\" and \\"broke\\"',
+      '  are not the same failure"',
+    ].join("\n");
+    expect(parseFrontmatter(fm).get("title")).toBe(
+      '"Wrong" and "broke" are not the same failure'
+    );
   });
 
   test("a multiline unquoted value is unaffected", () => {
-    const fm = ["description:", "  A sentence that wraps", "  across two lines."].join("\n");
-    expect(parseFrontmatter(fm).get("description")).toBe("A sentence that wraps across two lines.");
+    const fm = [
+      "description:",
+      "  A sentence that wraps",
+      "  across two lines.",
+    ].join("\n");
+    expect(parseFrontmatter(fm).get("description")).toBe(
+      "A sentence that wraps across two lines."
+    );
   });
 
   // The other half of the ruling: the syntax is deliberately SMALL, so an escape outside the
@@ -594,8 +786,12 @@ describe("quoted scalars round-trip to their intended value", () => {
   // would just move the leak from `\"` to the next escape someone reaches for.
   test("names an escape the parser cannot decode, and only that one", () => {
     expect(unsupportedEscapes('title: "a \\u00e9 b"')).toEqual(["\\u"]);
-    expect(unsupportedEscapes('title: "\\"ok\\" \\t \\n \\\\ \\/"')).toEqual([]);
-    expect(unsupportedEscapes("title: plain\ndescription: also plain")).toEqual([]);
+    expect(unsupportedEscapes('title: "\\"ok\\" \\t \\n \\\\ \\/"')).toEqual(
+      []
+    );
+    expect(unsupportedEscapes("title: plain\ndescription: also plain")).toEqual(
+      []
+    );
   });
 });
 
@@ -604,7 +800,9 @@ describe("quoted scalars round-trip to their intended value", () => {
 // ---------------------------------------------------------------------------------------
 
 describe("yamlList", () => {
-  const cases: Array<[label: string, input: string | undefined, expected: string[]]> = [
+  const cases: Array<
+    [label: string, input: string | undefined, expected: string[]]
+  > = [
     ["undefined", undefined, []],
     ["empty string", "", []],
     ["empty flow sequence", "[]", []],
@@ -612,11 +810,23 @@ describe("yamlList", () => {
     ["flow, one item", "[parsing]", ["parsing"]],
     ["flow, several items", "[parsing, exit-codes]", ["parsing", "exit-codes"]],
     ["flow, no space after comma", "[a,b,c]", ["a", "b", "c"]],
-    ["Prettier-wrapped flow (joined, trailing comma)", "[ a, b, c, ]", ["a", "b", "c"]],
+    [
+      "Prettier-wrapped flow (joined, trailing comma)",
+      "[ a, b, c, ]",
+      ["a", "b", "c"],
+    ],
     ["block sequence (joined)", "- a - b", ["a", "b"]],
     ["block sequence, single item", "- a", ["a"]],
-    ["hyphenated values survive", "[exit-codes, machine-mode]", ["exit-codes", "machine-mode"]],
-    ["type/slug values survive", "[concept/exit-codes, rule/x]", ["concept/exit-codes", "rule/x"]],
+    [
+      "hyphenated values survive",
+      "[exit-codes, machine-mode]",
+      ["exit-codes", "machine-mode"],
+    ],
+    [
+      "type/slug values survive",
+      "[concept/exit-codes, rule/x]",
+      ["concept/exit-codes", "rule/x"],
+    ],
     [
       "block sequence of type/slug",
       "- concept/exit-codes - rule/x",
@@ -677,7 +887,7 @@ describe("walkMarkdown", () => {
     expect(
       walkMarkdown(root)
         .map((p) => p.slice(root.length + 1))
-        .sort(),
+        .sort()
     ).toEqual(["a.md", "sub/b.md"]);
   });
 
@@ -692,7 +902,9 @@ describe("walkMarkdown", () => {
 
   test("is case-sensitive about the .md extension", () => {
     const root = wiki({ "a.MD": "x", "b.markdown": "x", "c.md": "x" });
-    expect(walkMarkdown(root).map((p) => p.slice(root.length + 1))).toEqual(["c.md"]);
+    expect(walkMarkdown(root).map((p) => p.slice(root.length + 1))).toEqual([
+      "c.md",
+    ]);
   });
 });
 
@@ -708,10 +920,16 @@ describe("walkMarkdown", () => {
 function validWiki(): string {
   return wiki({
     // the contract: no frontmatter, nothing links to it
-    "SCHEMA.md": "# The contract\n\nWrite `type:` and link with `[a](../b.md)`.\n",
+    "SCHEMA.md":
+      "# The contract\n\nWrite `type:` and link with `[a](../b.md)`.\n",
     "index.md": page(
-      { type: "index", title: "Catalog", tags: "[index, catalog]", updated: DATE },
-      "# Catalog\n\n- [Alpha](./concepts/alpha.md) — the entry point.\n",
+      {
+        type: "index",
+        title: "Catalog",
+        tags: "[index, catalog]",
+        updated: DATE,
+      },
+      "# Catalog\n\n- [Alpha](./concepts/alpha.md) — the entry point.\n"
     ),
     "concepts/alpha.md": page(
       {
@@ -738,16 +956,22 @@ function validWiki(): string {
         "## A section",
         "",
         "Body.",
-      ].join("\n"),
+      ].join("\n")
     ),
     // reachable ONLY via alpha — proves reachability is transitive, not one hop from index
     "concepts/beta.md": page(
       { type: "concept", title: "Beta", tags: "[core]", updated: DATE },
-      "# Beta\n\n## The taxonomy\n\nBody.\n",
+      "# Beta\n\n## The taxonomy\n\nBody.\n"
     ),
     "rules/parsing/rho.md": page(
-      { type: "rule", title: "Rho", tags: "[parsing]", related: "[concept/alpha]", updated: DATE },
-      "# Rho\n\nBack to [Alpha](../../concepts/alpha.md).\n",
+      {
+        type: "rule",
+        title: "Rho",
+        tags: "[parsing]",
+        related: "[concept/alpha]",
+        updated: DATE,
+      },
+      "# Rho\n\nBack to [Alpha](../../concepts/alpha.md).\n"
     ),
     // not a page: excluded by nonPageDirs, so its missing frontmatter is not a problem
     "_skeletons/template.md": "no frontmatter here, and nothing links to it",
@@ -777,7 +1001,7 @@ describe("runDocsLint — links", () => {
   const indexTo = (...targets: string[]) =>
     page(
       { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-      `# Catalog\n\n${targets.map((t) => `- [x](./${t})`).join("\n")}\n`,
+      `# Catalog\n\n${targets.map((t) => `- [x](./${t})`).join("\n")}\n`
     );
 
   test("a broken relative link is MISSING FILE", () => {
@@ -824,7 +1048,7 @@ describe("runDocsLint — links", () => {
       "index.md": indexTo("a.md"),
       "a.md": page(
         OK_FM,
-        "# A\n\n[x](https://example.com/nope.md) [y](http://x/y) [z](mailto:a@b.c)\n",
+        "# A\n\n[x](https://example.com/nope.md) [y](http://x/y) [z](mailto:a@b.c)\n"
       ),
     });
     expect(lint(config(root)).problems).toEqual([]);
@@ -835,7 +1059,7 @@ describe("runDocsLint — links", () => {
       "index.md": indexTo("a.md"),
       "a.md": page(
         OK_FM,
-        "# A\n\nInline `[gone](./nope.md)` and fenced:\n\n```md\n[gone](./nope.md)\n```\n",
+        "# A\n\nInline `[gone](./nope.md)` and fenced:\n\n```md\n[gone](./nope.md)\n```\n"
       ),
     });
     expect(lint(config(root)).problems).toEqual([]);
@@ -844,7 +1068,10 @@ describe("runDocsLint — links", () => {
   test("every broken link is reported, not just the first", () => {
     const root = wiki({
       "index.md": indexTo("a.md"),
-      "a.md": page(OK_FM, "# A\n\n[1](./one.md) [2](./two.md) [3](./three.md)\n"),
+      "a.md": page(
+        OK_FM,
+        "# A\n\n[1](./one.md) [2](./two.md) [3](./three.md)\n"
+      ),
     });
     const res = lint(config(root));
     expect(res.problems).toHaveLength(3);
@@ -857,7 +1084,7 @@ describe("runDocsLint — anchors", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(OK_FM, "# A\n\n[to b](./b.md#no-such-heading)\n"),
       "b.md": page(OK_FM, "# B\n\n## The taxonomy\n"),
@@ -866,7 +1093,7 @@ describe("runDocsLint — anchors", () => {
     // a broken ANCHOR still makes the target reachable — b.md is not also an orphan
     expect(res.problems).toHaveLength(1);
     expect(res.problems[0]).toMatch(
-      /^MISSING ANCHOR\s+a\.md: \.\/b\.md#no-such-heading\s+\(#no-such-heading not a heading\)$/,
+      /^MISSING ANCHOR\s+a\.md: \.\/b\.md#no-such-heading\s+\(#no-such-heading not a heading\)$/
     );
   });
 
@@ -874,7 +1101,7 @@ describe("runDocsLint — anchors", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(OK_FM, "# A\n\n[to b](./sub/b.md#the-taxonomy)\n"),
       "sub/b.md": page(OK_FM, "# B\n\n## The taxonomy\n"),
@@ -886,9 +1113,12 @@ describe("runDocsLint — anchors", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
-      "a.md": page(OK_FM, "# A\n\nJump to [the section](#a-section).\n\n## A section\n"),
+      "a.md": page(
+        OK_FM,
+        "# A\n\nJump to [the section](#a-section).\n\n## A section\n"
+      ),
     });
     expect(lint(config(root)).problems).toEqual([]);
   });
@@ -897,9 +1127,12 @@ describe("runDocsLint — anchors", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
-      "a.md": page(OK_FM, "# A\n\nJump to [nowhere](#not-here).\n\n## A section\n"),
+      "a.md": page(
+        OK_FM,
+        "# A\n\nJump to [nowhere](#not-here).\n\n## A section\n"
+      ),
     });
     const res = lint(config(root));
     expect(res.problems).toHaveLength(1);
@@ -910,11 +1143,11 @@ describe("runDocsLint — anchors", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(
         OK_FM,
-        "# A\n\n[ok](#filter-cutoff--resonance) and [wrong](#filter-cutoff-resonance)\n\n## Filter (cutoff & resonance)\n",
+        "# A\n\n[ok](#filter-cutoff--resonance) and [wrong](#filter-cutoff-resonance)\n\n## Filter (cutoff & resonance)\n"
       ),
     });
     const res = lint(config(root));
@@ -929,11 +1162,14 @@ describe("runDocsLint — anchors", () => {
 
 describe("runDocsLint — frontmatter", () => {
   /** Wiki whose only page `a.md` is cataloged, with the given frontmatter fields. */
-  function oneCatalogedPage(fields: Record<string, string | null>, body = "# A\n"): string {
+  function oneCatalogedPage(
+    fields: Record<string, string | null>,
+    body = "# A\n"
+  ): string {
     return wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(fields, body),
     });
@@ -943,7 +1179,7 @@ describe("runDocsLint — frontmatter", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": "# A\n\nNo frontmatter here.\n",
     });
@@ -956,7 +1192,7 @@ describe("runDocsLint — frontmatter", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": `\n${page(OK_FM, "# A\n")}`,
     });
@@ -966,55 +1202,63 @@ describe("runDocsLint — frontmatter", () => {
   test("a missing `type` is MISSING type", () => {
     const res = lint(config(oneCatalogedPage({ ...OK_FM, type: null })));
     expect(res.problems).toHaveLength(1);
-    expect(res.problems[0]).toMatch(/^MISSING type\s+a\.md\s+\(OKF requires a `type` field\)$/);
+    expect(res.problems[0]).toMatch(
+      /^MISSING type\s+a\.md\s+\(OKF requires a `type` field\)$/
+    );
   });
 
   test("a `type` outside the configured vocabulary is BAD type, and names the vocabulary", () => {
     const res = lint(config(oneCatalogedPage({ ...OK_FM, type: "archetype" })));
     expect(res.problems).toHaveLength(1);
     expect(res.problems[0]).toContain("BAD type");
-    expect(res.problems[0]).toContain('"archetype" not in {concept, rule, index}');
+    expect(res.problems[0]).toContain(
+      '"archetype" not in {concept, rule, index}'
+    );
   });
 
   test("the `types` vocabulary is a parameter — the same page passes with it configured", () => {
     const root = oneCatalogedPage({ ...OK_FM, type: "archetype" });
     expect(
-      lint(config(root, { types: ["concept", "rule", "index", "archetype"] })).problems,
+      lint(config(root, { types: ["concept", "rule", "index", "archetype"] }))
+        .problems
     ).toEqual([]);
   });
 
   test("`type` matching is exact, not case-insensitive or trimmed-by-luck", () => {
-    expect(lint(config(oneCatalogedPage({ ...OK_FM, type: "Concept" }))).problems[0]).toContain(
-      "BAD type",
-    );
+    expect(
+      lint(config(oneCatalogedPage({ ...OK_FM, type: "Concept" }))).problems[0]
+    ).toContain("BAD type");
   });
 
   test("missing `tags` is MISSING tags", () => {
     const res = lint(config(oneCatalogedPage({ ...OK_FM, tags: null })));
     expect(res.problems).toHaveLength(1);
-    expect(res.problems[0]).toMatch(/^MISSING tags\s+a\.md\s+\(expected `tags: \[ \.\.\. \]`\)$/);
+    expect(res.problems[0]).toMatch(
+      /^MISSING tags\s+a\.md\s+\(expected `tags: \[ \.\.\. \]`\)$/
+    );
   });
 
   test("an EMPTY tag list is rejected — `tags: []` is not tagging", () => {
-    expect(lint(config(oneCatalogedPage({ ...OK_FM, tags: "[]" }))).problems[0]).toContain(
-      "MISSING tags",
-    );
-    expect(lint(config(oneCatalogedPage({ ...OK_FM, tags: "[   ]" }))).problems[0]).toContain(
-      "MISSING tags",
-    );
+    expect(
+      lint(config(oneCatalogedPage({ ...OK_FM, tags: "[]" }))).problems[0]
+    ).toContain("MISSING tags");
+    expect(
+      lint(config(oneCatalogedPage({ ...OK_FM, tags: "[   ]" }))).problems[0]
+    ).toContain("MISSING tags");
   });
 
   test("flow style is accepted", () => {
-    expect(lint(config(oneCatalogedPage({ ...OK_FM, tags: "[parsing, core]" }))).problems).toEqual(
-      [],
-    );
+    expect(
+      lint(config(oneCatalogedPage({ ...OK_FM, tags: "[parsing, core]" })))
+        .problems
+    ).toEqual([]);
   });
 
   test("YAML block style is accepted", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": `---\ntype: concept\ntitle: A\ntags:\n  - parsing\n  - core\nupdated: ${DATE}\n---\n\n# A\n`,
     });
@@ -1027,7 +1271,7 @@ describe("runDocsLint — frontmatter", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": `---\ntype: concept\ntitle: A\ntags:\n  [\n    parsing,\n    silent-failure,\n    exit-codes,\n  ]\nupdated: ${DATE}\n---\n\n# A\n`,
     });
@@ -1038,33 +1282,42 @@ describe("runDocsLint — frontmatter", () => {
   // `parseFrontmatter` kept the quotes and `"concept"` !== `concept`. See the `unquotes a
   // quoted scalar` unit test.
   test("accepts a quoted `type` value", () => {
-    expect(lint(config(oneCatalogedPage({ ...OK_FM, type: '"concept"' }))).problems).toHaveLength(
-      0,
-    );
-    expect(lint(config(oneCatalogedPage({ ...OK_FM, type: "'concept'" }))).problems).toHaveLength(
-      0,
-    );
+    expect(
+      lint(config(oneCatalogedPage({ ...OK_FM, type: '"concept"' }))).problems
+    ).toHaveLength(0);
+    expect(
+      lint(config(oneCatalogedPage({ ...OK_FM, type: "'concept'" }))).problems
+    ).toHaveLength(0);
   });
 
   // ...and quoting must not smuggle an unknown value past the check.
   test("still rejects a quoted value outside the vocabulary", () => {
-    expect(lint(config(oneCatalogedPage({ ...OK_FM, type: '"nonsense"' }))).problems[0]).toContain(
-      "BAD type",
-    );
+    expect(
+      lint(config(oneCatalogedPage({ ...OK_FM, type: '"nonsense"' })))
+        .problems[0]
+    ).toContain("BAD type");
   });
 
   // The frontmatter syntax is deliberately smaller than YAML's, so it has to SAY so: an escape
   // the parser cannot decode would otherwise reach `acc show` as literal backslashes.
   test("rejects an escape the parser cannot decode", () => {
-    const res = lint(config(oneCatalogedPage({ ...OK_FM, title: '"caf\\u00e9"' })));
+    const res = lint(
+      config(oneCatalogedPage({ ...OK_FM, title: '"caf\\u00e9"' }))
+    );
     expect(res.problems[0]).toContain("BAD ESCAPE");
     expect(res.problems[0]).toContain("\\u");
   });
 
   test("accepts the escapes it can decode", () => {
     expect(
-      lint(config(oneCatalogedPage({ ...OK_FM, title: '"\\"wrong\\" is not \\"broke\\""' })))
-        .problems,
+      lint(
+        config(
+          oneCatalogedPage({
+            ...OK_FM,
+            title: '"\\"wrong\\" is not \\"broke\\""',
+          })
+        )
+      ).problems
     ).toEqual([]);
   });
 });
@@ -1084,16 +1337,22 @@ describe("runDocsLint — the date field", () => {
           timestamp: ISO,
           reviewed: ISO,
         },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(fields),
     });
 
   test("`dateField` defaults to `timestamp` (OKF's convention)", () => {
     const root = oneCatalogedPage({ ...OK_FM, updated: DATE });
-    const res = lint({ root, types: ["concept", "index"], allowDateOnly: true });
+    const res = lint({
+      root,
+      types: ["concept", "index"],
+      allowDateOnly: true,
+    });
     expect(res.problems).toHaveLength(1);
-    expect(res.problems[0]).toMatch(/^MISSING timestamp\s+a\.md\s+\(expected `timestamp: /);
+    expect(res.problems[0]).toMatch(
+      /^MISSING timestamp\s+a\.md\s+\(expected `timestamp: /
+    );
   });
 
   test("`dateField` actually changes which field is required", () => {
@@ -1104,8 +1363,14 @@ describe("runDocsLint — the date field", () => {
     expect(res.problems[0]).toContain("MISSING reviewed");
 
     // and with the field present, the same config is clean while `updated` is now irrelevant
-    const present = oneCatalogedPage({ ...OK_FM, updated: null, reviewed: DATE });
-    expect(lint(config(present, { dateField: "reviewed" })).problems).toEqual([]);
+    const present = oneCatalogedPage({
+      ...OK_FM,
+      updated: null,
+      reviewed: DATE,
+    });
+    expect(lint(config(present, { dateField: "reviewed" })).problems).toEqual(
+      []
+    );
   });
 
   test("`dateField: generated` validates the instant INSIDE the mapping", () => {
@@ -1121,7 +1386,7 @@ describe("runDocsLint — the date field", () => {
             tags: "[index]",
             generated: `{ by: agent, at: ${DATE} }`,
           },
-          "# Catalog\n\n- [A](./a.md)\n",
+          "# Catalog\n\n- [A](./a.md)\n"
         ),
         "a.md": page({
           type: "concept",
@@ -1132,23 +1397,31 @@ describe("runDocsLint — the date field", () => {
       });
 
     expect(
-      lint(config(build(DATE), { dateField: "generated", allowDateOnly: true })).problems,
+      lint(config(build(DATE), { dateField: "generated", allowDateOnly: true }))
+        .problems
     ).toEqual([]);
     expect(
-      lint(config(build("soon"), { dateField: "generated", allowDateOnly: true })).problems[0],
+      lint(
+        config(build("soon"), { dateField: "generated", allowDateOnly: true })
+      ).problems[0]
     ).toContain("BAD generated.at");
   });
 
   test("allowDateOnly:true accepts YYYY-MM-DD", () => {
     expect(
-      lint(config(oneCatalogedPage({ ...OK_FM, updated: "2026-08-13" }), { allowDateOnly: true }))
-        .problems,
+      lint(
+        config(oneCatalogedPage({ ...OK_FM, updated: "2026-08-13" }), {
+          allowDateOnly: true,
+        })
+      ).problems
     ).toEqual([]);
   });
 
   test("allowDateOnly:false rejects YYYY-MM-DD", () => {
     const res = lint(
-      config(oneCatalogedPage({ ...OK_FM, updated: "2026-08-13" }), { allowDateOnly: false }),
+      config(oneCatalogedPage({ ...OK_FM, updated: "2026-08-13" }), {
+        allowDateOnly: false,
+      })
     );
     expect(res.problems).toHaveLength(1);
     expect(res.problems[0]).toContain("MISSING updated");
@@ -1156,14 +1429,19 @@ describe("runDocsLint — the date field", () => {
 
   test("full ISO-8601 is accepted either way", () => {
     for (const allowDateOnly of [true, false]) {
-      const root = oneCatalogedPage({ ...OK_FM, updated: "2026-08-13T09:30:00Z" });
+      const root = oneCatalogedPage({
+        ...OK_FM,
+        updated: "2026-08-13T09:30:00Z",
+      });
       expect(lint(config(root, { allowDateOnly })).problems).toEqual([]);
     }
   });
 
   test("junk after a date-only value is rejected even when allowDateOnly is on", () => {
     const root = oneCatalogedPage({ ...OK_FM, updated: "2026-08-13 (approx)" });
-    expect(lint(config(root, { allowDateOnly: true })).problems[0]).toContain("MISSING updated");
+    expect(lint(config(root, { allowDateOnly: true })).problems[0]).toContain(
+      "MISSING updated"
+    );
   });
 
   test("a non-date and a wrong-order date are rejected", () => {
@@ -1196,21 +1474,23 @@ describe("runDocsLint — orphans", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(OK_FM, "# A\n"),
       "lonely.md": page(OK_FM, "# Lonely\n"),
     });
     const res = lint(config(root));
     expect(res.problems).toHaveLength(1);
-    expect(res.problems[0]).toMatch(/^ORPHAN\s+lonely\.md\s+\(unreachable from index\.md/);
+    expect(res.problems[0]).toMatch(
+      /^ORPHAN\s+lonely\.md\s+\(unreachable from index\.md/
+    );
   });
 
   test("reachability is TRANSITIVE — a page linked from a cataloged sibling is not an orphan", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./concepts/a.md)\n",
+        "# Catalog\n\n- [A](./concepts/a.md)\n"
       ),
       "concepts/a.md": page(OK_FM, "# A\n\n[B](./b.md)\n"),
       "concepts/b.md": page(OK_FM, "# B\n\n[C](../deep/c.md)\n"),
@@ -1224,7 +1504,7 @@ describe("runDocsLint — orphans", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(OK_FM, "# A\n\n[B](./b.md)\n"),
       "b.md": page(OK_FM, "# B\n\n[A](./a.md)\n"),
@@ -1236,7 +1516,7 @@ describe("runDocsLint — orphans", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n",
+        "# Catalog\n"
       ),
       "a.md": page(OK_FM, "# A\n\n[B](./b.md)\n"),
       "b.md": page(OK_FM, "# B\n\n[A](./a.md)\n"),
@@ -1257,14 +1537,16 @@ describe("runDocsLint — orphans", () => {
   // them ("every page is an orphan without it"). The JSON counterpart is asserted below.
   test("no catalog means no per-page ORPHAN lines", () => {
     const root = wiki({ "a.md": page(OK_FM), "b.md": page(OK_FM) });
-    expect(lint(config(root)).problems.filter((p) => p.startsWith("ORPHAN"))).toEqual([]);
+    expect(
+      lint(config(root)).problems.filter((p) => p.startsWith("ORPHAN"))
+    ).toEqual([]);
   });
 
   test("index.md itself is never its own orphan", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n",
+        "# Catalog\n"
       ),
     });
     expect(lint(config(root)).problems).toEqual([]);
@@ -1273,12 +1555,20 @@ describe("runDocsLint — orphans", () => {
   test("`related:` does NOT confer reachability — only links do (documented design)", () => {
     const root = wiki({
       "index.md": page(
-        { type: "index", title: "Catalog", tags: "[index]", updated: DATE, related: "[concept/a]" },
-        "# Catalog\n",
+        {
+          type: "index",
+          title: "Catalog",
+          tags: "[index]",
+          updated: DATE,
+          related: "[concept/a]",
+        },
+        "# Catalog\n"
       ),
       "a.md": page(OK_FM, "# A\n"),
     });
-    expect(lint(config(root)).problems).toContainEqual(expect.stringContaining("ORPHAN"));
+    expect(lint(config(root)).problems).toContainEqual(
+      expect.stringContaining("ORPHAN")
+    );
   });
 });
 
@@ -1291,14 +1581,14 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page({ ...OK_FM, related: "[rule/does-not-exist]" }),
     });
     const res = lint(config(root));
     expect(res.problems).toHaveLength(1);
     expect(res.problems[0]).toMatch(
-      /^BAD related\s+a\.md: "rule\/does-not-exist" matches no page \(expected `type\/slug`\)$/,
+      /^BAD related\s+a\.md: "rule\/does-not-exist" matches no page \(expected `type\/slug`\)$/
     );
   });
 
@@ -1306,13 +1596,17 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./concepts/deep/a.md)\n",
+        "# Catalog\n\n- [A](./concepts/deep/a.md)\n"
       ),
       "concepts/deep/a.md": page(
         { ...OK_FM, related: "[rule/rho]" },
-        "# A\n\n[Rho](../../rules/parsing/nested/rho.md)\n",
+        "# A\n\n[Rho](../../rules/parsing/nested/rho.md)\n"
       ),
-      "rules/parsing/nested/rho.md": page({ ...OK_FM, type: "rule", related: "[concept/a]" }),
+      "rules/parsing/nested/rho.md": page({
+        ...OK_FM,
+        type: "rule",
+        related: "[concept/a]",
+      }),
     });
     expect(lint(config(root)).problems).toEqual([]);
   });
@@ -1321,7 +1615,7 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page({ ...OK_FM, related: "[rule/b]" }, "# A\n\n[B](./b.md)\n"),
       "b.md": page(OK_FM), // type: concept, so `rule/b` must not resolve
@@ -1333,7 +1627,7 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": `---\ntype: concept\ntitle: A\ntags: [t]\nrelated:\n  - rule/nope-one\n  - rule/nope-two\nupdated: ${DATE}\n---\n\n# A\n`,
     });
@@ -1349,7 +1643,7 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./one/a.md)\n- [B](./two/a.md)\n",
+        "# Catalog\n\n- [A](./one/a.md)\n- [B](./two/a.md)\n"
       ),
       "one/a.md": page(OK_FM),
       "two/a.md": page(OK_FM),
@@ -1357,7 +1651,7 @@ describe("runDocsLint — related", () => {
     const res = lint(config(root));
     expect(res.problems).toHaveLength(1);
     expect(res.problems[0]).toMatch(
-      /^DUPLICATE KEY\s+two\/a\.md: "concept\/a" already used by one\/a\.md$/,
+      /^DUPLICATE KEY\s+two\/a\.md: "concept\/a" already used by one\/a\.md$/
     );
   });
 
@@ -1365,7 +1659,7 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./one/a.md)\n- [B](./two/a.md)\n",
+        "# Catalog\n\n- [A](./one/a.md)\n- [B](./two/a.md)\n"
       ),
       "one/a.md": page(OK_FM),
       "two/a.md": page({ ...OK_FM, type: "rule" }),
@@ -1379,7 +1673,7 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./one/a.md)\n- [B](./two/a.md)\n- [C](./c.md)\n",
+        "# Catalog\n\n- [A](./one/a.md)\n- [B](./two/a.md)\n- [C](./c.md)\n"
       ),
       "one/a.md": page(OK_FM),
       "two/a.md": page(OK_FM),
@@ -1394,7 +1688,7 @@ describe("runDocsLint — related", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(OK_FM),
     });
@@ -1411,9 +1705,10 @@ describe("runDocsLint — SCHEMA.md exemption", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n",
+        "# Catalog\n"
       ),
-      "SCHEMA.md": "# The contract\n\nNo frontmatter, no inbound links, no problems.\n",
+      "SCHEMA.md":
+        "# The contract\n\nNo frontmatter, no inbound links, no problems.\n",
     });
     expect(lint(config(root)).problems).toEqual([]);
   });
@@ -1422,12 +1717,14 @@ describe("runDocsLint — SCHEMA.md exemption", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n",
+        "# Catalog\n"
       ),
       "CONTRACT.md": "# The contract\n\nNo frontmatter, no inbound links.\n",
     });
     const res = lint(config(root));
-    expect(res.problems).toContainEqual(expect.stringContaining("NO FRONTMATTER"));
+    expect(res.problems).toContainEqual(
+      expect.stringContaining("NO FRONTMATTER")
+    );
     expect(res.problems).toContainEqual(expect.stringContaining("ORPHAN"));
   });
 
@@ -1435,7 +1732,7 @@ describe("runDocsLint — SCHEMA.md exemption", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n",
+        "# Catalog\n"
       ),
       "SCHEMA.md": "# The contract\n\n[gone](./nowhere.md)\n",
     });
@@ -1449,7 +1746,7 @@ describe("runDocsLint — SCHEMA.md exemption", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n",
+        "# Catalog\n"
       ),
       "concepts/SCHEMA.md": "no frontmatter\n",
       "concepts/OLD-SCHEMA.md": "no frontmatter either\n",
@@ -1475,7 +1772,7 @@ describe("runDocsLint — extraChecks", () => {
           seen = pages;
           return [];
         },
-      }),
+      })
     );
     expect(calls).toBe(1);
     expect(seen.map((p) => p.rel).sort()).toEqual([
@@ -1499,7 +1796,7 @@ describe("runDocsLint — extraChecks", () => {
           seen = pages;
           return [];
         },
-      }),
+      })
     );
     const alpha = seen.find((p) => p.rel === "concepts/alpha.md");
     expect(alpha).toBeDefined();
@@ -1521,7 +1818,7 @@ describe("runDocsLint — extraChecks", () => {
       config(root, {
         nonPageDirs: ["_skeletons"],
         extraChecks: () => ["CUSTOM one", "CUSTOM two"],
-      }),
+      })
     );
     expect(res.problems).toEqual(["CUSTOM one", "CUSTOM two"]);
     expect(res.count).toBe(2);
@@ -1535,7 +1832,7 @@ describe("runDocsLint — extraChecks", () => {
         nonPageDirs: ["_skeletons"],
         json: true,
         extraChecks: () => ["CUSTOM one"],
-      }),
+      })
     );
     expect(parseGraph(res.out).problems).toEqual(["CUSTOM one"]);
   });
@@ -1544,16 +1841,21 @@ describe("runDocsLint — extraChecks", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page({ ...OK_FM, type: null }),
     });
     const res = lint(config(root, { extraChecks: () => ["CUSTOM last"] }));
-    expect(res.problems).toEqual([expect.stringContaining("MISSING type"), "CUSTOM last"]);
+    expect(res.problems).toEqual([
+      expect.stringContaining("MISSING type"),
+      "CUSTOM last",
+    ]);
   });
 
   test("is optional — omitting it changes nothing", () => {
-    expect(lint(config(validWiki(), { nonPageDirs: ["_skeletons"] })).count).toBe(0);
+    expect(
+      lint(config(validWiki(), { nonPageDirs: ["_skeletons"] })).count
+    ).toBe(0);
   });
 });
 
@@ -1607,7 +1909,9 @@ function nodeBy(graph: Graph, path: string): GraphNode {
 
 describe("runDocsLint — --json", () => {
   test("emits valid JSON and nothing else", () => {
-    const res = lint(config(validWiki(), { nonPageDirs: ["_skeletons"], json: true }));
+    const res = lint(
+      config(validWiki(), { nonPageDirs: ["_skeletons"], json: true })
+    );
     expect(() => parseGraph(res.out)).not.toThrow();
     // problems are collected but NOT printed as lines in JSON mode: stdout stays parseable
     expect(res.out.trimStart().startsWith("{")).toBe(true);
@@ -1629,7 +1933,7 @@ describe("runDocsLint — --json", () => {
     const root = wiki({
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n\n- [A](./a.md)\n",
+        "# Catalog\n\n- [A](./a.md)\n"
       ),
       "a.md": page(OK_FM, "# A\n\n[B](./b.md)\n"),
       "b.md": page(OK_FM, "# B\n"),
@@ -1650,10 +1954,14 @@ describe("runDocsLint — --json", () => {
   test("stats.orphans agrees on a wiki with no orphans at all", () => {
     const root = validWiki();
     const human = lint(config(root, { nonPageDirs: ["_skeletons"] }));
-    const graph = parseGraph(lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out);
+    const graph = parseGraph(
+      lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out
+    );
     expect(human.problems.filter((p) => p.startsWith("ORPHAN"))).toEqual([]);
     expect(graph.stats.orphans).toBe(0);
-    expect(graph.nodes.every((n) => n.reachable || n.contractExempt)).toBe(true);
+    expect(graph.nodes.every((n) => n.reachable || n.contractExempt)).toBe(
+      true
+    );
   });
 
   // CHARACTERISATION of the one place the two views legitimately differ: with no catalog the
@@ -1670,7 +1978,9 @@ describe("runDocsLint — --json", () => {
 
   test("nodes carry frontmatter, edges in BOTH directions, and the date under its own key", () => {
     const root = validWiki();
-    const graph = parseGraph(lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out);
+    const graph = parseGraph(
+      lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out
+    );
 
     const alpha = nodeBy(graph, "concepts/alpha.md");
     expect(alpha.type).toBe("concept");
@@ -1678,7 +1988,10 @@ describe("runDocsLint — --json", () => {
     expect(alpha.tags).toEqual(["core", "parsing"]);
     expect(alpha.updated).toBe(DATE);
     expect(alpha.related).toEqual(["rule/rho"]);
-    expect(alpha.linksOut.sort()).toEqual(["concepts/beta.md", "rules/parsing/rho.md"]);
+    expect(alpha.linksOut.sort()).toEqual([
+      "concepts/beta.md",
+      "rules/parsing/rho.md",
+    ]);
     expect(alpha.linksIn.sort()).toEqual(["index.md", "rules/parsing/rho.md"]);
 
     // a same-file anchor is not a self-edge
@@ -1696,7 +2009,13 @@ describe("runDocsLint — --json", () => {
   test("the date key follows `dateField`", () => {
     const root = validWiki();
     const graph = parseGraph(
-      lint(config(root, { nonPageDirs: ["_skeletons"], json: true, dateField: "timestamp" })).out,
+      lint(
+        config(root, {
+          nonPageDirs: ["_skeletons"],
+          json: true,
+          dateField: "timestamp",
+        })
+      ).out
     );
     const alpha = nodeBy(graph, "concepts/alpha.md");
     expect("timestamp" in alpha).toBe(true);
@@ -1705,9 +2024,14 @@ describe("runDocsLint — --json", () => {
 
   test("tagNeighbors are the pages sharing a tag, never the page itself", () => {
     const root = validWiki();
-    const graph = parseGraph(lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out);
+    const graph = parseGraph(
+      lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out
+    );
     const alpha = nodeBy(graph, "concepts/alpha.md");
-    expect(alpha.tagNeighbors.sort()).toEqual(["concepts/beta.md", "rules/parsing/rho.md"]);
+    expect(alpha.tagNeighbors.sort()).toEqual([
+      "concepts/beta.md",
+      "rules/parsing/rho.md",
+    ]);
     expect(alpha.tagNeighbors).not.toContain("concepts/alpha.md");
     // a page with a tag nobody shares has no neighbours
     expect(nodeBy(graph, "index.md").tagNeighbors).toEqual([]);
@@ -1715,16 +2039,24 @@ describe("runDocsLint — --json", () => {
 
   test("stats and indexes count what they say they count", () => {
     const root = validWiki();
-    const graph = parseGraph(lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out);
+    const graph = parseGraph(
+      lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out
+    );
     expect(graph.stats.pages).toBe(5); // 4 pages + SCHEMA.md, _skeletons excluded
     expect(graph.stats.linkEdges).toBe(
-      graph.nodes.reduce((n, node) => n + node.linksOut.length, 0),
+      graph.nodes.reduce((n, node) => n + node.linksOut.length, 0)
     );
     expect(graph.stats.relatedEdges).toBe(2);
     expect(graph.stats.tags).toBe(Object.keys(graph.tagIndex).length);
-    expect(graph.typeIndex.concept?.sort()).toEqual(["concepts/alpha.md", "concepts/beta.md"]);
+    expect(graph.typeIndex.concept?.sort()).toEqual([
+      "concepts/alpha.md",
+      "concepts/beta.md",
+    ]);
     expect(graph.typeIndex.rule).toEqual(["rules/parsing/rho.md"]);
-    expect(graph.tagIndex.core?.sort()).toEqual(["concepts/alpha.md", "concepts/beta.md"]);
+    expect(graph.tagIndex.core?.sort()).toEqual([
+      "concepts/alpha.md",
+      "concepts/beta.md",
+    ]);
     expect(graph.root).toBe(".");
     expect(graph.contract).toBe("SCHEMA.md");
     expect(graph.catalog).toBe("index.md");
@@ -1732,7 +2064,9 @@ describe("runDocsLint — --json", () => {
 
   test("hubs rank by inbound links and exclude the catalog itself", () => {
     const root = validWiki();
-    const graph = parseGraph(lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out);
+    const graph = parseGraph(
+      lint(config(root, { nonPageDirs: ["_skeletons"], json: true })).out
+    );
     expect(graph.hubs.map((h) => h.path)).not.toContain("index.md");
     expect(graph.hubs[0]?.path).toBe("concepts/alpha.md");
     expect(graph.hubs[0]?.linksIn).toBe(2);
@@ -1749,11 +2083,14 @@ describe("runDocsLint — nonPageDirs", () => {
     const files = {
       "index.md": page(
         { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
-        "# Catalog\n",
+        "# Catalog\n"
       ),
-      "_skeletons/tpl.md": "no frontmatter, nothing links here, [broken](./nope.md)\n",
+      "_skeletons/tpl.md":
+        "no frontmatter, nothing links here, [broken](./nope.md)\n",
     };
-    expect(lint(config(wiki(files), { nonPageDirs: ["_skeletons"] })).problems).toEqual([]);
+    expect(
+      lint(config(wiki(files), { nonPageDirs: ["_skeletons"] })).problems
+    ).toEqual([]);
     // control: without the exclusion the same tree is full of problems
     const control = lint(config(wiki(files)));
     expect(control.problems.length).toBeGreaterThan(0);
