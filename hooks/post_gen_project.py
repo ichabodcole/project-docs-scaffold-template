@@ -237,9 +237,6 @@ def install_to_current_directory():
     print("     discover the docs structure and reach for the CLI:\n")
     print(LAYER_NOTE)
     print("  6. Start documenting! 📝\n")
-    print("If this directory ALREADY had a docs/ tree from an older scaffold, the")
-    print("install aborted above — that upgrade path is a migration, not a copy.")
-    print("Run /project-docs:update-project-docs and it will find the right one.\n")
 
 
 def install_to_new_folder():

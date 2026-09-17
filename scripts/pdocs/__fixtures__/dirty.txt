@@ -23,6 +23,11 @@ MISSING status   docs/briefs/missing-fields.md
 MISSING generated   docs/briefs/missing-fields.md
 MISSING lifecycle   docs/briefs/missing-fields.md
 MISSING FILE   docs/investigations/broken-link.md: ./findings-that-do-not-exist.md
+MISSING type   docs/projects/sample/SKILL.draft.md
+MISSING title   docs/projects/sample/SKILL.draft.md
+MISSING status   docs/projects/sample/SKILL.draft.md
+MISSING generated   docs/projects/sample/SKILL.draft.md
+UNKNOWN FIELD  docs/projects/sample/SKILL.draft.md: "name"  (not a project-docs document? add it to `lint.exclude` in .project-docs.json)
 BAD LIFECYCLE  docs/projects/sample/plan.md: "shipped"  (plan: draft | active | completed | abandoned)
 BAD GENERATED  docs/projects/sample/test-plan.md: 2026-01-01  (expected `{ by: <actor>, at: YYYY-MM-DD }`)
 NO FRONTMATTER docs/reports/no-frontmatter.md  (see docs/SCHEMA.md)
@@ -32,6 +37,7 @@ BAD SCALAR     docs/cycles/one.md: `description` contains ": " unquoted  (a real
 SCHEMA EXTRA TYPE  SCHEMA.md documents `ghost`, which the lint knows nothing about
 TEMPLATE MISSING  docs/cycles/TEMPLATE.md  (the `cycle` registry row declares it; nothing is there)
 
-15 problem(s).
+20 problem(s).
+0 tracked page(s) outside docs/, links only  (`lint.exclude` takes one out)
 
-docs-lint: 24 problem(s)
+docs-lint: 29 problem(s)

@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { childEnv } from "./pdocs/test-env.ts";
 
 const HOOK = join(import.meta.dir, "..", "hooks", "post_gen_project.py");
 
@@ -42,7 +43,7 @@ function install(parent: string): { code: number; out: string } {
       "m.install_to_current_directory()",
     ].join("\n")
   );
-  const r = spawnSync("python3", [driver], { cwd: slug, encoding: "utf8" });
+  const r = spawnSync("python3", [driver], { cwd: slug, encoding: "utf8", env: childEnv() });
   return { code: r.status ?? -1, out: `${r.stdout}${r.stderr}` };
 }
 
@@ -67,6 +68,15 @@ describe("the hook installs the layer into an existing project", () => {
     expect(existsSync(join(parent, "scripts", "pdocs", "cli.ts"))).toBe(true);
     expect(existsSync(join(parent, "docs", "README.md"))).toBe(true);
     expect(existsSync(slug)).toBe(false);
+  });
+
+  // The success message used to end "the install aborted above" — after an
+  // install that had not. An abort says so itself, and says it once.
+  test("a successful install says nothing about an abort", () => {
+    const { parent } = fixture();
+    const { out } = install(parent);
+    expect(out).toContain("Documentation structure installed");
+    expect(out).not.toContain("abort");
   });
 });
 
@@ -142,6 +152,9 @@ describe("a collision aborts and leaves the tree as it was found", () => {
     const { out } = install(parent);
 
     expect(out).toContain("Installation aborted");
+    // The upgrade pointer lives HERE, on the path where it is true.
+    expect(out).toContain("/project-docs:update-project-docs");
+    expect(out).not.toContain("Documentation structure installed");
     expect(Bun.file(join(parent, "docs", "mine.md")).size).toBeGreaterThan(0);
     expect(existsSync(join(slug, "scripts", "pdocs", "cli.ts"))).toBe(true);
     expect(existsSync(join(parent, "scripts"))).toBe(false);

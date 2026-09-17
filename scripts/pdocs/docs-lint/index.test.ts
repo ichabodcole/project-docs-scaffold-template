@@ -31,7 +31,14 @@
 // CORRECT and are expected to fail against today's implementation. See the comment on each.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
@@ -385,6 +392,86 @@ describe("checkLinks", () => {
   test("outbound edges name the markdown targets", () => {
     const res = checkLinks(join(dir, "a.md"), "[x](./target.md) [y](https://example.com)");
     expect(res.outbound).toEqual([join(dir, "target.md")]);
+  });
+});
+
+describe("checkLinks — a link may leave the tree, not the repository", () => {
+  // Real files on a real disk, because the rule is about exactly that: the
+  // target EXISTS, here, and the link is broken anyway.
+  //
+  //   <base>/repo/docs/a.md      the page
+  //   <base>/repo/src/check.ts   outside `docs/`, inside the repository
+  //   <base>/sibling/notes.md    a sibling checkout: on this machine, in no clone
+  const base = mkdtempSync(join(tmpdir(), "links-repo-"));
+  const repo = join(base, "repo");
+  const page = join(repo, "docs/a.md");
+  mkdirSync(join(repo, "docs"), { recursive: true });
+  mkdirSync(join(repo, "src"), { recursive: true });
+  mkdirSync(join(base, "sibling"), { recursive: true });
+  writeFileSync(join(repo, "src/check.ts"), "export {};\n");
+  writeFileSync(join(base, "sibling/notes.md"), "# Notes\n\n## Here\n");
+  afterAll(() => rmSync(base, { recursive: true, force: true }));
+
+  const check = (body: string, repoRoot?: string) =>
+    checkLinks(page, body, { repoRoot }).problems;
+
+  test("a relative link into a sibling checkout is MISSING FILE, though the file is there", () => {
+    expect(check("[n](../../sibling/notes.md)", repo)).toEqual([
+      { kind: "MISSING FILE", target: "../../sibling/notes.md", outside: true },
+    ]);
+  });
+
+  test("so is an absolute path, and its anchor is never reached", () => {
+    const target = `${join(base, "sibling/notes.md")}#nope`;
+    expect(check(`[n](${target})`, repo)).toEqual([
+      { kind: "MISSING FILE", target, outside: true },
+    ]);
+  });
+
+  test("a link that leaves docs/ and stays in the repository resolves", () => {
+    expect(check("[c](../src/check.ts)", repo)).toEqual([]);
+  });
+
+  // Out and back in: it resolves INSIDE the repository, through the folder
+  // name this checkout happens to have. CI's checkout is named something else.
+  test("a link that climbs above the repository and comes back in is outside too", () => {
+    expect(check("[c](../../repo/src/check.ts)", repo)).toEqual([
+      { kind: "MISSING FILE", target: "../../repo/src/check.ts", outside: true },
+    ]);
+    // …while going up and down INSIDE it is an ordinary link.
+    expect(check("[c](../docs/../src/check.ts)", repo)).toEqual([]);
+  });
+
+  test("a target that is simply absent is not called `outside`", () => {
+    expect(check("[n](../../sibling/gone.md)", repo)).toEqual([
+      { kind: "MISSING FILE", target: "../../sibling/gone.md" },
+    ]);
+  });
+
+  test("without a repoRoot the check is existence only, as it was", () => {
+    expect(check("[n](../../sibling/notes.md#here)")).toEqual([]);
+  });
+
+  test("a folder whose name merely starts like the repository's is outside it", () => {
+    mkdirSync(join(base, "repo-old"), { recursive: true });
+    writeFileSync(join(base, "repo-old/x.md"), "# X\n");
+    expect(check("[x](../../repo-old/x.md)", repo)).toEqual([
+      { kind: "MISSING FILE", target: "../../repo-old/x.md", outside: true },
+    ]);
+  });
+
+  // `tmpdir()` on macOS is `/var/…`, a symlink to `/private/var/…`, so one
+  // repository has two spellings. An absolute link written in the other one is
+  // spelled outside and is really inside; only resolving both can tell.
+  test("the same repository spelled through a symlink is not outside itself", () => {
+    const alias = join(base, "alias");
+    symlinkSync(repo, alias);
+    expect(check(`[c](${join(alias, "src/check.ts")})`, repo)).toEqual([]);
+    expect(check(`[c](${join(realpathSync(repo), "src/check.ts")})`, alias)).toEqual([]);
+    // …and the sibling is outside under either spelling.
+    expect(check("[n](../../sibling/notes.md)", alias)).toEqual([
+      { kind: "MISSING FILE", target: "../../sibling/notes.md", outside: true },
+    ]);
   });
 });
 

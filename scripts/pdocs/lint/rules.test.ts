@@ -31,6 +31,7 @@ import {
   hookChecks,
   isTemplate,
   libraryFieldChecks,
+  reportDocuments,
   reportLines,
   schemaLifecycles,
   schemaTableChecks,
@@ -1000,60 +1001,62 @@ describe("what the modes tell you", () => {
   });
 });
 
+// ─── The real entry point, against a tree built here ───────────────────────────
+//
+// The point of `--root` is what the PROCESS does — so these drive the real
+// entry point and read its stdout, rather than reassembling the tiers inside
+// the test and proving nothing about the thing anybody actually runs.
+//
+// `--format text` on every invocation that reads prose: a spawned child gets
+// a pipe, and `resolveFormat` reads a non-TTY stdout as machine output.
+const ENTRY = join(REPO_ROOT, "scripts/pdocs/cli.ts");
+
+const run = (args: string[], cwd = REPO_ROOT) => {
+  const p = Bun.spawnSync(["bun", ENTRY, ...args], { cwd, env: childEnv() });
+  return {
+    code: p.exitCode,
+    stdout: p.stdout.toString(),
+    stderr: p.stderr.toString(),
+  };
+};
+
+/**
+ * The minimum tree the lint will run against: the real contract, a catalog,
+ * and the templates the registry declares.
+ *
+ * The templates are here and not in `fixture` because only these tests spawn
+ * the whole gate — `templateProblems` is part of `collect`, not of a tier, so
+ * a test calling `thinTier` directly never sees it. They are derived from the
+ * registry rather than listed, and inert on every tier: `isTemplate` skips
+ * them by name.
+ */
+const templateStubs = (): Record<string, string> => {
+  const out: Record<string, string> = {};
+  for (const row of buildRegistry(DEFAULT_CONFIG)) {
+    if (row.template === null || row.externalTemplate) continue;
+    for (const rel of [row.template].flat())
+      out[rel] = "# A Template\n\nA stub. Every tier skips it by name.\n";
+  }
+  return out;
+};
+
+const minimal = (extra: Record<string, string> = {}) =>
+  fixture({
+    ...templateStubs(),
+    "docs/SCHEMA.md": SCHEMA,
+    "docs/index.md":
+      fm({
+        type: "index",
+        title: "Index",
+        description: "The catalog.",
+        status: "stable",
+        tags: "[index]",
+        generated: GENERATED,
+      }) + "# Index\n",
+    ...extra,
+  }).repoRoot;
+
 describe("--root", () => {
-  // The point of `--root` is what the PROCESS does — so these drive the real
-  // entry point and read its stdout, rather than reassembling the tiers inside
-  // the test and proving nothing about the thing anybody actually runs.
-  //
-  // `--format text` on every invocation that reads prose: a spawned child gets
-  // a pipe, and `resolveFormat` reads a non-TTY stdout as machine output.
-  const ENTRY = join(REPO_ROOT, "scripts/pdocs/cli.ts");
-
-  const run = (args: string[], cwd = REPO_ROOT) => {
-    const p = Bun.spawnSync(["bun", ENTRY, ...args], { cwd, env: childEnv() });
-    return {
-      code: p.exitCode,
-      stdout: p.stdout.toString(),
-      stderr: p.stderr.toString(),
-    };
-  };
-
-  /**
-   * The minimum tree the lint will run against: the real contract, a catalog,
-   * and the templates the registry declares.
-   *
-   * The templates are here and not in `fixture` because only these tests spawn
-   * the whole gate — `templateProblems` is part of `collect`, not of a tier, so
-   * a test calling `thinTier` directly never sees it. They are derived from the
-   * registry rather than listed, and inert on every tier: `isTemplate` skips
-   * them by name.
-   */
-  const templateStubs = (): Record<string, string> => {
-    const out: Record<string, string> = {};
-    for (const row of buildRegistry(DEFAULT_CONFIG)) {
-      if (row.template === null || row.externalTemplate) continue;
-      for (const rel of [row.template].flat())
-        out[rel] = "# A Template\n\nA stub. Every tier skips it by name.\n";
-    }
-    return out;
-  };
-
-  const minimal = (extra: Record<string, string> = {}) =>
-    fixture({
-      ...templateStubs(),
-      "docs/SCHEMA.md": SCHEMA,
-      "docs/index.md":
-        fm({
-          type: "index",
-          title: "Index",
-          description: "The catalog.",
-          status: "stable",
-          tags: "[index]",
-          generated: GENERATED,
-        }) + "# Index\n",
-      ...extra,
-    }).repoRoot;
-
   test("lints the tree it is given, not this repository", () => {
     const root = minimal();
     const { code, stdout } = run(["check", "--format", "text", "--root", root]);
@@ -1141,6 +1144,240 @@ describe("--root", () => {
     const { stdout } = run(["check", "--format", "text"]);
     expect(stdout).toContain("library (graph tier)");
     expect(stdout).not.toContain("across 2 files");
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+
+describe("the gate — a link may leave docs/, not the repository", () => {
+  const page = (body: string) =>
+    fm({
+      type: "investigation",
+      title: "Co-presence",
+      description: "An investigation that cites other checkouts.",
+      status: "stable",
+      lifecycle: "concluded",
+      generated: GENERATED,
+    }) + `# Co-presence\n\n${body}\n`;
+
+  test("a sibling checkout that EXISTS fails locally, in both tiers; a file elsewhere in the repository passes", () => {
+    const root = minimal({
+      "src/checker.ts": "export {};\n",
+      "docs/investigations/2026-07-14-co-presence.md": page(
+        "[inside](../../src/checker.ts)"
+      ),
+    });
+    // The sibling is made AFTER the repository root is known, beside it, and
+    // is really on disk — the state in which an existence check passes.
+    const sibling = `${root}-sibling`;
+    roots.push(sibling);
+    mkdirSync(sibling, { recursive: true });
+    writeFileSync(join(sibling, "proposal.md"), "# Proposal\n");
+    const rel = `../../../${basename(sibling)}/proposal.md`;
+    const abs = join(sibling, "proposal.md");
+    writeFileSync(
+      join(root, "docs/investigations/2026-07-14-co-presence.md"),
+      page(`[inside](../../src/checker.ts) [rel](${rel}) [abs](${abs})`)
+    );
+    // The library tier goes through `collectDocsLint`, a different call site.
+    writeFileSync(
+      join(root, "docs/index.md"),
+      readFileSync(join(root, "docs/index.md"), "utf8") + `\n[abs](${abs})\n`
+    );
+
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(9);
+    const hint =
+      "(leaves the repository — it resolves on this machine and in no other checkout)";
+    expect(stdout).toContain(
+      `MISSING FILE   docs/investigations/2026-07-14-co-presence.md: ${rel}  ${hint}`
+    );
+    expect(stdout).toContain(
+      `MISSING FILE   docs/investigations/2026-07-14-co-presence.md: ${abs}  ${hint}`
+    );
+    expect(stdout).toContain(`MISSING FILE   index.md: ${abs}  ${hint}`);
+    expect(stdout).not.toContain("src/checker.ts");
+    expect(stdout).toContain("docs-lint: 3 problem(s)");
+  });
+});
+
+describe("the gate — the corpus outside the docs root", () => {
+  const git = (root: string, ...args: string[]) =>
+    Bun.spawnSync(["git", ...args], { cwd: root, env: childEnv() });
+
+  const tracked = (extra: Record<string, string>, config?: Record<string, unknown>) => {
+    const root = minimal(extra);
+    if (config)
+      writeFileSync(
+        join(root, ".project-docs.json"),
+        JSON.stringify({ docsRoot: "docs", version: "1.0.0", lint: { adopting: false, ...config } })
+      );
+    git(root, "init", "-q");
+    git(root, "add", "-A");
+    return root;
+  };
+
+  test("the summary names it with a count, and the envelope carries the number", () => {
+    const root = tracked({
+      "README.md": "# Readme\n",
+      "DEV_KICKOFF.md": "# Kickoff\n\n[plan](docs/projects/gone/plan.md)\n",
+    });
+    const text = run(["check", "--format", "text", "--root", root]);
+    expect(text.stdout).toContain("MISSING FILE  DEV_KICKOFF.md: docs/projects/gone/plan.md");
+    expect(text.stdout).toContain(
+      "\n2 tracked page(s) outside docs/, links only  (`lint.exclude` takes one out)\n"
+    );
+    const json = JSON.parse(run(["check", "--format", "json", "--root", root]).stdout);
+    expect(json.data.outside).toBe(2);
+  });
+
+  // The count is of what is READ. `linkProblemsFor` skips the docs root and the
+  // generated CHANGELOG by constants it does not export, and `collect` restates
+  // them to count by — so both halves are asserted on one tree: the broken link
+  // in CHANGELOG.md is not reported, AND the file is not counted.
+  test("it counts what is read: not the docs root, not CHANGELOG.md, not a template", () => {
+    const root = tracked({
+      "README.md": "# Readme\n",
+      "CHANGELOG.md": "# Changelog\n\n[gone](./no-such-file.md)\n",
+    });
+    const json = JSON.parse(run(["check", "--format", "json", "--root", root]).stdout);
+    expect(json.data.problems).toEqual([]);
+    expect(json.data.outside).toBe(1);
+  });
+
+  test("`lint.exclude` takes a file out of it, problems and count both", () => {
+    const files = {
+      "README.md": "# Readme\n",
+      "DEV_KICKOFF.md": "# Kickoff\n\n[plan](docs/projects/gone/plan.md)\n",
+    };
+    const root = tracked(files, { exclude: ["DEV_KICKOFF.md"] });
+    const json = JSON.parse(run(["check", "--format", "json", "--root", root]).stdout);
+    expect(json.data.clean).toBe(true);
+    expect(json.data.outside).toBe(1);
+  });
+
+  test("the line names the project's own docs root", () => {
+    const root = mkdtempSync(join(tmpdir(), "docs-lint-"));
+    roots.push(root);
+    const moved = minimal();
+    // Same minimal tree, under `documentation/`.
+    Bun.spawnSync(["cp", "-R", join(moved, "docs"), join(root, "documentation")], {
+      env: childEnv(),
+    });
+    writeFileSync(
+      join(root, ".project-docs.json"),
+      JSON.stringify({ docsRoot: "documentation", version: "1.0.0", lint: { adopting: false } })
+    );
+    const { stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(stdout).toContain("0 tracked page(s) outside documentation/, links only");
+  });
+});
+
+describe("UNKNOWN FIELD points at lint.exclude only for a file that is not ours", () => {
+  const hint = "add it to `lint.exclude` in .project-docs.json";
+
+  test("another tool's file — no `type`, its own key — gets the pointer", () => {
+    const ctx = fixture({
+      "docs/projects/scriptorium/SKILL.draft.md":
+        "---\nname: scriptorium\ndescription: A skill draft.\n---\n\n# Draft\n",
+    });
+    const row = thinTier(ctx).find((p) => p.startsWith("UNKNOWN FIELD"));
+    expect(row).toBe(
+      'UNKNOWN FIELD  docs/projects/scriptorium/SKILL.draft.md: "name"  ' +
+        `(not a project-docs document? ${hint})`
+    );
+    // …and excluding it, as the row says, is what clears it.
+    const excluded = fixture(
+      {
+        "docs/projects/scriptorium/SKILL.draft.md":
+          "---\nname: scriptorium\ndescription: A skill draft.\n---\n\n# Draft\n",
+      },
+      { exclude: ["docs/projects/scriptorium/SKILL.draft.md"] }
+    );
+    expect(thinTier(excluded)).toEqual([]);
+  });
+
+  test("a document of ours with a stray key is told to fix the key, not to leave the gate", () => {
+    const ctx = fixture({
+      "docs/backlog/2026-09-03-a.md":
+        fm({
+          type: "backlog",
+          title: "A",
+          description: "A thing.",
+          status: "draft",
+          lifecycle: "open",
+          owner: "someone",
+          generated: GENERATED,
+        }) + "# A\n",
+    });
+    expect(thinTier(ctx)).toEqual(['UNKNOWN FIELD  docs/backlog/2026-09-03-a.md: "owner"']);
+  });
+
+  // The hint is appended to a row other code parses by prefix. `report` must
+  // still read the file's MISSING rows and must not read the hint as a field.
+  test("the report still parses the rows beside it", () => {
+    const ctx = fixture({
+      "docs/projects/scriptorium/SKILL.draft.md":
+        "---\nname: scriptorium\ndescription: A skill draft.\n---\n\n# Draft\n",
+    });
+    expect(reportDocuments(ctx)).toEqual([
+      {
+        path: "docs/projects/scriptorium/SKILL.draft.md",
+        tier: "workbench",
+        missing: ["type", "title", "status", "generated"],
+      },
+    ]);
+  });
+});
+
+describe("reportDocuments — the worklist as records", () => {
+  const bare = (type: string) => `---\ntype: ${type}\ntitle: T\n---\n\n# T\n`;
+
+  test("one record per document, library and workbench told apart, every path named", () => {
+    const files: Record<string, string> = {
+      "docs/memories/a-memory.md": bare("memory"),
+    };
+    // Twelve in one folder: the text names ten and says "… and 2 more".
+    for (let i = 1; i <= 12; i++)
+      files[`docs/briefs/2026-09-${String(i).padStart(2, "0")}-b.md`] = bare("brief");
+    const ctx = fixture(files);
+
+    const docs = reportDocuments(ctx);
+    expect(docs.length).toBe(13);
+    expect(new Set(docs.map((d) => d.path)).size).toBe(13);
+    expect(reportLines(ctx).join("\n")).toContain("… and 2 more");
+
+    expect(docs.find((d) => d.path === "docs/memories/a-memory.md")).toEqual({
+      path: "docs/memories/a-memory.md",
+      tier: "library",
+      // A library page owes `tags`; a brief does not, and owes `lifecycle`.
+      missing: ["description", "status", "generated", "tags"],
+    });
+    expect(docs.find((d) => d.path === "docs/briefs/2026-09-01-b.md")).toEqual({
+      path: "docs/briefs/2026-09-01-b.md",
+      tier: "workbench",
+      missing: ["description", "status", "generated", "lifecycle"],
+    });
+  });
+
+  test("a slide deck is in neither rendering's worklist", () => {
+    const ctx = fixture({
+      "docs/projects/x/artifacts/deck.md": "---\nmarp: true\ntheme: default\n---\n\n# Deck\n",
+    });
+    expect(reportDocuments(ctx)).toEqual([]);
+    expect(reportLines(ctx).join("\n")).toContain("look like slide decks");
+  });
+
+  test("the records and the headline count the same things", () => {
+    const ctx = fixture({
+      "docs/memories/a-memory.md": bare("memory"),
+      "docs/briefs/2026-09-01-b.md": bare("brief"),
+    });
+    const docs = reportDocuments(ctx);
+    const fields = docs.reduce((n, d) => n + d.missing.length, 0);
+    expect(reportLines(ctx)[0]).toStartWith(
+      `${fields} missing field(s) across ${docs.length} of `
+    );
   });
 });
 
