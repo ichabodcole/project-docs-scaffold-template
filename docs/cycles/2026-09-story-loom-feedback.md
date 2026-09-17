@@ -55,3 +55,4 @@ _Written at close._
 - feature/v2.9-to-v2.10-migration (landed 2026-09-14)
 - fix/v2.10-tests-derive-owned-diff (landed 2026-09-14)
 - fix/v2.10-tests-ignore-release-markers (landed 2026-09-14)
+- feature/spellbook-feedback-round-1 (open)
