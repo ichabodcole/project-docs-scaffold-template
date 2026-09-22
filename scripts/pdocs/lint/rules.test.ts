@@ -1265,6 +1265,67 @@ describe("the gate — the repository is git's, not the config's", () => {
     expect(stdout).not.toContain("CONTRIBUTING.md");
     expect(stdout).toContain("../../../../../outside.md  (not portable");
   });
+
+  // The same monorepo, gated by a real pre-commit hook in a LINKED worktree.
+  // Git exports `GIT_DIR` to that hook, and a git that is told its directory
+  // but not its work tree takes the working directory as the top level — so
+  // from `packages/app` both `ls-files` and `rev-parse --show-toplevel` answer
+  // about the wrong root. The hook's findings, not an ENOENT, decide the exit.
+  test("run from the package directory by a commit hook in a linked worktree", () => {
+    const base = mkdtempSync(join(tmpdir(), "pdocs-hook-"));
+    roots.push(base);
+    const main = join(base, "main");
+    const app = join(main, "packages/app");
+    const files = minimalFiles({
+      "docs/investigations/2026-07-14-mono.md":
+        fm({
+          type: "investigation",
+          title: "Mono",
+          description: "An investigation that cites the monorepo root.",
+          status: "stable",
+          lifecycle: "concluded",
+          generated: GENERATED,
+        }) + "# Mono\n\n[c](../../../../CONTRIBUTING.md)\n",
+    });
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(app, rel)), { recursive: true });
+      writeFileSync(join(app, rel), body);
+    }
+    writeFileSync(
+      join(app, ".project-docs.json"),
+      JSON.stringify({
+        docsRoot: "docs",
+        version: "1.0.0",
+        lint: { adopting: false },
+      })
+    );
+    writeFileSync(join(main, "CONTRIBUTING.md"), "# Contributing\n");
+    const git = (cwd: string, ...args: string[]) =>
+      Bun.spawnSync(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args],
+        { cwd, env: childEnv() }
+      );
+    git(main, "init", "-q");
+    git(main, "add", "-A");
+    git(main, "commit", "-q", "--no-verify", "-m", "init");
+    const wt = join(base, "wt");
+    git(main, "worktree", "add", "-q", wt);
+
+    const out = join(base, "hook");
+    mkdirSync(join(main, ".git/hooks"), { recursive: true });
+    writeFileSync(
+      join(main, ".git/hooks/pre-commit"),
+      `#!/bin/sh\ncd packages/app && bun "${ENTRY}" check --format text --root . > "${out}.stdout" 2> "${out}.stderr"\necho $? > "${out}.code"\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    writeFileSync(join(wt, "CONTRIBUTING.md"), "# Contributing, edited\n");
+    git(wt, "commit", "-q", "-am", "edit");
+
+    const stderr = readFileSync(`${out}.stderr`, "utf8");
+    expect(stderr).not.toContain("ENOENT");
+    expect(readFileSync(`${out}.stdout`, "utf8")).toContain("docs-lint: clean");
+    expect(readFileSync(`${out}.code`, "utf8").trim()).toBe("0");
+  });
 });
 
 describe("the gate — the corpus outside the docs root", () => {
@@ -1373,6 +1434,7 @@ describe("the gate — the corpus outside the docs root", () => {
     );
     expect(stdout.split("./gone.md").length - 1).toBe(1);
   });
+
 });
 
 describe("UNKNOWN FIELD points at lint.exclude only for a file that is not ours", () => {

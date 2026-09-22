@@ -73,6 +73,46 @@ export function context(repoRoot: string): Ctx {
   return { repoRoot, docsRoot: join(repoRoot, config.docsRoot), config };
 }
 
+/**
+ * `git rev-parse --local-env-vars`: the variables that tell git which ONE
+ * repository it is in. Written out rather than asked for, because asking is a
+ * spawn that would itself need this list.
+ */
+export const GIT_LOCAL_ENV = [
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR",
+  "GIT_CONFIG",
+  "GIT_CONFIG_COUNT",
+  "GIT_CONFIG_PARAMETERS",
+  "GIT_DIR",
+  "GIT_GRAFT_FILE",
+  "GIT_IMPLICIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_NO_REPLACE_OBJECTS",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_PREFIX",
+  "GIT_REPLACE_REF_BASE",
+  "GIT_SHALLOW_FILE",
+  "GIT_WORK_TREE",
+] as const;
+
+/**
+ * The environment every git spawn in the lint is given: this process's, minus
+ * `GIT_LOCAL_ENV`, so git finds the repository from the `cwd` it is handed.
+ *
+ * A commit hook inherits `GIT_DIR` — from a linked worktree, always — and a git
+ * told its directory but not its work tree takes the working directory as the
+ * top level. From `packages/app/` in a monorepo, `ls-files` then answers with
+ * paths relative to the wrong root and the lint reads files that do not exist.
+ * Passed explicitly because a Bun spawn with no `env` inherits the environment
+ * the process STARTED with, whatever has since been deleted from `process.env`.
+ */
+export function gitEnv(): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = { ...process.env };
+  for (const name of GIT_LOCAL_ENV) delete env[name];
+  return env;
+}
+
 const boundaries = new Map<string, string>();
 
 /**
@@ -92,6 +132,7 @@ export function linkBoundary(ctx: Ctx): string {
   let boundary = ctx.repoRoot;
   const out = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
     cwd: ctx.repoRoot,
+    env: gitEnv(),
   });
   const top = out.success ? new TextDecoder().decode(out.stdout).trim() : "";
   if (top && existsSync(top)) {

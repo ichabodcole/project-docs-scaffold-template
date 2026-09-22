@@ -20,6 +20,7 @@ import {
 import {
   type Ctx,
   excluder,
+  gitEnv,
   frontmatterSyntaxProblems,
   graphTier,
   libraryFieldChecks,
@@ -93,7 +94,7 @@ export function collect(ctx: Ctx): LintReport {
   // shipped plugin pages, where a link to a moved playbook is a broken
   // instruction in someone else's repository. `lint.exclude` takes a file out.
   const excluded = excluder(ctx);
-  const tracked = trackedMarkdown(ctx.repoRoot).filter(
+  const tracked = trackedMarkdown(ctx.repoRoot, gitEnv()).filter(
     (p) => !isTpl(p) && !excluded(p) && !p.startsWith(`${ctx.config.docsRoot}/`)
   );
 

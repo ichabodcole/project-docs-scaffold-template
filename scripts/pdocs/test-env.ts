@@ -44,39 +44,26 @@
 //
 // So a child gets none of them. The list is `git rev-parse --local-env-vars` —
 // git's own statement of which variables describe ONE repository and must not
-// cross into another — written out rather than asked for, because asking is a
-// spawn that would itself need this file.
+// cross into another — and it lives in `lint/rules.ts`, because the lint's own
+// git spawns strip the same variables (`gitEnv`): a consumer's commit hook
+// hands them to `pdocs check` exactly as this repository's hands them to tests.
 //
-// WHAT THIS CANNOT REACH: code a test calls IN-PROCESS that spawns git itself.
-// `collect()` runs `trackedMarkdown()`, and the v2.6 codemod's `main` runs
-// `git status`, each with no `env` of its own — and a Bun spawn with no `env`
+// WHAT THIS CANNOT REACH: code a test calls IN-PROCESS that spawns git itself
+// with no `env` of its own — the v2.6 codemod's `main` runs `git status` that
+// way (the lint no longer does; see `gitEnv`) — and a Bun spawn with no `env`
 // inherits the environment the process STARTED with, so deleting the variables
 // from `process.env` first changes nothing (`test-env.test.ts` holds that
 // fact). A test whose outcome depends on what git says about a temp repository
 // therefore runs that code in a CHILD, with `childEnv()`: `pdocs check` for the
 // lint's verdict, a `bun -e` driver for the codemod. It does not call it here.
 
+import { GIT_LOCAL_ENV } from "./lint/rules.ts";
+
 /** The zone the TEST process is running in, whatever put it there. */
 export const CHILD_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /** `git rev-parse --local-env-vars`: what a hook exports about ITS repository. */
-export const GIT_LOCAL_ENV = [
-  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-  "GIT_COMMON_DIR",
-  "GIT_CONFIG",
-  "GIT_CONFIG_COUNT",
-  "GIT_CONFIG_PARAMETERS",
-  "GIT_DIR",
-  "GIT_GRAFT_FILE",
-  "GIT_IMPLICIT_WORK_TREE",
-  "GIT_INDEX_FILE",
-  "GIT_NO_REPLACE_OBJECTS",
-  "GIT_OBJECT_DIRECTORY",
-  "GIT_PREFIX",
-  "GIT_REPLACE_REF_BASE",
-  "GIT_SHALLOW_FILE",
-  "GIT_WORK_TREE",
-] as const;
+export { GIT_LOCAL_ENV };
 
 /**
  * The environment for a spawned child: the test's own, plus the test process's
