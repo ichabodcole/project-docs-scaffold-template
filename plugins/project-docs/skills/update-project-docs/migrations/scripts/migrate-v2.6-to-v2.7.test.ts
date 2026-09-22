@@ -26,7 +26,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { childEnv } from "../../../../../../scripts/pdocs/test-env.ts";
-import { DEFAULT_CONFIG } from "../../../../../../scripts/pdocs/docs-lint/config.ts";
+import { DEFAULT_CONFIG as LIVE_DEFAULT_CONFIG } from "../../../../../../scripts/pdocs/docs-lint/config.ts";
 import { buildRegistry } from "../../../../../../scripts/pdocs/lint/registry.ts";
 import {
   isSeeded,
@@ -71,6 +71,36 @@ import {
   titleOf,
   typeOf,
 } from "./migrate-v2.6-to-v2.7.codemod.ts";
+
+/**
+ * The layout this migration installs: the live defaults with the tier arrays
+ * as they stood at v2.7. The live defaults moved to the work-taxonomy layout
+ * in 9.0.0, and this migration carries its own copy of the old arrays
+ * (`tiersOf`), so its tests compare against those rather than the live ones.
+ */
+const DEFAULT_CONFIG = {
+  ...LIVE_DEFAULT_CONFIG,
+  lint: {
+    ...LIVE_DEFAULT_CONFIG.lint,
+    durable: [
+      "architecture",
+      "specifications",
+      "interaction-design",
+      "playbooks",
+      "lessons-learned",
+      "memories",
+    ],
+    workbench: [
+      "backlog",
+      "briefs",
+      "investigations",
+      "projects",
+      "reports",
+      "fragments",
+      "cycles",
+    ],
+  },
+};
 
 const roots: string[] = [];
 afterAll(() => {

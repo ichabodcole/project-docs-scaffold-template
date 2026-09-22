@@ -50,6 +50,32 @@ afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });
 });
 
+/**
+ * The tier arrays this repository's own `.project-docs.json` states: the legacy
+ * folders, still listed until this repository migrates. A fixture states them
+ * because the DEFAULTS are the new layout, and the rules below were written
+ * against the old one.
+ */
+const LEGACY_TIERS = {
+  durable: [
+    "architecture",
+    "specifications",
+    "interaction-design",
+    "playbooks",
+    "lessons-learned",
+    "memories",
+  ],
+  workbench: [
+    "backlog",
+    "briefs",
+    "investigations",
+    "projects",
+    "reports",
+    "fragments",
+    "cycles",
+  ],
+};
+
 /** A fixture repository: `.project-docs.json`, a docs root, and the files given. */
 function fixture(
   files: Record<string, string>,
@@ -62,7 +88,7 @@ function fixture(
     JSON.stringify({
       docsRoot: "docs",
       version: "1.0.0",
-      lint: { adopting: false, ...config },
+      lint: { adopting: false, ...LEGACY_TIERS, ...config },
     })
   );
   for (const [rel, body] of Object.entries(files)) {
@@ -1346,7 +1372,7 @@ describe("the gate — the repository is git's, not the config's", () => {
       JSON.stringify({
         docsRoot: "docs",
         version: "1.0.0",
-        lint: { adopting: false },
+        lint: { adopting: false, ...LEGACY_TIERS },
       })
     );
     writeFileSync(join(main, "CONTRIBUTING.md"), "# Contributing\n");

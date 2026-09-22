@@ -46,6 +46,28 @@ import {
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(REPO_ROOT, "scripts/pdocs/cli.ts");
 const ROWS = buildRegistry(DEFAULT_CONFIG);
+
+/**
+ * The defaults, with the legacy folders still listed in the tiers — the shape
+ * this repository's own `.project-docs.json` has until it migrates. The
+ * defaults themselves are the new layout, and these tests create legacy types.
+ */
+const FIXTURE_CONFIG = {
+  ...DEFAULT_CONFIG,
+  lint: {
+    ...DEFAULT_CONFIG.lint,
+    durable: [...DEFAULT_CONFIG.lint.durable, "lessons-learned", "memories"],
+    workbench: [
+      "backlog",
+      "briefs",
+      "investigations",
+      "projects",
+      "reports",
+      "fragments",
+      ...DEFAULT_CONFIG.lint.workbench,
+    ],
+  },
+};
 const CREATABLE = ROWS.filter((r) => r.creatable);
 
 const roots: string[] = [];
@@ -96,7 +118,7 @@ function tree(): string {
 
   writeFileSync(
     join(root, ".project-docs.json"),
-    `${JSON.stringify(DEFAULT_CONFIG, null, 2)}\n`
+    `${JSON.stringify(FIXTURE_CONFIG, null, 2)}\n`
   );
 
   mkdirSync(docs, { recursive: true });

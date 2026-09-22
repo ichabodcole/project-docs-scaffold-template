@@ -61,6 +61,30 @@ describe("loadConfig", () => {
     ).toEqual(["docs/**/*-prototype.md"]);
   });
 
+  // A second vocabulary beside `types`: the names `scope:` may take on a work
+  // item. Read by the same parser, and with the same fallback rule — a list
+  // that is not all strings is not a list of scopes.
+  test("scopes loads the declared list, defaults to empty, and falls back on a bad entry", () => {
+    expect(loadConfig(root(JSON.stringify({ lint: { scopes: ["lint", "cli"] } }))).lint.scopes).toEqual([
+      "lint",
+      "cli",
+    ]);
+    expect(loadConfig(root()).lint.scopes).toEqual([]);
+    expect(loadConfig(root(JSON.stringify({ lint: { scopes: ["lint", 7] } }))).lint.scopes).toEqual([]);
+  });
+
+  // Defaults apply only when a key is absent; this repository and the payload
+  // both state their arrays, so neither tree moves when these change.
+  test("the default layout is the work-taxonomy one", () => {
+    expect(DEFAULT_CONFIG.lint.durable).toEqual([
+      "architecture",
+      "specifications",
+      "interaction-design",
+      "playbooks",
+    ]);
+    expect(DEFAULT_CONFIG.lint.workbench).toEqual(["features", "items", "cycles"]);
+  });
+
   test("the defaults are not shared between calls", () => {
     const a = loadConfig(root());
     a.lint.durable.push("mutated");
