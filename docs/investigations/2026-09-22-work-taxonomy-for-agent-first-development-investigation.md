@@ -513,32 +513,35 @@ docs/
 
 ### Fields
 
-| Field         | On            | Required | Meaning                                                                            |
-| ------------- | ------------- | -------- | ---------------------------------------------------------------------------------- |
-| `id`          | item          | yes      | Stable identity; links and commit trailers use it                                  |
-| `title`       | all           | yes      |                                                                                    |
-| `kind`        | item          | yes      | `task` · `bug` · `chore` · `research` (the list may grow only by a real need)      |
-| `state`       | feature, item | yes      | See below                                                                          |
-| `parent`      | item          | when set | The feature it serves                                                              |
-| `scope`       | feature, item | when set | The part of the project it touches; a controlled list in `.project-docs.json`      |
-| `cycle`       | item          | when set | The cycle it is in play in                                                         |
-| `from`        | item          | when set | What spawned it — a review, another item, a feedback round                         |
-| `source`      | item          | when set | External IDs: an issue number, an Operator capture                                 |
-| `blocked_by`  | item          | when set | Items that must land first; what lets an agent ask "what can I start now"          |
-| `released_in` | feature, item | derived  | The first release containing the landing commit                                    |
-| `priority`    | item          | optional |                                                                                    |
-| `assignee`    | item          | optional | A person or an agent, one vocabulary — **conflicts with the manifesto; see below** |
+| Field         | On            | Required | Meaning                                                                       |
+| ------------- | ------------- | -------- | ----------------------------------------------------------------------------- |
+| `id`          | item          | yes      | Stable identity; links and commit trailers use it                             |
+| `title`       | all           | yes      |                                                                               |
+| `kind`        | item          | yes      | `task` · `bug` · `chore` · `research` (the list may grow only by a real need) |
+| `state`       | feature, item | yes      | See below                                                                     |
+| `parent`      | item          | when set | The feature it serves                                                         |
+| `scope`       | feature, item | when set | The part of the project it touches; a controlled list in `.project-docs.json` |
+| `cycle`       | item          | when set | The cycle it is in play in                                                    |
+| `from`        | item          | when set | What spawned it — a review, another item, a feedback round                    |
+| `source`      | item          | when set | External IDs: an issue number, an Operator capture                            |
+| `blocked_by`  | item          | when set | Items that must land first; what lets an agent ask "what can I start now"     |
+| `released_in` | feature, item | derived  | The first release containing the landing commit                               |
+| `priority`    | item          | optional |                                                                               |
+| `assignee`    | item          | optional | A person or an agent, one vocabulary — see below                              |
 
 The body of an item carries its definition of done. Out, deliberately: estimates
 and due dates.
 
-**`assignee` is an unresolved conflict, for the proposal to decide.** The
-manifesto says project-docs "records scope and state, not people or dates" and
-leaves _who_ is doing the work to a PM tool; an `assignee` field is exactly
-that. The case for it is agent-first: naming which agent (or person) holds an
-item is routing, the thing Macro and Linear built for agents, not a status
-dashboard. The proposal either amends the manifesto with that rationale or
-leaves `assignee` out until a need shows.
+**`assignee` — decided 2026-09-22: kept, optional.** The manifesto says
+project-docs "records scope and state, not people or dates", and that stays true
+in spirit: project-docs remains a tool for a single developer, because that is
+the only experience it is built from, and growing it for human teams would mean
+guessing. The use for `assignee` is agent teams — an Anthill team, where seats
+have handles and their own scope of work, and an item can be routed to the seat
+that owns it. It is optional because in the common case — one person and the
+agent they are working with — it would be boilerplate naming the same party
+every time. The proposal amends the manifesto line to say so: an assignee routes
+work to an agent or seat; project-docs still does not track people or dates.
 
 ### States
 
@@ -604,8 +607,8 @@ Every field needs a named writer or it goes stale:
   `title`, `id`, and what it knows of `parent`, `scope`, `from` and `source` at
   creation. Intake from upstream always writes `source:`; a review writes
   `from:`.
-- **Triage** (a person) accepts or drops an item and sets `priority` — and
-  `assignee`, if the proposal keeps it.
+- **Triage** (a person) accepts or drops an item and sets `priority`, and
+  `assignee` when the item is routed to a particular agent or seat.
 - **Shaping** — writing a feature's plan, or an item's definition of done — sets
   `blocked_by` and moves the item to `ready`.
 - **`init-branch`** moves an item to `active` and sets `cycle` if one is active.
@@ -621,8 +624,6 @@ Every field needs a named writer or it goes stale:
 
 ## Open Questions
 
-- `assignee` against the manifesto's "not people" rule: amend the manifesto, or
-  leave the field out until a need shows (see the Fields section).
 - `scope`: one value or a list? One maps onto a commit prefix; a list covers a
   change to shared code used by two apps. Lean: one.
 - The item ID format: sequential (`WI-020`), date-based, or a short hash — and
