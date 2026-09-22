@@ -479,11 +479,11 @@ authored).
 
 ### The entities
 
-| Entity        | What it is                                                                        | Its file                            |
-| ------------- | --------------------------------------------------------------------------------- | ----------------------------------- |
-| **Feature**   | An outcome worth shaping. The proposal _is_ the feature; it closes when delivered | `features/<slug>/proposal.md`       |
-| **Work item** | The one unit of work, small enough to hand an agent. `kind` says what sort        | `items/<id>-<slug>.md`, or a folder |
-| **Cycle**     | A scope-bound grouping with an appetite and an outcome                            | `cycles/YYYY-MM-<slug>.md`          |
+| Entity        | What it is                                                                        | Its file                       |
+| ------------- | --------------------------------------------------------------------------------- | ------------------------------ |
+| **Feature**   | An outcome worth shaping. The proposal _is_ the feature; it closes when delivered | `features/<slug>/proposal.md`  |
+| **Work item** | The one unit of work, small enough to hand an agent. `kind` says what sort        | `items/<slug>.md`, or a folder |
+| **Cycle**     | A scope-bound grouping with an appetite and an outcome                            | `cycles/YYYY-MM-<slug>.md`     |
 
 Everything else is **owned**: named documents (`plan.md`, `test-plan.md`,
 `design-resolution.md`), records (`sessions/`), and anything unnamed
@@ -501,33 +501,33 @@ docs/
       sessions/2026-09-04-phase-one.md
       artifacts/
   items/
-    WI-012-lint-descriptions.md   ← parent: feature/okf-frontmatter
-    WI-020-hook-env/
+    lint-descriptions.md          ← parent: feature/okf-frontmatter
+    hook-env/
       item.md                     ← kind: bug, cycle: 2026-09-story-loom
       plan.md                     ← granular plan the agent executed
       sessions/2026-09-22-fix.md
-    WI-021-bump-deps.md           ← kind: chore, no parent
+    bump-deps.md                  ← kind: chore, no parent
   cycles/
     2026-09-story-loom.md
 ```
 
 ### Fields
 
-| Field         | On            | Required | Meaning                                                                       |
-| ------------- | ------------- | -------- | ----------------------------------------------------------------------------- |
-| `id`          | item          | yes      | Stable identity; links and commit trailers use it                             |
-| `title`       | all           | yes      |                                                                               |
-| `kind`        | item          | yes      | `task` · `bug` · `chore` · `research` (the list may grow only by a real need) |
-| `state`       | feature, item | yes      | See below                                                                     |
-| `parent`      | item          | when set | The feature it serves                                                         |
-| `scope`       | feature, item | when set | The part of the project it touches; a controlled list in `.project-docs.json` |
-| `cycle`       | item          | when set | The cycle it is in play in                                                    |
-| `from`        | item          | when set | What spawned it — a review, another item, a feedback round                    |
-| `source`      | item          | when set | External IDs: an issue number, an Operator capture                            |
-| `blocked_by`  | item          | when set | Items that must land first; what lets an agent ask "what can I start now"     |
-| `released_in` | feature, item | derived  | The first release containing the landing commit                               |
-| `priority`    | item          | optional |                                                                               |
-| `assignee`    | item          | optional | A person or an agent, one vocabulary — see below                              |
+| Field         | On            | Required | Meaning                                                                                 |
+| ------------- | ------------- | -------- | --------------------------------------------------------------------------------------- |
+| `id`          | item          | yes      | A UUID; stable identity that fields and commit trailers use, so a rename breaks nothing |
+| `title`       | all           | yes      |                                                                                         |
+| `kind`        | item          | yes      | `task` · `bug` · `chore` · `research` (the list may grow only by a real need)           |
+| `state`       | feature, item | yes      | See below                                                                               |
+| `parent`      | item          | when set | The feature it serves                                                                   |
+| `scope`       | feature, item | when set | The part of the project it touches; a controlled list in `.project-docs.json`           |
+| `cycle`       | item          | when set | The cycle it is in play in                                                              |
+| `from`        | item          | when set | What spawned it — a review, another item, a feedback round                              |
+| `source`      | item          | when set | External IDs: an issue number, an Operator capture                                      |
+| `blocked_by`  | item          | when set | Items that must land first; what lets an agent ask "what can I start now"               |
+| `released_in` | feature, item | derived  | The first release containing the landing commit                                         |
+| `priority`    | item          | optional |                                                                                         |
+| `assignee`    | item          | optional | A person or an agent, one vocabulary — see below                                        |
 
 The body of an item carries its definition of done. Out, deliberately: estimates
 and due dates.
@@ -624,15 +624,26 @@ Every field needs a named writer or it goes stale:
 
 ## Open Questions
 
-- `scope`: one value or a list? One maps onto a commit prefix; a list covers a
-  change to shared code used by two apps. Lean: one.
-- The item ID format: sequential (`WI-020`), date-based, or a short hash — and
-  who allocates it, so two agents working in parallel cannot collide.
+Settled after the investigation concluded (2026-09-22):
+
+- **`scope` takes one value.** Start with only what is known to be needed; a
+  list can come later if real work demands it.
+- **The item ID is a UUID** in frontmatter — the standard, and the one a person
+  creating an item by hand can generate anywhere (`uuidgen`). The CLI can
+  generate a time-ordered v7; a random v4 also conforms. Filenames stay readable
+  slugs; tools may show the first eight characters as a short form, as git does
+  with hashes. NanoID was the shorter alternative, set aside because it needs a
+  library to generate.
+- **Consumers migrate through `update-project-docs`:** a new migration with a
+  script for what can be automated (folder renames, moves, frontmatter rewrites)
+  and guide steps for what needs judgment. It is dogfooded on this repository
+  first, recording what the move actually took, then run on one other consumer
+  and revised from its feedback.
+
+Still open, for the proposal:
+
 - What a UI needs beyond the fields: ordering within a state, and whether a
   generated index is worth having.
-- The consumer migration: what an existing `backlog/`, `projects/` and
-  `_archive/` become, staged with Guidance Lifecycle's retirements as one
-  release.
 
 ## Next Steps
 
