@@ -1622,6 +1622,19 @@ describe("reportDocuments — the worklist as records", () => {
     ]);
   });
 
+  // Two spaces then `(` is the shape of a problem row's `  (hint)`. A record
+  // recovered from the row by pattern loses the rest of the name — and with no
+  // `type`, the slide-deck check then opens the truncated path.
+  test("a path that looks like a row's hint arrives whole, through the CLI", () => {
+    const root = minimal({ "docs/briefs/no  (type).md": "---\ntitle: T\n---\n# T\n" });
+    const { code, stdout } = run(["report", "--format", "json", "--root", root]);
+    expect(code).toBe(0);
+    const paths = JSON.parse(stdout).data.documents.map(
+      (d: { path: string }) => d.path
+    );
+    expect(paths).toContain("docs/briefs/no  (type).md");
+  });
+
   test("a slide deck is in neither rendering's worklist", () => {
     const ctx = fixture({
       "docs/projects/x/artifacts/deck.md":

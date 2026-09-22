@@ -385,14 +385,18 @@ export function documentProblems(
   docsRoot: string,
   requireTags: boolean,
   registry: ReadonlyMap<string, RegistryRow> = defaultRegistryIndex()
-): { problems: string[]; activeCycle: boolean } {
+): { problems: string[]; activeCycle: boolean; missing: string[] } {
   const { rel, type } = file;
   const problems: string[] = [];
+  // The fields `pdocs report` lists, as data. The rows say the same thing for a
+  // person; a record recovered from a row by pattern is only as whole as the
+  // pattern, and a file name can look like any part of a row.
+  const missing: string[] = [];
 
   const m = /^---\n([\s\S]*?)\n---/.exec(raw);
   if (!m) {
     problems.push(`NO FRONTMATTER ${rel}  (see ${docsRoot}/SCHEMA.md)`);
-    return { problems, activeCycle: false };
+    return { problems, activeCycle: false, missing: ["frontmatter"] };
   }
 
   const fields = parseFrontmatter(m[1] as string);
@@ -406,10 +410,9 @@ export function documentProblems(
     ...(row?.extra ?? []),
   ]);
 
-  for (const key of required)
-    if (!fields.get(key)) problems.push(`MISSING ${key}   ${rel}`);
-  if (lifecycle && !fields.get("lifecycle"))
-    problems.push(`MISSING lifecycle   ${rel}`);
+  for (const key of required) if (!fields.get(key)) missing.push(key);
+  if (lifecycle && !fields.get("lifecycle")) missing.push("lifecycle");
+  for (const key of missing) problems.push(`MISSING ${key}   ${rel}`);
   // The key set is closed, so a file that is somebody else's format — a draft
   // of a Claude Code `SKILL.md`, with `name:` — cannot be made to pass by
   // adding fields: the key that makes it what it is stays unknown. The way out
@@ -463,7 +466,7 @@ export function documentProblems(
     if (!TAG_RE.test(tag))
       problems.push(`BAD TAG        ${rel}: "${tag}"  (kebab-case)`);
 
-  return { problems, activeCycle };
+  return { problems, activeCycle, missing };
 }
 
 /**
@@ -477,29 +480,48 @@ export function documentProblems(
  * cold-read agent found it by trying the thing the contract forbids.
  */
 export function libraryFieldChecks(ctx: Ctx): string[] {
+  return libraryFindings(ctx).problems;
+}
+
+/** A document's missing fields, as `documentProblems` found them. */
+type MissingRecord = { rel: string; missing: string[] };
+
+function libraryFindings(ctx: Ctx): {
+  problems: string[];
+  missing: MissingRecord[];
+} {
   const registry = registryIndex(ctx.config);
   const isTpl = templateTest(ctx);
   const problems: string[] = [];
+  const missing: MissingRecord[] = [];
   for (const file of libraryFiles(ctx)) {
     if (CONTRACT_BASENAMES.has(basename(file.path)) || isTpl(file.path))
       continue;
-    problems.push(
-      ...documentProblems(
-        file,
-        readFileSync(file.path, "utf8"),
-        ctx.config.docsRoot,
-        true,
-        registry
-      ).problems
+    const r = documentProblems(
+      file,
+      readFileSync(file.path, "utf8"),
+      ctx.config.docsRoot,
+      true,
+      registry
     );
+    problems.push(...r.problems);
+    missing.push({ rel: file.rel, missing: r.missing });
   }
-  return problems;
+  return { problems, missing };
 }
 
 export function thinTier(ctx: Ctx): string[] {
+  return thinFindings(ctx).problems;
+}
+
+function thinFindings(ctx: Ctx): {
+  problems: string[];
+  missing: MissingRecord[];
+} {
   const registry = registryIndex(ctx.config);
   const isTpl = templateTest(ctx);
   const problems: string[] = [];
+  const missing: MissingRecord[] = [];
   const activeCycles: string[] = [];
 
   for (const file of workbenchFiles(ctx)) {
@@ -525,6 +547,7 @@ export function thinTier(ctx: Ctx): string[] {
 
     const r = documentProblems(file, raw, ctx.config.docsRoot, false, registry);
     problems.push(...r.problems);
+    missing.push({ rel, missing: r.missing });
     if (r.activeCycle) activeCycles.push(rel);
   }
 
@@ -535,7 +558,7 @@ export function thinTier(ctx: Ctx): string[] {
       `TWO ACTIVE CYCLES  ${activeCycles.join(", ")}  (at most one cycle is \`lifecycle: active\`)`
     );
 
-  return problems;
+  return { problems, missing };
 }
 
 function generatedProblems(
@@ -881,29 +904,17 @@ function missingFields(ctx: Ctx): {
     tiers.set(rel, tier);
   };
 
-  const found: Array<[ReportTier, string[]]> = [
-    ["workbench", thinTier(ctx)],
-    ["library", libraryFieldChecks(ctx)],
+  // From the findings, never from the rows: a row is for a person, and a path
+  // recovered from one by pattern is truncated by any name that looks like the
+  // row's own punctuation. A broken link is not here at all — it is a defect
+  // to fix, not a blank to fill, and this is the one report that never fails.
+  const found: Array<[ReportTier, MissingRecord[]]> = [
+    ["workbench", thinFindings(ctx).missing],
+    ["library", libraryFindings(ctx).missing],
   ];
-  for (const [tier, problems] of found)
-    for (const problem of problems) {
-      // `MISSING FILE` and `MISSING ANCHOR` share the prefix and are not fields: a
-      // broken link is a defect to fix, not a blank to fill, and listing it here
-      // would put it in the one report that never fails.
-      // The path runs to the end of the row or to the two-space `  (hint)`,
-      // not to the first space: `has space.md` is a legal name, and a record
-      // that truncates it hands a worker a file that does not exist.
-      const m =
-        /^(?:MISSING|NO) (?!FILE|ANCHOR)(\S+)\s+(.+?)(?: {2}\(.*)?$/.exec(
-          problem
-        );
-      if (m)
-        note(
-          m[1] === "FRONTMATTER" ? "frontmatter" : (m[1] as string),
-          m[2] as string,
-          tier
-        );
-    }
+  for (const [tier, records] of found)
+    for (const { rel, missing: fields } of records)
+      for (const field of fields) note(field, rel, tier);
 
   // A slide deck reached this list as a bare `type` row, indistinguishable from
   // a document that wants a `type` written — and an agent working the list
