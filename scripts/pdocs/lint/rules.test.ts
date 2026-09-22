@@ -15,6 +15,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -1266,6 +1267,55 @@ describe("the gate — the repository is git's, not the config's", () => {
     expect(stdout).toContain("../../../../../outside.md  (not portable");
   });
 
+  // Git answers with the real path; the config directory may be reached
+  // through a symlink (`/tmp` on macOS, here made explicit so Linux sees it
+  // too). The climb check compares the boundary with the linking page's own
+  // directory, so a boundary in git's spelling contains nothing, and a link
+  // that climbs above the repository and back in through the checkout's own
+  // folder name — resolvable on this machine only — is waved through.
+  test("the boundary is spelled as the config directory is, symlink or not", () => {
+    const base = mkdtempSync(join(tmpdir(), "pdocs-spell-"));
+    roots.push(base);
+    const real = join(base, "real");
+    const app = join(real, "packages/app");
+    const files = minimalFiles({
+      "docs/investigations/2026-07-14-mono.md":
+        fm({
+          type: "investigation",
+          title: "Mono",
+          description: "An investigation that climbs out and back in.",
+          status: "stable",
+          lifecycle: "concluded",
+          generated: GENERATED,
+        }) + "# Mono\n\n[c](../../../../../real/CONTRIBUTING.md)\n",
+    });
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(app, rel)), { recursive: true });
+      writeFileSync(join(app, rel), body);
+    }
+    writeFileSync(
+      join(app, ".project-docs.json"),
+      JSON.stringify({
+        docsRoot: "docs",
+        version: "1.0.0",
+        lint: { adopting: false },
+      })
+    );
+    writeFileSync(join(real, "CONTRIBUTING.md"), "# Contributing\n");
+    Bun.spawnSync(["git", "init", "-q"], { cwd: real, env: childEnv() });
+    const alias = join(base, "alias");
+    symlinkSync(real, alias);
+
+    const { stdout } = run([
+      "check",
+      "--format",
+      "text",
+      "--root",
+      join(alias, "packages/app"),
+    ]);
+    expect(stdout).toContain("../../../../../real/CONTRIBUTING.md  (not portable");
+  });
+
   // The same monorepo, gated by a real pre-commit hook in a LINKED worktree.
   // Git exports `GIT_DIR` to that hook, and a git that is told its directory
   // but not its work tree takes the working directory as the top level — so
@@ -1435,6 +1485,34 @@ describe("the gate — the corpus outside the docs root", () => {
     expect(stdout.split("./gone.md").length - 1).toBe(1);
   });
 
+  // The ported link check skips a literal `docs/` whatever the docs root is
+  // called, so under `documentation/` a tracked `docs/` folder is read by
+  // nobody — and the count, which is of what is READ, must not include it.
+  test("under another docs root, a tracked docs/ folder is not counted", () => {
+    const root = mkdtempSync(join(tmpdir(), "docs-lint-"));
+    roots.push(root);
+    Bun.spawnSync(
+      ["cp", "-R", join(minimal(), "docs"), join(root, "documentation")],
+      { env: childEnv() }
+    );
+    writeFileSync(
+      join(root, ".project-docs.json"),
+      JSON.stringify({
+        docsRoot: "documentation",
+        version: "1.0.0",
+        lint: { adopting: false },
+      })
+    );
+    writeFileSync(join(root, "README.md"), "# Readme\n");
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "docs/stray.md"), "# Stray\n");
+    git(root, "init", "-q");
+    git(root, "add", "-A");
+    const json = JSON.parse(
+      run(["check", "--format", "json", "--root", root]).stdout
+    );
+    expect(json.data.outside).toBe(1);
+  });
 });
 
 describe("UNKNOWN FIELD points at lint.exclude only for a file that is not ours", () => {
