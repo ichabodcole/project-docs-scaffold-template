@@ -640,6 +640,22 @@ Settled after the investigation concluded (2026-09-22):
   first, recording what the move actually took, then run on one other consumer
   and revised from its feedback.
 
+Revised during planning (2026-09-22) — these supersede the Recommendation where
+they differ; the [proposal](../projects/work-taxonomy/proposal.md) carries them:
+
+- **`_archive/` is kept**, as a narrow exception for people browsing the tree:
+  only entities in a terminal state may sit in `items/_archive/` or
+  `features/_archive/`, the lifecycle field stays the source of truth, and
+  `pdocs archive` moves the entity and rewrites its links. `sweep-project`
+  drives it.
+- **`triage` is a default, not a gate.** Items created by agents start there and
+  leave through a triage step the user has seen (`triage-items`), enforced by
+  the skills rather than the CLI.
+- **A feature's entry file is `feature.md`;** an entity folder's entry file is
+  named after the entity.
+- **A research item and its write-up stay separate:** the item is the asking,
+  `write-up.md` the output it owns.
+
 Still open, for the proposal:
 
 - What a UI needs beyond the fields: ordering within a state, and whether a

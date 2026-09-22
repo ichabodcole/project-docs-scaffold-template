@@ -79,7 +79,7 @@ authored).
 
 | Entity        | What it is                                                                        | Its file                       |
 | ------------- | --------------------------------------------------------------------------------- | ------------------------------ |
-| **Feature**   | An outcome worth shaping. The proposal _is_ the feature; it closes when delivered | `features/<slug>/proposal.md`  |
+| **Feature**   | An outcome worth shaping. The proposal _is_ the feature; it closes when delivered | `features/<slug>/feature.md`   |
 | **Work item** | The one unit of work, small enough to hand an agent. `kind` says what sort        | `items/<slug>.md`, or a folder |
 | **Cycle**     | A scope-bound grouping with an appetite and an outcome                            | `cycles/YYYY-MM-<slug>.md`     |
 
@@ -87,15 +87,26 @@ Everything else is **owned**: named documents (`plan.md`, `test-plan.md`,
 `design-resolution.md`), records (`sessions/`), and anything unnamed
 (`artifacts/`) live inside the folder of the feature or item they belong to. An
 entity is a single file until it owns something; then it is a folder holding its
-own file and what it owns, with named documents at the folder's root under fixed
-names and `artifacts/` reserved for the unnamed. A folder means "these files
-belong to one entity" — never "these files share a state, a parent or a cycle."
+own file — named after the entity, `feature.md` or `item.md` — and what it owns,
+with named documents at the folder's root under fixed names and `artifacts/`
+reserved for the unnamed. A folder means "these files belong to one entity" —
+never "these files share a state, a parent or a cycle." A research item is the
+asking (its question, definition of done and lifecycle); the investigation's
+findings are the output it owns, `write-up.md`, with `reports/` beside it.
+
+**One exception, for people browsing the tree: `_archive/`.** A flat folder of
+every item ever filed is noise to a human reading the file tree, so an entity in
+a terminal state (`done`, `dropped`) may move into `items/_archive/` or
+`features/_archive/`. The lifecycle field stays the source of truth — the folder
+mirrors it, as Backlog.md's tool-maintained archive does — and the lint refuses
+anything in `_archive/` that is not terminal. `pdocs archive` does the move in
+one step: it checks the state, moves the file or folder, and rewrites inbound
+and outbound links. References by UUID survive the move untouched.
 
 ```
 docs/
   features/
-    okf-frontmatter/
-      proposal.md                 ← the feature (state lives here)
+    okf-frontmatter/      feature.md                  ← the feature (the proposal; state lives here)
       plan.md                     ← broad plan across its items
       sessions/2026-09-04-phase-one.md
       artifacts/
@@ -150,11 +161,14 @@ reads the same groups:
 
 `triage` is not the idea stage — ideas are triaged upstream, in Operator, before
 anything enters the tree. It is for items already in the tree that nobody has
-accepted yet, and it is **the one state only a human leaves**: anything may
-create an item there (a review agent filing findings, an agent hitting a bug
-mid-task), and only a person accepts it into `backlog` or drops it, so agents
-can file freely without growing the backlog uncontrolled. An item created by
-someone who already wants it starts at `backlog` or `ready` directly.
+accepted yet. **Items created by agents start in `triage`** — a review agent
+filing findings, an agent hitting a bug mid-task — **and leave it through a
+triage step the user has seen**: the `triage-items` skill proposes each item's
+disposition (backlog, a feature to join, drop) and applies it once the user has
+reviewed it. The safeguard is that default, enforced by the skills, not a gate
+in the CLI; it keeps agent-filed work from reading as accepted work nobody
+accepted. An item created by someone who already wants it starts at `backlog` or
+`ready` directly.
 
 A feature arrives already accepted: its `draft` is `backlog` and `approved` is
 `ready`. Nothing is deleted; it is `dropped`. A cycle keeps its own `planned` ·
@@ -177,14 +191,14 @@ authored as a document.
 | Fragment                           | Removed; ideas live upstream                                     |
 | Brief                              | Removed as a type; a framing document is owned by what it frames |
 | Investigation                      | Work item, `kind: research`, owning its write-up                 |
-| Project folder + proposal          | Feature                                                          |
+| Project folder + proposal          | Feature (`features/<slug>/feature.md`)                           |
 | Plan, test plan, design resolution | Named documents inside their owner                               |
 | Kickoff, handoff                   | Named documents inside their owner                               |
 | Session                            | Record inside its owner                                          |
 | Report                             | Owned by the research item that produced it                      |
 | Artifact                           | Unnamed file in its owner's `artifacts/` folder (unchanged role) |
 | Cycle                              | Cycle; membership moves to the items                             |
-| `_archive/`                        | Removed; a terminal state is the archive                         |
+| `_archive/`                        | Kept, for terminal entities only, mirroring their lifecycle      |
 
 ### The manifesto amendment for `assignee`
 
@@ -218,8 +232,9 @@ second round of decisions on `released_in`:
   folder, and creates an item born `done` for work that ran without one.
 - **Commits** carry the item's `id` in a trailer, which is what lets
   `released_in` be derived.
-- **A release or sweep** touch point writes `released_in` where it cannot be
-  derived, and closes cycles whose items are all in the completed group.
+- **`sweep-project`** — the release and sweep touch point — writes `released_in`
+  where it cannot be derived, closes cycles whose items are all in the completed
+  group, and archives terminal entities through `pdocs archive`.
 - **The lint** refuses a work item that disappears without reaching `dropped`,
   and checks that `scope` is in the declared list and every `parent`, `from`,
   `blocked_by` and `cycle` resolves.
