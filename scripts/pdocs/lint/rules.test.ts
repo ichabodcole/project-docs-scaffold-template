@@ -1350,9 +1350,20 @@ describe("the gate — the repository is git's, not the config's", () => {
       })
     );
     writeFileSync(join(main, "CONTRIBUTING.md"), "# Contributing\n");
+    // `core.hooksPath` pinned, absolute: a developer's global one would
+    // otherwise run instead, and the hook this test installs never would.
     const git = (cwd: string, ...args: string[]) =>
       Bun.spawnSync(
-        ["git", "-c", "user.name=t", "-c", "user.email=t@t", ...args],
+        [
+          "git",
+          "-c",
+          "user.name=t",
+          "-c",
+          "user.email=t@t",
+          "-c",
+          `core.hooksPath=${join(main, ".git/hooks")}`,
+          ...args,
+        ],
         { cwd, env: childEnv() }
       );
     git(main, "init", "-q");
@@ -1374,6 +1385,47 @@ describe("the gate — the repository is git's, not the config's", () => {
     const stderr = readFileSync(`${out}.stderr`, "utf8");
     expect(stderr).not.toContain("ENOENT");
     expect(readFileSync(`${out}.stdout`, "utf8")).toContain("docs-lint: clean");
+    expect(readFileSync(`${out}.code`, "utf8").trim()).toBe("0");
+  });
+
+  // Git hands the hook the index being COMMITTED, and the lint cannot use it —
+  // `commit -a` names `.git/index.lock`, a plain commit a path relative to a
+  // top level the hook may not be at. Without it `ls-files` reads the real
+  // index, which still lists what `commit -a` is about to delete.
+  test("a commit -a that deletes a tracked page, gated by a commit hook", () => {
+    const root = minimal({
+      "README.md": "# Readme\n",
+      "NOTES.md": "# Notes\n",
+    });
+    const hooks = join(root, ".git/hooks");
+    const git = (...args: string[]) =>
+      Bun.spawnSync(
+        [
+          "git",
+          "-c",
+          "user.name=t",
+          "-c",
+          "user.email=t@t",
+          "-c",
+          `core.hooksPath=${hooks}`,
+          ...args,
+        ],
+        { cwd: root, env: childEnv() }
+      );
+    git("init", "-q");
+    git("add", "-A");
+    git("commit", "-q", "--no-verify", "-m", "init");
+    const out = join(root, "hook");
+    mkdirSync(hooks, { recursive: true });
+    writeFileSync(
+      join(hooks, "pre-commit"),
+      `#!/bin/sh\nbun "${ENTRY}" check --format text --root . > "${out}.stdout" 2> "${out}.stderr"\necho $? > "${out}.code"\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    rmSync(join(root, "NOTES.md"));
+    git("commit", "-q", "-am", "drop the notes");
+
+    expect(readFileSync(`${out}.stderr`, "utf8")).not.toContain("ENOENT");
     expect(readFileSync(`${out}.code`, "utf8").trim()).toBe("0");
   });
 });

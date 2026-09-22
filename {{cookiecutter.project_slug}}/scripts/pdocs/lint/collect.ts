@@ -10,7 +10,7 @@
 // file is the failure this layering exists to avoid: get it wrong and the walk
 // finds nothing, and a lint that walks nothing reports clean.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DocsLintReport } from "../docs-lint/index.ts";
 import {
@@ -20,8 +20,8 @@ import {
 import {
   type Ctx,
   excluder,
-  gitEnv,
   frontmatterSyntaxProblems,
+  gitEnv,
   graphTier,
   libraryFieldChecks,
   schemaTableChecks,
@@ -93,9 +93,17 @@ export function collect(ctx: Ctx): LintReport {
   // Everything git tracks outside the docs root: README, AGENTS, and the
   // shipped plugin pages, where a link to a moved playbook is a broken
   // instruction in someone else's repository. `lint.exclude` takes a file out.
+  // A tracked path that is not on disk is one being deleted: in a commit hook
+  // `ls-files` reads the real index (`gitEnv` drops the one being committed),
+  // which still lists what `git commit -a` is removing, and outside a hook it
+  // is an unstaged `rm`. There is nothing to read, so it is not in the corpus.
   const excluded = excluder(ctx);
   const tracked = trackedMarkdown(ctx.repoRoot, gitEnv()).filter(
-    (p) => !isTpl(p) && !excluded(p) && !p.startsWith(`${ctx.config.docsRoot}/`)
+    (p) =>
+      !isTpl(p) &&
+      !excluded(p) &&
+      !p.startsWith(`${ctx.config.docsRoot}/`) &&
+      existsSync(join(ctx.repoRoot, p))
   );
 
   const workbench = [
