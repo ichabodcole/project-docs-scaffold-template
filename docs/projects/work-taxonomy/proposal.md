@@ -231,10 +231,8 @@ second round of decisions on `released_in`:
 declarable type vocabulary parsed from `.project-docs.json`, plus the seed
 manifest — went out with the v2.9 migration
 (`plugins/project-docs/skills/update-project-docs/migrations/v2.8-to-v2.9.md`).
-[Its proposal's](../docs-foundation/proposal.md) `lifecycle: draft` is stale
-against that plan and should be reconciled to `implemented`; this proposal does
-not edit that file, but the discrepancy should not be read as Docs Foundation
-being unshipped.
+[Its proposal](../docs-foundation/proposal.md) is `lifecycle: implemented`
+(reconciled 2026-09-22).
 
 Docs Foundation also opened the configuration seam `scope` needs: it made
 `.project-docs.json` something the lint parses for a vocabulary (the `types`

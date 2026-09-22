@@ -6,7 +6,7 @@ description:
   weighted toward the failure modes unit tests cannot reach.
 tags: [configuration, ownership, lint]
 status: draft
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: completed # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5, at: 2026-09-11 }
 ---
 
@@ -376,6 +376,13 @@ predicate silently skipped. Both are fixed, and
 template the registry declares. The remaining gap is that the classification is
 still by category rather than file by file; automating it stays the right
 follow-up.
+
+**T2-06 and T2-07, executed later (2026-09-22 reconciliation).** The first
+migration to consume `seed.ts` was v2.9 → v2.10. Its test suite,
+`plugins/project-docs/skills/update-project-docs/migrations/scripts/migrate-v2.9-to-v2.10.test.ts`,
+runs both against a real migration: "(a) untouched" and "(b) one template
+edited" are T2-06, and "(d) a template on disk the manifest never recorded" is
+T2-07. The table above is left as it was recorded.
 
 ## Visual Artifacts
 

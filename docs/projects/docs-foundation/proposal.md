@@ -6,7 +6,7 @@ description:
   model, so later default changes cost configuration rather than a fork.
 tags: [configuration, ownership, lint]
 status: draft
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: implemented # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5, at: 2026-09-11 }
 ---
 

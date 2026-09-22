@@ -6,7 +6,7 @@ description:
   the lifecycle project can retire types without removing capability.
 tags: [configuration, ownership, lint]
 status: draft
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: completed # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5, at: 2026-09-11 }
 ---
 
