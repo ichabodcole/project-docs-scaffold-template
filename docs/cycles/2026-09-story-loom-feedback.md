@@ -16,6 +16,7 @@ scope:
     backlog/2026-09-14-story-loom-feedback-round-1,
     backlog/2026-09-14-v2.9-to-v2.10-refresh-the-owned-files,
     backlog/2026-09-15-spellbook-feedback-round-1,
+    backlog/2026-09-17-check-inherits-git-hook-variables,
   ]
 after: [] # cycles or projects this one waits on
 generated: { by: claude-fable-5-1, at: 2026-09-14 }
@@ -44,6 +45,9 @@ that is the second branch this cycle exists to hold.
   — added 2026-09-15: the second consumer's round, worked as one branch under
   the same cycle because it is the same kind of work and the release that closes
   it is the one this cycle was already waiting for.
+- [pdocs check inherits git's hook variables](../backlog/2026-09-17-check-inherits-git-hook-variables.md)
+  — added 2026-09-22: what the Spellbook branch's re-review found on `develop`,
+  worked here so the release this cycle waits for carries it.
 
 ## Outcome
 
@@ -56,3 +60,4 @@ _Written at close._
 - fix/v2.10-tests-derive-owned-diff (landed 2026-09-14)
 - fix/v2.10-tests-ignore-release-markers (landed 2026-09-14)
 - feature/spellbook-feedback-round-1 (landed 2026-09-17)
+- fix/check-inherits-git-hook-variables (open)
