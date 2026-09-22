@@ -188,3 +188,7 @@ What has been happening lately, for a cold start. — see
   — Under the docs root a link that is absolute, or leaves git's top level, is
   MISSING FILE even when the file exists; report --format json carries
   per-document records; test children are stripped of git's hook variables.
+- [The lint strips git's hook variables, and reads only what is on disk](./memories/2026-09-22-the-lint-strips-git-hook-variables.md)
+  — pdocs check spawns git without the repository variables a commit hook
+  exports, so it runs from a package in a linked worktree; a tracked page that
+  is being deleted is skipped, and report records come from findings, not rows.

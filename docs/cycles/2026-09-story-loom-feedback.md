@@ -60,4 +60,4 @@ _Written at close._
 - fix/v2.10-tests-derive-owned-diff (landed 2026-09-14)
 - fix/v2.10-tests-ignore-release-markers (landed 2026-09-14)
 - feature/spellbook-feedback-round-1 (landed 2026-09-17)
-- fix/check-inherits-git-hook-variables (open)
+- fix/check-inherits-git-hook-variables (landed 2026-09-22)

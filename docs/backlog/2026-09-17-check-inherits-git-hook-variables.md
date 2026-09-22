@@ -9,7 +9,7 @@ description:
   crashes with ENOENT; report records are also parsed back out of problem rows.
 tags: [lint, git, hooks]
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: open # where the work has got to; see docs/SCHEMA.md
+lifecycle: done # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-fable-5-1, at: 2026-09-17 }
 ---
 
@@ -39,12 +39,13 @@ three are true on `develop` before that branch; none blocked it.
 
 ## Done when
 
-- [ ] `check` run from a package directory inside a linked-worktree commit hook
+- [x] `check` run from a package directory inside a linked-worktree commit hook
       exits on its findings, not on `ENOENT`.
-- [ ] `docs/briefs/no  (type).md` with no `type` appears whole in
+- [x] `docs/briefs/no  (type).md` with no `type` appears whole in
       `report --format json`.
-- [ ] Each of the two behaviours in 3 has a test that goes red when neutered.
+- [x] Each of the two behaviours in 3 has a test that goes red when neutered.
 
 ## References
 
 - [Session record](../projects/spellbook-feedback/sessions/2026-09-17-spellbook-feedback-round-1.md)
+- [Session record for the fix](../projects/spellbook-feedback/sessions/2026-09-22-check-inherits-git-hook-variables.md)
