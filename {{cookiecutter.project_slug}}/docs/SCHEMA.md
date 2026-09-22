@@ -277,6 +277,22 @@ is an observation rather than a task, has no `done` for that reason.
 PEPs, RFDs — has that intermediate state, and its absence here is why three
 proposals grew `Approved (in flight)` by hand.
 
+## State groups
+
+Work items and features carry these states in `lifecycle`, and each state
+belongs to exactly one group. The lint parses this table and fails if the
+grouping it enforces disagrees. A feature never takes `triage`.
+
+| Group       | State     | Means                                          |
+| ----------- | --------- | ---------------------------------------------- |
+| `unstarted` | `triage`  | Filed, and nobody has decided to take it on    |
+| `unstarted` | `backlog` | Accepted, and not yet shaped                   |
+| `unstarted` | `ready`   | Shaped and unblocked, and can be picked up     |
+| `started`   | `active`  | Being worked                                   |
+| `started`   | `review`  | Built, and being reviewed                      |
+| `completed` | `done`    | Finished                                       |
+| `cancelled` | `dropped` | Will not be done; the record stays in the tree |
+
 ## Archiving
 
 Archival is a **lifecycle value first, a folder move second.** Every terminal

@@ -35,6 +35,7 @@ import {
   reportDocuments,
   reportLines,
   schemaLifecycles,
+  schemaStateGroups,
   schemaTableChecks,
   thinTier,
 } from "./rules.ts";
@@ -735,7 +736,67 @@ describe("the contract and the code agree", () => {
   });
 
   test("no table at all is a problem, not silence", () => {
-    expect(schemaTableChecks("# Nothing here\n")).toHaveLength(1);
+    // Both tables are missing, and each says so.
+    expect(schemaTableChecks("# Nothing here\n")).toEqual([
+      'NO SCHEMA TABLE  SCHEMA.md: no parsable "## Lifecycle by type" section',
+      'NO STATE GROUPS TABLE  SCHEMA.md: no parsable "## State groups" section',
+    ]);
+  });
+});
+
+describe("the state groups: SCHEMA.md and STATE_GROUP agree", () => {
+  const TABLE = [
+    "## State groups",
+    "",
+    "| Group       | State     | Means                     |",
+    "| ----------- | --------- | ------------------------- |",
+    "| `unstarted` | `triage`  | Not yet looked at.        |",
+    "| `unstarted` | `backlog` | Accepted, not scheduled.  |",
+    "| `unstarted` | `ready`   | Shaped and unblocked.     |",
+    "| `started`   | `active`  | Being worked.             |",
+    "| `started`   | `review`  | Built, under review.      |",
+    "| `completed` | `done`    | Finished.                 |",
+    "| `cancelled` | `dropped` | Will not be done.         |",
+    "",
+    "## Next",
+    "",
+  ].join("\n");
+
+  test("parses Group · State · Means, rows only after the alignment row", () => {
+    const groups = schemaStateGroups(`# S\n\n${TABLE}`);
+    expect(groups.get("triage")).toBe("unstarted");
+    expect(groups.get("review")).toBe("started");
+    expect(groups.get("dropped")).toBe("cancelled");
+    expect(groups.has("State")).toBe(false);
+    expect(groups.size).toBe(7);
+  });
+
+  test("this repository's SCHEMA.md states every group the registry enforces", () => {
+    expect(
+      schemaTableChecks(SCHEMA).filter((p) => /STATE/.test(p))
+    ).toEqual([]);
+    expect(schemaStateGroups(SCHEMA).size).toBe(7);
+  });
+
+  test("a state in the wrong group is caught, naming the state", () => {
+    const broken = SCHEMA.replace(
+      /\| `started`(\s*)\| `review`/,
+      "| `completed`$1| `review`"
+    );
+    expect(broken).not.toBe(SCHEMA);
+    const problems = schemaTableChecks(broken).filter((p) =>
+      p.startsWith("SCHEMA DISAGREES")
+    );
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("`review`");
+  });
+
+  test("a missing section is a problem, not silence", () => {
+    const without = SCHEMA.replace(/\n## State groups\n[\s\S]*?(?=\n## )/, "");
+    expect(without).not.toBe(SCHEMA);
+    expect(schemaTableChecks(without)).toContain(
+      'NO STATE GROUPS TABLE  SCHEMA.md: no parsable "## State groups" section'
+    );
   });
 });
 

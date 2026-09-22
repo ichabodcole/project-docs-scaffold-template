@@ -654,7 +654,11 @@ describe("fixtures — the generated trees the whole-script tests run against", 
     cpSync(join(target(), "scripts/pdocs"), join(o, "scripts/pdocs"), { recursive: true });
     const newCheck = Bun.spawnSync(["bun", "scripts/pdocs/cli.ts", "check", "--format", "json"], { cwd: o, stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(newCheck.exitCode).toBe(9);
-    expect(JSON.parse(newCheck.stdout.toString()).data.total).toBe(3);
+    // Counted on the page alone: a newer CLI over this older SCHEMA.md also
+    // reports the contract rows that SCHEMA.md predates (the State groups table
+    // arrived in 9.0.0), and those are the refresh's job, not this page's.
+    const problems: Array<{ message: string }> = JSON.parse(newCheck.stdout.toString()).data.problems;
+    expect(problems.filter((p) => p.message.includes("templates.md"))).toHaveLength(3);
   });
 });
 

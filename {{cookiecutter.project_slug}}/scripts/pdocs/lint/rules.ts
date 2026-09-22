@@ -48,6 +48,7 @@ import {
   type RegistryRow,
   ROOT_PAGE_TYPE,
   SPEC,
+  STATE_GROUP,
   buildRegistry,
   defaultRegistryIndex,
   registryIndex,
@@ -781,11 +782,65 @@ export function schemaLifecycles(schema: string): Map<string, string[] | null> {
   return out;
 }
 
+/**
+ * SCHEMA.md's "State groups" table, parsed: state → group.
+ *
+ * Columns are Group · State · Means, one row per state. Same parsing rules as
+ * `schemaLifecycles`: rows only after the alignment row, cells trimmed, and a
+ * backticked name in each of the first two cells.
+ */
+export function schemaStateGroups(schema: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const section = /\n## State groups\n([\s\S]*?)(?:\n## |$)/.exec(schema);
+  if (!section) return out;
+  let inBody = false;
+  for (const line of (section[1] as string).split("\n")) {
+    if (/^\|\s*:?-+:?\s*\|/.test(line)) {
+      inBody = true;
+      continue;
+    }
+    if (!inBody) continue;
+    const m = /^\|\s*`([a-z-]+)`\s*\|\s*`([a-z-]+)`\s*\|/.exec(line);
+    if (m) out.set(m[2] as string, m[1] as string);
+  }
+  return out;
+}
+
+/** The state-groups table against `STATE_GROUP`, the way the lifecycle table
+ *  is checked against the registry. */
+function stateGroupChecks(schema: string): string[] {
+  const stated = schemaStateGroups(schema);
+  if (stated.size === 0)
+    return [
+      'NO STATE GROUPS TABLE  SCHEMA.md: no parsable "## State groups" section',
+    ];
+  const problems: string[] = [];
+  for (const [state, group] of Object.entries(STATE_GROUP)) {
+    const want = stated.get(state);
+    if (want === undefined)
+      problems.push(
+        `SCHEMA MISSING STATE  SCHEMA.md: the lint groups \`${state}\` as \`${group}\`, the State groups table omits it`
+      );
+    else if (want !== group)
+      problems.push(
+        `SCHEMA DISAGREES  state \`${state}\`: SCHEMA.md groups it "${want}", the lint enforces "${group}"`
+      );
+  }
+  for (const state of stated.keys())
+    if (!(state in STATE_GROUP))
+      problems.push(
+        `SCHEMA EXTRA STATE  SCHEMA.md groups \`${state}\`, which the lint knows nothing about`
+      );
+  return problems;
+}
+
 export function schemaTableChecks(schema: string): string[] {
+  const groups = stateGroupChecks(schema);
   const stated = schemaLifecycles(schema);
   if (stated.size === 0)
     return [
       'NO SCHEMA TABLE  SCHEMA.md: no parsable "## Lifecycle by type" section',
+      ...groups,
     ];
 
   // One source, not three unioned inline. That union was the assembly the
@@ -818,7 +873,7 @@ export function schemaTableChecks(schema: string): string[] {
         `SCHEMA EXTRA TYPE  SCHEMA.md documents \`${type}\`, which the lint knows nothing about`
       );
 
-  return problems;
+  return [...problems, ...groups];
 }
 
 /**
