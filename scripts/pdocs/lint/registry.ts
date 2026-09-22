@@ -29,6 +29,50 @@ import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import { yamlList } from "../docs-lint/index.ts";
 
 // ---------------------------------------------------------------------------------------
+// The work-taxonomy vocabulary
+// ---------------------------------------------------------------------------------------
+
+/**
+ * A work item's states, in the order work moves through them. `lifecycle`
+ * carries one of these on an item (D1: the key stays `lifecycle`).
+ */
+export const ITEM_STATES = [
+  "triage",
+  "backlog",
+  "ready",
+  "active",
+  "review",
+  "done",
+  "dropped",
+];
+
+/** A feature's states: the item's without `triage`, because a feature arrives
+ *  already accepted (D3). */
+export const FEATURE_STATES = ITEM_STATES.filter((s) => s !== "triage");
+
+/** The four groups every state falls into. Views and the board group by these. */
+export type StateGroup = "unstarted" | "started" | "completed" | "cancelled";
+
+/** Each state's group. SCHEMA.md's `## State groups` table states the same, and
+ *  `schemaTableChecks` proves the two agree. */
+export const STATE_GROUP: Record<string, StateGroup> = {
+  triage: "unstarted",
+  backlog: "unstarted",
+  ready: "unstarted",
+  active: "started",
+  review: "started",
+  done: "completed",
+  dropped: "cancelled",
+};
+
+/** A work item's `kind`. Closed. */
+export const KINDS = ["task", "bug", "chore", "research"];
+
+/** A work item's `priority`. Closed (D7): an unchecked priority drifts the way
+ *  `**Status:**` did. */
+export const PRIORITIES = ["urgent", "high", "medium", "low"];
+
+// ---------------------------------------------------------------------------------------
 // The source tables
 // ---------------------------------------------------------------------------------------
 

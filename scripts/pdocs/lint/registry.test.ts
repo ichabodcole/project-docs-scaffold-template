@@ -22,7 +22,12 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import {
+  FEATURE_STATES,
+  ITEM_STATES,
+  KINDS,
+  PRIORITIES,
   PROJECT_FILE_TYPE,
+  STATE_GROUP,
   type RegistryRow,
   TYPE_ALIAS,
   buildRegistry,
@@ -529,5 +534,46 @@ describe("rows a project declares for itself", () => {
 
   test("declaring nothing changes nothing", () => {
     expect(withTypes({}).length).toBe(ROWS.length);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// The work-taxonomy vocabulary
+// ---------------------------------------------------------------------------------------
+
+describe("the state vocabulary and its groups", () => {
+  test("an item moves through seven states, in order", () => {
+    expect(ITEM_STATES).toEqual([
+      "triage",
+      "backlog",
+      "ready",
+      "active",
+      "review",
+      "done",
+      "dropped",
+    ]);
+  });
+
+  // D3: a feature arrives already accepted.
+  test("a feature's states are the item's minus triage", () => {
+    expect(FEATURE_STATES).toEqual(ITEM_STATES.filter((s) => s !== "triage"));
+  });
+
+  test("every state maps to exactly one group", () => {
+    expect(Object.keys(STATE_GROUP).sort()).toEqual([...ITEM_STATES].sort());
+    expect(STATE_GROUP).toEqual({
+      triage: "unstarted",
+      backlog: "unstarted",
+      ready: "unstarted",
+      active: "started",
+      review: "started",
+      done: "completed",
+      dropped: "cancelled",
+    });
+  });
+
+  test("kinds and priorities are closed sets (D7)", () => {
+    expect(KINDS).toEqual(["task", "bug", "chore", "research"]);
+    expect(PRIORITIES).toEqual(["urgent", "high", "medium", "low"]);
   });
 });
