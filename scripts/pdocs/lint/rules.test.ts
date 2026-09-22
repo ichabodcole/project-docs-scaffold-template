@@ -38,6 +38,8 @@ import {
   schemaStateGroups,
   schemaTableChecks,
   thinTier,
+  ownedType,
+  workbenchFiles,
 } from "./rules.ts";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import { childEnv } from "../test-env.ts";
@@ -74,6 +76,8 @@ const LEGACY_TIERS = {
     "reports",
     "fragments",
     "cycles",
+    "features",
+    "items",
   ],
 };
 
@@ -1870,5 +1874,110 @@ describe("a project that declares its own document types", () => {
       }
     );
     expect(graphTier(ctx).problems).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Position typing for the owner folders: features/, items/, and legacy projects/
+// ---------------------------------------------------------------------------------------
+
+describe("position typing — features/ and items/", () => {
+  // The risky part of the phase: a wrong type silently lints a plan as an
+  // artifact and reports it clean. Every position gets a real fixture tree.
+  const POSITIONS: Array<[string, string]> = [
+    ["features/a/feature.md", "feature"],
+    ["features/_archive/a/feature.md", "feature"],
+    ["items/_archive/b.md", "item"],
+    ["features/a/plan.md", "plan"],
+    ["features/a/sessions/2026-01-01-x.md", "session"],
+    ["features/a/reports/2026-01-01-r.md", "report"],
+    ["features/a/artifacts/n.md", "artifact"],
+    ["features/a/notes.md", "artifact"],
+    ["items/b.md", "item"],
+    ["items/b/item.md", "item"],
+    ["items/b/write-up.md", "write-up"],
+    ["items/b/sessions/2026-01-01-y.md", "session"],
+    ["projects/c/proposal.md", "proposal"],
+  ];
+
+  const typed = (paths: string[]) => {
+    const ctx = fixture(
+      Object.fromEntries(paths.map((p) => [`docs/${p}`, "# X\n"])),
+      { skip: [] }
+    );
+    return new Map(
+      workbenchFiles(ctx).map((f) => [f.rel.slice("docs/".length), f.type])
+    );
+  };
+
+  test.each(POSITIONS)("%s is typed %s", (path, type) => {
+    expect(typed([path]).get(path)).toBe(type);
+  });
+
+  test("the whole tree at once types every position the same way", () => {
+    const types = typed(POSITIONS.map(([p]) => p));
+    for (const [path, type] of POSITIONS) expect(types.get(path)).toBe(type);
+  });
+
+  test("ownedType strips a leading _archive/ and nothing deeper", () => {
+    expect(ownedType("features", "_archive/a/feature.md")).toBe("feature");
+    expect(ownedType("items", "_archive/b/item.md")).toBe("item");
+    // An `_archive/` inside an entity is not the archive: its files are the
+    // entity's own artifacts.
+    expect(ownedType("features", "a/_archive/notes.md")).toBe("artifact");
+    expect(ownedType("items", "b/_archive/x.md")).toBe("artifact");
+  });
+
+  const entity = (type: string) =>
+    fm({
+      type,
+      title: "E",
+      description: "An entity.",
+      status: "draft",
+      generated: GENERATED,
+    }) + "# E\n";
+
+  test("a feature.md under items/ and an item.md under features/ are misplaced", () => {
+    const ctx = fixture(
+      {
+        "docs/items/b/feature.md": entity("feature"),
+        "docs/features/a/item.md": entity("item"),
+      },
+      { skip: [] }
+    );
+    const misplaced = thinTier(ctx).filter((p) =>
+      p.startsWith("MISPLACED ENTITY")
+    );
+    expect(misplaced).toHaveLength(2);
+    expect(misplaced.some((p) => p.includes("docs/items/b/feature.md"))).toBe(
+      true
+    );
+    expect(misplaced.some((p) => p.includes("docs/features/a/item.md"))).toBe(
+      true
+    );
+  });
+
+  test("an entity file below its entity folder is misplaced too", () => {
+    const ctx = fixture(
+      { "docs/features/a/artifacts/feature.md": entity("feature") },
+      { skip: [] }
+    );
+    expect(
+      thinTier(ctx).filter((p) => p.startsWith("MISPLACED ENTITY"))
+    ).toHaveLength(1);
+  });
+
+  test("a well-placed entity is not misplaced", () => {
+    const ctx = fixture(
+      {
+        "docs/features/a/feature.md": entity("feature"),
+        "docs/items/b.md": entity("item"),
+        "docs/items/_archive/c/item.md": entity("item"),
+      },
+      { skip: [] }
+    );
+    expect(
+      thinTier(ctx).filter((p) => p.startsWith("MISPLACED ENTITY"))
+    ).toEqual([]);
   });
 });

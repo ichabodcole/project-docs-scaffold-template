@@ -43,6 +43,12 @@ import {
 } from "../docs-lint/index.ts";
 import {
   DURABLE_TYPE,
+  ENTITY_FILE,
+  FEATURES_FOLDER,
+  ITEMS_FOLDER,
+  OWNED_FILE_TYPE,
+  OWNER_SUBFOLDER,
+  PROJECTS_FOLDER,
   PROJECT_FILE_TYPE,
   PROJECT_SPEC,
   type RegistryRow,
@@ -282,15 +288,24 @@ const TAG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 // The workbench: presence and vocabulary
 // ---------------------------------------------------------------------------------------
 
-/** Every workbench file, paired with the `type` its position says it must carry. */
-export function workbenchFiles(ctx: Ctx): Array<{
+/** A workbench file: where it is, and the `type` its position says it must carry. */
+export interface WorkbenchFile {
   path: string;
   rel: string;
   type: string;
-}> {
+  /** Set when an entity file (`feature.md`, `item.md`) sits where its entity
+   *  cannot: the reason, for the `MISPLACED ENTITY` row. */
+  misplaced?: string;
+}
+
+/** The folders whose documents are typed by `ownedType` rather than by folder. */
+const OWNER_FOLDERS = new Set([FEATURES_FOLDER, ITEMS_FOLDER, PROJECTS_FOLDER]);
+
+/** Every workbench file, paired with the `type` its position says it must carry. */
+export function workbenchFiles(ctx: Ctx): WorkbenchFile[] {
   const skip = new Set([...ctx.config.lint.skip, "TEMPLATES"]);
   const excluded = excluder(ctx);
-  const out: Array<{ path: string; rel: string; type: string }> = [];
+  const out: WorkbenchFile[] = [];
 
   for (const folder of ctx.config.lint.workbench) {
     const dir = join(ctx.docsRoot, folder);
@@ -298,23 +313,93 @@ export function workbenchFiles(ctx: Ctx): Array<{
     for (const path of walkMarkdown(dir, skip)) {
       const rel = relative(ctx.repoRoot, path);
       if (excluded(rel)) continue;
+      if (OWNER_FOLDERS.has(folder)) {
+        const within = relative(dir, path).split(sep).join("/");
+        const { type, misplaced } = ownedPosition(folder, within);
+        out.push({ path, rel, type, ...(misplaced ? { misplaced } : {}) });
+        continue;
+      }
       out.push({
         path,
         rel,
-        type:
-          folder === "projects"
-            ? projectType(path)
-            : (SPEC[folder]?.type ?? ctx.config.lint.types[folder] ?? ""),
+        type: SPEC[folder]?.type ?? ctx.config.lint.types[folder] ?? "",
       });
     }
   }
   return out;
 }
 
-function projectType(path: string): string {
-  if (path.includes("/sessions/")) return "session";
-  return PROJECT_FILE_TYPE[basename(path)] ?? "artifact";
+/** `sessions` → `session`, and so on: `OWNER_SUBFOLDER` read backwards. */
+const SUBFOLDER_TYPE: Record<string, string> = Object.fromEntries(
+  Object.entries(OWNER_SUBFOLDER).map(([type, folder]) => [folder, type])
+);
+
+/** `feature.md` → `feature`, `item.md` → `item`: the entity files of the new
+ *  owners. `proposal.md` is only an entry file under the legacy `projects/`. */
+const ENTITY_FILE_TYPE: Record<string, string> = {
+  [ENTITY_FILE[FEATURES_FOLDER]!.name]: ENTITY_FILE[FEATURES_FOLDER]!.type,
+  [ENTITY_FILE[ITEMS_FOLDER]!.name]: ENTITY_FILE[ITEMS_FOLDER]!.type,
+};
+
+/**
+ * The type a document's position inside an owner folder gives it.
+ *
+ * `owner` is the owner folder's name (`features`, `items`, or the legacy
+ * `projects`); `within` is the path relative to it, `/`-separated. A leading
+ * `_archive/` is stripped first under `features/` and `items/` only, so an
+ * archived entity is typed exactly like a live one; an `_archive/` anywhere
+ * deeper is just a folder of artifacts.
+ */
+export function ownedType(owner: string, within: string): string {
+  return ownedPosition(owner, within).type;
 }
+
+function ownedPosition(
+  owner: string,
+  within: string
+): { type: string; misplaced: string | null } {
+  let segs = within.split("/");
+  if (owner !== PROJECTS_FOLDER && segs[0] === "_archive" && segs.length > 1)
+    segs = segs.slice(1);
+
+  const expected = ENTITY_FILE[owner];
+  const misplace = (type: string) =>
+    `a ${type} belongs at ${type === "item" ? `${ITEMS_FOLDER}/<slug>.md or ` : ""}` +
+    `${type === "feature" ? FEATURES_FOLDER : ITEMS_FOLDER}/<slug>/${
+      ENTITY_FILE[type === "feature" ? FEATURES_FOLDER : ITEMS_FOLDER]!.name
+    }`;
+
+  // Loose in the owner folder itself. Under `items/` that IS an item —
+  // `items/<slug>.md` — whatever it is called.
+  if (segs.length === 1) {
+    if (owner === ITEMS_FOLDER) return { type: "item", misplaced: null };
+    const entity = ENTITY_FILE_TYPE[segs[0] as string];
+    return entity
+      ? { type: entity, misplaced: misplace(entity) }
+      : { type: "", misplaced: null };
+  }
+
+  const rest = segs.slice(1);
+  const name = rest[rest.length - 1] as string;
+  const entity = ENTITY_FILE_TYPE[name];
+
+  if (rest.length === 1) {
+    if (entity)
+      return {
+        type: entity,
+        misplaced: expected?.type === entity ? null : misplace(entity),
+      };
+    if (owner === PROJECTS_FOLDER && name === PROJECT_FILE_TYPE_ENTRY)
+      return { type: "proposal", misplaced: null };
+    return { type: OWNED_FILE_TYPE[name] ?? "artifact", misplaced: null };
+  }
+
+  if (entity) return { type: entity, misplaced: misplace(entity) };
+  return { type: SUBFOLDER_TYPE[rest[0] as string] ?? "artifact", misplaced: null };
+}
+
+/** The legacy project folder's entry file. */
+const PROJECT_FILE_TYPE_ENTRY = ENTITY_FILE[PROJECTS_FOLDER]!.name;
 
 /**
  * Every library file, paired with the `type` its position says it must carry —
@@ -545,6 +630,9 @@ function thinFindings(ctx: Ctx): {
     }
 
     if (CONTRACT_BASENAMES.has(name) || isTpl(path)) continue;
+
+    if (file.misplaced)
+      problems.push(`MISPLACED ENTITY  ${rel}  (${file.misplaced})`);
 
     const r = documentProblems(file, raw, ctx.config.docsRoot, false, registry);
     problems.push(...r.problems);

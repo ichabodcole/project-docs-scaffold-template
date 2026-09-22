@@ -341,6 +341,48 @@ export const TYPE_ALIAS: Record<string, TypeAlias> = {
   project: { type: "proposal", namesScope: true },
 };
 
+/** The folder that holds feature folders: `features/<slug>/feature.md`. */
+export const FEATURES_FOLDER = "features";
+
+/** The folder that holds work items: `items/<slug>.md`, or `items/<slug>/item.md`
+ *  once the item owns documents. */
+export const ITEMS_FOLDER = "items";
+
+/**
+ * An owner folder's entry file, named after the entity (D2). A tool finds the
+ * entry file by the folder's kind alone. The legacy `projects/` owner's entry
+ * file is `proposal.md`.
+ */
+export const ENTITY_FILE: Record<string, { name: string; type: string }> = {
+  features: { name: "feature.md", type: "feature" },
+  items: { name: "item.md", type: "item" },
+  projects: { name: "proposal.md", type: "proposal" },
+};
+
+/**
+ * The owned documents with a fixed name, wherever the owner is — a feature, an
+ * item, or (until this repository migrates) a legacy project. The legacy
+ * `PROJECT_FILE_TYPE` above is the same map plus `proposal.md`, minus
+ * `write-up.md`, which arrived with work items.
+ */
+export const OWNED_FILE_TYPE: Record<string, string> = {
+  "plan.md": "plan",
+  "design-resolution.md": "design-resolution",
+  "test-plan.md": "test-plan",
+  "DEV_KICKOFF.md": "kickoff",
+  "handoff.md": "handoff",
+  // A research item's output (D4). The item holds the question and the state;
+  // this holds the answer, and has no lifecycle of its own.
+  "write-up.md": "write-up",
+};
+
+/** Where an owned type sits inside its owner folder, when not at its top. */
+export const OWNER_SUBFOLDER: Record<string, string> = {
+  session: "sessions",
+  artifact: "artifacts",
+  report: "reports",
+};
+
 /**
  * The folder that holds project folders.
  *
