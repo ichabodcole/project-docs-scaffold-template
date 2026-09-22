@@ -23,10 +23,12 @@ type, and wire the three touch points that move knowledge between states:
 **consult** at begin-work, **reflect** at end-work, **override** per lifecycle
 event.
 
-Depends on [Docs Foundation](../docs-foundation/proposal.md), which must ship
-first: once adopters can declare types in their own config, retiring two is a
-change of defaults rather than a removal of capability. Breaking: major bump for
-the plugin and the scaffold template.
+Builds on [Docs Foundation](../docs-foundation/proposal.md), which has shipped
+(the v2.9 migration): adopters can declare types in their own config, so
+retiring two is a change of defaults rather than a removal of capability. Lands
+together with [Work Taxonomy](../work-taxonomy/proposal.md) as **one** breaking
+release — both retire types from the same schema through the same migration.
+Breaking: major bump for the plugin and the scaffold template.
 
 ## Problem Statement
 
@@ -60,10 +62,15 @@ because you need to know exactly what the agent did. _Guidance_ is curated and
 imperative. Between them sits a promotion step that has never existed, which is
 why every capture is implicitly permanent.
 
-| state    | types                      | lint tier   |
-| -------- | -------------------------- | ----------- |
-| Capture  | `session`, `investigation` | `workbench` |
-| Guidance | `playbook`                 | `durable`   |
+| state    | types                        | lint tier   |
+| -------- | ---------------------------- | ----------- |
+| Capture  | `session`, research write-up | `workbench` |
+| Guidance | `playbook`                   | `durable`   |
+
+The research write-up is what an investigation becomes under
+[Work Taxonomy](../work-taxonomy/proposal.md): a document owned by a work item
+of `kind: research`, not a type of its own. It stays Capture — dated, and read
+later on its own merits — and the work item carries the state.
 
 `memory` is provenance nobody requested. `lesson` is a playbook fragment filed
 apart from its playbook: a domain trap belongs in that domain's guide as a step
@@ -120,9 +127,11 @@ its condition gets applied mechanically. Rewrite the playbook template to
 lesson template first, so anything migrated out of it is already in shape.
 
 **Phase 2 — Touch-point wiring.** Consult into `generate-dev-plan` and
-`dev-kickoff`; Reflect into `finalize-branch`; Override into `finalize-branch`,
-`dev-kickoff`, release and handoff, each naming a specific path and declaring
-precedence.
+`dev-kickoff`; Reflect into `finalize-branch` — in the same revision that adds
+Work Taxonomy's state transitions there (`done`, the session written into its
+owner's folder, an item born `done` for work that ran first), so the skill
+changes once; Override into `finalize-branch`, `dev-kickoff`, release and
+handoff, each naming a specific path and declaring precedence.
 
 Consult's evidence must be **query output, not a self-report** — the failure
 mode the reviewer-capability check hit in 3.4.0, where constraining the wording
@@ -132,8 +141,10 @@ memories.
 
 **Phase 3 — Retire `memory` and `lesson`.** Remove from `DURABLE_TYPE`, the
 templates, category READMEs, `SCHEMA.md`, `.project-docs.json` defaults, the
-payload and `pdocs new`'s creatable types. Write the migration, which must tell
-an adopter how to keep either type locally rather than only how to delete it.
+payload and `pdocs new`'s creatable types. Write the migration — one migration
+with Work Taxonomy's, which retires `backlog`, `fragment` and `brief` — and it
+must tell an adopter how to keep either type locally rather than only how to
+delete it.
 
 ## Impact & Risks
 
@@ -150,8 +161,9 @@ fewer template sections.
 - _Consult goes hollow_ — an agent reports "nothing applies" without looking.
   Mitigation must be structural, not a wording rule; see
   [A self-report can't be made verifiable by constraining its wording](../../memories/2026-09-02-self-reports-cannot-be-made-verifiable.md).
-- _Breaking for adopters who are not Cole._ Mitigation: the sibling project
-  lands first.
+- _Breaking for adopters who are not Cole._ Mitigation: Docs Foundation has
+  landed, so keeping a retired type is configuration; and the change arrives as
+  one major release with Work Taxonomy rather than two in succession.
 
 **Complexity:** High — five skills, the lint registry, the payload, the
 migration system, and a template rewrite.
@@ -164,8 +176,10 @@ migration system, and a template rewrite.
   what produced 266 memories is that the artifact becomes optional.
 - Disposition of the 266 existing memories across 25 repositories: blanket
   delete, or one retroactive Reflect pass.
-- Does `investigation` belong in Capture alongside `session`? It is dated and
-  unmaintained, but unlike a session it is often read later on its own merits.
+- ~~Does `investigation` belong in Capture alongside `session`?~~ **Resolved
+  2026-09-22 by [Work Taxonomy](../work-taxonomy/proposal.md):** `investigation`
+  stops being a type; its write-up is a Capture document owned by a
+  `kind: research` work item.
 
 ## Success Criteria
 
@@ -185,4 +199,6 @@ migration system, and a template rewrite.
 - [Guidance Layer & Lifecycle Touch Points](../../briefs/2026-09-11-guidance-layer-and-touch-points.md)
   — the census and measurements behind both projects
 - [Docs Foundation: Ownership Classes & Declarable Types](../docs-foundation/proposal.md)
-  — the prerequisite project
+  — the prerequisite project, shipped
+- [Work Taxonomy: Feature, Work Item, Cycle](../work-taxonomy/proposal.md) —
+  lands with this project as one breaking release
