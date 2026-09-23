@@ -117,6 +117,25 @@ describe("rewriteLinks", () => {
     expect(r.changed).toBe(2);
   });
 
+  test("footnotes and prose definitions in a moved document are left alone (re-review 1)", () => {
+    const text = [
+      "Text.[^1]",
+      "",
+      "[^1]: See the other notes",
+      "[plain]: some words here",
+      "[word]: notes",
+      "[r]: ./README.md",
+      "[x]: ./x.md",
+      "",
+    ].join("\n");
+    const exists = (abs: string) => ["/r/docs/items/README.md", "/r/docs/items/x.md"].includes(abs);
+    const r = rewriteLinks(text, "/r/docs/items/x.md", "/r/docs/items/x/item.md", map, exists);
+    expect(r.text).toBe(
+      text.replace("[r]: ./README.md", "[r]: ../README.md").replace("[x]: ./x.md", "[x]: ./item.md")
+    );
+    expect(r.changed).toBe(2);
+  });
+
   test("a pointy-bracket destination keeps its brackets", () => {
     const r = rewriteLinks(
       "[x](<../../items/x.md>)\n",

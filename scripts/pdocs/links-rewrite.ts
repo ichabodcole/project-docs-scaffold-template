@@ -16,9 +16,12 @@ import { MARKDOWN_LINK_RE, stripCode } from "./docs-lint/index.ts";
 /**
  * A reference-style link definition: `[label]: destination`, up to three
  * spaces of indent. Group 1 is everything before the destination; group 2 the
- * destination (pointy-bracketed or bare), without any title after it.
+ * destination (pointy-bracketed or bare). The line may end there or carry a
+ * title (`"…"`, `'…'`, `(…)`) — anything else after a bare word is prose, not
+ * a destination. A label starting `^` is a footnote and never matches.
  */
-const REFERENCE_DEFINITION_RE = /^( {0,3}\[[^\]\n]+\]:[ \t]*)(<[^>\n]*>|[^\s<]\S*)/gm;
+const REFERENCE_DEFINITION_RE =
+  /^( {0,3}\[(?!\^)[^\]\n]+\]:[ \t]*)(<[^>\n]*>|[^\s<]\S*)(?=[ \t]*(?:"[^"\n]*"|'[^'\n]*'|\([^)\n]*\))?[ \t]*$)/gm;
 
 /**
  * Where `abs` lives after the move. `moveMap` maps absolute old paths to
@@ -49,7 +52,15 @@ export function rewriteLinks(
   text: string,
   fromFile: string,
   toFile: string,
-  moveMap: ReadonlyMap<string, string>
+  moveMap: ReadonlyMap<string, string>,
+  /**
+   * Whether a path exists before the move. A reference DEFINITION is rewritten
+   * only when its destination is a real target — in the move map, or on disk —
+   * because `[label]: word` is also how people write glossaries. Inline links
+   * are always links. Defaults to "nothing exists", keeping this pure; the
+   * caller that moves files passes `existsSync`.
+   */
+  exists: (abs: string) => boolean = () => false
 ): { text: string; changed: number } {
   const fileMoves = fromFile !== toFile;
   const fromDir = dirname(fromFile);
@@ -59,17 +70,17 @@ export function rewriteLinks(
   const stripped = stripCode(text);
   // Inline links, and reference-style definitions (`[r]: ./x.md`). The
   // checker reads only the first form; a move still must not break the second.
-  const found: Array<{ start: number; raw: string }> = [];
+  const found: Array<{ start: number; raw: string; definition?: true }> = [];
   for (const m of stripped.matchAll(MARKDOWN_LINK_RE))
     if (m[1] !== undefined && m.index !== undefined)
       // The destination's position in the ORIGINAL text: `](` is two characters.
       found.push({ start: m.index + 2, raw: m[1] });
   for (const m of stripped.matchAll(REFERENCE_DEFINITION_RE))
     if (m[2] !== undefined && m.index !== undefined)
-      found.push({ start: m.index + (m[1] as string).length, raw: m[2] });
+      found.push({ start: m.index + (m[1] as string).length, raw: m[2], definition: true });
   found.sort((a, b) => a.start - b.start);
 
-  for (const { start, raw } of found) {
+  for (const { start, raw, definition } of found) {
     const written = text.slice(start, start + raw.length);
     const pointy = /^<.*>$/.test(written.trim());
     const target = written.trim().replace(/^<(.*)>$/, "$1");
@@ -81,6 +92,7 @@ export function rewriteLinks(
 
     const oldAbs = resolve(fromDir, pathPart);
     const newAbs = movedTo(oldAbs, moveMap);
+    if (definition && newAbs === oldAbs && !exists(oldAbs)) continue;
     if (newAbs === oldAbs && !fileMoves) continue;
 
     let rel = relative(toDir, newAbs).split(sep).join("/");

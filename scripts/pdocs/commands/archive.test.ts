@@ -238,6 +238,17 @@ describe("pdocs archive", () => {
     clean(root);
   });
 
+  test("a footnote and a prose definition survive an archive untouched (re-review 1)", () => {
+    const root = tree();
+    const path = "docs/items/done-one.md";
+    const body = `${read(root, path)}\nNote.[^1]\n\n[^1]: See the other notes\n[plain]: some words here\n`;
+    writeFileSync(join(root, path), body);
+    archive(root, "item/done-one");
+    const after = read(root, "docs/items/_archive/done-one.md");
+    expect(after).toContain("[^1]: See the other notes\n");
+    expect(after).toContain("[plain]: some words here\n");
+  });
+
   test("archiving what is already archived is a no-op and exits 0", () => {
     const root = tree();
     archive(root, "item/done-one");

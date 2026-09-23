@@ -60,7 +60,7 @@ export function moveAndRewrite(ctx: Ctx, from: string, to: string): MoveResult {
   const edits: Array<{ path: string; text: string; changed: number }> = [];
   for (const file of linkingFiles(ctx)) {
     const target = movedTo(file, moveMap);
-    const r = rewriteLinks(readFileSync(file, "utf8"), file, target, moveMap);
+    const r = rewriteLinks(readFileSync(file, "utf8"), file, target, moveMap, existsSync);
     // A path-form `from:` (D6) is a link too, written in frontmatter.
     const f = rewriteFromField(r.text, ctx.docsRoot, moveMap);
     const changed = r.changed + f.changed;
