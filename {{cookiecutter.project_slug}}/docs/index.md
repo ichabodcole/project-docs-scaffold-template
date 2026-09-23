@@ -58,17 +58,3 @@ Repeatable procedures for work that recurs. — see
 [playbooks/README.md](./playbooks/README.md).
 
 _No pages yet._
-
-## Lessons learned
-
-What went wrong or right, distilled so it transfers. — see
-[lessons-learned/README.md](./lessons-learned/README.md).
-
-_No pages yet._
-
-## Memories
-
-What has been happening lately, for a cold start. — see
-[memories/README.md](./memories/README.md).
-
-_No pages yet._

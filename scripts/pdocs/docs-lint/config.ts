@@ -86,7 +86,9 @@ export const DEFAULT_CONFIG: ProjectDocsConfig = {
     workbench: ["features", "items", "cycles"],
     types: {},
     scopes: [],
-    skip: ["_archive", "superpowers"],
+    // `_archive` is linted, not skipped: the terminal-state rule (only done
+    // or dropped work sits there) has to see it.
+    skip: ["superpowers"],
   },
 };
 

@@ -20,9 +20,8 @@ boundaries.
 
 ## Quick Onboarding
 
-**[memories/](./memories/)** - Summaries of recent work. Read this folder at the
-start of a new session to understand what's been happening lately without
-scanning git logs or exploring files.
+**[items/](./items/README.md)** - The work items: what is in triage, ready and
+in flight. Read it at the start of a new session to see what is happening.
 
 ## Structure
 
@@ -109,15 +108,15 @@ folder gets created at all. Use these when you're uncertain if action is needed.
 
 Co-located pipeline documents for defined bodies of work. Each project folder
 contains its proposal, plan, sessions, and artifacts together — the full story
-of a piece of work in one place. See [projects/README.md](./projects/README.md)
-for conventions and templates.
+of a piece of work in one place. See [features/README.md](./features/README.md)
+for conventions (projects become features in 9.0.0).
 
 #### `/backlog`
 
 Small, self-contained work items — bugs, minor refactors, papercuts, and clear
 tasks that don't warrant a full project folder. Individual files per item,
-archived when complete. See [backlog/README.md](./backlog/README.md) for format
-and conventions.
+archived when complete. See [items/README.md](./items/README.md) for format and
+conventions (backlog items become work items in 9.0.0).
 
 #### `/cycles`
 

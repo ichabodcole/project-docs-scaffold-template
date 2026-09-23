@@ -23,7 +23,9 @@
       "projects",
       "reports",
       "fragments",
-      "cycles"
+      "cycles",
+      "features",
+      "items"
     ],
     "skip": [
       "_archive",

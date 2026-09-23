@@ -13,9 +13,10 @@
  * the table and this list — deliberately, which is the point.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { Glob } from "bun";
+import { DEFAULT_CONFIG } from "./pdocs/docs-lint/config.ts";
 
 const PAYLOAD = resolve(import.meta.dir, "../{{cookiecutter.project_slug}}");
 const SCHEMA = join(PAYLOAD, "docs/SCHEMA.md");
@@ -92,7 +93,61 @@ describe("the ownership contract covers the payload", () => {
 
   test("every seeded payload file really is a template", () => {
     const seeded = payloadFiles().filter((f) => classify(f) === "seeded");
-    expect(seeded.length).toBeGreaterThan(15);
+    // Nine work templates in `TEMPLATES/`, six category templates.
+    expect(seeded.length).toBeGreaterThanOrEqual(15);
     for (const f of seeded) expect(f.endsWith(".md")).toBe(true);
+  });
+});
+
+describe("the payload ships the work-taxonomy layout", () => {
+  const RETIRED_FOLDERS = [
+    "backlog",
+    "briefs",
+    "fragments",
+    "investigations",
+    "reports",
+    "projects",
+    "memories",
+    "lessons-learned",
+  ];
+
+  test("no retired folder is shipped", () => {
+    expect(
+      RETIRED_FOLDERS.filter((f) => existsSync(join(PAYLOAD, "docs", f)))
+    ).toEqual([]);
+  });
+
+  test("features/ and items/ ship with their contract page and an archive", () => {
+    for (const path of [
+      "docs/features/README.md",
+      "docs/items/README.md",
+      "docs/features/_archive/.gitkeep",
+      "docs/items/_archive/.gitkeep",
+      "docs/TEMPLATES/FEATURE.template.md",
+      "docs/TEMPLATES/ITEM.template.md",
+    ])
+      expect({ path, shipped: existsSync(join(PAYLOAD, path)) }).toEqual({
+        path,
+        shipped: true,
+      });
+    expect(classify("docs/features/_archive/.gitkeep")).toBe("structural");
+    expect(classify("docs/items/README.md")).toBe("owned");
+  });
+
+  test("the catalog has no Memories or Lessons section", () => {
+    const index = readFileSync(join(PAYLOAD, "docs/index.md"), "utf8");
+    expect(index).not.toContain("## Memories");
+    expect(index).not.toContain("## Lessons");
+  });
+
+  // The payload's config and the defaults describe one layout. The archive is
+  // linted (not skipped), because the terminal-state rule has to see it.
+  test("the payload's .project-docs.json states the defaults", () => {
+    const cfg = JSON.parse(readFileSync(join(PAYLOAD, ".project-docs.json"), "utf8"));
+    expect(cfg.lint.durable).toEqual(DEFAULT_CONFIG.lint.durable);
+    expect(cfg.lint.workbench).toEqual(DEFAULT_CONFIG.lint.workbench);
+    expect(cfg.lint.scopes).toEqual(DEFAULT_CONFIG.lint.scopes);
+    expect(cfg.lint.skip).not.toContain("_archive");
+    expect(DEFAULT_CONFIG.lint.skip).not.toContain("_archive");
   });
 });
