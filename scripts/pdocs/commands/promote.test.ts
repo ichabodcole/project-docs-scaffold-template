@@ -96,6 +96,27 @@ describe("rewriteLinks", () => {
     );
   });
 
+  test("a reference-style definition is rewritten; one inside a fence is not", () => {
+    const text = [
+      "See [x][ref].",
+      "",
+      "[ref]: ../../items/x.md#why",
+      '  [other]: <../../items/x.md> "Title"',
+      "",
+      "```",
+      "[fenced]: ../../items/x.md",
+      "```",
+      "",
+    ].join("\n");
+    const r = rewriteLinks(text, "/r/docs/features/a/plan.md", "/r/docs/features/a/plan.md", map);
+    expect(r.text).toBe(
+      text
+        .replace("[ref]: ../../items/x.md#why", "[ref]: ../../items/x/item.md#why")
+        .replace("[other]: <../../items/x.md>", "[other]: <../../items/x/item.md>")
+    );
+    expect(r.changed).toBe(2);
+  });
+
   test("a pointy-bracket destination keeps its brackets", () => {
     const r = rewriteLinks(
       "[x](<../../items/x.md>)\n",

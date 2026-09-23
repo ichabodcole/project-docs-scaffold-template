@@ -14,6 +14,13 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { MARKDOWN_LINK_RE, stripCode } from "./docs-lint/index.ts";
 
 /**
+ * A reference-style link definition: `[label]: destination`, up to three
+ * spaces of indent. Group 1 is everything before the destination; group 2 the
+ * destination (pointy-bracketed or bare), without any title after it.
+ */
+const REFERENCE_DEFINITION_RE = /^( {0,3}\[[^\]\n]+\]:[ \t]*)(<[^>\n]*>|[^\s<]\S*)/gm;
+
+/**
  * Where `abs` lives after the move. `moveMap` maps absolute old paths to
  * absolute new ones; a key may be a FILE or a FOLDER, and a folder carries
  * everything under it. The longest matching key wins.
@@ -49,11 +56,20 @@ export function rewriteLinks(
   const toDir = dirname(toFile);
   const edits: Array<{ start: number; end: number; value: string }> = [];
 
-  for (const m of stripCode(text).matchAll(MARKDOWN_LINK_RE)) {
-    const raw = m[1];
-    if (raw === undefined || m.index === undefined) continue;
-    // The destination's position in the ORIGINAL text: `](` is two characters.
-    const start = m.index + 2;
+  const stripped = stripCode(text);
+  // Inline links, and reference-style definitions (`[r]: ./x.md`). The
+  // checker reads only the first form; a move still must not break the second.
+  const found: Array<{ start: number; raw: string }> = [];
+  for (const m of stripped.matchAll(MARKDOWN_LINK_RE))
+    if (m[1] !== undefined && m.index !== undefined)
+      // The destination's position in the ORIGINAL text: `](` is two characters.
+      found.push({ start: m.index + 2, raw: m[1] });
+  for (const m of stripped.matchAll(REFERENCE_DEFINITION_RE))
+    if (m[2] !== undefined && m.index !== undefined)
+      found.push({ start: m.index + (m[1] as string).length, raw: m[2] });
+  found.sort((a, b) => a.start - b.start);
+
+  for (const { start, raw } of found) {
     const written = text.slice(start, start + raw.length);
     const pointy = /^<.*>$/.test(written.trim());
     const target = written.trim().replace(/^<(.*)>$/, "$1");
