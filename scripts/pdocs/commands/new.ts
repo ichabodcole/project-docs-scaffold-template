@@ -826,7 +826,11 @@ export const newCommand: Command = {
   usage:
     "pdocs new <type> <name> [--title <t>] [--description <d>] [--owner <feature/…|item/…>] " +
     "[--variant <v>] [--from <path>]",
-  // `name` is NOT required and the two are not the same kind of optional: a
+  // `--project` was the owner flag before 9.0.0; skills written against it still pass it.
+  retiredFlags: {
+    "--project": "`--project` was replaced by `--owner feature/<slug>` (or `item/<slug>`).",
+  },
+    // `name` is NOT required and the two are not the same kind of optional: a
   // type whose filename the registry fixes — `proposal.md`, `plan.md` — takes
   // none, and a type that names a scope demands one. The parser enforces the
   // maximum; which of the two applies is `resolveType`'s answer, so `required`

@@ -792,6 +792,10 @@ describe("the emitted declaration", () => {
       expect(names("find")).toContain(flag);
   });
 
+  test("a retired flag is not declared: `new` does not list --project (review 12)", () => {
+    expect(at(declaration(), ["new"]).args.map((a) => a.name)).not.toContain("--project");
+  });
+
   test("check declares --against, a string", () => {
     const against = at(declaration(), ["check"]).args.find(
       (a) => a.name === "--against"

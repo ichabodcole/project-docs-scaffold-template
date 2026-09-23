@@ -117,6 +117,12 @@ export interface Verb {
   /** The positionals this verb takes, for the manifest, for arity and for the
    *  declaration. */
   positionals?: Positional[];
+  /**
+   * Flags this verb USED to take, and what replaced each. Not accepted, not
+   * listed, not declared — the parser only uses this to refuse one with a
+   * message that names its replacement instead of "unknown flag".
+   */
+  retiredFlags?: Record<string, string>;
 }
 
 export interface Command extends Verb {
@@ -387,6 +393,13 @@ export function parseArgs(
     const eq = token.indexOf("=");
     const name = eq === -1 ? token : token.slice(0, eq);
     const attached = eq === -1 ? undefined : token.slice(eq + 1);
+
+    const retired = verb.retiredFlags?.[name];
+    if (retired !== undefined)
+      throw new UsageError(retired, {
+        token,
+        hint: `\`pdocs ${verb.name} --help\` describes each flag it takes.`,
+      });
 
     if (!takesValue.has(name)) {
       const valid = commandFlagNames(verb);

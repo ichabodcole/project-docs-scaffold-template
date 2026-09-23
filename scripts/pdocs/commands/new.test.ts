@@ -373,7 +373,13 @@ describe("pdocs new — a project folder, after the alias", () => {
     makeProject(root, "oauth-upgrade");
     const r = run(["new", "plan", "--root", root, "--project", "oauth-upgrade"]);
     expect(r.code).toBe(ExitCode.Usage);
-    expect(r.stderr).toContain("--owner");
+    expect(r.stderr).toContain(
+      "`--project` was replaced by `--owner feature/<slug>` (or `item/<slug>`)"
+    );
+    // `--project=x` is the same flag.
+    expect(run(["new", "plan", "--root", root, "--project=oauth-upgrade"]).stderr).toContain(
+      "was replaced by `--owner"
+    );
     expect(existsSync(join(root, "docs/projects/oauth-upgrade/plan.md"))).toBe(false);
   });
 });
