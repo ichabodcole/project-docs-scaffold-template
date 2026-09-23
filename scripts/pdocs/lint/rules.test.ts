@@ -2138,3 +2138,34 @@ describe("collect runs the work-taxonomy corpus rules", () => {
     expect(rows[0]).toContain("docs/items/a.md");
   });
 });
+
+describe("a loose file directly in an owner folder (review F)", () => {
+  const page = (fields: Record<string, string>) => fm({ title: "N", description: "A note.", status: "draft", generated: GENERATED, ...fields }) + "# N\n";
+
+  test("features/notes.md is one NOT AN ENTITY POSITION row, and nothing garbled", () => {
+    const ctx = fixture(
+      { "docs/features/notes.md": page({ type: "artifact", lifecycle: "active" }) },
+      { skip: [] }
+    );
+    const problems = thinTier(ctx);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toStartWith("NOT AN ENTITY POSITION  docs/features/notes.md");
+    expect(problems[0]).toContain("features/<slug>/feature.md");
+  });
+
+  test("a legacy projects/x.md is still an artifact, as on develop", () => {
+    const ctx = fixture({ "docs/projects/x.md": page({ type: "artifact" }) }, { skip: [] });
+    expect(workbenchFiles(ctx).find((f) => f.rel === "docs/projects/x.md")?.type).toBe("artifact");
+    expect(thinTier(ctx)).toEqual([]);
+  });
+
+  test("items/feature.md is a MISPLACED ENTITY, not an item missing its fields", () => {
+    const ctx = fixture(
+      { "docs/items/feature.md": page({ type: "feature", lifecycle: "backlog" }) },
+      { skip: [] }
+    );
+    const problems = thinTier(ctx);
+    expect(problems.some((p) => p.startsWith("MISPLACED ENTITY  docs/items/feature.md"))).toBe(true);
+    expect(problems.filter((p) => p.startsWith("MISSING"))).toEqual([]);
+  });
+});

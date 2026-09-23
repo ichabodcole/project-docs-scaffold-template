@@ -307,6 +307,9 @@ export interface WorkbenchFile {
   /** Set when an entity file (`feature.md`, `item.md`) sits where its entity
    *  cannot: the reason, for the `MISPLACED ENTITY` row. */
   misplaced?: string;
+  /** Set when the file sits where no document can (loose in `features/`): the
+   *  reason, for the `NOT AN ENTITY POSITION` row. No other field rule runs. */
+  notEntity?: string;
 }
 
 /** The folders whose documents are typed by `ownedType` rather than by folder. */
@@ -336,8 +339,14 @@ export function workbenchFiles(ctx: Ctx): WorkbenchFile[] {
       if (excluded(rel)) continue;
       if (OWNER_FOLDERS.has(folder)) {
         const within = relative(dir, path).split(sep).join("/");
-        const { type, misplaced } = ownedPosition(folder, within);
-        out.push({ path, rel, type, ...(misplaced ? { misplaced } : {}) });
+        const { type, misplaced, notEntity } = ownedPosition(folder, within);
+        out.push({
+          path,
+          rel,
+          type,
+          ...(misplaced ? { misplaced } : {}),
+          ...(notEntity ? { notEntity } : {}),
+        });
         continue;
       }
       out.push({
@@ -378,7 +387,7 @@ export function ownedType(owner: string, within: string): string {
 function ownedPosition(
   owner: string,
   within: string
-): { type: string; misplaced: string | null } {
+): { type: string; misplaced: string | null; notEntity?: string } {
   let segs = within.split("/");
   if (owner !== PROJECTS_FOLDER && segs[0] === "_archive" && segs.length > 1)
     segs = segs.slice(1);
@@ -390,14 +399,29 @@ function ownedPosition(
       ENTITY_FILE[type === "feature" ? FEATURES_FOLDER : ITEMS_FOLDER]!.name
     }`;
 
-  // Loose in the owner folder itself. Under `items/` that IS an item —
-  // `items/<slug>.md` — whatever it is called.
+  // Loose in the owner folder itself.
   if (segs.length === 1) {
-    if (owner === ITEMS_FOLDER) return { type: "item", misplaced: null };
-    const entity = ENTITY_FILE_TYPE[segs[0] as string];
-    return entity
-      ? { type: entity, misplaced: misplace(entity) }
-      : { type: "", misplaced: null };
+    const name = segs[0] as string;
+    // The legacy project tree, exactly as it was typed before the work
+    // taxonomy: a loose file is its fixed-name type, or an artifact.
+    if (owner === PROJECTS_FOLDER)
+      return { type: PROJECT_FILE_TYPE[name] ?? "artifact", misplaced: null };
+    // Under `items/` a loose file IS an item — `items/<slug>.md` — unless it
+    // is a feature's entry file, which is in the wrong owner.
+    if (owner === ITEMS_FOLDER)
+      return name === ENTITY_FILE[FEATURES_FOLDER]!.name
+        ? { type: "feature", misplaced: misplace("feature") }
+        : { type: "item", misplaced: null };
+    const entity = ENTITY_FILE_TYPE[name];
+    if (entity) return { type: entity, misplaced: misplace(entity) };
+    // A file loose in `features/` has no type a position can give it: every
+    // feature is a folder. One finding says so; typing it `""` produced a
+    // WRONG TYPE and a frozen-record row that named no type.
+    return {
+      type: "",
+      misplaced: null,
+      notEntity: `a file directly in ${FEATURES_FOLDER}/ must be a feature folder — move it to ${FEATURES_FOLDER}/<slug>/feature.md, or into a feature's artifacts/`,
+    };
   }
 
   const rest = segs.slice(1);
@@ -706,6 +730,10 @@ function thinFindings(ctx: Ctx): {
 
     if (CONTRACT_BASENAMES.has(name) || isTpl(path)) continue;
 
+    if (file.notEntity) {
+      problems.push(`NOT AN ENTITY POSITION  ${rel}: ${file.notEntity}`);
+      continue;
+    }
     if (file.misplaced)
       problems.push(`MISPLACED ENTITY  ${rel}  (${file.misplaced})`);
 
