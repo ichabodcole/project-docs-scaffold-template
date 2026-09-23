@@ -46,7 +46,9 @@ import {
   ENTITY_FILE,
   FEATURES_FOLDER,
   ITEMS_FOLDER,
+  KINDS,
   OWNED_FILE_TYPE,
+  PRIORITIES,
   OWNER_SUBFOLDER,
   PROJECTS_FOLDER,
   PROJECT_FILE_TYPE,
@@ -282,6 +284,9 @@ const REQUIRED = ["type", "title", "description", "status", "generated"];
 const OPTIONAL = new Set(["tags", "related", "supersedes"]);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+/** A UUID, lowercase — the one form `pdocs` writes and compares. */
+export const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TAG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 // ---------------------------------------------------------------------------------------
@@ -488,7 +493,11 @@ export function documentProblems(
   const fields = parseFrontmatter(m[1] as string);
   const row = registry.get(type);
   const lifecycle = row?.lifecycle ?? null;
-  const required = requireTags ? [...REQUIRED, "tags"] : REQUIRED;
+  const required = [
+    ...REQUIRED,
+    ...(requireTags ? ["tags"] : []),
+    ...(row?.required ?? []),
+  ];
   const allowed = new Set([
     ...REQUIRED,
     ...OPTIONAL,
@@ -539,6 +548,25 @@ export function documentProblems(
   }
 
   problems.push(...generatedProblems(rel, fields.get("generated")));
+
+  // The work-item fields with a closed shape, checked only where the row
+  // declares them: on any other type the key is already an UNKNOWN FIELD.
+  const declares = (key: string) => row?.extra.includes(key) === true;
+  const id = fields.get("id");
+  if (id && declares("id")) {
+    if (UUID_RE.test(id.toLowerCase()) && id !== id.toLowerCase())
+      problems.push(`BAD ID         ${rel}: "${id}"  (lowercase)`);
+    else if (!UUID_RE.test(id))
+      problems.push(`BAD ID         ${rel}: "${id}"  (expected a UUID)`);
+  }
+  const kind = fields.get("kind");
+  if (kind && declares("kind") && !KINDS.includes(kind))
+    problems.push(`BAD KIND       ${rel}: "${kind}"  (${KINDS.join(" | ")})`);
+  const priority = fields.get("priority");
+  if (priority && declares("priority") && !PRIORITIES.includes(priority))
+    problems.push(
+      `BAD PRIORITY   ${rel}: "${priority}"  (${PRIORITIES.join(" | ")})`
+    );
 
   // Superseded by `generated.at` in OKF 0.2, and rejected rather than ignored
   // so a document cannot carry two disagreeing dates.

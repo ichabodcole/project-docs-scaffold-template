@@ -38,6 +38,7 @@ import {
   schemaStateGroups,
   schemaTableChecks,
   thinTier,
+  documentProblems,
   ownedType,
   workbenchFiles,
 } from "./rules.ts";
@@ -1986,5 +1987,121 @@ describe("position typing — features/ and items/", () => {
     expect(
       thinTier(ctx).filter((p) => p.startsWith("MISPLACED ENTITY"))
     ).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Per-document field rules for the work taxonomy (Task 1.6)
+// ---------------------------------------------------------------------------------------
+
+describe("per-document field rules — items and features", () => {
+  const UUID = "0190f4b2-7c3a-7d4e-8f00-00000000abcd";
+  const ITEM = {
+    type: "item",
+    title: "Fix the hook",
+    description: "The hook reads the wrong index.",
+    status: "draft",
+    lifecycle: "triage",
+    id: UUID,
+    kind: "bug",
+    generated: GENERATED,
+  };
+  const item = { path: "/x/docs/items/fix-hook.md", rel: "docs/items/fix-hook.md", type: "item" };
+  const feature = {
+    path: "/x/docs/features/a/feature.md",
+    rel: "docs/features/a/feature.md",
+    type: "feature",
+  };
+  const check = (
+    file: { path: string; rel: string; type: string },
+    fields: Record<string, string>
+  ) => documentProblems(file, `${fm(fields)}# X\n`, "docs", false).problems;
+  const without = (key: string) =>
+    Object.fromEntries(Object.entries(ITEM).filter(([k]) => k !== key));
+
+  test("a complete item is clean", () => {
+    expect(check(item, ITEM)).toEqual([]);
+  });
+
+  test("an item missing id, kind or lifecycle names the field", () => {
+    expect(check(item, without("id"))).toEqual(["MISSING id   docs/items/fix-hook.md"]);
+    expect(check(item, without("kind"))).toEqual(["MISSING kind   docs/items/fix-hook.md"]);
+    expect(check(item, without("lifecycle"))).toEqual([
+      "MISSING lifecycle   docs/items/fix-hook.md",
+    ]);
+  });
+
+  test("the missing fields reach the report as data", () => {
+    const r = documentProblems(item, `${fm(without("id"))}# X\n`, "docs", false);
+    expect(r.missing).toEqual(["id"]);
+  });
+
+  test("an id that is not a UUID is BAD ID", () => {
+    const problems = check(item, { ...ITEM, id: "1234" });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toStartWith("BAD ID");
+    expect(problems[0]).toContain("UUID");
+  });
+
+  test("an uppercase UUID is reported, so pdocs has one canonical form", () => {
+    const problems = check(item, { ...ITEM, id: UUID.toUpperCase() });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toStartWith("BAD ID");
+    expect(problems[0]).toContain("(lowercase)");
+  });
+
+  test("a quoted UUID is a UUID", () => {
+    expect(check(item, { ...ITEM, id: `"${UUID}"` })).toEqual([]);
+  });
+
+  test("a kind or priority outside its closed set is reported", () => {
+    const kind = check(item, { ...ITEM, kind: "story" });
+    expect(kind).toHaveLength(1);
+    expect(kind[0]).toStartWith("BAD KIND");
+    expect(kind[0]).toContain("task | bug | chore | research");
+
+    const priority = check(item, { ...ITEM, priority: "p1" });
+    expect(priority).toHaveLength(1);
+    expect(priority[0]).toStartWith("BAD PRIORITY");
+    expect(priority[0]).toContain("urgent | high | medium | low");
+
+    expect(check(item, { ...ITEM, priority: "urgent" })).toEqual([]);
+  });
+
+  test("a feature cannot be in triage (D3)", () => {
+    const problems = check(feature, {
+      type: "feature",
+      title: "A",
+      description: "A feature.",
+      status: "draft",
+      lifecycle: "triage",
+      generated: GENERATED,
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toStartWith("BAD LIFECYCLE");
+  });
+
+  // D9's non-rule, pinned so nobody adds the check by accident: released_in
+  // is optional and not linted.
+  test("a done item with no released_in is clean", () => {
+    expect(check(item, { ...ITEM, lifecycle: "done" })).toEqual([]);
+  });
+
+  test("the item rules are the item's: a plan with a kind is an unknown field, not a BAD KIND", () => {
+    const plan = {
+      path: "/x/docs/features/a/plan.md",
+      rel: "docs/features/a/plan.md",
+      type: "plan",
+    };
+    const problems = check(plan, {
+      type: "plan",
+      title: "P",
+      description: "A plan.",
+      status: "draft",
+      lifecycle: "draft",
+      kind: "story",
+      generated: GENERATED,
+    });
+    expect(problems).toEqual(['UNKNOWN FIELD  docs/features/a/plan.md: "kind"']);
   });
 });
