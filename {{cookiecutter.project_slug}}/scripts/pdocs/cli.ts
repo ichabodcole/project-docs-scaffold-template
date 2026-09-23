@@ -8,6 +8,7 @@
 //   bun scripts/pdocs/cli.ts backlinks what cites a document
 //   bun scripts/pdocs/cli.ts orphans   library pages the catalog cannot reach
 //   bun scripts/pdocs/cli.ts new       create a document of a declared type
+//   bun scripts/pdocs/cli.ts promote   turn a single-file item into a folder
 //   bun scripts/pdocs/cli.ts schema    this CLI's own surface, as a declaration
 //
 // Hand-rolled dispatch, and ZERO DEPENDENCIES on purpose. The recipe for this
@@ -44,6 +45,7 @@ import { find } from "./commands/find.ts";
 import { graph } from "./commands/graph.ts";
 import { newCommand } from "./commands/new.ts";
 import { orphans } from "./commands/orphans.ts";
+import { promote } from "./commands/promote.ts";
 import { report } from "./commands/report.ts";
 
 /** One flag, as help and as the parser's rule for it. A `metavar` means the
@@ -123,6 +125,7 @@ const COMMANDS: Command[] = [
   backlinks,
   orphans,
   newCommand,
+  promote,
 ];
 
 const GLOBAL_OPTIONS: Option[] = [

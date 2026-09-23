@@ -25,6 +25,9 @@
 //    nothing, `runDocsLint` is the printing wrapper over it. The source can
 //    only print, so a CLI that owns its own output envelope has to re-implement
 //    the walk to get at the data. Anthill made the same split independently.
+// 4. The link grammar `checkLinks` scans with is exported as `MARKDOWN_LINK_RE`,
+//    so a tool that REWRITES links (`scripts/pdocs/links-rewrite.ts`) reads
+//    exactly the links the checker reads, rather than a second regex.
 
 import {
   existsSync,
@@ -420,6 +423,15 @@ function climbsOut(root: string, fromDir: string, pathPart: string): boolean {
 }
 
 /**
+ * A markdown link's destination: `](target)`, or CommonMark's pointy-bracket
+ * `](<target>)`. Group 1 is the destination as written. Scan `stripCode(body)`
+ * with it — the stripping preserves length, so a match's index is its index in
+ * the original text. `matchAll` copies the regex, so the shared `/g` state is
+ * never advanced.
+ */
+export const MARKDOWN_LINK_RE = /\]\((<[^>]*>|[^)]+)\)/g;
+
+/**
  * Resolve every relative markdown link in one file: does the target exist, and if it names an
  * anchor, is that anchor a heading there?
  *
@@ -460,7 +472,7 @@ export function checkLinks(
   // a link mid-URL and then reported the fragment as a missing FILE, since a truncated URL no
   // longer looks like one. `docs/wiki/site/markdown.ts` learned the same form; a linter that
   // disagrees with the renderer about what a link is will pass pages that render broken.
-  for (const m of stripCode(body).matchAll(/\]\((<[^>]*>|[^)]+)\)/g)) {
+  for (const m of stripCode(body).matchAll(MARKDOWN_LINK_RE)) {
     const link = m[1];
     if (link === undefined) continue;
     const target = link.trim().replace(/^<(.*)>$/, "$1");
