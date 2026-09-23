@@ -323,11 +323,13 @@ export function deletedItems(
   if (refExists(ctx, ref) !== true) return [];
 
   const itemsDir = join(ctx.config.docsRoot, ITEMS_FOLDER);
-  const listed = gitRun(ctx, ["ls-tree", "-r", "--name-only", ref, "--", itemsDir]);
+  // `-z`: without it git C-quotes any path with a non-ASCII byte in it
+  // (`"docs/items/caf\303\251.md"`), which then names no blob.
+  const listed = gitRun(ctx, ["ls-tree", "-r", "-z", "--name-only", ref, "--", itemsDir]);
   if (!listed.success) return [];
   const paths = listed.stdout
     .toString()
-    .split("\n")
+    .split("\0")
     .filter((p) => p.endsWith(".md"));
   if (paths.length === 0) return [];
 
@@ -338,10 +340,12 @@ export function deletedItems(
   );
   if (!batch.success) return [];
 
+  // Ids compare lowercased: `BAD ID … (lowercase)` asks for exactly that
+  // edit, and making it must not read as the item leaving the tree.
   const current = new Set(
     documents
       .filter((d) => d.type === "item")
-      .map((d) => scalar(d.fields.get("id")))
+      .map((d) => scalar(d.fields.get("id")).toLowerCase())
       .filter(Boolean)
   );
 
@@ -364,7 +368,11 @@ export function deletedItems(
     const fields = parseFrontmatter(fm[1] as string);
     if (scalar(fields.get("type")) !== "item") continue;
     const id = scalar(fields.get("id"));
-    if (!id || current.has(id)) continue;
+    if (!id || current.has(id.toLowerCase())) continue;
+    // Still there, at the same path, and unreadable as an item — CRLF line
+    // endings, a broken block. Its own parse problem is the finding; it has
+    // not left the tree.
+    if (existsSync(join(ctx.repoRoot, path))) continue;
     const state = scalar(fields.get("lifecycle"));
     if (state === "dropped") continue;
     problems.push(

@@ -464,6 +464,29 @@ describe("no silent deletion — an item leaves the tree only through dropped", 
     expect(check(root).deleted).toEqual([]);
   });
 
+  test("lowercasing an uppercase id is not a deletion (review C)", () => {
+    const root = repo("backlog", {}, { "docs/items/x.md": item(A.toUpperCase()) });
+    writeFileSync(join(root, "docs/items/x.md"), item(A));
+    expect(check(root).deleted).toEqual([]);
+  });
+
+  test("deleting an item with a non-ASCII filename is found (review D)", () => {
+    const root = repo("backlog", {}, { "docs/items/café.md": item(A) });
+    rmSync(join(root, "docs/items/café.md"));
+    const { deleted } = check(root);
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]).toContain("docs/items/café.md");
+  });
+
+  test("an item still at its path but unparsable is not reported deleted (review H)", () => {
+    const root = repo();
+    // CRLF line endings: the frontmatter no longer parses. That is the file's
+    // own finding (NO FRONTMATTER), not a deletion.
+    const path = join(root, "docs/items/x.md");
+    writeFileSync(path, item(A).replace(/\n/g, "\r\n"));
+    expect(check(root).deleted).toEqual([]);
+  });
+
   test("a tree that is not a git repository has no finding and no crash", () => {
     const ctx = fixture({ "docs/items/x.md": item(A) });
     copyFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), join(ctx.docsRoot, "SCHEMA.md"));
