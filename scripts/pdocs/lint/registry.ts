@@ -430,49 +430,83 @@ type Creation = {
  * inventing a convention rather than recording one. Add the second member the
  * day a real file needs it.
  */
+/** The two fallbacks a refusal names until `pdocs new` writes work documents. */
+const COPY_ITEM =
+  "copy {docs}/TEMPLATES/ITEM.template.md to {docs}/items/<slug>.md and give it a lowercase UUID `id`";
+const COPY_FEATURE =
+  "copy {docs}/TEMPLATES/FEATURE.template.md to {docs}/features/<slug>/feature.md";
+
+/**
+ * Words a caller may still type that are no longer types, and what replaced
+ * them. `pdocs new project` resolved to the proposal row until 9.0.0; skills
+ * written against that grammar still run it, so the refusal says what to do
+ * rather than "unknown type".
+ */
+const RETIRED_WORD: Record<string, string> = {
+  project:
+    "`project` was replaced by `feature` in 9.0.0 (`pdocs new feature <slug>`, not built yet) — until then " +
+    COPY_FEATURE,
+};
+
+/** Why `word` is no longer a type, with the docs root filled in; `null` when it
+ *  never was one. */
+export function retiredWordReason(word: string, config: ProjectDocsConfig): string | null {
+  const reason = RETIRED_WORD[word];
+  return reason === undefined ? null : fillDocs(reason, config);
+}
+
+/** `{docs}` in a message is the configured docs root, normalised. */
+function fillDocs(text: string, config: ProjectDocsConfig): string {
+  const docs = config.docsRoot.replace(/^\.\/+/, "").replace(/\/+$/, "") || ".";
+  return text.replaceAll("{docs}", docs);
+}
+
 const CREATION: Record<string, Creation> = {
   // Retired in 9.0.0. Lintable until this repository has migrated; never
-  // created, so they declare no template. Each reason names the replacement.
+  // created, so they declare no template. Each reason names the replacement,
+  // and — until `pdocs new item` and `--owner` land — the template to copy,
+  // which is the one way to write the replacement today. `{docs}` is the
+  // configured docs root, filled in by `buildRegistry`.
   backlog: {
     filename: { kind: "slug", date: "day" },
     template: null,
-    uncreatableReason: "retired in 9.0.0; use `pdocs new item <slug> --kind task`",
+    uncreatableReason: `retired in 9.0.0; the replacement is a work item (\`pdocs new item <slug> --kind task\`, not built yet) — until then ${COPY_ITEM}`,
   },
   fragment: {
     filename: { kind: "slug", date: "day" },
     template: null,
-    uncreatableReason:
-      "retired in 9.0.0; use `pdocs new item <slug> --kind task` (it starts in `triage`)",
+    uncreatableReason: `retired in 9.0.0; the replacement is a \`triage\` work item (\`pdocs new item <slug> --kind task\`, not built yet) — until then ${COPY_ITEM}`,
   },
   brief: {
     filename: { kind: "slug", date: "day" },
     template: null,
-    uncreatableReason:
-      "retired in 9.0.0; write the idea as a feature (`pdocs new feature <slug>`) or a `triage` item (`pdocs new item <slug> --kind task`)",
+    uncreatableReason: `retired in 9.0.0; write the idea as a feature or a \`triage\` work item — until \`pdocs new\` makes them, ${COPY_FEATURE}, or ${COPY_ITEM}`,
   },
   investigation: {
     filename: { kind: "slug", date: "day", suffix: "investigation" },
     template: null,
     uncreatableReason:
-      "retired in 9.0.0; use `pdocs new item <slug> --kind research`, then its write-up",
+      "retired in 9.0.0; the replacement is a research work item and its write-up " +
+      "(`pdocs new item <slug> --kind research`, not built yet) — until then copy " +
+      "{docs}/TEMPLATES/ITEM.template.md to {docs}/items/<slug>/item.md with `kind: research` " +
+      "and a lowercase UUID `id`, and {docs}/TEMPLATES/WRITE-UP.template.md to {docs}/items/<slug>/write-up.md",
   },
   proposal: {
     filename: { kind: "fixed", name: "proposal.md" },
     template: null,
-    uncreatableReason:
-      "retired in 9.0.0; a proposal is now a feature — use `pdocs new feature <slug>`",
+    uncreatableReason: `retired in 9.0.0; a proposal is now a feature (\`pdocs new feature <slug>\`, not built yet) — until then ${COPY_FEATURE}`,
   },
   memory: {
     filename: { kind: "slug", date: "day" },
     template: null,
     uncreatableReason:
-      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`)",
+      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`), or start one with `pdocs new playbook <slug>`",
   },
   lesson: {
     filename: { kind: "slug", date: "none" },
     template: null,
     uncreatableReason:
-      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`)",
+      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`), or start one with `pdocs new playbook <slug>`",
   },
 
   // The work taxonomy's entities. Created by `pdocs new` once it learns
@@ -480,14 +514,12 @@ const CREATION: Record<string, Creation> = {
   feature: {
     filename: { kind: "fixed", name: "feature.md" },
     template: "TEMPLATES/FEATURE.template.md",
-    uncreatableReason:
-      "`pdocs new feature` is not built yet — copy docs/TEMPLATES/FEATURE.template.md to features/<slug>/feature.md",
+    uncreatableReason: `\`pdocs new feature\` is not built yet — ${COPY_FEATURE}`,
   },
   item: {
     filename: { kind: "slug", date: "none" },
     template: "TEMPLATES/ITEM.template.md",
-    uncreatableReason:
-      "`pdocs new item` is not built yet — copy docs/TEMPLATES/ITEM.template.md to items/<slug>.md and give it a UUID `id`",
+    uncreatableReason: `\`pdocs new item\` is not built yet — ${COPY_ITEM}`,
   },
 
   // Owned, dated.
@@ -718,7 +750,7 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
       creatable: c.uncreatableReason === undefined,
       ...(c.uncreatableReason === undefined
         ? {}
-        : { uncreatableReason: c.uncreatableReason }),
+        : { uncreatableReason: fillDocs(c.uncreatableReason, config) }),
       ...(VALIDATION[type] === undefined
         ? {}
         : { validate: VALIDATION[type] }),

@@ -715,15 +715,47 @@ describe("the retired types", () => {
       expect(r.template).toBeNull();
       expect(r.uncreatableReason).toStartWith("retired in 9.0.0; ");
     }
-    expect(row("backlog").uncreatableReason).toBe(
-      "retired in 9.0.0; use `pdocs new item <slug> --kind task`"
+    expect(row("backlog").uncreatableReason).toContain(
+      "pdocs new item <slug> --kind task"
     );
-    expect(row("investigation").uncreatableReason).toContain("--kind research");
+    expect(row("investigation").uncreatableReason).toContain("research");
     expect(row("proposal").uncreatableReason).toContain("feature");
   });
 
   test("no other row is retired", () => {
     for (const r of ROWS)
       if (!RETIRED.includes(r.type)) expect(r.retired).toBeUndefined();
+  });
+});
+
+describe("an uncreatable work type names the fallback that works today (review J)", () => {
+  // Until `pdocs new item` and `--owner` land, the only way to write a work
+  // document is to copy its template. Every refusal names the exact file.
+  const templatePathsIn = (reason: string) =>
+    [...reason.matchAll(/docs\/TEMPLATES\/[A-Z-]+\.template\.md/g)].map((m) => m[0]);
+
+  test("feature, item and the work-shaped retired types each name a template that exists", () => {
+    for (const type of ["feature", "item", "proposal", "backlog", "fragment", "brief", "investigation"]) {
+      const reason = row(type).uncreatableReason as string;
+      const paths = templatePathsIn(reason);
+      expect({ type, named: paths.length > 0 }).toEqual({ type, named: true });
+      for (const p of paths) expect({ type, p, exists: existsSync(join(REPO_ROOT, p)) }).toEqual({ type, p, exists: true });
+    }
+    expect(row("feature").uncreatableReason).toContain("docs/features/<slug>/feature.md");
+    expect(row("item").uncreatableReason).toContain("docs/items/<slug>.md");
+    expect(row("investigation").uncreatableReason).toContain("WRITE-UP.template.md");
+  });
+
+  test("memory and lesson point at a playbook, which pdocs can create", () => {
+    for (const type of ["memory", "lesson"])
+      expect(row(type).uncreatableReason).toContain("playbook");
+  });
+
+  test("the paths follow the configured docs root", () => {
+    const moved = buildRegistry({ ...DEFAULT_CONFIG, docsRoot: "documentation" });
+    expect(moved.find((r) => r.type === "item")?.uncreatableReason).toContain(
+      "documentation/TEMPLATES/ITEM.template.md"
+    );
+    expect(moved.find((r) => r.type === "item")?.uncreatableReason).not.toContain("{docs}");
   });
 });

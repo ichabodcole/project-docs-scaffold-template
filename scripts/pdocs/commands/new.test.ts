@@ -300,7 +300,12 @@ describe("pdocs new — a project folder, after the alias", () => {
     const r = run(["new", "project", "oauth upgrade", "--root", root, "--format", "json"]);
     expect(r.code).toBe(ExitCode.Usage);
     expect(r.stdout).toBe("");
-    expect(JSON.parse(r.stderr).error.message).toContain("unknown type `project`");
+    const message: string = JSON.parse(r.stderr).error.message;
+    // Not "unknown type": `create-project` still runs this, and the answer has
+    // to say what replaced it and how to write one today (review J).
+    expect(message).toContain("replaced by `feature`");
+    expect(message).toContain("docs/TEMPLATES/FEATURE.template.md");
+    expect(message).toContain("docs/features/<slug>/feature.md");
     expect(existsSync(join(root, "docs/projects/oauth-upgrade"))).toBe(false);
   });
 

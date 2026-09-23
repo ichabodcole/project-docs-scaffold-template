@@ -60,6 +60,7 @@ import {
   TYPE_ALIAS,
   defaultRegistryIndex,
   registryIndex,
+  retiredWordReason,
 } from "../lint/registry.ts";
 import { collectPages, pageKeys } from "../pages.ts";
 
@@ -225,6 +226,13 @@ export function resolveType(ctx: Ctx, typeArg: string): ResolvedType {
     ].sort();
 
   if (!row) {
+    const retired = retiredWordReason(typeArg, ctx.config);
+    if (retired !== null)
+      throw new UsageError(`${retired}.`, {
+        token: typeArg,
+        choices: creatable(),
+        hint: `Creatable: ${creatable().join(", ")}.`,
+      });
     const choices = creatable();
     throw new UsageError(
       `unknown type \`${typeArg}\`. Creatable: ${choices.join(", ")}.`,
