@@ -30,7 +30,8 @@ For more guidance on plans, see the projects README: ../README.md
 
 # [Feature Name] Implementation Plan
 
-**Related Proposal:** link the owner — `./feature.md` or `./item.md` (`pdocs new --owner` adds it under Related Documents)
+**Related Proposal:** link the owner — `./feature.md` or `./item.md`
+(`pdocs new --owner` adds it under Related Documents)
 
 ---
 

@@ -44,7 +44,8 @@ For more guidance on test plans, see the projects README: ../README.md
 # Test Plan: [Feature Name]
 
 **Related Plan:** `[Development Plan](./plan.md)`, if the owner has one\
-**Related Proposal:** link the owner — `./feature.md` or `./item.md` (`pdocs new --owner` adds it)
+**Related Proposal:** link the owner — `./feature.md` or `./item.md`
+(`pdocs new --owner` adds it)
 
 ---
 

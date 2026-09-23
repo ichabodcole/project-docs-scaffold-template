@@ -39,7 +39,8 @@ For more guidance on design resolutions, see the projects README: ../README.md
 
 # [Design Resolution Title]
 
-**Related Proposal:** link the owner — `./feature.md` or `./item.md` (`pdocs new --owner` adds it under Related Documents)
+**Related Proposal:** link the owner — `./feature.md` or `./item.md`
+(`pdocs new --owner` adds it under Related Documents)
 
 ---
 

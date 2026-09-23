@@ -116,6 +116,20 @@ if [ "$docs_checked" -gt 0 ]; then
   fi
 fi
 
+# SEEDED TEMPLATES ARE COMPARED BYTE FOR BYTE, not normalized. The scaffold
+# records each seeded file's hash (`docs/.pdocs-seed.json`), and a migration
+# updates a template only while the project's copy still has that hash — so a
+# wrapping difference between this repository's copy and the payload's is a
+# real difference to the migration, even though Prettier calls it nothing.
+while IFS= read -r payload_file; do
+  rel="${payload_file#"$PAYLOAD"/}"
+  [ -f "$ROOT/$rel" ] || continue
+  if ! cmp -s "$ROOT/$rel" "$payload_file"; then
+    echo "DRIFTED        $rel  (a seeded template, compared byte for byte: its hash is recorded)"
+    fail=1
+  fi
+done < <(find "$PAYLOAD/docs" -type f -ipath '*template*' | sort)
+
 # Cookiecutter renders EVERY payload file through Jinja, code included. A
 # mirrored source file that happens to contain `{{` or `{%` is therefore
 # rewritten on generation — silently, and only in the generated project, where
