@@ -212,13 +212,14 @@ export interface RegistryRow {
   tier: "library" | "workbench";
   /**
    * `docs` — `folder` is docs-root-relative.
-   * `project` — the document lives under `projects/<project>/`, and `folder` is
-   *   relative to THAT: `""` for the fixed-name project documents, `sessions`
-   *   for a session, `artifacts` for an artifact.
+   * `owner` — the document lives inside an owner folder (a feature, an item,
+   *   or a legacy project), and `folder` is relative to THAT: `""` for the
+   *   fixed-name owned documents, `sessions`, `reports` or `artifacts` for the
+   *   rest.
    * `root` — a singleton at the docs root; `folder` is `""`.
    */
-  scope: "docs" | "project" | "root";
-  /** See `scope`. Empty for root pages and for the fixed project documents. */
+  scope: "docs" | "owner" | "root";
+  /** See `scope`. Empty for root pages and for the fixed owned documents. */
   folder: string;
   filename: FilenameShape;
   /**
@@ -239,6 +240,14 @@ export interface RegistryRow {
   lifecycle: string[] | null;
   /** Frontmatter keys beyond REQUIRED + OPTIONAL + `lifecycle`. */
   extra: string[];
+  /** Keys this type requires beyond the universal REQUIRED set. `item` is the
+   *  one that has any: `id` and `kind`. */
+  required: string[];
+  /**
+   * Retired in 9.0.0: still lintable, so a tree that has not migrated keeps
+   * passing, and never created. Deleted once this repository has migrated.
+   */
+  retired?: boolean;
   /** Whether `pdocs new` will create one. */
   creatable: boolean;
   /** Why not, when `creatable` is false. This string is what `new` tells the caller. */
@@ -337,9 +346,11 @@ export interface TypeAlias {
   namesScope: boolean;
 }
 
-export const TYPE_ALIAS: Record<string, TypeAlias> = {
-  project: { type: "proposal", namesScope: true },
-};
+/**
+ * Empty since 9.0.0. `project` resolved to the `proposal` row, and the proposal
+ * is retired: a feature is created as itself.
+ */
+export const TYPE_ALIAS: Record<string, TypeAlias> = {};
 
 /** The folder that holds feature folders: `features/<slug>/feature.md`. */
 export const FEATURES_FOLDER = "features";
@@ -425,20 +436,69 @@ type Creation = {
  * day a real file needs it.
  */
 const CREATION: Record<string, Creation> = {
-  // Workbench, dated.
-  backlog: { filename: { kind: "slug", date: "day" }, template: "backlog/TEMPLATE.md" },
-  fragment: { filename: { kind: "slug", date: "day" }, template: "fragments/TEMPLATE.md" },
+  // Retired in 9.0.0. Lintable until this repository has migrated; never
+  // created, so they declare no template. Each reason names the replacement.
+  backlog: {
+    filename: { kind: "slug", date: "day" },
+    template: null,
+    uncreatableReason: "retired in 9.0.0; use `pdocs new item <slug> --kind task`",
+  },
+  fragment: {
+    filename: { kind: "slug", date: "day" },
+    template: null,
+    uncreatableReason:
+      "retired in 9.0.0; use `pdocs new item <slug> --kind task` (it starts in `triage`)",
+  },
   brief: {
     filename: { kind: "slug", date: "day" },
-    template: "briefs/TEMPLATES/BRIEF.template.md",
+    template: null,
+    uncreatableReason:
+      "retired in 9.0.0; write the idea as a feature (`pdocs new feature <slug>`) or a `triage` item (`pdocs new item <slug> --kind task`)",
   },
   investigation: {
     filename: { kind: "slug", date: "day", suffix: "investigation" },
-    template: "investigations/YYYY-MM-DD-TEMPLATE-investigation.md",
+    template: null,
+    uncreatableReason:
+      "retired in 9.0.0; use `pdocs new item <slug> --kind research`, then its write-up",
   },
+  proposal: {
+    filename: { kind: "fixed", name: "proposal.md" },
+    template: null,
+    uncreatableReason:
+      "retired in 9.0.0; a proposal is now a feature — use `pdocs new feature <slug>`",
+  },
+  memory: {
+    filename: { kind: "slug", date: "day" },
+    template: null,
+    uncreatableReason:
+      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`)",
+  },
+  lesson: {
+    filename: { kind: "slug", date: "none" },
+    template: null,
+    uncreatableReason:
+      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`)",
+  },
+
+  // The work taxonomy's entities. Created by `pdocs new` once it learns
+  // `--owner` and writes an `id`; until then, written from the template.
+  feature: {
+    filename: { kind: "fixed", name: "feature.md" },
+    template: "TEMPLATES/FEATURE.template.md",
+    uncreatableReason:
+      "`pdocs new feature` is not built yet — copy docs/TEMPLATES/FEATURE.template.md to features/<slug>/feature.md",
+  },
+  item: {
+    filename: { kind: "slug", date: "none" },
+    template: "TEMPLATES/ITEM.template.md",
+    uncreatableReason:
+      "`pdocs new item` is not built yet — copy docs/TEMPLATES/ITEM.template.md to items/<slug>.md and give it a UUID `id`",
+  },
+
+  // Owned, dated.
   report: {
     filename: { kind: "slug", date: "day", suffix: "report" },
-    template: "reports/YYYY-MM-DD-TEMPLATE-report.md",
+    template: "TEMPLATES/REPORT.template.md",
   },
   // A cycle is named for the month it runs in, not the day it opened.
   cycle: { filename: { kind: "slug", date: "month" }, template: "cycles/TEMPLATE.md" },
@@ -456,11 +516,6 @@ const CREATION: Record<string, Creation> = {
     filename: { kind: "slug", date: "none", suffix: "playbook" },
     template: "playbooks/TEMPLATE.md",
   },
-  lesson: {
-    filename: { kind: "slug", date: "none" },
-    template: "lessons-learned/TEMPLATE.md",
-  },
-  memory: { filename: { kind: "slug", date: "day" }, template: "memories/TEMPLATE.md" },
   specification: {
     filename: { kind: "numbered" },
     template: [
@@ -489,23 +544,26 @@ const CREATION: Record<string, Creation> = {
     uncreatableReason: "the scaffold ships index.md; entries are added to it, not the file",
   },
 
-  // Project-scoped. The filenames come from `PROJECT_FILE_TYPE` below.
-  proposal: { filename: fixedProjectFile("proposal"), template: "projects/TEMPLATES/PROPOSAL.template.md" },
-  plan: { filename: fixedProjectFile("plan"), template: "projects/TEMPLATES/PLAN.template.md" },
+  // Owned. The fixed filenames come from `OWNED_FILE_TYPE` above.
+  plan: { filename: fixedOwnedFile("plan"), template: "TEMPLATES/PLAN.template.md" },
   "design-resolution": {
-    filename: fixedProjectFile("design-resolution"),
-    template: "projects/TEMPLATES/DESIGN-RESOLUTION.template.md",
+    filename: fixedOwnedFile("design-resolution"),
+    template: "TEMPLATES/DESIGN-RESOLUTION.template.md",
   },
   "test-plan": {
-    filename: fixedProjectFile("test-plan"),
-    template: "projects/TEMPLATES/TEST-PLAN.template.md",
+    filename: fixedOwnedFile("test-plan"),
+    template: "TEMPLATES/TEST-PLAN.template.md",
   },
   handoff: {
-    filename: fixedProjectFile("handoff"),
-    template: "projects/TEMPLATES/HANDOFF.template.md",
+    filename: fixedOwnedFile("handoff"),
+    template: "TEMPLATES/HANDOFF.template.md",
+  },
+  "write-up": {
+    filename: fixedOwnedFile("write-up"),
+    template: "TEMPLATES/WRITE-UP.template.md",
   },
   kickoff: {
-    filename: fixedProjectFile("kickoff"),
+    filename: fixedOwnedFile("kickoff"),
     // Outside the docs tree, and outside the cookiecutter payload: a generated
     // project has no `plugins/` directory. The row exists so the lint can type
     // `DEV_KICKOFF.md`; the `dev-kickoff` skill owns creating it.
@@ -517,7 +575,7 @@ const CREATION: Record<string, Creation> = {
   },
   session: {
     filename: { kind: "slug", date: "day" },
-    template: "projects/TEMPLATES/YYYY-MM-DD-SESSION.template.md",
+    template: "TEMPLATES/YYYY-MM-DD-SESSION.template.md",
   },
   artifact: {
     filename: { kind: "freeform" },
@@ -595,19 +653,57 @@ const VALIDATION: Record<string, Validator> = {
   },
 };
 
-/** The fixed name `PROJECT_FILE_TYPE` already states for this type. */
-function fixedProjectFile(type: string): FilenameShape {
-  const entry = Object.entries(PROJECT_FILE_TYPE).find(([, t]) => t === type);
+/** The fixed name `OWNED_FILE_TYPE` already states for this type. */
+function fixedOwnedFile(type: string): FilenameShape {
+  const entry = Object.entries(OWNED_FILE_TYPE).find(([, t]) => t === type);
   if (!entry)
-    throw new Error(`registry: no PROJECT_FILE_TYPE entry names \`${type}\``);
+    throw new Error(`registry: no OWNED_FILE_TYPE entry names \`${type}\``);
   return { kind: "fixed", name: entry[0] };
 }
 
-/** Where a project-scoped type sits INSIDE its project folder. */
-const PROJECT_SUBFOLDER: Record<string, string> = {
-  session: "sessions",
-  artifact: "artifacts",
+/** The types retired in 9.0.0 (see `RegistryRow.retired`). */
+export const RETIRED_TYPES = new Set([
+  "proposal",
+  "backlog",
+  "fragment",
+  "brief",
+  "investigation",
+  "memory",
+  "lesson",
+]);
+
+/**
+ * The owned types and their vocabularies. The legacy `PROJECT_SPEC` holds the
+ * same entries for the types a project folder carried, plus `proposal`; the
+ * registry declares each owned type once, from here.
+ */
+export const OWNED_SPEC: Record<string, { lifecycle: string[] | null }> = {
+  plan: PROJECT_SPEC.plan!,
+  "design-resolution": PROJECT_SPEC["design-resolution"]!,
+  "test-plan": PROJECT_SPEC["test-plan"]!,
+  kickoff: PROJECT_SPEC.kickoff!,
+  handoff: PROJECT_SPEC.handoff!,
+  session: PROJECT_SPEC.session!,
+  artifact: PROJECT_SPEC.artifact!,
+  report: { lifecycle: SPEC.reports!.lifecycle },
+  "write-up": { lifecycle: null },
 };
+
+/** A work item's fields beyond the universal ones, and who writes them is in
+ *  SCHEMA.md. `id` and `kind` are also required (`RegistryRow.required`). */
+const ITEM_EXTRA = [
+  "id",
+  "kind",
+  "parent",
+  "scope",
+  "cycle",
+  "from",
+  "source",
+  "blocked_by",
+  "released_in",
+  "priority",
+  "assignee",
+];
 
 /**
  * Every document type, as one list.
@@ -642,7 +738,8 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
     scope: RegistryRow["scope"],
     folder: string,
     lifecycle: string[] | null,
-    extra: string[]
+    extra: string[],
+    required: string[] = []
   ): void => {
     const c = creation(type);
     rows.push({
@@ -655,6 +752,8 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
       externalTemplate: c.externalTemplate === true,
       lifecycle,
       extra,
+      required,
+      ...(RETIRED_TYPES.has(type) ? { retired: true } : {}),
       creatable: c.uncreatableReason === undefined,
       ...(c.uncreatableReason === undefined
         ? {}
@@ -674,22 +773,27 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
   for (const type of Object.values(ROOT_PAGE_TYPE))
     push(type, "library", "root", "", null, []);
 
-  // Workbench folders.
+  // Workbench folders. A folder whose type is now OWNED (`reports/`) is still
+  // typed by position until this repository migrates, but its row is the
+  // owned one below — every type is declared once.
   for (const [folder, spec] of Object.entries(SPEC))
-    push(spec.type, "workbench", "docs", folder, spec.lifecycle, spec.extra ?? []);
+    if (!(spec.type in OWNED_SPEC))
+      push(spec.type, "workbench", "docs", folder, spec.lifecycle, spec.extra ?? []);
 
-  // Project-scoped. `PROJECT_SPEC` has no `extra` field at all — which is
-  // exactly why this registry exists — so every one of these declares `[]`
-  // here rather than being unable to declare anything.
-  for (const [type, spec] of Object.entries(PROJECT_SPEC))
-    push(
-      type,
-      "workbench",
-      "project",
-      PROJECT_SUBFOLDER[type] ?? "",
-      spec.lifecycle,
-      []
-    );
+  // The two entities. A feature is its owner folder's entry file; an item is a
+  // file in `items/` until it owns documents, then `items/<slug>/item.md`.
+  push("feature", "workbench", "owner", "", FEATURE_STATES, ["scope", "released_in"]);
+  push("item", "workbench", "docs", ITEMS_FOLDER, ITEM_STATES, ITEM_EXTRA, [
+    "id",
+    "kind",
+  ]);
+
+  // The legacy project folder's entry file.
+  push("proposal", "workbench", "owner", "", PROJECT_SPEC.proposal!.lifecycle, []);
+
+  // Owned, in a feature, an item, or a legacy project.
+  for (const [type, spec] of Object.entries(OWNED_SPEC))
+    push(type, "workbench", "owner", OWNER_SUBFOLDER[type] ?? "", spec.lifecycle, []);
 
   // Folders this project declared in `.project-docs.json`. The scaffold ships
   // no template for them, so they are lintable but not creatable — the same
@@ -711,6 +815,7 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
       externalTemplate: false,
       lifecycle: null,
       extra: [],
+      required: [],
       creatable: false,
       uncreatableReason: `\`${type}\` is declared in this project's .project-docs.json; the scaffold ships no template for it`,
     });

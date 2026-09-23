@@ -57,6 +57,9 @@ const SCRIPT = join(import.meta.dir, "migrate-v2.9-to-v2.10.ts");
 const REPO_ROOT = resolve(import.meta.dir, "../../../../../..");
 /** The release the v2.9 migration adopted consumers onto; fixture O is what it generated. */
 const V80_TAG = "project-docs-scaffold-template-v8.0.0";
+/** The release this migration was written against: its "current" scaffold
+ *  is built from this tag rather than the working tree (plan D16). */
+const OWN_TAG = "project-docs-scaffold-template-v8.1.0";
 /** The `Applies If` cell of the migrations table, verbatim. */
 const APPLIES_IF = "! grep -q isSeeded scripts/pdocs/lint/rules.ts";
 
@@ -123,21 +126,30 @@ function generatedScaffolds(): Scaffolds {
     config,
     `replay_dir: "${join(base, "replay")}"\ncookiecutters_dir: "${join(base, "cookiecutters")}"\n`
   );
-  const tagPresent =
-    Bun.spawnSync(
-      ["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `${V80_TAG}^{commit}`],
-      { stdout: "pipe", stderr: "pipe", env: childEnv() }
-    ).exitCode === 0;
-  if (!tagPresent)
+  const missingTag = [V80_TAG, OWN_TAG].find(
+    (tag) =>
+      Bun.spawnSync(
+        ["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `${tag}^{commit}`],
+        { stdout: "pipe", stderr: "pipe", env: childEnv() }
+      ).exitCode !== 0
+  );
+  if (missingTag)
     throw new Error(
-      `tag ${V80_TAG} is not in this clone, so fixture O cannot be generated. ` +
+      `tag ${missingTag} is not in this clone, so fixtures O and N cannot be generated. ` +
         "Run `git fetch --tags` (a shallow or --no-tags clone drops it) and re-run."
     );
-  const template80 = join(base, "template-v8.0.0");
-  mkdirSync(template80);
-  const tar = join(base, "template-v8.0.0.tar");
-  sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", tar, V80_TAG]);
-  sh(["tar", "-xf", tar, "-C", template80]);
+  const archive = (tag: string): string => {
+    const dir = join(base, tag);
+    mkdirSync(dir);
+    const tar = join(base, `${tag}.tar`);
+    sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", tar, tag]);
+    sh(["tar", "-xf", tar, "-C", dir]);
+    return dir;
+  };
+  const template80 = archive(V80_TAG);
+  // The scaffold this migration was written against (D16), not the working
+  // tree: the working tree moves on to layouts this script never knew.
+  const templateOwn = archive(OWN_TAG);
 
   const generate = (template: string, into: string): string => {
     mkdirSync(into);
@@ -157,7 +169,7 @@ function generatedScaffolds(): Scaffolds {
   };
   scaffolds = {
     old: generate(template80, join(base, "old")),
-    current: generate(REPO_ROOT, join(base, "current")),
+    current: generate(templateOwn, join(base, "current")),
   };
   return scaffolds;
 }

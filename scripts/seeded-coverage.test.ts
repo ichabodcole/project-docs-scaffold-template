@@ -90,12 +90,21 @@ describe("seed.ts and the lint decide \"template\" by one rule", () => {
   });
 
   test("it really would have caught the prefix bug", () => {
-    // Perturbation, inline: the original predicate, against today's registry.
+    // Perturbation, inline: the original predicate, against the name shapes
+    // the scaffold has shipped. Today's registry no longer declares a
+    // `YYYY-MM-DD-TEMPLATE-*` template (the report template moved to
+    // `TEMPLATES/REPORT.template.md` in 9.0.0), but the shape is still one
+    // `isSeeded` must accept — adopters' trees carry it.
     const oldPredicate = (n: string) =>
       (n.startsWith("TEMPLATE") && n.endsWith(".md")) || n.endsWith(".template.md");
-    expect(
-      declaredTemplates().filter((t) => !oldPredicate(basename(t))).length
-    ).toBeGreaterThan(0);
+    const shipped = [
+      ...declaredTemplates().map((t) => basename(t)),
+      "YYYY-MM-DD-TEMPLATE-report.md",
+      "YYYY-MM-DD-TEMPLATE-investigation.md",
+    ];
+    const missed = shipped.filter((n) => !oldPredicate(n));
+    expect(missed.length).toBeGreaterThan(0);
+    expect(missed.every((n) => isSeeded(n))).toBe(true);
   });
 
   test("every declared template actually exists in this repo", () => {

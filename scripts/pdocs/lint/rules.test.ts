@@ -942,6 +942,8 @@ function render(body: string): string {
   if (!m) return body;
   const filled = (m[1] as string)
     .replace(/YYYY-MM-DD/g, "2026-09-03")
+    // An item's `id` placeholder: a writer (or `pdocs new item`) puts a UUID.
+    .replace(/"\[uuid\]"/g, "0190f4b2-7c3a-7d4e-8f00-000000000001")
     .replace(/"\[[^"]*\]"/g, '"A filled-in placeholder."')
     .replace(/\[([a-z][a-z0-9-]*)\]/g, "$1");
   return body.replace(m[0], `---\n${filled}\n---`);
@@ -955,6 +957,11 @@ function pathFor(type: string): string {
     if (spec.type === type) return `docs/${folder}/2026-09-03-page.md`;
   for (const [file, t] of Object.entries(PROJECT_FILE_TYPE))
     if (t === type) return `docs/projects/x/${file}`;
+  // The work taxonomy's owners. A feature template renders into a feature
+  // folder, and an owned document into one too — the owner its links assume.
+  if (type === "feature") return "docs/features/x/feature.md";
+  if (type === "item") return "docs/items/2026-09-03-page.md";
+  if (type === "write-up") return "docs/items/x/write-up.md";
   if (type === "session") return "docs/projects/x/sessions/2026-09-03-a.md";
   if (type === "artifact") return "docs/projects/x/artifacts/a.md";
   throw new Error(`no home for type "${type}"`);

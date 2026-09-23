@@ -134,7 +134,7 @@ Date prefix enables:
 ## Template
 
 A ready-to-use template is available:
-**[YYYY-MM-DD-TEMPLATE-report.md](./YYYY-MM-DD-TEMPLATE-report.md)**
+**[REPORT.template.md](../TEMPLATES/REPORT.template.md)**
 
 The template provides structure for common report types while remaining flexible
 for different assessment needs.

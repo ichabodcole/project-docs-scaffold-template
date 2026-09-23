@@ -255,7 +255,7 @@ export function resolveDirectory(
   row: RegistryRow,
   project: string | undefined
 ): { dir: string; projectDir: string | null } {
-  if (row.scope !== "project")
+  if (row.scope !== "owner")
     return {
       dir: row.folder ? join(ctx.docsRoot, row.folder) : ctx.docsRoot,
       projectDir: null,
@@ -628,7 +628,11 @@ const COMMON_FLAGS: Array<[flag: string, key: string]> = [
  *  that grows a field grows its flag with it. */
 const EXTRA_FLAGS = [
   ...new Set([...defaultRegistryIndex().values()].flatMap((r) => r.extra)),
-].sort();
+]
+  // `from:` is an item field, and `--from` is already the flag that names the
+  // source document; one flag serves both (Task 2.3 wires the field).
+  .filter((key) => key !== "from")
+  .sort();
 
 function flagValue(
   flags: Record<string, string | true>,

@@ -166,8 +166,35 @@ function tree(): string {
   return root;
 }
 
-/** Project-scoped creatable rows, in the registry's own order. */
-const PROJECT_ROWS = CREATABLE.filter((r) => r.scope === "project");
+/**
+ * A legacy project folder with its proposal, written by hand. `pdocs new
+ * project` is gone (the proposal is retired in 9.0.0, and `pdocs new feature`
+ * arrives with `--owner` in Phase 2), but the owned types still live in a
+ * project folder until this repository migrates, and the templates still link
+ * `./proposal.md`.
+ */
+function makeProject(root: string, slug: string): string {
+  const dir = join(root, "docs", "projects", slug);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "proposal.md"),
+    page(
+      {
+        type: "proposal",
+        title: "Fixture Proposal",
+        description: "The proposal the fixture project's documents link back to.",
+        status: "draft",
+        lifecycle: "draft",
+        generated: "{ by: new-test, at: 2026-01-01 }",
+      },
+      "# Fixture Proposal\n"
+    )
+  );
+  return slug;
+}
+
+/** Owner-scoped creatable rows, in the registry's own order. */
+const PROJECT_ROWS = CREATABLE.filter((r) => r.scope === "owner");
 
 /**
  * A project holding every project document that comes BEFORE this row.
@@ -186,8 +213,7 @@ const PROJECT_ROWS = CREATABLE.filter((r) => r.scope === "project");
  * case here depends on the two orders coinciding.
  */
 function seedProject(root: string, row: RegistryRow): string {
-  const slug = "fixture-project";
-  mkdirSync(join(root, "docs", "projects", slug), { recursive: true });
+  const slug = makeProject(root, "fixture-project");
   for (const earlier of PROJECT_ROWS) {
     if (earlier.type === row.type) break;
     const seeded = run([
@@ -227,7 +253,7 @@ function invocation(row: RegistryRow, root: string): string[] {
     "--format",
     "json",
   ];
-  if (row.scope === "project") args.push("--project", seedProject(root, row));
+  if (row.scope === "owner") args.push("--project", seedProject(root, row));
   if (Array.isArray(row.template))
     args.push("--variant", variantName(row.template[0] as string));
   return args;
@@ -259,44 +285,28 @@ describe("pdocs new — every creatable type, then the gate", () => {
     });
   }
 
-  test("the loop covered every creatable row, and there are 18", () => {
+  test("the loop covered every creatable row, and there are 12", () => {
     expect(covered.sort()).toEqual(CREATABLE.map((r) => r.type).sort());
-    expect(CREATABLE).toHaveLength(18);
+    expect(CREATABLE).toHaveLength(12);
   });
 });
 
-describe("pdocs new project — the alias", () => {
-  test("makes the folder and its proposal, and the gate stays clean", () => {
+describe("pdocs new — a project folder, after the alias", () => {
+  // `pdocs new project` resolved to the `proposal` row. The proposal is
+  // retired in 9.0.0, so the word is no longer a type at all, and nothing is
+  // written. A feature is created as itself once `new feature` exists.
+  test("`new project` is refused and writes nothing", () => {
     const root = tree();
-
-    const created = run([
-      "new",
-      "project",
-      "oauth upgrade",
-      "--root",
-      root,
-      "--format",
-      "json",
-    ]);
-    expect(created.code).toBe(ExitCode.Success);
-
-    const out = JSON.parse(created.stdout);
-    expect(out.ok).toBe(true);
-    expect(out.meta.command).toBe("new");
-    // The alias resolves to a row; the reported type is the row's, not the word
-    // that was typed.
-    expect(out.data.type).toBe("proposal");
-    expect(out.data.path).toBe("docs/projects/oauth-upgrade/proposal.md");
-    expect(out.data.created).toEqual(["docs/projects/oauth-upgrade/proposal.md"]);
-
-    expect(run(["check", "--root", root, "--format", "text"]).code).toBe(
-      ExitCode.Success
-    );
+    const r = run(["new", "project", "oauth upgrade", "--root", root, "--format", "json"]);
+    expect(r.code).toBe(ExitCode.Usage);
+    expect(r.stdout).toBe("");
+    expect(JSON.parse(r.stderr).error.message).toContain("unknown type `project`");
+    expect(existsSync(join(root, "docs/projects/oauth-upgrade"))).toBe(false);
   });
 
   test("a project-scoped type then works against that folder", () => {
     const root = tree();
-    run(["new", "project", "oauth-upgrade", "--root", root]);
+    makeProject(root, "oauth-upgrade");
     const plan = run([
       "new",
       "plan",
@@ -360,7 +370,6 @@ describe("pdocs new project — the alias", () => {
     const r = run(["new", "plan", "--root", root, "--project", "nowhere"]);
     expect(r.code).toBe(ExitCode.NotFound);
     expect(r.stderr).toContain("no `nowhere`");
-    expect(r.stderr).toContain("pdocs new project nowhere");
   });
 
   test("a project-scoped type refuses to stand alone", () => {
@@ -387,7 +396,7 @@ describe("pdocs new — what it refuses to create", () => {
     const refused = ROWS.filter((r) => !r.creatable).map((r) => r.type);
     expect(refused).toContain("kickoff");
     expect(refused).toContain("artifact");
-    expect(refused).toHaveLength(5);
+    expect(refused).toHaveLength(14);
   });
 
   test("an unknown type lists the creatable ones", () => {
@@ -396,7 +405,7 @@ describe("pdocs new — what it refuses to create", () => {
     expect(r.code).toBe(ExitCode.Usage);
     expect(r.stderr).toContain("unknown type `nonsense`");
     expect(r.stderr).toContain("playbook");
-    expect(r.stderr).toContain("project");
+    expect(r.stderr).toContain("plan");
   });
 
   test("an existing target is a conflict, not an overwrite", () => {
@@ -425,7 +434,8 @@ describe("pdocs new — names that try to leave the tree", () => {
   // names both of them are happy with.
   //
   // `pdocs new project ".."` used to resolve to the docs root's own parent,
-  // write `docs/proposal.md`, and report `{"ok": true}` with exit 0. The very
+  // write `docs/proposal.md`, and report `{"ok": true}` with exit 0. The alias
+  // is gone; the same names now reach the same code through `--project`. The very
   // next `pdocs check` called that document `BAD type` and `ORPHAN` — the two
   // halves of the tool that read one registry precisely so they cannot
   // disagree, disagreeing, because a `.` survived the slug filter and
@@ -442,37 +452,40 @@ describe("pdocs new — names that try to leave the tree", () => {
   // one under test is worse than no case. It is covered in the `slugify` unit
   // test, where it does exercise the rule.
   for (const name of ["..", "...", "../..", "./.."]) {
-    test(`\`new project ${JSON.stringify(name)}\` is refused and writes nothing`, () => {
+    test(`\`new plan --project ${JSON.stringify(name)}\` is refused and writes nothing`, () => {
       const root = tree();
       const before = filesUnder(root);
 
-      const r = run(["new", "project", name, "--root", root, "--format", "json"]);
+      const r = run(["new", "plan", "--project", name, "--root", root, "--format", "json"]);
       expect(r.code).toBe(ExitCode.Usage);
       expect(r.stdout).toBe("");
+      expect(JSON.parse(r.stderr).error.message).toContain("needs letters or digits");
       expect(filesUnder(root)).toEqual(before);
       // Nothing landed beside the docs root either.
-      expect(existsSync(join(root, "proposal.md"))).toBe(false);
+      expect(existsSync(join(root, "plan.md"))).toBe(false);
     });
   }
 
-  test("`new lesson \"...\"` is refused, catalog included", () => {
+  test("`new playbook \"...\"` is refused, catalog included", () => {
     // The same defect with a second face, and the one that made
     // `references/pdocs.md` untrue: it says "a name with no letters or digits
     // in it is a usage error", which held for `"!!!"` and not for `"..."`.
-    // `"..."` created `docs/lessons-learned/....md` AND a catalog line for it.
+    // `"..."` created `docs/lessons-learned/....md` AND a catalog line for it
+    // (a lesson then; lessons are retired, and a playbook is the library type
+    // that takes a bare name now).
     const root = tree();
     const index = readFileSync(join(root, "docs/index.md"), "utf8");
 
-    const r = run(["new", "lesson", "...", "--root", root]);
+    const r = run(["new", "playbook", "...", "--root", root]);
     expect(r.code).toBe(ExitCode.Usage);
     expect(r.stderr).toContain("needs letters or digits");
-    expect(existsSync(join(root, "docs/lessons-learned/....md"))).toBe(false);
+    expect(filesUnder(join(root, "docs/playbooks")).filter((f) => !["README.md", "TEMPLATE.md"].includes(f))).toEqual([]);
     expect(readFileSync(join(root, "docs/index.md"), "utf8")).toBe(index);
   });
 
   test("`--project` cannot escape either", () => {
     const root = tree();
-    run(["new", "project", "oauth-upgrade", "--root", root]);
+    makeProject(root, "oauth-upgrade");
     const r = run(["new", "plan", "--root", root, "--project", ".."]);
     expect(r.code).toBe(ExitCode.Usage);
     expect(existsSync(join(root, "docs/plan.md"))).toBe(false);
@@ -497,15 +510,13 @@ describe("pdocs new — names that try to leave the tree", () => {
   });
 });
 
-describe("pdocs new — `--project` takes what `new project` took", () => {
-  test("a name that needed slugging is accepted by both", () => {
+describe("pdocs new — `--project` is read as a name, not a folder", () => {
+  test("a name that needed slugging finds the folder it slugs to", () => {
     // `new project "My Big Project"` created `my-big-project/`; `new plan
     // --project "My Big Project"` then exited 5 with a diagnostic recommending
     // `pdocs new project My Big Project` — the command that had just worked.
     const root = tree();
-    expect(run(["new", "project", "My Big Project", "--root", root]).code).toBe(
-      ExitCode.Success
-    );
+    makeProject(root, "my-big-project");
 
     const plan = run([
       "new",
@@ -557,7 +568,7 @@ describe("pdocs new cycle — the registry's own validate predicate", () => {
     // `pageAliasKeys` existed, because `pageKey` answers `proposal/proposal`
     // for every project in the tree.
     const root = tree();
-    run(["new", "project", "oauth-upgrade", "--root", root]);
+    makeProject(root, "oauth-upgrade");
     const r = run([
       "new",
       "cycle",
@@ -579,7 +590,7 @@ describe("pdocs new cycle — the registry's own validate predicate", () => {
     // `project/<name>` is an addition, not a replacement: the library-tier form
     // the rest of the tree uses still has to resolve.
     const root = tree();
-    run(["new", "backlog", "a-thing", "--root", root]);
+    run(["new", "playbook", "a-thing", "--root", root]);
     const r = run([
       "new",
       "cycle",
@@ -587,7 +598,7 @@ describe("pdocs new cycle — the registry's own validate predicate", () => {
       "--root",
       root,
       "--scope",
-      `backlog/${today()}-a-thing`,
+      "playbook/a-thing-playbook",
     ]);
     expect(r.stderr).toBe("");
     expect(r.code).toBe(ExitCode.Success);
@@ -598,8 +609,8 @@ describe("pdocs new cycle — the registry's own validate predicate", () => {
     // It is not scope, it is a category: with two projects in the tree it
     // matches both, and with one it is still not the project's name.
     const root = tree();
-    run(["new", "project", "oauth-upgrade", "--root", root]);
-    run(["new", "project", "billing-rewrite", "--root", root]);
+    makeProject(root, "oauth-upgrade");
+    makeProject(root, "billing-rewrite");
     const r = run([
       "new",
       "cycle",
@@ -653,7 +664,7 @@ describe("pdocs new cycle — the registry's own validate predicate", () => {
     const root = tree();
     const r = run([
       "new",
-      "backlog",
+      "playbook",
       "an-item",
       "--root",
       root,
@@ -661,7 +672,7 @@ describe("pdocs new cycle — the registry's own validate predicate", () => {
       "a week",
     ]);
     expect(r.code).toBe(ExitCode.Usage);
-    expect(r.stderr).toContain("--appetite is not a field of `backlog`");
+    expect(r.stderr).toContain("--appetite is not a field of `playbook`");
   });
 });
 
@@ -695,11 +706,12 @@ describe("pdocs new — the filename grammar", () => {
 
   test("the date prefix is applied at the precision the row declares", () => {
     const root = tree();
-    const backlog = JSON.parse(
-      run(["new", "backlog", "an-item", "--root", root, "--format", "json"])
+    makeProject(root, "p");
+    const session = JSON.parse(
+      run(["new", "session", "an-item", "--project", "p", "--root", root, "--format", "json"])
         .stdout
     ).data.path;
-    expect(backlog).toBe(`docs/backlog/${today()}-an-item.md`);
+    expect(session).toBe(`docs/projects/p/sessions/${today()}-an-item.md`);
 
     const cycle = JSON.parse(
       run(["new", "cycle", "tooling", "--root", root, "--format", "json"])
@@ -830,7 +842,7 @@ describe("pdocs new — the catalog line", () => {
   test("a workbench document gets none", () => {
     const root = tree();
     const out = JSON.parse(
-      run(["new", "backlog", "an-item", "--root", root, "--format", "json"])
+      run(["new", "cycle", "tooling", "--root", root, "--format", "json"])
         .stdout
     );
     expect(out.data.created).toHaveLength(1);
@@ -842,18 +854,20 @@ describe("pdocs new --from", () => {
     const root = tree();
     run([
       "new",
-      "investigation",
-      "oauth",
+      "playbook",
+      "rollback",
       "--root",
       root,
       "--title",
-      "OAuth Investigation",
+      "Rollback",
     ]);
-    const source = `docs/investigations/${today()}-oauth-investigation.md`;
+    makeProject(root, "oauth-upgrade");
+    const source = "docs/playbooks/rollback-playbook.md";
 
     const made = run([
       "new",
-      "project",
+      "plan",
+      "--project",
       "oauth-upgrade",
       "--root",
       root,
@@ -864,12 +878,10 @@ describe("pdocs new --from", () => {
     expect(made.code).toBe(ExitCode.Success);
 
     const body = readFileSync(
-      join(root, "docs/projects/oauth-upgrade/proposal.md"),
+      join(root, "docs/projects/oauth-upgrade/plan.md"),
       "utf8"
     );
-    expect(body).toContain(
-      `- [OAuth Investigation](../../investigations/${today()}-oauth-investigation.md)`
-    );
+    expect(body).toContain("- [Rollback](../../playbooks/rollback-playbook.md)");
     expect(run(["check", "--root", root]).code).toBe(ExitCode.Success);
   });
 
@@ -894,8 +906,8 @@ describe("pdocs new --from", () => {
 describe("pdocs new — frontmatter", () => {
   test("`generated.at` is today, which the template's placeholder is not", () => {
     const root = tree();
-    run(["new", "lesson", "a-lesson", "--root", root, "--by", "claude-opus-5"]);
-    const body = readFileSync(join(root, "docs/lessons-learned/a-lesson.md"), "utf8");
+    run(["new", "playbook", "a-playbook", "--root", root, "--by", "claude-opus-5"]);
+    const body = readFileSync(join(root, "docs/playbooks/a-playbook.md"), "utf8");
     expect(body).toContain(`generated: { by: claude-opus-5, at: ${today()} }`);
     expect(body).not.toContain("YYYY-MM-DD }");
   });
@@ -904,15 +916,15 @@ describe("pdocs new — frontmatter", () => {
     const root = tree();
     run([
       "new",
-      "memory",
-      "a-memory",
+      "playbook",
+      "a-rule",
       "--root",
       root,
       "--description",
       "The gate learned a rule: state the contract, then check it.",
     ]);
     const body = readFileSync(
-      join(root, `docs/memories/${today()}-a-memory.md`),
+      join(root, "docs/playbooks/a-rule-playbook.md"),
       "utf8"
     );
     expect(body).toContain(
@@ -925,7 +937,7 @@ describe("pdocs new — frontmatter", () => {
     const root = tree();
     const r = run([
       "new",
-      "backlog",
+      "cycle",
       "an-item",
       "--root",
       root,
@@ -933,15 +945,18 @@ describe("pdocs new — frontmatter", () => {
       "shipped",
     ]);
     expect(r.code).toBe(ExitCode.Usage);
-    expect(r.stderr).toContain("open | done | promoted | dropped");
+    expect(r.stderr).toContain("planned | active | closed | abandoned");
   });
 
   test("a lifecycle on a frozen record is refused", () => {
     const root = tree();
+    makeProject(root, "p");
     const r = run([
       "new",
       "report",
       "a-report",
+      "--project",
+      "p",
       "--root",
       root,
       "--lifecycle",

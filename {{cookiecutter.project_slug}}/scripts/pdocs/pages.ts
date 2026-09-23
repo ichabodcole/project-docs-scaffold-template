@@ -41,7 +41,11 @@ import {
   libraryFiles,
   workbenchFiles,
 } from "./lint/rules.ts";
-import { PROJECTS_FOLDER, TYPE_ALIAS } from "./lint/registry.ts";
+import { ENTITY_FILE, PROJECTS_FOLDER } from "./lint/registry.ts";
+
+/** The legacy project folder's entry type: a `proposal` answers to
+ *  `project/<folder>` until this repository has migrated. */
+const LEGACY_PROJECT_ENTRY = ENTITY_FILE[PROJECTS_FOLDER]!.type;
 
 /** One document, flattened. Every field is either frontmatter as written or
  *  something derived from the file's position — nothing here is a judgement. */
@@ -176,14 +180,13 @@ export function pageKey(page: Page): string | null {
  */
 export function pageAliasKeys(page: Page): string[] {
   const keys: string[] = [];
-  for (const [name, alias] of Object.entries(TYPE_ALIAS)) {
-    if (!alias.namesScope || page.type !== alias.type) continue;
-    // `<docsRoot>/projects/<folder>/<fixed name>.md` — the folder is the
-    // parent, and the grandparent proves this really is the project tree
-    // rather than a same-named type somewhere else.
+  // `<docsRoot>/projects/<folder>/proposal.md` — the folder is the parent, and
+  // the grandparent proves this really is the project tree rather than a
+  // same-named type somewhere else.
+  if (page.type === LEGACY_PROJECT_ENTRY) {
     const folder = basename(dirname(page.path));
     if (folder && basename(dirname(dirname(page.path))) === PROJECTS_FOLDER)
-      keys.push(`${name}/${folder}`);
+      keys.push(`project/${folder}`);
   }
   return keys;
 }

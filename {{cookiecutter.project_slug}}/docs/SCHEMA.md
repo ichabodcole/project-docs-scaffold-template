@@ -251,6 +251,9 @@ gate — which is the way round that drift always goes.
 | `report`            | —                                                                              | thin  | `reports/`                        |
 | `session`           | —                                                                              | thin  | `projects/*/sessions/`            |
 | `artifact`          | —                                                                              | thin  | anything else in a project folder |
+| `feature` | `backlog` · `ready` · `active` · `review` · `done` · `dropped` | thin | `features/*/feature.md` |
+| `item` | `triage` · `backlog` · `ready` · `active` · `review` · `done` · `dropped` | thin | `items/`, or `items/*/item.md` |
+| `write-up` | — | thin | `write-up.md` in a feature or item |
 
 **Why the library types carry none.** A living page is never "done"; it is
 current or it is not, and `status` already says which. Adding a lifecycle to a

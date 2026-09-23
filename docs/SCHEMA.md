@@ -226,31 +226,34 @@ gate — which is the way round that drift always goes.
 
 `—` means the type carries no `lifecycle` at all, and writing one is an error.
 
-| `type`              | `lifecycle` values                                                             | Tier  | Where                             |
-| ------------------- | ------------------------------------------------------------------------------ | ----- | --------------------------------- |
-| `architecture`      | —                                                                              | graph | `architecture/`                   |
-| `specification`     | —                                                                              | graph | `specifications/`                 |
-| `interaction`       | —                                                                              | graph | `interaction-design/`             |
-| `playbook`          | —                                                                              | graph | `playbooks/`                      |
-| `lesson`            | —                                                                              | graph | `lessons-learned/`                |
-| `memory`            | —                                                                              | graph | `memories/`                       |
-| `manifesto`         | —                                                                              | graph | `PROJECT_MANIFESTO.md`            |
-| `summary`           | —                                                                              | graph | `PROJECT-SUMMARY.md`              |
-| `index`             | —                                                                              | graph | `index.md`                        |
-| `backlog`           | `open` · `done` · `promoted` · `dropped`                                       | thin  | `backlog/`                        |
-| `fragment`          | `open` · `promoted` · `dropped`                                                | thin  | `fragments/`                      |
-| `brief`             | `active` · `spent`                                                             | thin  | `briefs/`                         |
-| `investigation`     | `active` · `concluded`                                                         | thin  | `investigations/`                 |
-| `cycle`             | `planned` · `active` · `closed` · `abandoned`                                  | thin  | `cycles/`                         |
-| `proposal`          | `draft` · `approved` · `deferred` · `implemented` · `withdrawn` · `superseded` | thin  | `projects/*/proposal.md`          |
-| `plan`              | `draft` · `active` · `completed` · `abandoned`                                 | thin  | `projects/*/plan.md`              |
-| `design-resolution` | `draft` · `resolved` · `superseded`                                            | thin  | `projects/*/design-resolution.md` |
-| `test-plan`         | `draft` · `ready` · `active` · `completed`                                     | thin  | `projects/*/test-plan.md`         |
-| `kickoff`           | —                                                                              | thin  | `projects/*/DEV_KICKOFF.md`       |
-| `handoff`           | —                                                                              | thin  | `projects/*/handoff.md`           |
-| `report`            | —                                                                              | thin  | `reports/`                        |
-| `session`           | —                                                                              | thin  | `projects/*/sessions/`            |
-| `artifact`          | —                                                                              | thin  | anything else in a project folder |
+| `type`              | `lifecycle` values                                                             | Tier  | Where                              |
+| ------------------- | ------------------------------------------------------------------------------ | ----- | ---------------------------------- |
+| `architecture`      | —                                                                              | graph | `architecture/`                    |
+| `specification`     | —                                                                              | graph | `specifications/`                  |
+| `interaction`       | —                                                                              | graph | `interaction-design/`              |
+| `playbook`          | —                                                                              | graph | `playbooks/`                       |
+| `lesson`            | —                                                                              | graph | `lessons-learned/`                 |
+| `memory`            | —                                                                              | graph | `memories/`                        |
+| `manifesto`         | —                                                                              | graph | `PROJECT_MANIFESTO.md`             |
+| `summary`           | —                                                                              | graph | `PROJECT-SUMMARY.md`               |
+| `index`             | —                                                                              | graph | `index.md`                         |
+| `backlog`           | `open` · `done` · `promoted` · `dropped`                                       | thin  | `backlog/`                         |
+| `fragment`          | `open` · `promoted` · `dropped`                                                | thin  | `fragments/`                       |
+| `brief`             | `active` · `spent`                                                             | thin  | `briefs/`                          |
+| `investigation`     | `active` · `concluded`                                                         | thin  | `investigations/`                  |
+| `cycle`             | `planned` · `active` · `closed` · `abandoned`                                  | thin  | `cycles/`                          |
+| `proposal`          | `draft` · `approved` · `deferred` · `implemented` · `withdrawn` · `superseded` | thin  | `projects/*/proposal.md`           |
+| `plan`              | `draft` · `active` · `completed` · `abandoned`                                 | thin  | `projects/*/plan.md`               |
+| `design-resolution` | `draft` · `resolved` · `superseded`                                            | thin  | `projects/*/design-resolution.md`  |
+| `test-plan`         | `draft` · `ready` · `active` · `completed`                                     | thin  | `projects/*/test-plan.md`          |
+| `kickoff`           | —                                                                              | thin  | `projects/*/DEV_KICKOFF.md`        |
+| `handoff`           | —                                                                              | thin  | `projects/*/handoff.md`            |
+| `report`            | —                                                                              | thin  | `reports/`                         |
+| `session`           | —                                                                              | thin  | `projects/*/sessions/`             |
+| `artifact`          | —                                                                              | thin  | anything else in a project folder  |
+| `feature`           | `backlog` · `ready` · `active` · `review` · `done` · `dropped`                 | thin  | `features/*/feature.md`            |
+| `item`              | `triage` · `backlog` · `ready` · `active` · `review` · `done` · `dropped`      | thin  | `items/`, or `items/*/item.md`     |
+| `write-up`          | —                                                                              | thin  | `write-up.md` in a feature or item |
 
 **Why the library types carry none.** A living page is never "done"; it is
 current or it is not, and `status` already says which. Adding a lifecycle to a

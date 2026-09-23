@@ -169,6 +169,14 @@ const REPO_ROOT = resolve(import.meta.dir, "../../../../../..");
 const V26_TAG = "project-docs-scaffold-template-v6.3.0";
 
 /**
+ * The release this migration's tests treat as "current": the last one before
+ * the 9.0.0 layout. Its scaffold is built from this tag rather than the
+ * working tree (plan D16), because the working tree moves on to layouts this
+ * script never knew.
+ */
+const OWN_TAG = "project-docs-scaffold-template-v8.1.0";
+
+/**
  * A0's extra docs-root folder: in neither tier and not in `lint.skip`, so an
  * unlisted folder that would silently get the strictest tier — the case the
  * preflight has to name and stop on. `describe("fixtures")` checks the claim
@@ -237,18 +245,29 @@ function generatedScaffolds(): Scaffolds {
         `${V26_TAG}^{commit}`,
       ],
       { stdout: "pipe", stderr: "pipe", env: childEnv() }
+    ).exitCode === 0 &&
+    Bun.spawnSync(
+      ["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `${OWN_TAG}^{commit}`],
+      { stdout: "pipe", stderr: "pipe", env: childEnv() }
     ).exitCode === 0;
   if (!tagPresent)
     throw new Error(
-      `tag ${V26_TAG} is not in this clone, so fixture A cannot be generated. ` +
+      `tag ${V26_TAG} or ${OWN_TAG} is not in this clone, so the fixtures cannot be generated. ` +
         "Run `git fetch --tags` (a shallow or --no-tags clone drops it) and re-run."
     );
 
-  const template26 = join(base, "template-v2.6");
-  mkdirSync(template26);
-  const tar = join(base, "template-v2.6.tar");
-  sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", tar, V26_TAG]);
-  sh(["tar", "-xf", tar, "-C", template26]);
+  const archive = (tag: string, name: string): string => {
+    const dir = join(base, name);
+    mkdirSync(dir);
+    const tar = join(base, `${name}.tar`);
+    sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", tar, tag]);
+    sh(["tar", "-xf", tar, "-C", dir]);
+    return dir;
+  };
+  const template26 = archive(V26_TAG, "template-v2.6");
+  // The scaffold this migration was written against (D16), not the working
+  // tree: the working tree moves on to layouts this script never knew.
+  const templateOwn = archive(OWN_TAG, "template-own");
 
   const generate = (template: string, into: string): string => {
     mkdirSync(into);
@@ -267,7 +286,7 @@ function generatedScaffolds(): Scaffolds {
 
   scaffolds = {
     v26: generate(template26, join(base, "v2.6")),
-    current: generate(REPO_ROOT, join(base, "current")),
+    current: generate(templateOwn, join(base, "current")),
     generationMs: performance.now() - started,
   };
   return scaffolds;

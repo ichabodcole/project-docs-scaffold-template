@@ -1,10 +1,10 @@
 ---
-type: proposal # REQUIRED (OKF §3). Do not change it — the folder decides it.
+type: feature # REQUIRED (OKF §3). Do not change it — the folder decides it.
 title: "[Proposal Title]"
 description: "[One sentence: what this proposes and why.]"
 tags: [area, feature] # 2-4 kebab-case keywords
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: backlog # where the work has got to; see docs/SCHEMA.md
 generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 
@@ -14,7 +14,7 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-USAGE: Copy this file to your project folder as `proposal.md`.
+USAGE: Copy this file to `features/<slug>/feature.md`.
 
 This template helps you tell the story of what you're proposing and why.
 Think of it as mapping out the major landmarks without detailing every step.

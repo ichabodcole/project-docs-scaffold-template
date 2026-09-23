@@ -23,8 +23,12 @@ import { dirname, join, resolve } from "node:path";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import {
   FEATURE_STATES,
+  FEATURES_FOLDER,
   ITEM_STATES,
+  ITEMS_FOLDER,
   KINDS,
+  OWNED_FILE_TYPE,
+  OWNER_SUBFOLDER,
   PRIORITIES,
   PROJECT_FILE_TYPE,
   STATE_GROUP,
@@ -74,10 +78,37 @@ const ALL_TYPES = [
   "handoff",
   "session",
   "artifact",
+  // The work taxonomy: the two entities and a research item's output.
+  "feature",
+  "item",
+  "write-up",
 ];
 
-/** The five types `pdocs new` will not create, and why. */
-const UNCREATABLE = ["artifact", "kickoff", "manifesto", "summary", "index"];
+/** The types retired in 9.0.0: still lintable, never created. */
+const RETIRED = [
+  "proposal",
+  "backlog",
+  "fragment",
+  "brief",
+  "investigation",
+  "memory",
+  "lesson",
+];
+
+/**
+ * The types `pdocs new` will not create, and why. `feature` and `item` are
+ * created by `pdocs new` once it learns `--owner` and writes an `id`.
+ */
+const UNCREATABLE = [
+  "artifact",
+  "kickoff",
+  "manifesto",
+  "summary",
+  "index",
+  "feature",
+  "item",
+  ...RETIRED,
+];
 
 const row = (type: string): RegistryRow => {
   const found = ROWS.find((r) => r.type === type);
@@ -89,8 +120,8 @@ const templatesOf = (r: RegistryRow): string[] =>
   r.template === null ? [] : [r.template].flat();
 
 describe("the registry covers the type system", () => {
-  test("exactly 23 rows, one per type in SCHEMA.md", () => {
-    expect(ALL_TYPES).toHaveLength(23);
+  test("exactly 26 rows, one per type in SCHEMA.md", () => {
+    expect(ALL_TYPES).toHaveLength(26);
     expect(ROWS.map((r) => r.type).sort()).toEqual([...ALL_TYPES].sort());
   });
 
@@ -99,11 +130,11 @@ describe("the registry covers the type system", () => {
   });
 
   // The tier decides the graph obligations, and nine types carry them.
-  test("nine library rows, fourteen workbench", () => {
+  test("nine library rows, seventeen workbench", () => {
     const byTier = (t: RegistryRow["tier"]) =>
       ROWS.filter((r) => r.tier === t).length;
     expect(byTier("library")).toBe(9);
-    expect(byTier("workbench")).toBe(14);
+    expect(byTier("workbench")).toBe(17);
   });
 
   test("a root page is a singleton with no folder and no template", () => {
@@ -116,23 +147,32 @@ describe("the registry covers the type system", () => {
     }
   });
 
-  test("a project-scoped row says so, and its fixed name is the one that types the file", () => {
-    for (const [name, type] of Object.entries(PROJECT_FILE_TYPE)) {
+  test("an owner-scoped row says so, and its fixed name is the one that types the file", () => {
+    for (const [name, type] of Object.entries({
+      ...PROJECT_FILE_TYPE,
+      ...OWNED_FILE_TYPE,
+    })) {
       const r = row(type);
-      expect(r.scope).toBe("project");
+      expect(r.scope).toBe("owner");
       expect(r.filename).toEqual({ kind: "fixed", name });
-      // The fixed-name project documents sit in the project folder itself.
+      // The fixed-name owned documents sit in the owner folder itself.
       expect(r.folder).toBe("");
     }
     expect(row("session").folder).toBe("sessions");
     expect(row("artifact").folder).toBe("artifacts");
+    expect(row("report").folder).toBe("reports");
+    expect(OWNER_SUBFOLDER).toEqual({
+      session: "sessions",
+      artifact: "artifacts",
+      report: "reports",
+    });
   });
 });
 
 describe("what `pdocs new` can create", () => {
-  test("eighteen creatable types; the other five say why not", () => {
+  test("twelve creatable types; the other fourteen say why not", () => {
     const creatable = ROWS.filter((r) => r.creatable).map((r) => r.type);
-    expect(creatable).toHaveLength(18);
+    expect(creatable).toHaveLength(12);
     expect(ROWS.filter((r) => !r.creatable).map((r) => r.type).sort()).toEqual(
       [...UNCREATABLE].sort()
     );
@@ -251,7 +291,7 @@ describe("the unified frontmatter contract", () => {
     expect(fromRegistry).toEqual(fromSchema);
   });
 
-  test("only `cycle` declares extra fields, and it declares all five", () => {
+  test("`cycle`, `feature` and `item` declare extra fields; nothing else does", () => {
     expect(row("cycle").extra).toEqual([
       "scope",
       "after",
@@ -260,7 +300,8 @@ describe("the unified frontmatter contract", () => {
       "closed",
     ]);
     for (const r of ROWS)
-      if (r.type !== "cycle") expect(r.extra).toEqual([]);
+      if (!["cycle", "feature", "item"].includes(r.type))
+        expect(r.extra).toEqual([]);
   });
 
   // The gap this registry exists to close: `PROJECT_SPEC` has no `extra` field
@@ -276,7 +317,7 @@ describe("the unified frontmatter contract", () => {
       "superseded",
     ]);
     expect(row("kickoff").lifecycle).toBeNull();
-    for (const r of ROWS.filter((x) => x.scope === "project"))
+    for (const r of ROWS.filter((x) => x.scope === "owner"))
       expect(Array.isArray(r.extra)).toBe(true);
   });
 
@@ -287,26 +328,20 @@ describe("the unified frontmatter contract", () => {
 });
 
 describe("aliases and pre-write validation", () => {
-  test("`project` is data, not a branch: it resolves to a creatable row", () => {
-    // The design resolution's grammar has `pdocs new project <name>`, and a
-    // project is a FOLDER rather than a document. Declaring it here is what
-    // keeps `commands/new.ts` from having to know that.
-    expect(Object.keys(TYPE_ALIAS)).toEqual(["project"]);
-    const alias = TYPE_ALIAS.project as (typeof TYPE_ALIAS)[string];
-    const row = registryIndex(DEFAULT_CONFIG).get(alias.type) as RegistryRow;
-    expect(row.creatable).toBe(true);
-    expect(row.scope).toBe("project");
-    expect(row.filename.kind).toBe("fixed");
+  // `project` resolved to the proposal row, and the proposal is retired: a
+  // feature is created as itself.
+  test("`project` is no longer an alias", () => {
+    expect(Object.keys(TYPE_ALIAS)).not.toContain("project");
   });
 
   test("an alias that names a scope resolves to a row that HAS one", () => {
-    // A `namesScope` alias supplies the project slug; a row outside a project
+    // A `namesScope` alias supplies the owner slug; a row outside an owner
     // scope would have nowhere to put it.
     for (const alias of Object.values(TYPE_ALIAS))
       if (alias.namesScope)
         expect(
           (registryIndex(DEFAULT_CONFIG).get(alias.type) as RegistryRow).scope
-        ).toBe("project");
+        ).toBe("owner");
   });
 
   test("`cycle` is the only row that declares a validate predicate", () => {
@@ -361,8 +396,11 @@ describe("buildRegistry reads its config", () => {
       ...DEFAULT_CONFIG,
       docsRoot: "documentation",
     });
-    const backlog = moved.find((r) => r.type === "backlog");
-    expect(backlog?.template).toBe("documentation/backlog/TEMPLATE.md");
+    const playbook = moved.find((r) => r.type === "playbook");
+    expect(playbook?.template).toBe("documentation/playbooks/TEMPLATE.md");
+    expect(moved.find((r) => r.type === "plan")?.template).toBe(
+      "documentation/TEMPLATES/PLAN.template.md"
+    );
     // Except kickoff's, which is not under the docs root at all.
     expect(moved.find((r) => r.type === "kickoff")?.template).toBe(
       "plugins/project-docs/skills/dev-kickoff/templates/DEV_KICKOFF.template.md"
@@ -441,9 +479,12 @@ describe("templateProblems", () => {
   });
 
   test("null templates report nothing", () => {
-    // The four rows with no template: artifact and the three root pages.
+    // The rows with no template: artifact, the three root pages, and every
+    // retired type — a type that cannot be created has nothing to seed.
     const none = ROWS.filter((r) => r.template === null).map((r) => r.type);
-    expect(none.sort()).toEqual(["artifact", "index", "manifesto", "summary"]);
+    expect(none.sort()).toEqual(
+      ["artifact", "index", "manifesto", "summary", ...RETIRED].sort()
+    );
   });
 });
 
@@ -575,5 +616,113 @@ describe("the state vocabulary and its groups", () => {
   test("kinds and priorities are closed sets (D7)", () => {
     expect(KINDS).toEqual(["task", "bug", "chore", "research"]);
     expect(PRIORITIES).toEqual(["urgent", "high", "medium", "low"]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// The work-taxonomy rows
+// ---------------------------------------------------------------------------------------
+
+describe("registry rows for feature, item, write-up, and owned documents", () => {
+  test("a feature is an owner's entry file, feature.md (D2), with the feature states", () => {
+    const r = row("feature");
+    expect(r.scope).toBe("owner");
+    expect(r.filename).toEqual({ kind: "fixed", name: "feature.md" });
+    expect(r.lifecycle).toEqual(FEATURE_STATES);
+    expect(r.extra).toEqual(["scope", "released_in"]);
+    expect(r.template).toBe("docs/TEMPLATES/FEATURE.template.md");
+  });
+
+  test("an item carries the item states, requires id and kind, and declares its fields", () => {
+    const r = row("item");
+    expect(r.folder).toBe(ITEMS_FOLDER);
+    expect(r.lifecycle).toEqual(ITEM_STATES);
+    expect(r.required).toEqual(["id", "kind"]);
+    expect(r.extra).toEqual([
+      "id",
+      "kind",
+      "parent",
+      "scope",
+      "cycle",
+      "from",
+      "source",
+      "blocked_by",
+      "released_in",
+      "priority",
+      "assignee",
+    ]);
+    expect(r.template).toBe("docs/TEMPLATES/ITEM.template.md");
+  });
+
+  test("a write-up is a fixed-name owned document with no lifecycle (D4)", () => {
+    const r = row("write-up");
+    expect(r.scope).toBe("owner");
+    expect(r.filename).toEqual({ kind: "fixed", name: "write-up.md" });
+    expect(r.lifecycle).toBeNull();
+    expect(r.template).toBe("docs/TEMPLATES/WRITE-UP.template.md");
+  });
+
+  test("every owned type is declared once, owner-scoped", () => {
+    for (const type of [
+      "plan",
+      "design-resolution",
+      "test-plan",
+      "kickoff",
+      "handoff",
+      "session",
+      "artifact",
+      "report",
+      "write-up",
+    ]) {
+      expect(ROWS.filter((r) => r.type === type)).toHaveLength(1);
+      expect(row(type).scope).toBe("owner");
+    }
+  });
+
+  test("every row states its required fields; only an item adds any", () => {
+    for (const r of ROWS)
+      expect(r.required).toEqual(r.type === "item" ? ["id", "kind"] : []);
+  });
+
+  test("the work templates live in docs/TEMPLATES/ (D5)", () => {
+    for (const type of [
+      "feature",
+      "item",
+      "write-up",
+      "plan",
+      "design-resolution",
+      "test-plan",
+      "handoff",
+      "session",
+      "report",
+    ])
+      expect(String(row(type).template)).toStartWith("docs/TEMPLATES/");
+  });
+
+  test("the owner folders are named", () => {
+    expect(FEATURES_FOLDER).toBe("features");
+    expect(ITEMS_FOLDER).toBe("items");
+  });
+});
+
+describe("the retired types", () => {
+  test("each is flagged retired, is not creatable, and names its replacement", () => {
+    for (const type of RETIRED) {
+      const r = row(type);
+      expect({ type, retired: r.retired }).toEqual({ type, retired: true });
+      expect(r.creatable).toBe(false);
+      expect(r.template).toBeNull();
+      expect(r.uncreatableReason).toStartWith("retired in 9.0.0; ");
+    }
+    expect(row("backlog").uncreatableReason).toBe(
+      "retired in 9.0.0; use `pdocs new item <slug> --kind task`"
+    );
+    expect(row("investigation").uncreatableReason).toContain("--kind research");
+    expect(row("proposal").uncreatableReason).toContain("feature");
+  });
+
+  test("no other row is retired", () => {
+    for (const r of ROWS)
+      if (!RETIRED.includes(r.type)) expect(r.retired).toBeUndefined();
   });
 });

@@ -210,10 +210,8 @@ describe("pdocs check", () => {
     });
     const { stdout } = run(["check", "--format", "json", "--root", root]);
     const out = JSON.parse(stdout);
-    expect(out.data.templates).toContain("docs/memories/TEMPLATE.md");
-    expect(out.data.templates).toContain(
-      "docs/projects/TEMPLATES/PROPOSAL.template.md"
-    );
+    expect(out.data.templates).toContain("docs/playbooks/TEMPLATE.md");
+    expect(out.data.templates).toContain("docs/TEMPLATES/FEATURE.template.md");
     expect(out.data.templates).toHaveLength(
       Object.keys(templateStubs()).length
     );
@@ -525,7 +523,11 @@ describe("a rejection from a closed set enumerates it", () => {
     const root = tree(CLEAN);
     const { out } = rejection(["new", "frobnicate", "x", "--root", root]);
     expect(out.error.choices).toContain("playbook");
-    expect(out.error.choices).toContain("project");
+    expect(out.error.choices).toContain("plan");
+    // Retired in 9.0.0: `project` was the proposal's alias, and neither is
+    // offered any more.
+    expect(out.error.choices).not.toContain("project");
+    expect(out.error.choices).not.toContain("backlog");
     // Derived from the registry: every name it offers can actually be created.
     expect(out.error.choices).not.toContain("index");
   });
