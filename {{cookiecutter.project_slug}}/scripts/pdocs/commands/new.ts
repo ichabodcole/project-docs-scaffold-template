@@ -1080,14 +1080,17 @@ export const newCommand: Command = {
               source.abs,
               new Map([[join(ctx.repoRoot, placement.promote.path), placement.entry]])
             );
-      const href = relative(dir, abs).replace(/^(?!\.)/, "./");
-      const fields = parseFrontmatter(
-        /^---\n([\s\S]*?)\n---/.exec(readFileSync(source.abs, "utf8"))?.[1] ?? ""
-      );
-      out = appendRelated(
-        out,
-        `- [${fields.get("title") ?? basename(source.abs, ".md")}](${href})`
-      );
+      // The owner's entry file is already linked above; once is enough.
+      if (abs !== placement.entry) {
+        const href = relative(dir, abs).replace(/^(?!\.)/, "./");
+        const fields = parseFrontmatter(
+          /^---\n([\s\S]*?)\n---/.exec(readFileSync(source.abs, "utf8"))?.[1] ?? ""
+        );
+        out = appendRelated(
+          out,
+          `- [${fields.get("title") ?? basename(source.abs, ".md")}](${href})`
+        );
+      }
     }
     // ---- the catalog line, computed before either file is touched -----------------------
     const description = (resolved.get("description") ?? "").replace(/\s+/g, " ").trim();
@@ -1138,8 +1141,12 @@ export const newCommand: Command = {
       console.log(rel);
       const id = fills.get("id");
       if (id !== undefined) console.log(`  id ${shortId(id)}`);
-      if (promoted !== null) console.log(`  promoted its owner to ${promoted}`);
-      for (const other of created.slice(1)) console.log(`  + catalog line in ${other}`);
+      if (catalog !== null) console.log(`  + catalog line in ${relative(ctx.repoRoot, indexPath)}`);
+      if (promotion !== null) {
+        console.log(`  promoted its owner to ${promotion.to}`);
+        for (const p of promotion.rewritten)
+          if (p !== promotion.to) console.log(`  rewrote links in ${p}`);
+      }
     }
     return ExitCode.Success;
   },

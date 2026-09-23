@@ -1436,6 +1436,31 @@ describe("pdocs new feature, and --owner", () => {
     clean(root);
   });
 
+  test("--from naming the owner itself writes the Related line once (re-review 3)", () => {
+    const root = workTree();
+    newItem(root, "beta", "--kind", "task");
+    run(["new", "plan", "--owner", "item/beta", "--from", "docs/items/beta.md", "--root", root]);
+    const body = readFileSync(join(root, "docs/items/beta/plan.md"), "utf8");
+    expect(body.split("- [Beta](./item.md)").length - 1).toBe(1);
+  });
+
+  test("text output labels what a promotion rewrote, not as catalog lines (re-review 2)", () => {
+    const root = workTree();
+    newItem(root, "beta", "--kind", "task");
+    writeFileSync(
+      join(root, "docs/features/a/notes.md"),
+      "---\ntype: artifact\ntitle: Notes\ndescription: Notes.\nstatus: draft\ngenerated: { by: t, at: 2026-01-01 }\n---\n\nSee [beta](../../items/beta.md).\n"
+    );
+    const text = run(["new", "plan", "--owner", "item/beta", "--root", root, "--format", "text"]).stdout;
+    expect(text).not.toContain("catalog line");
+    expect(text).toContain("promoted its owner to docs/items/beta/item.md");
+    expect(text).toContain("rewrote links in docs/features/a/notes.md");
+    // A library page still reports its catalog line.
+    expect(run(["new", "playbook", "p", "--root", root, "--format", "text"]).stdout).toContain(
+      "+ catalog line in docs/index.md"
+    );
+  });
+
   test("`created` lists the files an automatic promotion wrote (review 11)", () => {
     const root = workTree();
     newItem(root, "beta", "--kind", "task");
