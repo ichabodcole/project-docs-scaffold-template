@@ -1,36 +1,44 @@
-10 missing field(s) across 3 of 17 document(s)
+12 missing field(s) across 3 of 21 document(s)
 
 title  (2)
-       1  docs/briefs/
-          missing-fields.md
-       1  docs/projects/sample/
+       1  docs/features/sample/
           SKILL.draft.md
+       1  docs/items/
+          missing-fields.md
 
 status  (2)
-       1  docs/briefs/
-          missing-fields.md
-       1  docs/projects/sample/
+       1  docs/features/sample/
           SKILL.draft.md
+       1  docs/items/
+          missing-fields.md
 
 generated  (2)
-       1  docs/briefs/
-          missing-fields.md
-       1  docs/projects/sample/
+       1  docs/features/sample/
           SKILL.draft.md
-
-description  (1)
-       1  docs/briefs/
-          missing-fields.md
-
-lifecycle  (1)
-       1  docs/briefs/
+       1  docs/items/
           missing-fields.md
 
 type  (1)
-       1  docs/projects/sample/
+       1  docs/features/sample/
           SKILL.draft.md
 
 frontmatter  (1)
-       1  docs/reports/
-          no-frontmatter.md
+       1  docs/features/sample/reports/
+          2026-01-01-no-frontmatter.md
+
+description  (1)
+       1  docs/items/
+          missing-fields.md
+
+id  (1)
+       1  docs/items/
+          missing-fields.md
+
+kind  (1)
+       1  docs/items/
+          missing-fields.md
+
+lifecycle  (1)
+       1  docs/items/
+          missing-fields.md
 

@@ -2,9 +2,9 @@
 UNKNOWN FIELD  docs/architecture/legacy-date.md: "date"
 LEGACY FIELD   docs/architecture/legacy-date.md: `date` is superseded by `generated.at` (OKF 0.2 §13.1)
 UNKNOWN FIELD  docs/interaction-design/unknown-field.md: "owner"
-UNKNOWN FIELD  docs/lessons-learned/frozen-with-lifecycle.md: "lifecycle"
-LIFECYCLE      docs/lessons-learned/frozen-with-lifecycle.md: a lesson is a frozen record and carries no lifecycle
-BAD STATUS     docs/memories/bad-status.md: "approved"  (OKF 0.2: draft | stable | deprecated)
+BAD STATUS     docs/playbooks/bad-status.md: "approved"  (OKF 0.2: draft | stable | deprecated)
+UNKNOWN FIELD  docs/specifications/frozen-with-lifecycle.md: "lifecycle"
+LIFECYCLE      docs/specifications/frozen-with-lifecycle.md: a specification is a frozen record and carries no lifecycle
 ORPHAN         specifications/orphan.md  (unreachable from index.md — add its catalog line)
 BAD related    playbooks/dangling-related.md: "playbook/no-such-page" matches no page (expected `type/slug`)
 STALE HOOK     index.md → architecture/legacy-date.md:
@@ -16,28 +16,35 @@ STALE HOOK     index.md → architecture/legacy-date.md:
 6 frontmatter problem(s) in the library.
 
 ── workbench (thin tier) ───────────────────────────────
+MISSING type   docs/features/sample/SKILL.draft.md
+MISSING title   docs/features/sample/SKILL.draft.md
+MISSING status   docs/features/sample/SKILL.draft.md
+MISSING generated   docs/features/sample/SKILL.draft.md
+UNKNOWN FIELD  docs/features/sample/SKILL.draft.md: "name"  (not a project-docs document? add it to `lint.exclude` in .project-docs.json)
+BAD LIFECYCLE  docs/features/sample/plan.md: "shipped"  (plan: draft | active | completed | abandoned)
+NO FRONTMATTER docs/features/sample/reports/2026-01-01-no-frontmatter.md  (see docs/SCHEMA.md)
+MISSING FILE   docs/features/sample/sessions/2026-01-01-broken-link.md: ./findings-that-do-not-exist.md
+BAD GENERATED  docs/features/sample/test-plan.md: 2026-01-01  (expected `{ by: <actor>, at: YYYY-MM-DD }`)
+BAD KIND       docs/items/bad-kind.md: "story"  (task | bug | chore | research)
+MISPLACED ENTITY  docs/items/misplaced/feature.md  (a feature belongs at features/<slug>/feature.md)
+MISSING title   docs/items/missing-fields.md
+MISSING description   docs/items/missing-fields.md
+MISSING status   docs/items/missing-fields.md
+MISSING generated   docs/items/missing-fields.md
+MISSING id   docs/items/missing-fields.md
+MISSING kind   docs/items/missing-fields.md
+MISSING lifecycle   docs/items/missing-fields.md
+WRONG TYPE     docs/items/wrong-type.md: "feature" (its position says "item")
 BAD TAG        docs/backlog/bad-tag.md: "Not Kebab"  (kebab-case)
-MISSING title   docs/briefs/missing-fields.md
-MISSING description   docs/briefs/missing-fields.md
-MISSING status   docs/briefs/missing-fields.md
-MISSING generated   docs/briefs/missing-fields.md
-MISSING lifecycle   docs/briefs/missing-fields.md
-MISSING FILE   docs/investigations/broken-link.md: ./findings-that-do-not-exist.md
-MISSING type   docs/projects/sample/SKILL.draft.md
-MISSING title   docs/projects/sample/SKILL.draft.md
-MISSING status   docs/projects/sample/SKILL.draft.md
-MISSING generated   docs/projects/sample/SKILL.draft.md
-UNKNOWN FIELD  docs/projects/sample/SKILL.draft.md: "name"  (not a project-docs document? add it to `lint.exclude` in .project-docs.json)
-BAD LIFECYCLE  docs/projects/sample/plan.md: "shipped"  (plan: draft | active | completed | abandoned)
-BAD GENERATED  docs/projects/sample/test-plan.md: 2026-01-01  (expected `{ by: <actor>, at: YYYY-MM-DD }`)
-NO FRONTMATTER docs/reports/no-frontmatter.md  (see docs/SCHEMA.md)
-WRONG TYPE     docs/fragments/wrong-type.md: "memory" (its position says "fragment")
 TWO ACTIVE CYCLES  docs/cycles/one.md, docs/cycles/two.md  (at most one cycle is `lifecycle: active`)
+ARCHIVED NOT TERMINAL  docs/items/_archive/unfinished.md: "active"  (only done or dropped may sit in _archive/; `lifecycle` is the source of truth)
+MISSING ENTITY FILE  docs/items/misplaced/  (expected item.md)
+BAD PARENT  docs/items/bad-kind.md: "feature/nope"  (a parent is `feature/<slug>`, naming a feature in the tree)
 BAD SCALAR     docs/cycles/one.md: `description` contains ": " unquoted  (a real YAML parser reads this as a nested mapping)
 SCHEMA EXTRA TYPE  SCHEMA.md documents `ghost`, which the lint knows nothing about
 TEMPLATE MISSING  docs/cycles/TEMPLATE.md  (the `cycle` registry row declares it; nothing is there)
 
-20 problem(s).
+27 problem(s).
 0 tracked page(s) outside docs/, links only  (`lint.exclude` takes one out)
 
-docs-lint: 29 problem(s)
+docs-lint: 36 problem(s)

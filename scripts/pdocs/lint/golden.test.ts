@@ -23,6 +23,14 @@
 // earns, `UNKNOWN FIELD`'s pointer to `lint.exclude` among them. Every line
 // `docs/lint.ts` printed is still there, byte for byte.
 //
+// RE-RECORDED AGAIN for the work taxonomy (9.0.0): the fixture trees moved
+// from `backlog/`, `projects/` and the memory and lesson folders to `items/`,
+// `features/` and the four library folders that remain, keeping `backlog/` as
+// the one legacy row. Every row class the old transcript held is still there,
+// on its new path, and the dirty tree gained one instance of each new class
+// (BAD KIND, BAD PARENT, MISPLACED ENTITY, MISSING ENTITY FILE, ARCHIVED NOT
+// TERMINAL) so the transcript witnesses that the corpus rules are called.
+//
 // WHY THE FIXTURES ARE BUILT HERE AND NOT COMMITTED. A dirty tree of `.md`
 // inside this repository would be linted by the live gate (`main()` also walks
 // everything git tracks outside `docs/`), would fail `format:check`, and — the
@@ -128,19 +136,13 @@ function tree(
             "specifications",
             "interaction-design",
             "playbooks",
-            "lessons-learned",
-            "memories",
           ],
-          workbench: [
-            "backlog",
-            "briefs",
-            "investigations",
-            "projects",
-            "reports",
-            "fragments",
-            "cycles",
-          ],
-          skip: ["_archive", "superpowers"],
+          // The work-taxonomy layout, plus ONE legacy folder (`backlog`), so
+          // the transition path — a retired type still linted — is covered.
+          workbench: ["features", "items", "cycles", "backlog"],
+          // `_archive` is linted: the terminal-state rule has to see it.
+          skip: ["superpowers"],
+          scopes: [],
         },
       },
       null,
@@ -230,7 +232,7 @@ generated: { by: golden-test, at: 2026-01-01 }
 # Fixture Catalog
 
 - [A Playbook](./playbooks/a-playbook.md) — How the fixture exercises the graph tier.
-- [A Memory](./memories/a-memory.md) — One remembered fact about the fixture tree.
+- [An Architecture Page](./architecture/a-system-architecture.md) — One system the fixture tree describes.
 `,
 
   "docs/playbooks/a-playbook.md": `---
@@ -247,42 +249,59 @@ generated: { by: golden-test, at: 2026-01-01 }
 Reachable from the catalog, so not an orphan.
 `,
 
-  "docs/memories/a-memory.md": `---
-type: memory
-title: A Memory
-description: One remembered fact about the fixture tree.
+  "docs/architecture/a-system-architecture.md": `---
+type: architecture
+title: An Architecture Page
+description: One system the fixture tree describes.
 status: stable
 tags: [fixture]
 generated: { by: golden-test, at: 2026-01-01 }
 ---
 
-# A Memory
+# An Architecture Page
 
 Reachable from the catalog, so not an orphan.
 `,
 
-  "docs/backlog/an-item.md": `---
-type: backlog
-title: An Item
-description: A backlog item with nothing wrong with it.
+  "docs/features/sample/feature.md": `---
+type: feature
+title: A Feature
+description: A feature with nothing wrong with it.
 status: draft
-lifecycle: open
+lifecycle: active
+generated: { by: golden-test, at: 2026-01-01 }
+---
+
+# A Feature
+`,
+
+  "docs/items/an-item.md": `---
+type: item
+title: An Item
+description: A work item with nothing wrong with it.
+status: draft
+lifecycle: ready
+id: 0190f4b2-7c3a-7d4e-8f00-00000000000a
+kind: task
+parent: feature/sample
+priority: high
 generated: { by: golden-test, at: 2026-01-01 }
 ---
 
 # An Item
 `,
 
-  "docs/projects/sample/proposal.md": `---
-type: proposal
-title: A Proposal
-description: A proposal with nothing wrong with it.
+  // The legacy row: a retired type, still linted until the tree migrates.
+  "docs/backlog/an-item.md": `---
+type: backlog
+title: A Legacy Item
+description: A backlog item with nothing wrong with it.
 status: draft
-lifecycle: draft
+lifecycle: open
 generated: { by: golden-test, at: 2026-01-01 }
 ---
 
-# A Proposal
+# A Legacy Item
 `,
 };
 
@@ -324,8 +343,8 @@ generated: { by: golden-test, at: 2026-01-01 }
 
 - [Legacy Date](./architecture/legacy-date.md) — A hook that no longer says what the page says.
 - [Unknown Field](./interaction-design/unknown-field.md) — An interaction page carrying a field the schema does not allow.
-- [Frozen With Lifecycle](./lessons-learned/frozen-with-lifecycle.md) — A lesson that wrongly carries a lifecycle.
-- [Bad Status](./memories/bad-status.md) — A memory whose status is outside the OKF vocabulary.
+- [Frozen With Lifecycle](./specifications/frozen-with-lifecycle.md) — A specification that wrongly carries a lifecycle.
+- [Bad Status](./playbooks/bad-status.md) — A playbook whose status is outside the OKF vocabulary.
 - [Dangling Related](./playbooks/dangling-related.md) — A playbook pointing at a page that does not exist.
 `,
 
@@ -359,10 +378,10 @@ generated: { by: golden-test, at: 2026-01-01 }
 `,
 
   // LIFECYCLE on a frozen library type.
-  "docs/lessons-learned/frozen-with-lifecycle.md": `---
-type: lesson
+  "docs/specifications/frozen-with-lifecycle.md": `---
+type: specification
 title: Frozen With Lifecycle
-description: A lesson that wrongly carries a lifecycle.
+description: A specification that wrongly carries a lifecycle.
 status: stable
 tags: [fixture]
 lifecycle: active
@@ -374,10 +393,10 @@ generated: { by: golden-test, at: 2026-01-01 }
 
   // BAD STATUS on a library page — the exact defect that survived six phases
   // because the vocabulary check lived inside the workbench tier.
-  "docs/memories/bad-status.md": `---
-type: memory
+  "docs/playbooks/bad-status.md": `---
+type: playbook
 title: Bad Status
-description: A memory whose status is outside the OKF vocabulary.
+description: A playbook whose status is outside the OKF vocabulary.
 status: approved
 tags: [fixture]
 generated: { by: golden-test, at: 2026-01-01 }
@@ -415,7 +434,7 @@ generated: { by: golden-test, at: 2026-01-01 }
 # Orphan
 `,
 
-  // BAD TAG.
+  // BAD TAG, on the legacy row: a retired type is still linted.
   "docs/backlog/bad-tag.md": `---
 type: backlog
 title: Bad Tag
@@ -429,12 +448,59 @@ generated: { by: golden-test, at: 2026-01-01 }
 # Bad Tag
 `,
 
-  // MISSING <field>, five of them, including the lifecycle its type requires.
-  "docs/briefs/missing-fields.md": `---
-type: brief
+  // MISSING <field>, seven of them, including the lifecycle, id and kind an
+  // item requires.
+  "docs/items/missing-fields.md": `---
+type: item
 ---
 
 # Missing Fields
+`,
+
+  // BAD KIND and BAD PARENT: a field shape, and a reference that resolves to
+  // nothing (the corpus rules in `work.ts`).
+  "docs/items/bad-kind.md": `---
+type: item
+title: Bad Kind
+description: An item whose kind and parent are both wrong.
+status: draft
+lifecycle: backlog
+id: 0190f4b2-7c3a-7d4e-8f00-00000000000b
+kind: story
+parent: feature/nope
+generated: { by: golden-test, at: 2026-01-01 }
+---
+
+# Bad Kind
+`,
+
+  // MISPLACED ENTITY and MISSING ENTITY FILE: a feature's entry file in an
+  // item's folder, which then has no item.md.
+  "docs/items/misplaced/feature.md": `---
+type: feature
+title: Misplaced
+description: A feature file sitting in an item folder.
+status: draft
+lifecycle: backlog
+generated: { by: golden-test, at: 2026-01-01 }
+---
+
+# Misplaced
+`,
+
+  // ARCHIVED NOT TERMINAL: unfinished work in the archive (D15).
+  "docs/items/_archive/unfinished.md": `---
+type: item
+title: Unfinished
+description: An archived item that is still active.
+status: draft
+lifecycle: active
+id: 0190f4b2-7c3a-7d4e-8f00-00000000000c
+kind: chore
+generated: { by: golden-test, at: 2026-01-01 }
+---
+
+# Unfinished
 `,
 
   // BAD SCALAR: a `description` a real YAML parser reads as a nested mapping.
@@ -463,26 +529,40 @@ generated: { by: golden-test, at: 2026-01-01 }
 # Cycle Two
 `,
 
-  // WRONG TYPE: a library type declared on a workbench page.
-  "docs/fragments/wrong-type.md": `---
-type: memory
+  // WRONG TYPE: a work item declaring itself a feature.
+  "docs/items/wrong-type.md": `---
+type: feature
 title: Wrong Type
-description: A fragment claiming to be a memory.
+description: An item claiming to be a feature.
 status: draft
-lifecycle: open
+lifecycle: backlog
+id: 0190f4b2-7c3a-7d4e-8f00-00000000000d
+kind: task
 generated: { by: golden-test, at: 2026-01-01 }
 ---
 
 # Wrong Type
 `,
 
-  // MISSING FILE.
-  "docs/investigations/broken-link.md": `---
-type: investigation
-title: Broken Link
-description: An investigation linking a page that was never written.
+  // The feature the owned documents below belong to.
+  "docs/features/sample/feature.md": `---
+type: feature
+title: A Feature
+description: The feature the dirty documents belong to.
 status: draft
 lifecycle: active
+generated: { by: golden-test, at: 2026-01-01 }
+---
+
+# A Feature
+`,
+
+  // MISSING FILE.
+  "docs/features/sample/sessions/2026-01-01-broken-link.md": `---
+type: session
+title: Broken Link
+description: A session linking a page that was never written.
+status: stable
 generated: { by: golden-test, at: 2026-01-01 }
 ---
 
@@ -492,7 +572,7 @@ See [the findings](./findings-that-do-not-exist.md).
 `,
 
   // BAD LIFECYCLE on a workbench document.
-  "docs/projects/sample/plan.md": `---
+  "docs/features/sample/plan.md": `---
 type: plan
 title: A Plan
 description: A plan whose lifecycle is outside its vocabulary.
@@ -505,7 +585,7 @@ generated: { by: golden-test, at: 2026-01-01 }
 `,
 
   // BAD GENERATED: the field present, but not the mapping OKF 0.2 asks for.
-  "docs/projects/sample/test-plan.md": `---
+  "docs/features/sample/test-plan.md": `---
 type: test-plan
 title: A Test Plan
 description: A test plan whose generated field is a bare scalar.
@@ -518,7 +598,7 @@ generated: 2026-01-01
 `,
 
   // NO FRONTMATTER.
-  "docs/reports/no-frontmatter.md": `# No Frontmatter
+  "docs/features/sample/reports/2026-01-01-no-frontmatter.md": `# No Frontmatter
 
 A report that never got a frontmatter block.
 `,
@@ -528,9 +608,9 @@ A report that never got a frontmatter block.
   // closed key set can never accept. No `type`, so the row carries the pointer
   // to `lint.exclude` — which `unknown-field.md` above, a real page with a
   // stray key, must NOT carry.
-  "docs/projects/sample/SKILL.draft.md": `---
+  "docs/features/sample/SKILL.draft.md": `---
 name: sample-skill
-description: A draft of another tool's file, kept beside the project it serves.
+description: A draft of another tool's file, kept beside the feature it serves.
 ---
 
 # Sample Skill
@@ -573,17 +653,17 @@ test("`report --format json` carries one record per document, beside the same li
   // order the text first names it, fields in the order the text groups them.
   expect(data.documents).toEqual([
     {
-      path: "docs/briefs/missing-fields.md",
-      tier: "workbench",
-      missing: ["title", "status", "generated", "description", "lifecycle"],
-    },
-    {
-      path: "docs/projects/sample/SKILL.draft.md",
+      path: "docs/features/sample/SKILL.draft.md",
       tier: "workbench",
       missing: ["title", "status", "generated", "type"],
     },
     {
-      path: "docs/reports/no-frontmatter.md",
+      path: "docs/items/missing-fields.md",
+      tier: "workbench",
+      missing: ["title", "status", "generated", "description", "id", "kind", "lifecycle"],
+    },
+    {
+      path: "docs/features/sample/reports/2026-01-01-no-frontmatter.md",
       tier: "workbench",
       missing: ["frontmatter"],
     },

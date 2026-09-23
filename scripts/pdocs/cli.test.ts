@@ -618,6 +618,10 @@ describe("help and version", () => {
       "help",
     ]);
     expect(out.data.exitCodes["9"]).toContain("dirty");
+
+    // `check --against <ref>`: the base an item may not silently leave.
+    const check = out.data.commands.find((c: { name: string }) => c.name === "check");
+    expect(JSON.stringify(check)).toContain("--against");
   });
 
   test("`help` typed as a verb rejects a flag it does not take", () => {
@@ -749,6 +753,14 @@ describe("the emitted declaration", () => {
       const { stderr } = run([verb, "--acc-not-a-flag"]);
       expect(JSON.parse(stderr).error.choices).toEqual(declared);
     }
+  });
+
+  test("check declares --against, a string", () => {
+    const against = at(declaration(), ["check"]).args.find(
+      (a) => a.name === "--against"
+    );
+    expect(against).toBeDefined();
+    expect(against?.type).toBe("string");
   });
 
   test("selfDescription names a verb the document declares", () => {

@@ -392,6 +392,18 @@ describe("pdocs new — what it refuses to create", () => {
     });
   }
 
+  test("`new backlog x` is refused: exit 2, and the replacement is named", () => {
+    const root = tree();
+    const r = run(["new", "backlog", "x", "--root", root, "--format", "json"]);
+    expect(r.code).toBe(ExitCode.Usage);
+    expect(r.code).toBe(2);
+    expect(r.stdout).toBe("");
+    const message: string = JSON.parse(r.stderr).error.message;
+    expect(message).toContain("retired in 9.0.0");
+    expect(message).toContain("pdocs new item <slug> --kind task");
+    expect(existsSync(join(root, "docs/backlog"))).toBe(false);
+  });
+
   test("kickoff and artifact are among them", () => {
     const refused = ROWS.filter((r) => !r.creatable).map((r) => r.type);
     expect(refused).toContain("kickoff");
