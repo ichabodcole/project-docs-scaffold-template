@@ -62,6 +62,7 @@ import {
   registryIndex,
 } from "./registry.ts";
 import { isSeeded, loadManifest } from "../seed.ts";
+import { UUID_RE } from "../uuid.ts";
 
 /**
  * Where to lint, and by what rules.
@@ -290,9 +291,9 @@ const REQUIRED = ["type", "title", "description", "status", "generated"];
 const OPTIONAL = new Set(["tags", "related", "supersedes"]);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-/** A UUID, lowercase — the one form `pdocs` writes and compares. */
-export const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** A UUID, lowercase — the one form `pdocs` writes and compares. Declared
+ *  beside the generator in `uuid.ts`, so the writer and the lint share it. */
+export { UUID_RE };
 const TAG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 // ---------------------------------------------------------------------------------------
