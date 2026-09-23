@@ -486,6 +486,7 @@ describe("a rejection from a closed set enumerates it", () => {
       "new",
       "set",
       "promote",
+      "archive",
       "schema",
       "help",
     ]);
@@ -618,6 +619,7 @@ describe("help and version", () => {
       "new",
       "set",
       "promote",
+      "archive",
       "schema",
       "help",
     ]);
