@@ -350,6 +350,12 @@ export function deletedItems(
       .filter(Boolean)
   );
 
+  // The id each working-tree document carries, by repo-relative path — the
+  // same spelling `ls-tree` gives, since both are relative to the repo root.
+  const idAt = new Map(
+    documents.map((d) => [d.rel, scalar(d.fields.get("id"))] as const)
+  );
+
   const problems: string[] = [];
   const out = Buffer.from(batch.stdout);
   let at = 0;
@@ -370,10 +376,12 @@ export function deletedItems(
     if (scalar(fields.get("type")) !== "item") continue;
     const id = scalar(fields.get("id"));
     if (!id || current.has(id.toLowerCase())) continue;
-    // Still there, at the same path, and unreadable as an item — CRLF line
-    // endings, a broken block. Its own parse problem is the finding; it has
-    // not left the tree.
-    if (existsSync(join(ctx.repoRoot, path))) continue;
+    // Still there, at the same path, with no id that can be read — CRLF line
+    // endings, a broken block, a dropped `id:` line. Its own parse problem is
+    // the finding; it has not left the tree. A file there WITH a readable id
+    // is a different item (an id rewritten in place, a slug reused): the old
+    // id has gone, and that is a deletion.
+    if (existsSync(join(ctx.repoRoot, path)) && !idAt.get(path)) continue;
     const state = scalar(fields.get("lifecycle"));
     if (state === "dropped") continue;
     problems.push(

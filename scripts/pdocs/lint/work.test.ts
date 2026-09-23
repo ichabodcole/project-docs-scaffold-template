@@ -467,9 +467,30 @@ describe("no silent deletion — an item leaves the tree only through dropped", 
   });
 
   test("lowercasing an uppercase id is not a deletion (review C)", () => {
+    // Moved as well as lowercased, so the item is not at its old path and the
+    // ids really are compared: only the case-insensitive comparison keeps this
+    // from reading as a deletion.
     const root = repo("backlog", {}, { "docs/items/x.md": item(A.toUpperCase()) });
-    writeFileSync(join(root, "docs/items/x.md"), item(A));
+    rmSync(join(root, "docs/items/x.md"));
+    mkdirSync(join(root, "docs/items/x"));
+    writeFileSync(join(root, "docs/items/x/item.md"), item(A));
     expect(check(root).deleted).toEqual([]);
+  });
+
+  test("rewriting an item's id in place drops the old id: that is a deletion", () => {
+    const root = repo();
+    writeFileSync(join(root, "docs/items/x.md"), item(`${A.slice(0, -1)}e`));
+    const { deleted } = check(root);
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]).toContain(A);
+  });
+
+  test("reusing a slug for a new item drops the old one: that is a deletion", () => {
+    const root = repo();
+    writeFileSync(join(root, "docs/items/x.md"), item(B));
+    const { deleted } = check(root);
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]).toContain(A);
   });
 
   test("deleting an item with a non-ASCII filename is found (review D)", () => {
