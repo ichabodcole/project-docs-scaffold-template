@@ -24,6 +24,7 @@ import { dirname, join, resolve } from "node:path";
 import { ExitCode } from "../envelope.ts";
 import { childEnv } from "../test-env.ts";
 import { context } from "../lint/rules.ts";
+import { collectPages, pageKeys } from "../pages.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(REPO_ROOT, "scripts/pdocs/cli.ts");
@@ -681,5 +682,79 @@ describe("pdocs graph", () => {
     expect(stdout).toContain("pages");
     expect(stdout).toContain("by type");
     expect(stdout).not.toContain('"nodes"');
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Addresses on the work-taxonomy layout
+// ---------------------------------------------------------------------------------------
+
+describe("pageKeys — features and items", () => {
+  const ID_FILE = "0190f4b2-7c3a-7d4e-8f00-00000000000a";
+  const ID_FOLDER = "0190f4b2-7c3a-7d4e-8f00-00000000000b";
+  const ID_ARCHIVED = "0190f4b2-7c3a-7d4e-8f00-00000000000c";
+  const G = "{ by: read-test, at: 2026-09-22 }";
+  const entity = (type: string, extra: Record<string, string> = {}) =>
+    page(
+      { type, title: "E", description: "An entity.", status: "draft", generated: G, ...extra },
+      "# E"
+    );
+
+  const keysByPath = () => {
+    const root = mkdtempSync(join(tmpdir(), "pdocs-keys-"));
+    roots.push(root);
+    writeFileSync(
+      join(root, ".project-docs.json"),
+      JSON.stringify({
+        docsRoot: "docs",
+        version: "1.0.0",
+        lint: { workbench: ["features", "items", "cycles", "projects"], skip: [] },
+      })
+    );
+    const files: Record<string, string> = {
+      "docs/features/auth/feature.md": entity("feature", { lifecycle: "active" }),
+      "docs/features/_archive/old/feature.md": entity("feature", { lifecycle: "done" }),
+      "docs/items/fix-hook.md": entity("item", { id: ID_FILE, kind: "bug" }),
+      "docs/items/big/item.md": entity("item", { id: ID_FOLDER, kind: "task" }),
+      "docs/items/_archive/gone.md": entity("item", { id: ID_ARCHIVED, kind: "chore" }),
+      "docs/projects/legacy/proposal.md": entity("proposal", { lifecycle: "draft" }),
+    };
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), body);
+    }
+    return new Map(
+      collectPages(context(root)).map((p) => [p.path, pageKeys(p)] as const)
+    );
+  };
+
+  test("a feature answers to feature/<folder>, live or archived", () => {
+    const keys = keysByPath();
+    expect(keys.get("docs/features/auth/feature.md")).toContain("feature/auth");
+    expect(keys.get("docs/features/_archive/old/feature.md")).toContain("feature/old");
+  });
+
+  test("an item answers to item/<slug> and item/<uuid>, as a file or a folder, live or archived", () => {
+    const keys = keysByPath();
+    expect(keys.get("docs/items/fix-hook.md")).toEqual(
+      expect.arrayContaining(["item/fix-hook", `item/${ID_FILE}`])
+    );
+    expect(keys.get("docs/items/big/item.md")).toEqual(
+      expect.arrayContaining(["item/big", `item/${ID_FOLDER}`])
+    );
+    expect(keys.get("docs/items/_archive/gone.md")).toEqual(
+      expect.arrayContaining(["item/gone", `item/${ID_ARCHIVED}`])
+    );
+  });
+
+  test("no key is listed twice", () => {
+    for (const keys of keysByPath().values())
+      expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  test("a legacy project still answers to project/<folder> until retirement", () => {
+    expect(keysByPath().get("docs/projects/legacy/proposal.md")).toContain(
+      "project/legacy"
+    );
   });
 });

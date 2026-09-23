@@ -544,7 +544,10 @@ describe("pdocs new — `--project` is read as a name, not a folder", () => {
 });
 
 describe("pdocs new cycle — the registry's own validate predicate", () => {
-  test("refuses a scope entry that does not resolve", () => {
+  // A cycle's scope is derived from the items that name it (the work
+  // taxonomy), so `new cycle` no longer resolves `--scope`: the field stays
+  // writable on the legacy cycle row and nothing reads it.
+  test("--scope is not resolved any more", () => {
     const root = tree();
     const r = run([
       "new",
@@ -555,75 +558,8 @@ describe("pdocs new cycle — the registry's own validate predicate", () => {
       "--scope",
       "project/not-a-thing",
     ]);
-    expect(r.code).toBe(ExitCode.Usage);
-    expect(r.stderr).toContain("project/not-a-thing");
-    expect(existsSync(join(root, "docs/cycles/2026-10-tooling.md"))).toBe(false);
-  });
-
-  test("accepts `project/<name>`, which is the documented grammar", () => {
-    // THE FORM EVERYTHING ELSE WRITES: `docs/cycles/TEMPLATE.md` seeds `scope:`
-    // with `- project/[project-name]`, the design resolution's worked example
-    // is `pdocs new cycle 2026-10-tooling --scope project/oauth-upgrade`, and
-    // the v2.6→v2.7 guide says the same. It resolved to nothing until
-    // `pageAliasKeys` existed, because `pageKey` answers `proposal/proposal`
-    // for every project in the tree.
-    const root = tree();
-    makeProject(root, "oauth-upgrade");
-    const r = run([
-      "new",
-      "cycle",
-      "2026-10-tooling",
-      "--root",
-      root,
-      "--scope",
-      "project/oauth-upgrade",
-    ]);
     expect(r.stderr).toBe("");
     expect(r.code).toBe(ExitCode.Success);
-    expect(readFileSync(join(root, "docs/cycles/2026-10-tooling.md"), "utf8")).toContain(
-      "scope: [project/oauth-upgrade]"
-    );
-    expect(run(["check", "--root", root]).code).toBe(ExitCode.Success);
-  });
-
-  test("accepts a `type/slug` entry that names exactly one document", () => {
-    // `project/<name>` is an addition, not a replacement: the library-tier form
-    // the rest of the tree uses still has to resolve.
-    const root = tree();
-    run(["new", "playbook", "a-thing", "--root", root]);
-    const r = run([
-      "new",
-      "cycle",
-      "2026-10-tooling",
-      "--root",
-      root,
-      "--scope",
-      "playbook/a-thing-playbook",
-    ]);
-    expect(r.stderr).toBe("");
-    expect(r.code).toBe(ExitCode.Success);
-  });
-
-  test("refuses a key that names every project and identifies none", () => {
-    // `proposal/proposal` is what `--scope` used to accept and ONLY accept.
-    // It is not scope, it is a category: with two projects in the tree it
-    // matches both, and with one it is still not the project's name.
-    const root = tree();
-    makeProject(root, "oauth-upgrade");
-    makeProject(root, "billing-rewrite");
-    const r = run([
-      "new",
-      "cycle",
-      "2026-10-tooling",
-      "--root",
-      root,
-      "--scope",
-      "proposal/proposal",
-    ]);
-    expect(r.code).toBe(ExitCode.Usage);
-    expect(r.stderr).toContain("names 2 documents");
-    expect(r.stderr).toContain("project/<name>");
-    expect(existsSync(join(root, "docs/cycles/2026-10-tooling.md"))).toBe(false);
   });
 
   test("refuses to open a second active cycle", () => {

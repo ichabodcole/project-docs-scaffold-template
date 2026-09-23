@@ -41,7 +41,12 @@ import {
   libraryFiles,
   workbenchFiles,
 } from "./lint/rules.ts";
-import { ENTITY_FILE, PROJECTS_FOLDER } from "./lint/registry.ts";
+import {
+  ENTITY_FILE,
+  FEATURES_FOLDER,
+  ITEMS_FOLDER,
+  PROJECTS_FOLDER,
+} from "./lint/registry.ts";
 
 /** The legacy project folder's entry type: a `proposal` answers to
  *  `project/<folder>` until this repository has migrated. */
@@ -64,6 +69,8 @@ export interface Page {
   description: string | null;
   status: string | null;
   lifecycle: string | null;
+  /** A work item's `id`, as written (quotes removed); `null` elsewhere. */
+  id: string | null;
   tags: string[];
   /** Raw `type/slug` entries, as written. Unresolved on purpose: whether an
    *  edge points at a real page is the lint's question. */
@@ -134,6 +141,7 @@ export function collectPages(ctx: Ctx): Page[] {
       description: fields.get("description") ?? null,
       status: fields.get("status") ?? null,
       lifecycle: fields.get("lifecycle") ?? null,
+      id: fields.get("id")?.replace(/^(["'])(.*)\1$/, "$2") ?? null,
       tags: yamlList(fields.get("tags")),
       related: yamlList(fields.get("related")),
       date: parseGenerated(fields.get("generated"))?.at ?? null,
@@ -188,13 +196,35 @@ export function pageAliasKeys(page: Page): string[] {
     if (folder && basename(dirname(dirname(page.path))) === PROJECTS_FOLDER)
       keys.push(`project/${folder}`);
   }
+
+  // The work taxonomy's entities are named by their slug — the folder, or a
+  // single-file item's own name — wherever they sit, `_archive/` included, and
+  // an item by its `id` as well (plan D6).
+  if (page.type === "feature" || page.type === "item") {
+    const owner = page.type === "feature" ? FEATURES_FOLDER : ITEMS_FOLDER;
+    const segs = page.path.split("/");
+    const at = segs.lastIndexOf(owner);
+    if (at >= 0) {
+      let rest = segs.slice(at + 1);
+      if (rest[0] === "_archive" && rest.length > 1) rest = rest.slice(1);
+      const entry = ENTITY_FILE[owner]!.name;
+      const slug =
+        rest.length === 1 && page.type === "item"
+          ? basename(rest[0] as string, ".md")
+          : rest.length === 2 && rest[1] === entry
+            ? (rest[0] as string)
+            : null;
+      if (slug) keys.push(`${page.type}/${slug}`);
+    }
+    if (page.type === "item" && page.id) keys.push(`item/${page.id}`);
+  }
   return keys;
 }
 
 /** Every address a page answers to: its `type/slug` key, plus any alias. */
 export function pageKeys(page: Page): string[] {
   const key = pageKey(page);
-  return [...(key === null ? [] : [key]), ...pageAliasKeys(page)];
+  return [...new Set([...(key === null ? [] : [key]), ...pageAliasKeys(page)])];
 }
 
 /** `linksOut` inverted across the collection: path -> the paths that link to

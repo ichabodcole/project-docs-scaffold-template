@@ -350,16 +350,17 @@ describe("aliases and pre-write validation", () => {
     ]);
   });
 
-  test("the predicate refuses an unresolvable scope entry as a usage problem", () => {
+  // A cycle's scope is derived from the items that name it, so the predicate no
+  // longer resolves `scope:` entries. The field stays in `extra` until the
+  // legacy cycles are migrated, and nothing checks what it says.
+  test("the predicate does not resolve scope: a cycle's scope is derived now", () => {
     const cycle = ROWS.find((r) => r.type === "cycle") as RegistryRow;
     const problems = (cycle.validate as NonNullable<RegistryRow["validate"]>)({
       type: "cycle",
       fields: new Map([["scope", "[project/nowhere]"]]),
       documents: [],
     });
-    expect(problems).toHaveLength(1);
-    expect(problems[0]?.kind).toBe("usage");
-    expect(problems[0]?.message).toContain("project/nowhere");
+    expect(problems).toEqual([]);
   });
 
   test("the predicate refuses a second active cycle as a conflict", () => {

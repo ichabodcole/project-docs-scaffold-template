@@ -22,11 +22,6 @@
 
 import type { ProjectDocsConfig } from "../docs-lint/config.ts";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
-// The portable core, and the only direction the dependency may run: `pdocs`
-// reads `docs-lint`, never the reverse. `yamlList` is the parser the lint uses
-// for every list-valued field, so a validator reads `scope` exactly the way the
-// gate would read it.
-import { yamlList } from "../docs-lint/index.ts";
 
 // ---------------------------------------------------------------------------------------
 // The work-taxonomy vocabulary
@@ -594,46 +589,12 @@ const CREATION: Record<string, Creation> = {
  * every answer in one place.
  */
 const VALIDATION: Record<string, Validator> = {
-  // Both halves of the proposal's success criterion: "`pdocs new cycle`
-  // refuses to open a second active cycle, and refuses a scope entry that does
-  // not resolve."
-  //
-  // `scope` is checked against the same `type/slug` vocabulary `related:` uses,
-  // so a cycle cannot open over work the tree does not contain — which is the
-  // failure that makes a cycle index worse than no index. The lint has no
-  // opinion on `scope` after the fact: it is an `extra` field and nothing
-  // resolves it, so this is the only gate it gets.
+  // "`pdocs new cycle` refuses to open a second active cycle." A cycle's
+  // scope used to be resolved here too; it is derived from the items that
+  // name the cycle now, so `scope:` is only kept in `extra` for the legacy
+  // cycles until they are migrated, and nothing resolves it.
   cycle: ({ type, fields, documents }) => {
     const problems: ValidationProblem[] = [];
-
-    const byKey = new Map<string, string[]>();
-    for (const d of documents)
-      for (const key of d.keys)
-        byKey.set(key, [...(byKey.get(key) ?? []), d.path]);
-
-    for (const entry of yamlList(fields.get("scope"))) {
-      const matches = byKey.get(entry) ?? [];
-      if (matches.length === 0)
-        problems.push({
-          kind: "usage",
-          message:
-            `--scope: \`${entry}\` matches no document (expected \`project/<name>\` ` +
-            `for a project, or \`type/slug\` — e.g. \`backlog/2026-09-04-a-thing\`). ` +
-            `A cycle over work that is not there is worse than no cycle.`,
-        });
-      // A key that names several documents is not scope, it is a category.
-      // `proposal/proposal` is the one that turns up in practice: every project
-      // folder holds a `proposal.md`, so the key matches all of them and
-      // identifies none. `project/<name>` is what the caller meant.
-      else if (matches.length > 1)
-        problems.push({
-          kind: "usage",
-          message:
-            `--scope: \`${entry}\` names ${matches.length} documents ` +
-            `(${matches.slice(0, 3).join(", ")}${matches.length > 3 ? ", …" : ""}) — ` +
-            `it identifies none of them. Name a project as \`project/<name>\`.`,
-        });
-    }
 
     if (fields.get("lifecycle") === "active") {
       const open = documents.filter(
