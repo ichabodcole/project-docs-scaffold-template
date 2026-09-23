@@ -50,4 +50,4 @@ _Written at close, not before._
 
 ## Sessions
 
-- feature/work-taxonomy-p1-schema-lint (open)
+- feature/work-taxonomy-p1-schema-lint (landed 2026-09-22)

@@ -192,3 +192,7 @@ What has been happening lately, for a cold start. — see
   — pdocs check spawns git without the repository variables a commit hook
   exports, so it runs from a package in a linked worktree; a tracked page that
   is being deleted is skipped, and report records come from findings, not rows.
+- [The work-taxonomy lint lands beside the old types](./memories/2026-09-22-work-taxonomy-lint-beside-the-old.md)
+  — pdocs now lints features, items, grouped states, references and deletions
+  while the retired types stay lintable, and each old migration runs against the
+  scaffold release it was written for.

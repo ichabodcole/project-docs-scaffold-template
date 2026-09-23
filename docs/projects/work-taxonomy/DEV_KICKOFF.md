@@ -89,7 +89,7 @@ consumer.
 - [x] Discovery complete (the plan was written against the code)
 - [x] Plan created and user-reviewed
 - [x] Test plan created
-- [ ] Phase 1 — schema, registry, lint
+- [x] Phase 1 — schema, registry, lint
 - [ ] Phase 2 — `pdocs` creation, promotion, `set`, `archive`, views
 - [ ] Phase 3 — templates and prose
 - [ ] Phase 4 — skill audit and touch points

@@ -7,7 +7,7 @@ description:
   for every relationship, so a state is a field and nothing closes silently.
 tags: [taxonomy, work-management, schema]
 status: draft
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: approved # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5-5, at: 2026-09-22 }
 ---
 

@@ -7,7 +7,7 @@ description:
   consumer and ship both proposals as one major release.
 tags: [taxonomy, schema, migrations, touch-points]
 status: draft
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: active # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5-5, at: 2026-09-22 }
 ---
 
@@ -57,12 +57,12 @@ stays green on every commit, and no commit needs `--no-verify`.
 
 **Definition of Done:**
 
-- [ ] `pdocs check` enforces the state vocabulary and its grouping (both parsed
+- [x] `pdocs check` enforces the state vocabulary and its grouping (both parsed
       from `SCHEMA.md` and checked against the registry), `kind`, `id`, and
       `priority`. It also checks that `scope` is declared, that every `parent`,
       `from`, `blocked_by` and `cycle` resolves, and that no work item leaves
       the tree without reaching `dropped`.
-- [ ] A work item with no `title`, `kind` or `id` fails the lint.
+- [x] A work item with no `title`, `kind` or `id` fails the lint.
 - [ ] `pdocs new item` writes a UUIDv7 `id`.
       `pdocs new <owned-type> --owner item/<x>` turns a single-file item into a
       folder and rewrites every link to it.
@@ -454,11 +454,11 @@ These changes go in both trees; `scripts/check-mirror.sh` enforces the pairs.
 
 **Validation:**
 
-- [ ] `bun test`, `npx tsc --noEmit` and `npm run check` are green, with this
+- [x] `bun test`, `npx tsc --noEmit` and `npm run check` are green, with this
       repo's tree untouched.
-- [ ] A generated payload passes `pdocs check`. It contains no retired folder
+- [x] A generated payload passes `pdocs check`. It contains no retired folder
       and ships no tests.
-- [ ] A hand-written fixture with every Task 1.7 defect in it reports every one
+- [x] A hand-written fixture with every Task 1.7 defect in it reports every one
       of them, each once.
 
 **Dependencies:** none.
