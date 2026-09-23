@@ -671,7 +671,7 @@ function scopeOpener(): string | null {
 }
 
 /** The addresses, `type` and `lifecycle` of everything already written. */
-function existingDocuments(ctx: Ctx): ExistingDocument[] {
+export function existingDocuments(ctx: Ctx): ExistingDocument[] {
   return collectPages(ctx).map((page) => ({
     path: page.path,
     keys: pageKeys(page),
