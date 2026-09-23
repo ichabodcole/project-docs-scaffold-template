@@ -13,81 +13,27 @@
 // tree is walked once. The only other filesystem question it asks is whether a
 // `from:` path names a file, which is a stat, not a walk.
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { CONFIG_FILENAME } from "../docs-lint/config.ts";
-import { basename, isAbsolute, join, relative, sep } from "node:path";
-import { parseFrontmatter, yamlList } from "../docs-lint/index.ts";
-import { ENTITY_FILE, FEATURES_FOLDER, ITEMS_FOLDER, STATE_GROUP } from "./registry.ts";
+import { join, relative } from "node:path";
+import { parseFrontmatter } from "../docs-lint/index.ts";
+import { ENTITY_FILE, ITEMS_FOLDER } from "./registry.ts";
 import {
   type Ctx,
-  UUID_RE,
   type WorkbenchDocument,
   gitEnv,
   workbenchDocuments,
 } from "./rules.ts";
-
-const ARCHIVE = "_archive";
-
-/** An entity (feature or item) as its position and frontmatter describe it. */
-interface Entity {
-  doc: WorkbenchDocument;
-  kind: "feature" | "item";
-  /** The folder name, or the file name without `.md` for a single-file item. */
-  slug: string;
-  archived: boolean;
-  /** The entity's folder, docs-root-relative, when it has one. */
-  folder: string | null;
-}
-
-/**
- * Where an owner folder's document sits: the owner (`features` or `items`),
- * whether it is under `_archive/`, and the segments below that.
- */
-function position(
-  ctx: Ctx,
-  rel: string
-): { owner: string; archived: boolean; segs: string[] } | null {
-  // Relative to the resolved docs root, never to the configured string: a
-  // `docsRoot` spelled `./docs` or `docs/` is the same folder, and a prefix
-  // comparison against the spelling silently matched nothing.
-  const within = relative(ctx.docsRoot, join(ctx.repoRoot, rel));
-  if (within === "" || within.startsWith("..") || isAbsolute(within)) return null;
-  const segs = within.split(sep);
-  const owner = segs[0] as string;
-  if (owner !== FEATURES_FOLDER && owner !== ITEMS_FOLDER) return null;
-  let rest = segs.slice(1);
-  const archived = rest[0] === ARCHIVE && rest.length > 1;
-  if (archived) rest = rest.slice(1);
-  return { owner, archived, segs: rest };
-}
-
-function entityOf(ctx: Ctx, doc: WorkbenchDocument): Entity | null {
-  if (doc.misplaced || (doc.type !== "feature" && doc.type !== "item")) return null;
-  const pos = position(ctx, doc.rel);
-  if (!pos) return null;
-  const { owner, archived, segs } = pos;
-  const archivePart = archived ? `${ARCHIVE}/` : "";
-  // `items/<slug>.md` — a single-file item.
-  if (segs.length === 1)
-    return {
-      doc,
-      kind: doc.type,
-      slug: basename(segs[0] as string, ".md"),
-      archived,
-      folder: null,
-    };
-  return {
-    doc,
-    kind: doc.type,
-    slug: segs[0] as string,
-    archived,
-    folder: `${owner}/${archivePart}${segs[0]}`,
-  };
-}
-
-/** A scalar with any surrounding quotes removed. */
-const scalar = (v: string | undefined): string =>
-  (v ?? "").trim().replace(/^(["'])(.*)\1$/, "$2");
+import {
+  ARCHIVE,
+  type WorkEntity,
+  type WorkModel,
+  fromResolves,
+  ownerPosition,
+  parentResolves,
+  scalar,
+  workModel,
+} from "../work.ts";
 
 /** True when the raw value is written as a list, flow or block. */
 const isList = (raw: string): boolean => /^\[/.test(raw.trim()) || /^-\s/.test(raw.trim());
@@ -104,58 +50,47 @@ export function workProblems(
 ): string[] {
   const problems: string[] = [];
 
-  const entities = documents
-    .map((d) => entityOf(ctx, d))
-    .filter((e): e is Entity => e !== null);
-  const items = entities.filter((e) => e.kind === "item");
-  const features = entities.filter((e) => e.kind === "feature");
-  const featureSlugs = new Set(features.map((f) => f.slug));
-  const cycleSlugs = new Set(
-    documents.filter((d) => d.type === "cycle").map((d) => basename(d.rel, ".md"))
-  );
+  // The same model `pdocs new`, `set` and `view` resolve against, so the lint
+  // and the commands read a reference one way.
+  const model = workModel(ctx, documents);
+  const items = model.items;
+  const features = model.features;
+  const entities = [...features, ...items];
+  const featureSlugs = new Set(model.featuresBySlug.keys());
+  const cycleSlugs = new Set(model.cyclesBySlug.keys());
 
   // ---- ids ----------------------------------------------------------------------------
-  const byId = new Map<string, Entity[]>();
-  for (const it of items) {
-    const id = scalar(it.doc.fields.get("id"));
-    if (!id) continue;
-    byId.set(id, [...(byId.get(id) ?? []), it]);
-  }
+  const byId = model.itemsById;
   for (const [id, holders] of byId)
     if (holders.length > 1)
       problems.push(
-        `DUPLICATE ID  ${id}  ${holders.map((h) => h.doc.rel).join(", ")}  (an id names one item)`
+        `DUPLICATE ID  ${id}  ${holders.map((h) => h.path).join(", ")}  (an id names one item)`
       );
 
   // ---- slugs --------------------------------------------------------------------------
-  for (const [kind, group] of [
-    ["item", items],
-    ["feature", features],
-  ] as const) {
-    const bySlug = new Map<string, Entity[]>();
-    for (const e of group) bySlug.set(e.slug, [...(bySlug.get(e.slug) ?? []), e]);
+  for (const [kind, bySlug] of [
+    ["item", model.itemsBySlug],
+    ["feature", model.featuresBySlug],
+  ] as const)
     for (const [slug, holders] of bySlug)
       if (holders.length > 1)
         problems.push(
-          `DUPLICATE SLUG  ${kind}/${slug}  ${holders.map((h) => h.doc.rel).join(", ")}  (\`${kind}/${slug}\` must name one ${kind})`
+          `DUPLICATE SLUG  ${kind}/${slug}  ${holders.map((h) => h.path).join(", ")}  (\`${kind}/${slug}\` must name one ${kind})`
         );
-  }
 
   // ---- the archive holds only finished work (D15) --------------------------------------
   for (const e of entities) {
     if (!e.archived) continue;
-    const state = scalar(e.doc.fields.get("lifecycle"));
-    const group = STATE_GROUP[state];
-    if (group !== "completed" && group !== "cancelled")
+    if (e.group !== "completed" && e.group !== "cancelled")
       problems.push(
-        `ARCHIVED NOT TERMINAL  ${e.doc.rel}: "${state}"  (only done or dropped may sit in ${ARCHIVE}/; \`lifecycle\` is the source of truth)`
+        `ARCHIVED NOT TERMINAL  ${e.path}: "${e.lifecycle ?? ""}"  (only done or dropped may sit in ${ARCHIVE}/; \`lifecycle\` is the source of truth)`
       );
   }
 
   // ---- entity folders hold their entity file ------------------------------------------
   const folders = new Map<string, string>(); // docs-relative folder -> owner
   for (const d of documents) {
-    const pos = position(ctx, d.rel);
+    const pos = ownerPosition(ctx, d.rel);
     if (!pos || pos.segs.length < 2) continue;
     const archivePart = pos.archived ? `${ARCHIVE}/` : "";
     folders.set(`${pos.owner}/${archivePart}${pos.segs[0]}`, pos.owner);
@@ -170,9 +105,9 @@ export function workProblems(
   // ---- references ---------------------------------------------------------------------
   const declaredScopes = new Set(ctx.config.lint.scopes);
   for (const e of entities) {
-    const { rel, fields } = e.doc;
+    const rel = e.path;
 
-    const rawScope = fields.get("scope");
+    const rawScope = e.fields.get("scope");
     if (rawScope) {
       if (isList(rawScope))
         problems.push(
@@ -184,57 +119,32 @@ export function workProblems(
         );
     }
 
-    if (e.kind !== "item") continue;
+    if (e.entity !== "item") continue;
 
-    const parent = scalar(fields.get("parent"));
-    if (parent) {
-      const m = /^feature\/(.+)$/.exec(parent);
-      if (!m || !featureSlugs.has(m[1] as string))
-        problems.push(
-          `BAD PARENT  ${rel}: "${parent}"  (a parent is \`feature/<slug>\`, naming a feature in the tree)`
-        );
-    }
-
-    const cycle = scalar(fields.get("cycle"));
-    if (cycle && !cycleSlugs.has(cycle))
+    if (e.parent && !parentResolves(model, e.parent))
       problems.push(
-        `BAD CYCLE  ${rel}: "${cycle}"  (no cycle file by that slug)`
+        `BAD PARENT  ${rel}: "${e.parent}"  (a parent is \`feature/<slug>\`, naming a feature in the tree)`
       );
 
-    for (const blocker of yamlList(fields.get("blocked_by")).map((b) => scalar(b)))
+    if (e.cycle && !cycleSlugs.has(e.cycle))
+      problems.push(
+        `BAD CYCLE  ${rel}: "${e.cycle}"  (no cycle file by that slug)`
+      );
+
+    for (const blocker of e.blockedBy)
       if (!byId.has(blocker))
         problems.push(
           `BAD BLOCKED_BY  ${rel}: "${blocker}"  (no item has that id)`
         );
 
-    const from = scalar(fields.get("from"));
-    if (from && !fromResolves(ctx, from, byId, featureSlugs, cycleSlugs))
+    if (e.from && !fromResolves(ctx, model, e.from))
       problems.push(
-        `BAD FROM  ${rel}: "${from}"  (an item id, \`feature/<slug>\`, \`cycle/<slug>\`, or a docs-root-relative path to a document)`
+        `BAD FROM  ${rel}: "${e.from}"  (an item id, \`feature/<slug>\`, \`cycle/<slug>\`, or a docs-root-relative path to a document)`
       );
   }
 
   problems.push(...blockedCycles(items, byId));
   return problems;
-}
-
-/** The four forms `from:` may take (D6), each resolved against the tree. */
-function fromResolves(
-  ctx: Ctx,
-  from: string,
-  byId: ReadonlyMap<string, Entity[]>,
-  featureSlugs: ReadonlySet<string>,
-  cycleSlugs: ReadonlySet<string>
-): boolean {
-  if (UUID_RE.test(from)) return byId.has(from);
-  const feature = /^feature\/(.+)$/.exec(from);
-  if (feature) return featureSlugs.has(feature[1] as string);
-  const cycle = /^cycle\/(.+)$/.exec(from);
-  if (cycle) return cycleSlugs.has(cycle[1] as string);
-  if (!from.endsWith(".md") || from.startsWith("/") || from.split("/").includes(".."))
-    return false;
-  const abs = join(ctx.docsRoot, from);
-  return existsSync(abs) && statSync(abs).isFile();
 }
 
 /**
@@ -243,16 +153,14 @@ function fromResolves(
  * the same loop found from two of its members is one row.
  */
 function blockedCycles(
-  items: readonly Entity[],
-  byId: ReadonlyMap<string, Entity[]>
+  items: readonly WorkEntity[],
+  byId: WorkModel["itemsById"]
 ): string[] {
   const edges = new Map<string, string[]>(); // rel -> blocker rels
   for (const it of items)
     edges.set(
-      it.doc.rel,
-      yamlList(it.doc.fields.get("blocked_by"))
-        .map((b) => scalar(b))
-        .flatMap((id) => (byId.get(id) ?? []).map((e) => e.doc.rel))
+      it.path,
+      it.blockedBy.flatMap((id) => (byId.get(id) ?? []).map((e) => e.path))
     );
 
   const found = new Set<string>();
