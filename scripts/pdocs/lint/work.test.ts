@@ -19,7 +19,8 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { childEnv } from "../test-env.ts";
 import { type Ctx, context, thinTier } from "./rules.ts";
-import { workProblems } from "./work.ts";
+import { collect } from "./collect.ts";
+import { configProblems, workProblems } from "./work.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(REPO_ROOT, "scripts/pdocs/cli.ts");
@@ -625,5 +626,31 @@ describe("the deletion check's git spawns ignore a hook's environment (review E)
       .filter((m) => m.startsWith("ITEM DELETED"));
     expect(deleted).toHaveLength(1);
     expect(deleted[0]).toContain(A);
+  });
+});
+
+describe("a lint.scopes that is not a list of strings is reported (review I)", () => {
+  test("a string, a number and a mixed list each name the bad value", () => {
+    for (const bad of ["lint", 7, ["lint", 7]]) {
+      const problems = configProblems(fixture({}, { scopes: bad }));
+      expect(problems).toHaveLength(1);
+      expect(problems[0]).toStartWith("BAD CONFIG  .project-docs.json");
+      expect(problems[0]).toContain(JSON.stringify(bad));
+    }
+  });
+
+  test("the fallback stays: no scope is declared, and the config says why", () => {
+    const ctx = fixture(
+      { "docs/items/a.md": item(A, { scope: "lint" }), "docs/SCHEMA.md": readFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), "utf8") },
+      { scopes: "lint" }
+    );
+    const rows = collect(ctx).workbench;
+    expect(rows.filter((r) => r.startsWith("BAD CONFIG"))).toHaveLength(1);
+    expect(rows.filter((r) => r.startsWith("BAD SCOPE"))).toHaveLength(1);
+  });
+
+  test("an absent key and a good list are silent", () => {
+    expect(configProblems(fixture({}))).toEqual([]);
+    expect(configProblems(fixture({}, { scopes: ["lint"] }))).toEqual([]);
   });
 });

@@ -30,7 +30,7 @@ import {
   templateTest,
   thinReport,
 } from "./rules.ts";
-import { deletedItems, workProblems } from "./work.ts";
+import { configProblems, deletedItems, workProblems } from "./work.ts";
 
 /** Everything one run of the gate found, in the order a reader is shown it. */
 export interface LintReport {
@@ -112,6 +112,7 @@ export function collect(ctx: Ctx): LintReport {
   const thin = thinReport(ctx);
   const workbench = [
     ...thin.problems,
+    ...configProblems(ctx),
     ...workProblems(ctx, thin.documents),
     ...deletedItems(ctx, ctx.against ?? "HEAD", thin.documents),
     ...frontmatterSyntaxProblems(ctx),

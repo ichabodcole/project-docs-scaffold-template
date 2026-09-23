@@ -13,7 +13,8 @@
 // tree is walked once. The only other filesystem question it asks is whether a
 // `from:` path names a file, which is a stat, not a walk.
 
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { CONFIG_FILENAME } from "../docs-lint/config.ts";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
 import { parseFrontmatter, yamlList } from "../docs-lint/index.ts";
 import { ENTITY_FILE, FEATURES_FOLDER, ITEMS_FOLDER, STATE_GROUP } from "./registry.ts";
@@ -380,4 +381,30 @@ export function deletedItems(
     );
   }
   return problems;
+}
+
+// ---------------------------------------------------------------------------------------
+// The work-taxonomy config
+// ---------------------------------------------------------------------------------------
+
+/**
+ * `lint.scopes` in `.project-docs.json`, when it is present and not a list of
+ * strings. `loadConfig` falls back to `[]` for it, as it does for every array;
+ * without this row the only symptom is every `scope:` in the tree reporting
+ * "declare it in lint.scopes" — about a key the project did declare.
+ */
+export function configProblems(ctx: Ctx): string[] {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(join(ctx.repoRoot, CONFIG_FILENAME), "utf8"));
+  } catch {
+    return []; // absent, or malformed — `loadConfig` has already thrown for that
+  }
+  const lint = (raw as { lint?: Record<string, unknown> } | null)?.lint;
+  if (!lint || typeof lint !== "object" || !("scopes" in lint)) return [];
+  const scopes = lint.scopes;
+  if (Array.isArray(scopes) && scopes.every((x) => typeof x === "string")) return [];
+  return [
+    `BAD CONFIG  ${CONFIG_FILENAME}: lint.scopes is ${JSON.stringify(scopes)}  (expected a list of strings; until it is one, no scope is declared)`,
+  ];
 }
