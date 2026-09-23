@@ -1344,6 +1344,38 @@ describe("pdocs new feature, and --owner", () => {
     clean(root);
   });
 
+  test("--from the owner item's own file, while promoting it, links where it lands (review 2)", () => {
+    const root = workTree();
+    newItem(root, "beta", "--kind", "task");
+    const r = run([
+      "new", "plan", "--owner", "item/beta", "--from", "docs/items/beta.md",
+      "--root", root, "--format", "json",
+    ]);
+    expect(r.stderr).toBe("");
+    const body = readFileSync(join(root, "docs/items/beta/plan.md"), "utf8");
+    expect(body).not.toContain("../beta.md");
+    expect(body).toContain("(./item.md)");
+    clean(root);
+  });
+
+  test("`created` lists the files an automatic promotion wrote (review 11)", () => {
+    const root = workTree();
+    newItem(root, "beta", "--kind", "task");
+    writeFileSync(
+      join(root, "docs/features/a/notes.md"),
+      "---\ntype: artifact\ntitle: Notes\ndescription: Notes.\nstatus: draft\ngenerated: { by: t, at: 2026-01-01 }\n---\n\nSee [beta](../../items/beta.md).\n"
+    );
+    const data = json(
+      run(["new", "plan", "--owner", "item/beta", "--root", root, "--format", "json"])
+    );
+    expect(data.created).toEqual([
+      "docs/items/beta/plan.md",
+      "docs/items/beta/item.md",
+      "docs/features/a/notes.md",
+    ]);
+    clean(root);
+  });
+
   test("an owner that is not a feature or an item is refused, and nothing moves", () => {
     const root = workTree();
     newItem(root, "b", "--kind", "task");

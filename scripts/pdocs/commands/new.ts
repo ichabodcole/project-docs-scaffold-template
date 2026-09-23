@@ -69,6 +69,7 @@ import { collectPages, pageKeys } from "../pages.ts";
 import { uuidv7 } from "../uuid.ts";
 import { type WorkEntity, type WorkModel, collectWork, refFor, resolveRef } from "../work.ts";
 import { promoteItem } from "./promote.ts";
+import { movedTo } from "../links-rewrite.ts";
 
 /** `data` in the envelope. */
 export interface NewData {
@@ -1044,12 +1045,23 @@ export const newCommand: Command = {
       out = appendRelated(out, `- [${placement.ownerTitle}](${href})`);
     }
     if (source !== null) {
-      const abs = source.abs;
+      // Where the source will be once any promotion has run: `--from` may be
+      // the very item being promoted to hold this document (review 2).
+      const abs =
+        placement.promote === null || placement.entry === null
+          ? source.abs
+          : movedTo(
+              source.abs,
+              new Map([[join(ctx.repoRoot, placement.promote.path), placement.entry]])
+            );
       const href = relative(dir, abs).replace(/^(?!\.)/, "./");
       const fields = parseFrontmatter(
-        /^---\n([\s\S]*?)\n---/.exec(readFileSync(abs, "utf8"))?.[1] ?? ""
+        /^---\n([\s\S]*?)\n---/.exec(readFileSync(source.abs, "utf8"))?.[1] ?? ""
       );
-      out = appendRelated(out, `- [${fields.get("title") ?? basename(abs, ".md")}](${href})`);
+      out = appendRelated(
+        out,
+        `- [${fields.get("title") ?? basename(source.abs, ".md")}](${href})`
+      );
     }
     // ---- the catalog line, computed before either file is touched -----------------------
     const description = (resolved.get("description") ?? "").replace(/\s+/g, " ").trim();
@@ -1079,8 +1091,8 @@ export const newCommand: Command = {
     // ---- write -------------------------------------------------------------------------
     // Promotion is the first write, and the last thing that can refuse has
     // already run: an item is only turned into a folder that is then written to.
-    const promoted =
-      placement.promote === null ? null : promoteItem(ctx, placement.promote).to;
+    const promotion = placement.promote === null ? null : promoteItem(ctx, placement.promote);
+    const promoted = promotion?.to ?? null;
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, `---\n${frontmatter}\n---\n${out}`);
     const created = [rel];
@@ -1088,6 +1100,11 @@ export const newCommand: Command = {
       writeFileSync(indexPath, catalog);
       created.push(relative(ctx.repoRoot, indexPath));
     }
+    // An automatic promotion moved the item and rewrote links to it; those
+    // files were modified by this command too (review 11).
+    if (promotion !== null)
+      for (const p of [promotion.to, ...promotion.rewritten])
+        if (!created.includes(p)) created.push(p);
 
     const data: NewData = { path: rel, type: row.type, created, promoted };
     if (format === "json") printEnvelope("new", data);
