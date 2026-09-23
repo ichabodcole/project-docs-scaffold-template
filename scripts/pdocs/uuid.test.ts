@@ -28,6 +28,21 @@ describe("uuidv7", () => {
     expect([c, b, a].sort()).toEqual([a, b, c]);
   });
 
+  test("ids made in a tight loop strictly increase, within a millisecond too (review 9)", () => {
+    const ids = Array.from({ length: 2000 }, () => uuidv7());
+    for (let i = 1; i < ids.length; i++)
+      expect({ i, ordered: (ids[i - 1] as string) < (ids[i] as string) }).toEqual({ i, ordered: true });
+    for (const id of ids) expect(id).toMatch(V7);
+  });
+
+  test("two ids for one pinned millisecond increase, and a clock step back does not reorder", () => {
+    const a = uuidv7(1_900_000_000_000);
+    const b = uuidv7(1_900_000_000_000);
+    const c = uuidv7(1_899_999_999_000);
+    expect(a < b).toBe(true);
+    expect(b < c).toBe(true);
+  });
+
   test("a timestamp outside 48 bits is refused rather than wrapped", () => {
     expect(() => uuidv7(-1)).toThrow();
     expect(() => uuidv7(2 ** 48)).toThrow();
