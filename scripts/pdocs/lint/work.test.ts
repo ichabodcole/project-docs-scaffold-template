@@ -10,6 +10,7 @@ import {
   copyFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -555,5 +556,74 @@ describe("the docs root may be spelled ./docs or docs/ (review B)", () => {
         spelling,
         found: want,
       });
+  });
+});
+
+describe("the deletion check's git spawns ignore a hook's environment (review E)", () => {
+  // A pre-commit hook in a LINKED worktree is handed `GIT_DIR`. A git told its
+  // directory but not its work tree takes the working directory as the top
+  // level, so from `packages/app` an inherited environment makes `ls-tree --
+  // docs/items` look for the monorepo root's `docs/items` — nothing there,
+  // and the deleted item goes unreported. `gitEnv()` is what prevents it.
+  test("a monorepo package's deleted item is reported by a hook in a linked worktree", () => {
+    const base = mkdtempSync(join(tmpdir(), "pdocs-work-hook-"));
+    roots.push(base);
+    const main = join(base, "main");
+    const app = join(main, "packages/app");
+    const files: Record<string, string> = {
+      ".project-docs.json": JSON.stringify({
+        docsRoot: "docs",
+        version: "1.0.0",
+        lint: { adopting: false, workbench: ["features", "items", "cycles"], skip: [] },
+      }),
+      "docs/items/x.md": item(A),
+    };
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(app, rel)), { recursive: true });
+      writeFileSync(join(app, rel), body);
+    }
+    copyFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), join(app, "docs/SCHEMA.md"));
+
+    const git = (cwd: string, ...args: string[]) => {
+      const r = Bun.spawnSync(
+        [
+          "git",
+          "-c",
+          "user.name=t",
+          "-c",
+          "user.email=t@t",
+          "-c",
+          "commit.gpgsign=false",
+          "-c",
+          `core.hooksPath=${join(main, ".git/hooks")}`,
+          ...args,
+        ],
+        { cwd, env: childEnv(), stdout: "pipe", stderr: "pipe" }
+      );
+      if (r.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr.toString()}`);
+    };
+    mkdirSync(main, { recursive: true });
+    git(main, "init", "-q");
+    git(main, "add", "-A");
+    git(main, "commit", "-q", "--no-verify", "-m", "init");
+    const wt = join(base, "wt");
+    git(main, "worktree", "add", "-q", wt);
+
+    const out = join(base, "hook");
+    mkdirSync(join(main, ".git/hooks"), { recursive: true });
+    writeFileSync(
+      join(main, ".git/hooks/pre-commit"),
+      `#!/bin/sh\ncd packages/app && bun "${CLI}" check --format json --root . > "${out}.stdout" 2> "${out}.stderr"\nexit 0\n`,
+      { mode: 0o755 }
+    );
+    git(wt, "rm", "-q", "packages/app/docs/items/x.md");
+    git(wt, "commit", "-q", "-m", "delete the item");
+
+    const report = JSON.parse(readFileSync(`${out}.stdout`, "utf8"));
+    const deleted = (report.data.problems as Array<{ message: string }>)
+      .map((p) => p.message)
+      .filter((m) => m.startsWith("ITEM DELETED"));
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]).toContain(A);
   });
 });
