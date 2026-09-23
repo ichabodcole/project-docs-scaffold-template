@@ -444,3 +444,15 @@ export function viewUnreleased(model: WorkModel, since?: string): WorkEntity[] {
 export function viewReleased(model: WorkModel, version: string): WorkEntity[] {
   return ordered([...model.features, ...model.items].filter((e) => e.releasedIn === version));
 }
+
+/** The model's slug index for an entity kind. */
+export function entitiesBySlug(
+  model: WorkModel,
+  entity: WorkEntity["entity"]
+): ReadonlyMap<string, WorkEntity[]> {
+  return entity === "feature"
+    ? model.featuresBySlug
+    : entity === "item"
+      ? model.itemsBySlug
+      : model.cyclesBySlug;
+}

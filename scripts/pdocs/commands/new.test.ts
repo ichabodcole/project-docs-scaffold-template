@@ -1289,6 +1289,70 @@ describe("pdocs new feature, and --owner", () => {
     expect(again.code).toBe(ExitCode.Conflict);
   });
 
+  test("a slug already held by an item — archived or live, file or folder — is refused (review 3)", () => {
+    const root = workTree();
+    const item = (id: string) =>
+      page({
+        type: "item",
+        title: "Held",
+        description: "An item holding the slug.",
+        status: "draft",
+        lifecycle: "done",
+        id,
+        kind: "task",
+        generated: "{ by: new-test, at: 2026-01-01 }",
+      });
+    const held: Record<string, string> = {
+      "archived-file": "docs/items/_archive/archived-file.md",
+      "archived-folder": "docs/items/_archive/archived-folder/item.md",
+      "live-folder": "docs/items/live-folder/item.md",
+    };
+    let n = 0;
+    for (const path of Object.values(held)) {
+      mkdirSync(dirname(join(root, path)), { recursive: true });
+      writeFileSync(join(root, path), item(`0190f4b2-7c3a-7d4e-8f00-00000000000${++n}`));
+    }
+    for (const [slug, path] of Object.entries(held)) {
+      const r = newItem(root, slug, "--kind", "task");
+      expect({ slug, code: r.code }).toEqual({ slug, code: ExitCode.Conflict });
+      expect(r.stderr).toContain(path);
+      expect(existsSync(join(root, `docs/items/${slug}.md`))).toBe(false);
+    }
+  });
+
+  test("a slug already held by an archived feature is refused (review 3)", () => {
+    const root = workTree();
+    const path = "docs/features/_archive/old/feature.md";
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(
+      join(root, path),
+      page({
+        type: "feature",
+        title: "Old",
+        description: "An archived feature.",
+        status: "draft",
+        lifecycle: "done",
+        generated: "{ by: new-test, at: 2026-01-01 }",
+      })
+    );
+    const r = run(["new", "feature", "old", "--root", root]);
+    expect(r.code).toBe(ExitCode.Conflict);
+    expect(r.stderr).toContain(path);
+    expect(existsSync(join(root, "docs/features/old"))).toBe(false);
+  });
+
+  test("`new feature --scope` is checked against lint.scopes (review 4)", () => {
+    const root = workTree();
+    const bad = run(["new", "feature", "x", "--scope", "ui", "--root", root]);
+    expect(bad.code).toBe(ExitCode.Usage);
+    expect(bad.stderr).toContain("lint.scopes");
+    expect(existsSync(join(root, "docs/features/x"))).toBe(false);
+    expect(run(["new", "feature", "x", "--scope", "cli", "--root", root]).code).toBe(
+      ExitCode.Success
+    );
+    clean(root);
+  });
+
   test("a feature takes no --owner, and needs a name", () => {
     const root = workTree();
     expect(run(["new", "feature", "x", "--owner", "feature/a", "--root", root]).code).toBe(

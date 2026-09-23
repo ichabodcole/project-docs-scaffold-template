@@ -674,18 +674,13 @@ const VALIDATION: Record<string, Validator> = {
         `[${blockers.map((b) => resolve(b, ["item"]).id ?? b).join(", ")}]`
       );
 
-    const scope = value("scope");
-    if (scope && !scopes.includes(scope))
-      problems.push({
-        kind: "usage",
-        message:
-          `--scope: \`${scope}\` is not declared — declare it in lint.scopes in .project-docs.json` +
-          (scopes.length ? ` (declared: ${scopes.join(", ")})` : " (none are declared yet)") +
-          ".",
-      });
-
+    problems.push(...scopeProblems(value("scope"), scopes));
     return problems;
   },
+
+  // A feature's one reference-like field is `scope`, checked the same way.
+  feature: ({ fields, scopes }) =>
+    scopeProblems((fields.get("scope") ?? "").trim().replace(/^(["'])(.*)\1$/, "$2"), scopes),
 
   // "`pdocs new cycle` refuses to open a second active cycle." A cycle's
   // scope used to be resolved here too; it is derived from the items that
@@ -711,6 +706,20 @@ const VALIDATION: Record<string, Validator> = {
     return problems;
   },
 };
+
+/** `scope` names one value `lint.scopes` declares. */
+function scopeProblems(scope: string, scopes: readonly string[]): ValidationProblem[] {
+  if (!scope || scopes.includes(scope)) return [];
+  return [
+    {
+      kind: "usage",
+      message:
+        `--scope: \`${scope}\` is not declared — declare it in lint.scopes in .project-docs.json` +
+        (scopes.length ? ` (declared: ${scopes.join(", ")})` : " (none are declared yet)") +
+        ".",
+    },
+  ];
+}
 
 /** The fixed name `OWNED_FILE_TYPE` already states for this type. */
 function fixedOwnedFile(type: string): FilenameShape {

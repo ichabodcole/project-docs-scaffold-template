@@ -351,12 +351,12 @@ describe("aliases and pre-write validation", () => {
         ).toBe("owner");
   });
 
-  test("`cycle` and `item` are the rows that declare a validate predicate", () => {
+  test("`cycle`, `feature` and `item` are the rows that declare a validate predicate", () => {
     expect(
       ROWS.filter((r) => r.validate !== undefined)
         .map((r) => r.type)
         .sort()
-    ).toEqual(["cycle", "item"]);
+    ).toEqual(["cycle", "feature", "item"]);
   });
 
   // A cycle's scope is derived from the items that name it, so the predicate no

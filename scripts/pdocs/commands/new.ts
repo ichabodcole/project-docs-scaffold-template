@@ -56,6 +56,7 @@ import { OKF_STATUS, type Ctx } from "../lint/rules.ts";
 import {
   ENTITY_FILE,
   type ExistingDocument,
+  FEATURES_FOLDER,
   FIELD_VALUES,
   ITEMS_FOLDER,
   PROJECTS_FOLDER,
@@ -67,7 +68,14 @@ import {
 } from "../lint/registry.ts";
 import { collectPages, pageKeys } from "../pages.ts";
 import { uuidv7 } from "../uuid.ts";
-import { type WorkEntity, type WorkModel, collectWork, refFor, resolveRef } from "../work.ts";
+import {
+  type WorkEntity,
+  type WorkModel,
+  collectWork,
+  entitiesBySlug,
+  refFor,
+  resolveRef,
+} from "../work.ts";
 import { promoteItem } from "./promote.ts";
 import { movedTo } from "../links-rewrite.ts";
 
@@ -895,6 +903,19 @@ export const newCommand: Command = {
     const rel = relative(ctx.repoRoot, target);
     if (existsSync(target))
       throw new ConflictError(`${rel} already exists — pdocs will not overwrite it.`);
+
+    // An entity's slug names it (`item/<slug>`, `feature/<slug>`), live or
+    // archived, file or folder — so a slug already held anywhere is taken,
+    // even where the exact target path is free (review 3).
+    if ([FEATURES_FOLDER, ITEMS_FOLDER].some((o) => ENTITY_FILE[o]!.type === row.type)) {
+      const wanted = scopeName ?? basename(target, ".md");
+      const holders = entitiesBySlug(model(), row.type as "feature" | "item").get(wanted) ?? [];
+      if (holders.length)
+        throw new ConflictError(
+          `\`${row.type}/${wanted}\` is taken by ${holders.map((h) => h.path).join(", ")} — ` +
+            `a slug names one ${row.type}, archived or not. Choose another name.`
+        );
+    }
 
     // ---- the template, and the frontmatter it gets -------------------------------------
     const templatePath = join(ctx.repoRoot, resolveTemplate(row, flagValue(flags, "--variant")));
