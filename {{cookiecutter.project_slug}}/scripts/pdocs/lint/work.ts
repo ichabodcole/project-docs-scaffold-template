@@ -15,12 +15,13 @@
 
 import { existsSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import { yamlList } from "../docs-lint/index.ts";
+import { parseFrontmatter, yamlList } from "../docs-lint/index.ts";
 import { ENTITY_FILE, FEATURES_FOLDER, ITEMS_FOLDER, STATE_GROUP } from "./registry.ts";
 import {
   type Ctx,
   UUID_RE,
   type WorkbenchDocument,
+  gitEnv,
   workbenchDocuments,
 } from "./rules.ts";
 
@@ -277,4 +278,95 @@ function blockedCycles(
   };
   for (const node of [...edges.keys()].sort()) if (!state.has(node)) visit(node);
   return out;
+}
+
+// ---------------------------------------------------------------------------------------
+// No silent deletion (D9)
+// ---------------------------------------------------------------------------------------
+
+/** A git spawn from the lint: `gitEnv()` always, so a hook's index is not read. */
+function gitRun(ctx: Ctx, args: string[], stdin?: string) {
+  return Bun.spawnSync(["git", ...args], {
+    cwd: ctx.repoRoot,
+    env: gitEnv(),
+    stdin: stdin === undefined ? "ignore" : new TextEncoder().encode(stdin),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+}
+
+/** Whether `ref` names a commit in the repository at `ctx.repoRoot`. `null`
+ *  when there is no repository at all. */
+export function refExists(ctx: Ctx, ref: string): boolean | null {
+  if (!gitRun(ctx, ["rev-parse", "--git-dir"]).success) return null;
+  return gitRun(ctx, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]).success;
+}
+
+/**
+ * Items that were in the tree at `ref` and are not in it now, and were not
+ * `dropped` there. A move, a promotion or an archive keeps the `id`, so it is
+ * not a deletion; only an id that has gone from the working tree is.
+ *
+ * One `ls-tree` for the paths and one `cat-file --batch` for every blob, so
+ * the cost is two spawns whatever the size of the backlog. No repository, or
+ * a ref that does not resolve (a repository with no commits yet), is no
+ * finding: there is nothing to compare against.
+ */
+export function deletedItems(
+  ctx: Ctx,
+  ref: string = ctx.against ?? "HEAD",
+  documents: readonly WorkbenchDocument[] = workbenchDocuments(ctx)
+): string[] {
+  if (refExists(ctx, ref) !== true) return [];
+
+  const itemsDir = join(ctx.config.docsRoot, ITEMS_FOLDER);
+  const listed = gitRun(ctx, ["ls-tree", "-r", "--name-only", ref, "--", itemsDir]);
+  if (!listed.success) return [];
+  const paths = listed.stdout
+    .toString()
+    .split("\n")
+    .filter((p) => p.endsWith(".md"));
+  if (paths.length === 0) return [];
+
+  const batch = gitRun(
+    ctx,
+    ["cat-file", "--batch"],
+    paths.map((p) => `${ref}:./${p}\n`).join("")
+  );
+  if (!batch.success) return [];
+
+  const current = new Set(
+    documents
+      .filter((d) => d.type === "item")
+      .map((d) => scalar(d.fields.get("id")))
+      .filter(Boolean)
+  );
+
+  const problems: string[] = [];
+  const out = Buffer.from(batch.stdout);
+  let at = 0;
+  for (const path of paths) {
+    const eol = out.indexOf(0x0a, at);
+    if (eol < 0) break;
+    const header = out.subarray(at, eol).toString();
+    at = eol + 1;
+    const m = /^\S+ blob (\d+)$/.exec(header);
+    if (!m) continue; // `missing`, or not a blob
+    const size = Number(m[1]);
+    const body = out.subarray(at, at + size).toString("utf8");
+    at += size + 1; // the blob, and the newline cat-file writes after it
+
+    const fm = /^---\n([\s\S]*?)\n---/.exec(body);
+    if (!fm) continue;
+    const fields = parseFrontmatter(fm[1] as string);
+    if (scalar(fields.get("type")) !== "item") continue;
+    const id = scalar(fields.get("id"));
+    if (!id || current.has(id)) continue;
+    const state = scalar(fields.get("lifecycle"));
+    if (state === "dropped") continue;
+    problems.push(
+      `ITEM DELETED  ${path}: ${id}  (it left the tree at "${state || "no lifecycle"}" without reaching \`dropped\` — restore it and set \`lifecycle: dropped\`; nothing is deleted, it is dropped)`
+    );
+  }
+  return problems;
 }

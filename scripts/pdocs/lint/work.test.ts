@@ -6,11 +6,22 @@
 // Every case is a fixture tree, built the way `rules.test.ts` builds its own.
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { childEnv } from "../test-env.ts";
 import { type Ctx, context, thinTier } from "./rules.ts";
 import { workProblems } from "./work.ts";
+
+const REPO_ROOT = resolve(import.meta.dir, "../../..");
+const CLI = join(REPO_ROOT, "scripts/pdocs/cli.ts");
 
 const roots: string[] = [];
 afterAll(() => {
@@ -354,5 +365,107 @@ describe("workProblems — a fixture with every defect reports each once", () =>
         "MISSING ENTITY FILE",
       ].sort()
     );
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// No silent deletion (D9)
+// ---------------------------------------------------------------------------------------
+
+describe("no silent deletion — an item leaves the tree only through dropped", () => {
+  // Every git call and every check is a child process through `childEnv()`: a
+  // git spawned in-process from a hook environment inherits GIT_INDEX_FILE and
+  // reads the wrong index.
+  const git = (root: string, ...args: string[]) => {
+    const r = Bun.spawnSync(
+      ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args],
+      { cwd: root, env: childEnv(), stdout: "pipe", stderr: "pipe" }
+    );
+    if (r.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr.toString()}`);
+  };
+
+  const check = (root: string, ...extra: string[]) => {
+    const r = Bun.spawnSync(
+      ["bun", CLI, "check", "--root", root, "--format", "json", ...extra],
+      { env: childEnv(), stdout: "pipe", stderr: "pipe" }
+    );
+    const out = JSON.parse(r.stdout.toString());
+    return {
+      code: r.exitCode,
+      deleted: (out.data.problems as Array<{ message: string }>)
+        .map((p) => p.message)
+        .filter((m) => m.startsWith("ITEM DELETED")),
+    };
+  };
+
+  /** A committed repository holding one item, `docs/items/x.md`. */
+  const repo = (lifecycle = "backlog"): string => {
+    const ctx = fixture({ "docs/items/x.md": item(A, { lifecycle }) });
+    copyFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), join(ctx.docsRoot, "SCHEMA.md"));
+    git(ctx.repoRoot, "init", "-q");
+    git(ctx.repoRoot, "add", "-A");
+    git(ctx.repoRoot, "commit", "-q", "--no-verify", "-m", "an item");
+    return ctx.repoRoot;
+  };
+
+  test("the committed tree itself is clean", () => {
+    expect(check(repo()).deleted).toEqual([]);
+  });
+
+  test("deleting an item that is not dropped reports it, with its path and id", () => {
+    const root = repo();
+    rmSync(join(root, "docs/items/x.md"));
+    const { code, deleted } = check(root);
+    expect(deleted).toHaveLength(1);
+    expect(deleted[0]).toContain("docs/items/x.md");
+    expect(deleted[0]).toContain(A);
+    expect(deleted[0]).toContain("dropped");
+    expect(code).toBe(9);
+  });
+
+  test("an item committed as dropped may then be deleted", () => {
+    const root = repo("dropped");
+    rmSync(join(root, "docs/items/x.md"));
+    expect(check(root).deleted).toEqual([]);
+  });
+
+  test("promoting an item to a folder keeps its id, and is not a deletion", () => {
+    const root = repo();
+    mkdirSync(join(root, "docs/items/x"));
+    renameSync(join(root, "docs/items/x.md"), join(root, "docs/items/x/item.md"));
+    expect(check(root).deleted).toEqual([]);
+  });
+
+  test("archiving a done item is a move, not a deletion", () => {
+    const root = repo("done");
+    mkdirSync(join(root, "docs/items/_archive"));
+    renameSync(join(root, "docs/items/x.md"), join(root, "docs/items/_archive/x.md"));
+    expect(check(root).deleted).toEqual([]);
+  });
+
+  test("a committed deletion is still found with --against the base", () => {
+    const root = repo();
+    git(root, "rm", "-q", "docs/items/x.md");
+    git(root, "commit", "-q", "--no-verify", "-m", "gone");
+    // Against HEAD the working tree equals the ref: nothing to compare.
+    expect(check(root).deleted).toEqual([]);
+    expect(check(root, "--against", "HEAD~1").deleted).toHaveLength(1);
+  });
+
+  test("a tree that is not a git repository has no finding and no crash", () => {
+    const ctx = fixture({ "docs/items/x.md": item(A) });
+    copyFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), join(ctx.docsRoot, "SCHEMA.md"));
+    const r = check(ctx.repoRoot);
+    expect(r.deleted).toEqual([]);
+  });
+
+  test("a ref that does not exist is a usage error, not a clean report", () => {
+    const root = repo();
+    const r = Bun.spawnSync(
+      ["bun", CLI, "check", "--root", root, "--format", "json", "--against", "no-such-ref"],
+      { env: childEnv(), stdout: "pipe", stderr: "pipe" }
+    );
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr.toString()).toContain("no-such-ref");
   });
 });

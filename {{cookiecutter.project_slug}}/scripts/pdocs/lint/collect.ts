@@ -30,7 +30,7 @@ import {
   templateTest,
   thinReport,
 } from "./rules.ts";
-import { workProblems } from "./work.ts";
+import { deletedItems, workProblems } from "./work.ts";
 
 /** Everything one run of the gate found, in the order a reader is shown it. */
 export interface LintReport {
@@ -113,6 +113,7 @@ export function collect(ctx: Ctx): LintReport {
   const workbench = [
     ...thin.problems,
     ...workProblems(ctx, thin.documents),
+    ...deletedItems(ctx, ctx.against ?? "HEAD", thin.documents),
     ...frontmatterSyntaxProblems(ctx),
     ...schemaTableChecks(readFileSync(join(ctx.docsRoot, "SCHEMA.md"), "utf8")),
     // Two checks of the tooling's own configuration rather than of any

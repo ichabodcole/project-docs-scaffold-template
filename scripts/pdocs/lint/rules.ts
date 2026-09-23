@@ -75,6 +75,12 @@ export interface Ctx {
   repoRoot: string;
   docsRoot: string;
   config: ProjectDocsConfig;
+  /**
+   * The git ref "no silent deletion" compares the working tree against.
+   * `HEAD` when unset; `pdocs check --against <ref>` sets it, which is how CI
+   * (where the working tree IS `HEAD`) names the base.
+   */
+  against?: string;
 }
 
 export function context(repoRoot: string): Ctx {

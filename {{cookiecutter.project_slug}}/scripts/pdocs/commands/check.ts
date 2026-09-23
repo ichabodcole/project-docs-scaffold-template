@@ -13,8 +13,9 @@
 
 import type { Command, Invocation } from "../cli.ts";
 import { docsLintSummary } from "../docs-lint/index.ts";
-import { ExitCode, Outcome, printEnvelope } from "../envelope.ts";
+import { ExitCode, Outcome, UsageError, printEnvelope } from "../envelope.ts";
 import { type LintReport, collect } from "../lint/collect.ts";
+import { refExists } from "../lint/work.ts";
 
 /** One problem, and which tier found it. */
 export interface CheckProblem {
@@ -119,11 +120,30 @@ function renderText(report: LintReport, docsRoot: string): void {
 export const check: Command = {
   name: "check",
   summary: "Lint the documentation tree. Exit 9 if it is dirty.",
-  usage: "pdocs check [--root <path>] [--format text|json]",
-  options: [],
+  usage: "pdocs check [--root <path>] [--format text|json] [--against <ref>]",
+  options: [
+    {
+      flag: "--against",
+      metavar: "<ref>",
+      summary:
+        "The git ref an item may not silently leave (default HEAD). In CI, name the base.",
+    },
+  ],
 
-  run({ ctx, format }: Invocation): number {
-    const report = collect(ctx);
+  run({ ctx, format, flags }: Invocation): number {
+    const against = flags["--against"];
+    if (against === true) throw new UsageError("--against needs a ref.");
+    if (against !== undefined) {
+      const exists = refExists(ctx, against);
+      if (exists !== true)
+        throw new UsageError(
+          exists === null
+            ? `--against ${against}: ${ctx.repoRoot} is not a git repository.`
+            : `--against: \`${against}\` does not name a commit.`,
+          { token: against }
+        );
+    }
+    const report = collect(against === undefined ? ctx : { ...ctx, against });
 
     if (format === "json") printEnvelope("check", checkData(report));
     else renderText(report, ctx.config.docsRoot);
