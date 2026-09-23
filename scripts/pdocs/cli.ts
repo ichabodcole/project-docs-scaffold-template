@@ -7,6 +7,7 @@
 //   bun scripts/pdocs/cli.ts find      query by type, lifecycle, status, tag, date
 //   bun scripts/pdocs/cli.ts backlinks what cites a document
 //   bun scripts/pdocs/cli.ts orphans   library pages the catalog cannot reach
+//   bun scripts/pdocs/cli.ts view      derived views: backlog, board, ready, …
 //   bun scripts/pdocs/cli.ts new       create a document of a declared type
 //   bun scripts/pdocs/cli.ts set       change a work entity's fields
 //   bun scripts/pdocs/cli.ts promote   turn a single-file item into a folder
@@ -50,6 +51,7 @@ import { newCommand } from "./commands/new.ts";
 import { orphans } from "./commands/orphans.ts";
 import { promote } from "./commands/promote.ts";
 import { set } from "./commands/set.ts";
+import { view } from "./commands/view.ts";
 import { report } from "./commands/report.ts";
 
 /** One flag, as help and as the parser's rule for it. A `metavar` means the
@@ -128,6 +130,7 @@ const COMMANDS: Command[] = [
   find,
   backlinks,
   orphans,
+  view,
   newCommand,
   set,
   promote,

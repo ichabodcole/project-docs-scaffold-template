@@ -331,3 +331,116 @@ export function fromResolves(ctx: Ctx, model: WorkModel, from: string): boolean 
   const abs = join(ctx.docsRoot, from);
   return existsSync(abs) && statSync(abs).isFile();
 }
+
+// ---------------------------------------------------------------------------------------
+// Views
+// ---------------------------------------------------------------------------------------
+//
+// Derived, never authored: each is a pure function of the model, so a UI can
+// import them and get exactly what `pdocs view` prints. Every list is in one
+// order — priority (urgent first, none last), then `generated.at`, then path —
+// so two runs over one tree give the same bytes.
+
+/** The order every view lists entities in. */
+export function workOrder(a: WorkEntity, b: WorkEntity): number {
+  // Plain `<`, never `localeCompare`: a collation is the thing that differs
+  // between one machine and the next.
+  const cmp = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
+  return (
+    priorityRank(a.priority) - priorityRank(b.priority) ||
+    cmp(a.date ?? "9999-99-99", b.date ?? "9999-99-99") ||
+    cmp(a.path, b.path)
+  );
+}
+
+const ordered = (list: readonly WorkEntity[]) => [...list].sort(workOrder);
+
+/** The four state groups, in the order work moves through them. */
+export const GROUPS: readonly StateGroup[] = ["unstarted", "started", "completed", "cancelled"];
+
+/** `backlog`: items in the unstarted group. */
+export function viewBacklog(model: WorkModel): WorkEntity[] {
+  return ordered(model.items.filter((e) => e.group === "unstarted"));
+}
+
+/**
+ * `board`: live items (and, with `features`, live features) by state group.
+ * The archive stays off the board: it holds only finished work, and keeping
+ * the live view short is what it is for.
+ */
+export function viewBoard(
+  model: WorkModel,
+  opts: { features?: boolean } = {}
+): Record<StateGroup, WorkEntity[]> {
+  const live = [...(opts.features ? model.features : []), ...model.items].filter(
+    (e) => !e.archived
+  );
+  const out = {} as Record<StateGroup, WorkEntity[]>;
+  for (const g of GROUPS) out[g] = ordered(live.filter((e) => e.group === g));
+  return out;
+}
+
+/** `ready`: `ready` items whose every blocker is a `done` item. */
+export function viewReady(model: WorkModel): WorkEntity[] {
+  return ordered(
+    model.items.filter(
+      (e) =>
+        e.lifecycle === "ready" &&
+        e.blockedBy.every((id) => {
+          const holders = model.itemsById.get(id) ?? [];
+          return holders.length > 0 && holders.every((h) => h.lifecycle === "done");
+        })
+    )
+  );
+}
+
+/** `feature <slug>`: the feature, and the items whose `parent` names it. */
+export function viewFeature(
+  model: WorkModel,
+  feature: WorkEntity
+): { feature: WorkEntity; items: WorkEntity[] } {
+  const parent = `feature/${feature.slug}`;
+  return { feature, items: ordered(model.items.filter((e) => e.parent === parent)) };
+}
+
+/**
+ * `cycle <slug>`: the items that name the cycle — its scope is derived from
+ * them — and whether it can close: every one finished or dropped.
+ */
+export function viewCycle(
+  model: WorkModel,
+  cycle: WorkEntity
+): { cycle: WorkEntity; items: WorkEntity[]; closable: boolean } {
+  const items = ordered(model.items.filter((e) => e.cycle === cycle.slug));
+  return {
+    cycle,
+    items,
+    closable: items.every((e) => e.group === "completed" || e.group === "cancelled"),
+  };
+}
+
+/** `scope <name>`: the features and items whose `scope` is `name`. */
+export function viewScope(model: WorkModel, scope: string): WorkEntity[] {
+  return ordered([...model.features, ...model.items].filter((e) => e.scope === scope));
+}
+
+/**
+ * `unreleased`: done features and items with no `released_in`, archived or
+ * not. `since` keeps those whose `generated.at` is on or after it. A view, not
+ * a finding: `released_in` is not linted (D9).
+ */
+export function viewUnreleased(model: WorkModel, since?: string): WorkEntity[] {
+  return ordered(
+    [...model.features, ...model.items].filter(
+      (e) =>
+        e.lifecycle === "done" &&
+        e.releasedIn === null &&
+        (since === undefined || (e.date !== null && e.date >= since))
+    )
+  );
+}
+
+/** `released <version>`: the features and items that name it. */
+export function viewReleased(model: WorkModel, version: string): WorkEntity[] {
+  return ordered([...model.features, ...model.items].filter((e) => e.releasedIn === version));
+}
