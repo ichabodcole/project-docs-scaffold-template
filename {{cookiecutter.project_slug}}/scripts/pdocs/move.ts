@@ -22,7 +22,7 @@ import { dirname, join, relative } from "node:path";
 import { walkMarkdown } from "./docs-lint/index.ts";
 import { trackedMarkdown } from "./docs-lint/unlinted-links.ts";
 import { ConflictError } from "./envelope.ts";
-import { movedTo, rewriteLinks } from "./links-rewrite.ts";
+import { movedTo, rewriteFromField, rewriteLinks } from "./links-rewrite.ts";
 import { type Ctx, excluder, gitEnv } from "./lint/rules.ts";
 
 export interface MoveResult {
@@ -61,7 +61,10 @@ export function moveAndRewrite(ctx: Ctx, from: string, to: string): MoveResult {
   for (const file of linkingFiles(ctx)) {
     const target = movedTo(file, moveMap);
     const r = rewriteLinks(readFileSync(file, "utf8"), file, target, moveMap);
-    if (r.changed > 0) edits.push({ path: target, text: r.text, changed: r.changed });
+    // A path-form `from:` (D6) is a link too, written in frontmatter.
+    const f = rewriteFromField(r.text, ctx.docsRoot, moveMap);
+    const changed = r.changed + f.changed;
+    if (changed > 0) edits.push({ path: target, text: f.text, changed });
   }
 
   mkdirSync(dirname(to), { recursive: true });

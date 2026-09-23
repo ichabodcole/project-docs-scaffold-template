@@ -10,7 +10,7 @@
 // over `stripCode`), so a link inside code is not rewritten and a link the
 // checker would read is never missed.
 
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { MARKDOWN_LINK_RE, stripCode } from "./docs-lint/index.ts";
 
 /**
@@ -83,4 +83,35 @@ export function rewriteLinks(
   let out = text;
   for (const e of edits.reverse()) out = out.slice(0, e.start) + e.value + out.slice(e.end);
   return { text: out, changed: edits.length };
+}
+
+/**
+ * Rewrite a work entity's `from:` when it is a docs-root-relative PATH (D6)
+ * into something that moved. The id, `feature/<slug>`, `cycle/<slug>` and
+ * `item/<slug>` forms name an entity rather than a place, so a move leaves
+ * them alone. Only the frontmatter block is read; quoting and a trailing
+ * comment are kept.
+ */
+export function rewriteFromField(
+  text: string,
+  docsRoot: string,
+  moveMap: ReadonlyMap<string, string>
+): { text: string; changed: number } {
+  const fm = /^---\n([\s\S]*?)\n---/.exec(text);
+  if (!fm) return { text, changed: 0 };
+  const line = /^from:([ \t]*)(["']?)([^"'#\n]*?)\2([ \t]*(?:#.*)?)$/m.exec(fm[1] as string);
+  if (!line) return { text, changed: 0 };
+  const [whole, gap, quote, value, tail] = line as unknown as [string, string, string, string, string];
+  if (!value.endsWith(".md") || /^(feature|cycle|item)\//.test(value) || isAbsolute(value))
+    return { text, changed: 0 };
+  const abs = join(docsRoot, value);
+  const moved = movedTo(abs, moveMap);
+  if (moved === abs) return { text, changed: 0 };
+  const next = relative(docsRoot, moved).split(sep).join("/");
+  const start = 4 + line.index; // past the opening `---\n`
+  const replaced = `from:${gap}${quote}${next}${quote}${tail}`;
+  return {
+    text: text.slice(0, start) + replaced + text.slice(start + whole.length),
+    changed: 1,
+  };
 }

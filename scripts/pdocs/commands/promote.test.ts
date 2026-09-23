@@ -17,7 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { ExitCode } from "../envelope.ts";
-import { rewriteLinks } from "../links-rewrite.ts";
+import { rewriteFromField, rewriteLinks } from "../links-rewrite.ts";
 import { childEnv } from "../test-env.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
@@ -231,6 +231,42 @@ describe("pdocs promote", () => {
         "docs/items/x/item.md",
       ].sort()
     );
+  });
+
+  test("a path-form `from:` naming the promoted file follows it", () => {
+    const root = tree();
+    writeFileSync(
+      join(root, "docs/items/y.md"),
+      doc(
+        {
+          type: "item",
+          title: "Y",
+          description: "Another item.",
+          status: "draft",
+          lifecycle: "backlog",
+          id: "0190f4c9-1d2e-7f00-8a00-00000000000b",
+          kind: "task",
+          from: '"items/x.md" # where it came from',
+          generated: GENERATED,
+        },
+        "# Y"
+      )
+    );
+    expect(run(["check", "--root", root, "--format", "text"]).stdout).toContain("docs-lint: clean");
+    const data = JSON.parse(promote(root, "item/x").stdout).data;
+    expect(data.rewritten).toContain("docs/items/y.md");
+    expect(readFileSync(join(root, "docs/items/y.md"), "utf8")).toContain(
+      'from: "items/x/item.md" # where it came from\n'
+    );
+    expect(run(["check", "--root", root, "--format", "text"]).stdout).toContain("docs-lint: clean");
+  });
+
+  test("rewriteFromField leaves the id and entity forms alone, and touches only the frontmatter", () => {
+    const map = new Map([["/r/docs/items/x.md", "/r/docs/items/x/item.md"]]);
+    for (const value of ["0190f4b2-7c3a-7d4e-8f00-00000000000a", "feature/x", "cycle/x", "items/other.md"]) {
+      const text = `---\ntype: item\nfrom: ${value}\n---\n\nfrom: items/x.md\n`;
+      expect(rewriteFromField(text, "/r/docs", map)).toEqual({ text, changed: 0 });
+    }
   });
 
   test("`pdocs check` is clean afterwards, against HEAD's tree too", () => {

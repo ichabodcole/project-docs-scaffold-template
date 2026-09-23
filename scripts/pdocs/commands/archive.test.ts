@@ -44,6 +44,7 @@ const DONE = "0190f4b2-7c3a-7d4e-8f00-00000000000a";
 const FOLDER = "0190f4c9-1d2e-7f00-8a00-00000000000b";
 const ACTIVE = "0190f4d7-0000-7000-8000-00000000000c";
 const WAITS = "0190f4e1-0000-7000-8000-00000000000d";
+const NOTED = "0190f4f3-0000-7000-8000-00000000000e";
 
 const doc = (fields: Record<string, string>, body: string) =>
   `---\n${Object.entries(fields)
@@ -118,6 +119,17 @@ function tree(): string {
       { type: "plan", title: "P", description: "A plan.", status: "draft", lifecycle: "abandoned", generated: GENERATED },
       "# P\n\n[Feature](./feature.md)."
     )
+  );
+  write(
+    "docs/features/a/sessions/2026-09-01-s.md",
+    doc(
+      { type: "session", title: "S", description: "A session.", status: "stable", generated: GENERATED },
+      "# S"
+    )
+  );
+  write(
+    "docs/items/noted.md",
+    item(NOTED, "backlog", "# Noted", { from: "features/a/sessions/2026-09-01-s.md" })
   );
   write(
     "docs/features/b/feature.md",
@@ -212,6 +224,17 @@ describe("pdocs archive", () => {
     expect(fm(read(root, "docs/items/_archive/done-one.md"))).toBe(
       fm(item(DONE, "done", ""))
     );
+    clean(root);
+  });
+
+  test("a path-form `from:` into the moved folder follows it; other forms are untouched", () => {
+    const root = tree();
+    const r = archive(root, "feature/a");
+    expect(JSON.parse(r.stdout).data.rewritten).toContain("docs/items/noted.md");
+    expect(read(root, "docs/items/noted.md")).toContain(
+      "from: features/_archive/a/sessions/2026-09-01-s.md\n"
+    );
+    expect(read(root, "docs/items/waits.md")).toContain(`from: ${DONE}\n`);
     clean(root);
   });
 
