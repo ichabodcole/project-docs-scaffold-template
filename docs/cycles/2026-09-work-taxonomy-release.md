@@ -51,4 +51,4 @@ _Written at close, not before._
 ## Sessions
 
 - feature/work-taxonomy-p1-schema-lint (landed 2026-09-22)
-- feature/work-taxonomy-p2-pdocs-verbs (open)
+- feature/work-taxonomy-p2-pdocs-verbs (landed 2026-09-22)

@@ -90,7 +90,7 @@ consumer.
 - [x] Plan created and user-reviewed
 - [x] Test plan created
 - [x] Phase 1 — schema, registry, lint
-- [ ] Phase 2 — `pdocs` creation, promotion, `set`, `archive`, views
+- [x] Phase 2 — `pdocs` creation, promotion, `set`, `archive`, views
 - [ ] Phase 3 — templates and prose
 - [ ] Phase 4 — skill audit and touch points
 - [ ] Phase 5 — migration, dogfood, retirement

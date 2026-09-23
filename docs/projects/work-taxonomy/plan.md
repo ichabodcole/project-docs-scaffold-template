@@ -63,10 +63,10 @@ stays green on every commit, and no commit needs `--no-verify`.
       `from`, `blocked_by` and `cycle` resolves, and that no work item leaves
       the tree without reaching `dropped`.
 - [x] A work item with no `title`, `kind` or `id` fails the lint.
-- [ ] `pdocs new item` writes a UUIDv7 `id`.
+- [x] `pdocs new item` writes a UUIDv7 `id`.
       `pdocs new <owned-type> --owner item/<x>` turns a single-file item into a
       folder and rewrites every link to it.
-- [ ] `pdocs view` derives the backlog, the board, the ready-and-unblocked list,
+- [x] `pdocs view` derives the backlog, the board, the ready-and-unblocked list,
       a feature's items, a cycle's scope, a scope's work, and "done without
       `released_in`". None of these is an authored file.
 - [ ] `init-branch` writes `active` and `cycle`. `finalize-branch` writes
@@ -83,7 +83,7 @@ stays green on every commit, and no commit needs `--no-verify`.
       `fragments/`, `investigations/`, `reports/`, `projects/`, `memories/` or
       `lessons-learned/`. `_archive/` exists only as `items/_archive/` and
       `features/_archive/`, and holds only entities in `done` or `dropped`.
-- [ ] `pdocs archive <ref>` refuses an entity that is not in a terminal state,
+- [x] `pdocs archive <ref>` refuses an entity that is not in a terminal state,
       and otherwise moves it into its owner folder's `_archive/`, rewriting its
       inbound and outbound links. `sweep-project` drives it.
 - [ ] The migration script and its guide ship together. The script has been run
@@ -621,13 +621,13 @@ here.
 
 **Validation:**
 
-- [ ] On a scratch copy of the generated payload: `pdocs new feature a` →
+- [x] On a scratch copy of the generated payload: `pdocs new feature a` →
       `pdocs new item b --kind task --parent feature/a --lifecycle ready` →
       `pdocs new plan --owner item/b` (b becomes a folder) →
       `pdocs set item/b --lifecycle active` → `pdocs view board` →
       `pdocs set item/b --lifecycle done` → `pdocs archive item/b`. The result
       is `pdocs check` clean.
-- [ ] `bun test`, `npx tsc --noEmit` and `npm run check` are green.
+- [x] `bun test`, `npx tsc --noEmit` and `npm run check` are green.
 
 **Dependencies:** Phase 1.
 

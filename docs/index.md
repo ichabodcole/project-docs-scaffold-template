@@ -196,3 +196,7 @@ What has been happening lately, for a cold start. — see
   — pdocs now lints features, items, grouped states, references and deletions
   while the retired types stay lintable, and each old migration runs against the
   scaffold release it was written for.
+- [pdocs creates, moves and views work items](./memories/2026-09-22-pdocs-verbs-for-work-items.md)
+  — pdocs new item/feature, promote, set, archive and view operate on the work
+  model, and every move rewrites markdown links, reference definitions and
+  path-form from values so the next check still passes.
