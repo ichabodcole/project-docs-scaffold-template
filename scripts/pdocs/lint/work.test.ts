@@ -399,8 +399,12 @@ describe("no silent deletion — an item leaves the tree only through dropped", 
   };
 
   /** A committed repository holding one item, `docs/items/x.md`. */
-  const repo = (lifecycle = "backlog"): string => {
-    const ctx = fixture({ "docs/items/x.md": item(A, { lifecycle }) });
+  const repo = (
+    lifecycle = "backlog",
+    lint: Record<string, unknown> = {},
+    files: Record<string, string> = { "docs/items/x.md": item(A, { lifecycle }) }
+  ): string => {
+    const ctx = fixture(files, lint);
     copyFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), join(ctx.docsRoot, "SCHEMA.md"));
     git(ctx.repoRoot, "init", "-q");
     git(ctx.repoRoot, "add", "-A");
@@ -452,6 +456,13 @@ describe("no silent deletion — an item leaves the tree only through dropped", 
     expect(check(root, "--against", "HEAD~1").deleted).toHaveLength(1);
   });
 
+  test("archiving a done item is not a deletion when lint.skip names _archive (review A)", () => {
+    const root = repo("done", { skip: ["_archive"] });
+    mkdirSync(join(root, "docs/items/_archive"));
+    renameSync(join(root, "docs/items/x.md"), join(root, "docs/items/_archive/x.md"));
+    expect(check(root).deleted).toEqual([]);
+  });
+
   test("a tree that is not a git repository has no finding and no crash", () => {
     const ctx = fixture({ "docs/items/x.md": item(A) });
     copyFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), join(ctx.docsRoot, "SCHEMA.md"));
@@ -467,5 +478,33 @@ describe("no silent deletion — an item leaves the tree only through dropped", 
     );
     expect(r.exitCode).toBe(2);
     expect(r.stderr.toString()).toContain("no-such-ref");
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Review findings
+// ---------------------------------------------------------------------------------------
+
+describe("the archive is read even when lint.skip names _archive (review A)", () => {
+  // This repository skips `_archive` until it migrates. The work rules must
+  // see `features/_archive/` and `items/_archive/` regardless: the deletion
+  // check compares ids against them, and the terminal-state rule is about them.
+  test("a non-terminal item in _archive is still flagged", () => {
+    const ctx = fixture(
+      { "docs/items/_archive/z.md": item(A, { lifecycle: "active" }) },
+      { skip: ["_archive"] }
+    );
+    expect(only(ctx, "ARCHIVED NOT TERMINAL")).toHaveLength(1);
+  });
+
+  test("a slug both live and archived is still a DUPLICATE SLUG", () => {
+    const ctx = fixture(
+      {
+        "docs/items/z.md": item(A),
+        "docs/items/_archive/z.md": item(B, { lifecycle: "done" }),
+      },
+      { skip: ["_archive"] }
+    );
+    expect(only(ctx, "DUPLICATE SLUG")).toHaveLength(1);
   });
 });

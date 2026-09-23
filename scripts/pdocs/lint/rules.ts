@@ -318,10 +318,20 @@ export function workbenchFiles(ctx: Ctx): WorkbenchFile[] {
   const excluded = excluder(ctx);
   const out: WorkbenchFile[] = [];
 
+  // `features/_archive/` and `items/_archive/` are read whatever `lint.skip`
+  // says: the work rules are ABOUT the archive (only finished work may sit
+  // there, and an archived item still holds its id against the deletion
+  // check), so skipping it would switch those rules off rather than quiet
+  // them. A tree mid-migration keeps `_archive` in `skip` for its legacy
+  // folders; this is the exception for the two new owners.
+  const ownerSkip = new Set([...skip].filter((name) => name !== "_archive"));
+
   for (const folder of ctx.config.lint.workbench) {
     const dir = join(ctx.docsRoot, folder);
     if (!existsSync(dir)) continue;
-    for (const path of walkMarkdown(dir, skip)) {
+    const walkSkip =
+      folder === FEATURES_FOLDER || folder === ITEMS_FOLDER ? ownerSkip : skip;
+    for (const path of walkMarkdown(dir, walkSkip)) {
       const rel = relative(ctx.repoRoot, path);
       if (excluded(rel)) continue;
       if (OWNER_FOLDERS.has(folder)) {
