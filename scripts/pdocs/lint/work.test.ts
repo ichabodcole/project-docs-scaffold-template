@@ -31,14 +31,15 @@ afterAll(() => {
 /** A fixture on the new layout: features, items and cycles, archive linted. */
 function fixture(
   files: Record<string, string>,
-  lint: Record<string, unknown> = {}
+  lint: Record<string, unknown> = {},
+  docsRoot = "docs"
 ): Ctx {
   const root = mkdtempSync(join(tmpdir(), "pdocs-work-"));
   roots.push(root);
   writeFileSync(
     join(root, ".project-docs.json"),
     JSON.stringify({
-      docsRoot: "docs",
+      docsRoot,
       version: "1.0.0",
       lint: {
         adopting: false,
@@ -506,5 +507,30 @@ describe("the archive is read even when lint.skip names _archive (review A)", ()
       { skip: ["_archive"] }
     );
     expect(only(ctx, "DUPLICATE SLUG")).toHaveLength(1);
+  });
+});
+
+describe("the docs root may be spelled ./docs or docs/ (review B)", () => {
+  const files = {
+    "docs/items/a.md": item(A, { parent: "feature/nope" }),
+    "docs/items/_archive/z.md": item(B, { lifecycle: "active" }),
+    "docs/features/x/plan.md": doc({
+      type: "plan",
+      title: "P",
+      description: "A plan.",
+      status: "draft",
+      lifecycle: "draft",
+      generated: GENERATED,
+    }),
+  };
+
+  test("every spelling finds what `docs` finds", () => {
+    const want = workProblems(fixture(files));
+    expect(want.length).toBe(3);
+    for (const spelling of ["./docs", "docs/", "./docs/"])
+      expect({ spelling, found: workProblems(fixture(files, {}, spelling)) }).toEqual({
+        spelling,
+        found: want,
+      });
   });
 });

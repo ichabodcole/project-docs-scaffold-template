@@ -14,7 +14,7 @@
 // `from:` path names a file, which is a stat, not a walk.
 
 import { existsSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, isAbsolute, join, relative, sep } from "node:path";
 import { parseFrontmatter, yamlList } from "../docs-lint/index.ts";
 import { ENTITY_FILE, FEATURES_FOLDER, ITEMS_FOLDER, STATE_GROUP } from "./registry.ts";
 import {
@@ -46,9 +46,12 @@ function position(
   ctx: Ctx,
   rel: string
 ): { owner: string; archived: boolean; segs: string[] } | null {
-  const prefix = `${ctx.config.docsRoot}/`;
-  if (!rel.startsWith(prefix)) return null;
-  const segs = rel.slice(prefix.length).split("/");
+  // Relative to the resolved docs root, never to the configured string: a
+  // `docsRoot` spelled `./docs` or `docs/` is the same folder, and a prefix
+  // comparison against the spelling silently matched nothing.
+  const within = relative(ctx.docsRoot, join(ctx.repoRoot, rel));
+  if (within === "" || within.startsWith("..") || isAbsolute(within)) return null;
+  const segs = within.split(sep);
   const owner = segs[0] as string;
   if (owner !== FEATURES_FOLDER && owner !== ITEMS_FOLDER) return null;
   let rest = segs.slice(1);
@@ -160,7 +163,7 @@ export function workProblems(
   for (const [folder, owner] of [...folders].sort())
     if (!withEntity.has(folder))
       problems.push(
-        `MISSING ENTITY FILE  ${ctx.config.docsRoot}/${folder}/  (expected ${ENTITY_FILE[owner]!.name})`
+        `MISSING ENTITY FILE  ${relative(ctx.repoRoot, join(ctx.docsRoot, folder))}/  (expected ${ENTITY_FILE[owner]!.name})`
       );
 
   // ---- references ---------------------------------------------------------------------
