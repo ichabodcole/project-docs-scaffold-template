@@ -45,6 +45,7 @@ import {
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import { childEnv } from "../test-env.ts";
 import { buildRegistry } from "./registry.ts";
+import { collect } from "./collect.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const SCHEMA = readFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), "utf8");
@@ -2103,5 +2104,37 @@ describe("per-document field rules — items and features", () => {
       generated: GENERATED,
     });
     expect(problems).toEqual(['UNKNOWN FIELD  docs/features/a/plan.md: "kind"']);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// The corpus rules are wired into the gate
+// ---------------------------------------------------------------------------------------
+
+describe("collect runs the work-taxonomy corpus rules", () => {
+  // A wiring witness: `work.test.ts` proves the rule; this proves the gate
+  // still calls it.
+  test("a BAD PARENT reaches collect(ctx).workbench", () => {
+    const ctx = fixture(
+      {
+        "docs/SCHEMA.md": SCHEMA,
+        "docs/items/a.md":
+          fm({
+            type: "item",
+            title: "A",
+            description: "An item.",
+            status: "draft",
+            lifecycle: "backlog",
+            id: "0190f4b2-7c3a-7d4e-8f00-00000000000a",
+            kind: "task",
+            parent: "feature/nope",
+            generated: GENERATED,
+          }) + "# A\n",
+      },
+      { skip: [] }
+    );
+    const rows = collect(ctx).workbench.filter((p) => p.startsWith("BAD PARENT"));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain("docs/items/a.md");
   });
 });

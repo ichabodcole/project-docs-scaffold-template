@@ -628,14 +628,45 @@ export function thinTier(ctx: Ctx): string[] {
   return thinFindings(ctx).problems;
 }
 
+/**
+ * A workbench document as the thin pass read it: its position, its type, and
+ * its frontmatter. The corpus rules (`work.ts`) take these rather than walking
+ * the tree a second time.
+ */
+export interface WorkbenchDocument {
+  /** Repo-relative. */
+  rel: string;
+  type: string;
+  /** Parsed frontmatter; empty when the document has none. */
+  fields: ReadonlyMap<string, string>;
+  /** True when its position is wrong for its entity (`MISPLACED ENTITY`). */
+  misplaced: boolean;
+}
+
+/** Every non-template, non-contract workbench document, read once. */
+export function workbenchDocuments(ctx: Ctx): WorkbenchDocument[] {
+  return thinFindings(ctx).documents;
+}
+
+/** The thin tier's problems and the documents it read, from one walk. */
+export function thinReport(ctx: Ctx): {
+  problems: string[];
+  documents: WorkbenchDocument[];
+} {
+  const { problems, documents } = thinFindings(ctx);
+  return { problems, documents };
+}
+
 function thinFindings(ctx: Ctx): {
   problems: string[];
   missing: MissingRecord[];
+  documents: WorkbenchDocument[];
 } {
   const registry = registryIndex(ctx.config);
   const isTpl = templateTest(ctx);
   const problems: string[] = [];
   const missing: MissingRecord[] = [];
+  const documents: WorkbenchDocument[] = [];
   const activeCycles: string[] = [];
 
   for (const file of workbenchFiles(ctx)) {
@@ -665,6 +696,13 @@ function thinFindings(ctx: Ctx): {
     const r = documentProblems(file, raw, ctx.config.docsRoot, false, registry);
     problems.push(...r.problems);
     missing.push({ rel, missing: r.missing });
+    const m = /^---\n([\s\S]*?)\n---/.exec(raw);
+    documents.push({
+      rel,
+      type: file.type,
+      fields: m ? parseFrontmatter(m[1] as string) : new Map(),
+      misplaced: file.misplaced !== undefined,
+    });
     if (r.activeCycle) activeCycles.push(rel);
   }
 
@@ -675,7 +713,7 @@ function thinFindings(ctx: Ctx): {
       `TWO ACTIVE CYCLES  ${activeCycles.join(", ")}  (at most one cycle is \`lifecycle: active\`)`
     );
 
-  return { problems, missing };
+  return { problems, missing, documents };
 }
 
 function generatedProblems(

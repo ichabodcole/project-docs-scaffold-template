@@ -28,8 +28,9 @@ import {
   templatePaths,
   templateProblems,
   templateTest,
-  thinTier,
+  thinReport,
 } from "./rules.ts";
+import { workProblems } from "./work.ts";
 
 /** Everything one run of the gate found, in the order a reader is shown it. */
 export interface LintReport {
@@ -106,8 +107,12 @@ export function collect(ctx: Ctx): LintReport {
       existsSync(join(ctx.repoRoot, p))
   );
 
+  // The thin pass and the work-taxonomy corpus rules share one read of the
+  // workbench: `workProblems` takes the documents the thin pass already parsed.
+  const thin = thinReport(ctx);
   const workbench = [
-    ...thinTier(ctx),
+    ...thin.problems,
+    ...workProblems(ctx, thin.documents),
     ...frontmatterSyntaxProblems(ctx),
     ...schemaTableChecks(readFileSync(join(ctx.docsRoot, "SCHEMA.md"), "utf8")),
     // Two checks of the tooling's own configuration rather than of any
