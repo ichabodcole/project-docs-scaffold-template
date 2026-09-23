@@ -114,7 +114,6 @@ const UNCREATABLE = [
   "manifesto",
   "summary",
   "index",
-  "feature",
   ...RETIRED,
 ];
 
@@ -178,9 +177,9 @@ describe("the registry covers the type system", () => {
 });
 
 describe("what `pdocs new` can create", () => {
-  test("thirteen creatable types; the other thirteen say why not", () => {
+  test("fourteen creatable types; the other twelve say why not", () => {
     const creatable = ROWS.filter((r) => r.creatable).map((r) => r.type);
-    expect(creatable).toHaveLength(13);
+    expect(creatable).toHaveLength(14);
     expect(ROWS.filter((r) => !r.creatable).map((r) => r.type).sort()).toEqual(
       [...UNCREATABLE].sort()
     );
@@ -740,11 +739,8 @@ describe("the retired types", () => {
 });
 
 describe("an uncreatable work type names the fallback that works today (review J)", () => {
-  // Every refusal to create a work document names what to run instead: the
-  // `pdocs` command where one exists, and the exact template to copy where
-  // none does yet.
-  const templatePathsIn = (reason: string) =>
-    [...reason.matchAll(/docs\/TEMPLATES\/[A-Z-]+\.template\.md/g)].map((m) => m[0]);
+  // Every refusal to create a work document names the `pdocs` command that
+  // writes its replacement.
 
   test("the retired item-shaped types name `pdocs new item`", () => {
     for (const type of ["backlog", "fragment", "brief", "investigation"])
@@ -753,17 +749,19 @@ describe("an uncreatable work type names the fallback that works today (review J
         reason: expect.stringContaining("pdocs new item <slug>") as never,
       });
     expect(row("investigation").uncreatableReason).toContain("--kind research");
+    expect(row("investigation").uncreatableReason).toContain(
+      "pdocs new write-up --owner item/<slug>"
+    );
   });
 
-  test("feature, proposal, brief and investigation name a template that exists", () => {
-    for (const type of ["feature", "proposal", "brief", "investigation"]) {
-      const reason = row(type).uncreatableReason as string;
-      const paths = templatePathsIn(reason);
-      expect({ type, named: paths.length > 0 }).toEqual({ type, named: true });
-      for (const p of paths) expect({ type, p, exists: existsSync(join(REPO_ROOT, p)) }).toEqual({ type, p, exists: true });
-    }
-    expect(row("feature").uncreatableReason).toContain("docs/features/<slug>/feature.md");
-    expect(row("investigation").uncreatableReason).toContain("WRITE-UP.template.md");
+  test("the proposal and the brief name `pdocs new feature`", () => {
+    for (const type of ["proposal", "brief"])
+      expect(row(type).uncreatableReason).toContain("pdocs new feature <slug>");
+  });
+
+  test("feature is creatable, and names the folder it opens", () => {
+    expect(row("feature").creatable).toBe(true);
+    expect(row("feature").namesScope).toBe(true);
   });
 
   test("memory and lesson point at a playbook, which pdocs can create", () => {
@@ -771,11 +769,8 @@ describe("an uncreatable work type names the fallback that works today (review J
       expect(row(type).uncreatableReason).toContain("playbook");
   });
 
-  test("the paths follow the configured docs root", () => {
+  test("no refusal carries an unfilled `{docs}`", () => {
     const moved = buildRegistry({ ...DEFAULT_CONFIG, docsRoot: "documentation" });
-    expect(moved.find((r) => r.type === "feature")?.uncreatableReason).toContain(
-      "documentation/TEMPLATES/FEATURE.template.md"
-    );
-    expect(moved.find((r) => r.type === "feature")?.uncreatableReason).not.toContain("{docs}");
+    for (const r of moved) expect(r.uncreatableReason ?? "").not.toContain("{docs}");
   });
 });

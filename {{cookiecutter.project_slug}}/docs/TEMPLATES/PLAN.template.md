@@ -30,7 +30,7 @@ For more guidance on plans, see the projects README: ../README.md
 
 # [Feature Name] Implementation Plan
 
-**Related Proposal:** [Link to proposal](./proposal.md)
+**Related Proposal:** link the owner — `./feature.md` or `./item.md` (`pdocs new --owner` adds it under Related Documents)
 
 ---
 
@@ -139,7 +139,6 @@ feature work won't need this.]
 
 **Related Documents:**
 
-- [Proposal](./proposal.md)
 - `[Architecture docs](../../architecture/doc-name.md)`
 - `[Sessions](./sessions/)` (created during implementation)
 

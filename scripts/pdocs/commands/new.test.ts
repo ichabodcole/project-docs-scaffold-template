@@ -168,10 +168,9 @@ function tree(): string {
 
 /**
  * A legacy project folder with its proposal, written by hand. `pdocs new
- * project` is gone (the proposal is retired in 9.0.0, and `pdocs new feature`
- * arrives with `--owner` in Phase 2), but the owned types still live in a
- * project folder until this repository migrates, and the templates still link
- * `./proposal.md`.
+ * project` is gone (the proposal is retired in 9.0.0; a feature is created as
+ * itself), but this repository's owned documents still live in project
+ * folders until it migrates, so `--owner project/<slug>` still reaches one.
  */
 function makeProject(root: string, slug: string): string {
   const dir = join(root, "docs", "projects", slug);
@@ -193,43 +192,30 @@ function makeProject(root: string, slug: string): string {
   return slug;
 }
 
-/** Owner-scoped creatable rows, in the registry's own order. */
-const PROJECT_ROWS = CREATABLE.filter((r) => r.scope === "owner");
-
 /**
- * A project holding every project document that comes BEFORE this row.
- *
- * The templates carry two kinds of link. The invented ones — `doc-name.md`,
- * `URL` — are inline code and resolve nothing. The REAL ones are live links a
- * working document is supposed to have: a plan's `./proposal.md`, a session's
- * `../plan.md`. Creating a plan into an empty folder therefore leaves a broken
- * link, and the gate is RIGHT to say so — so the fixture is a real project
- * rather than an empty directory, and each seed is made by the command itself.
- *
- * Seeded in the registry's order, which is generic and needs no list here.
- * Every live link a template carries points BACKWARDS along the authoring
- * order — a plan cites its proposal, a test-plan cites its plan — so seeding
- * in any order that respects those dependencies produces a clean tree, and no
- * case here depends on the two orders coinciding.
+ * A feature to own the owned documents, written by hand so the loop below does
+ * not depend on `new feature` (which it also tests, as a row of its own).
+ * `new --owner` links the owner's entry file itself (D17), so no template
+ * needs a sibling document to exist for its links to resolve.
  */
-function seedProject(root: string, row: RegistryRow): string {
-  const slug = makeProject(root, "fixture-project");
-  for (const earlier of PROJECT_ROWS) {
-    if (earlier.type === row.type) break;
-    const seeded = run([
-      "new",
-      earlier.type,
-      `${earlier.type}-seed`,
-      "--root",
-      root,
-      "--project",
-      slug,
-      "--format",
-      "json",
-    ]);
-    expect(seeded.stderr).toBe("");
-  }
-  return slug;
+function makeFeature(root: string, slug: string): string {
+  const dir = join(root, "docs", "features", slug);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    join(dir, "feature.md"),
+    page(
+      {
+        type: "feature",
+        title: "Fixture Feature",
+        description: "The feature the fixture's owned documents belong to.",
+        status: "draft",
+        lifecycle: "active",
+        generated: "{ by: new-test, at: 2026-01-01 }",
+      },
+      "# Fixture Feature\n"
+    )
+  );
+  return `feature/${slug}`;
 }
 
 /**
@@ -253,7 +239,8 @@ function invocation(row: RegistryRow, root: string): string[] {
     "--format",
     "json",
   ];
-  if (row.scope === "owner") args.push("--project", seedProject(root, row));
+  if (row.scope === "owner" && !row.namesScope)
+    args.push("--owner", makeFeature(root, "fixture-feature"));
   // A key the row requires is passed with the first value its vocabulary
   // allows — `item`'s `--kind`. `id` is minted, never passed.
   for (const key of row.required)
@@ -289,16 +276,16 @@ describe("pdocs new — every creatable type, then the gate", () => {
     });
   }
 
-  test("the loop covered every creatable row, and there are 13", () => {
+  test("the loop covered every creatable row, and there are 14", () => {
     expect(covered.sort()).toEqual(CREATABLE.map((r) => r.type).sort());
-    expect(CREATABLE).toHaveLength(13);
+    expect(CREATABLE).toHaveLength(14);
   });
 });
 
 describe("pdocs new — a project folder, after the alias", () => {
   // `pdocs new project` resolved to the `proposal` row. The proposal is
   // retired in 9.0.0, so the word is no longer a type at all, and nothing is
-  // written. A feature is created as itself once `new feature` exists.
+  // written. A feature is created as itself: `pdocs new feature <slug>`.
   test("`new project` is refused and writes nothing", () => {
     const root = tree();
     const r = run(["new", "project", "oauth upgrade", "--root", root, "--format", "json"]);
@@ -308,12 +295,11 @@ describe("pdocs new — a project folder, after the alias", () => {
     // Not "unknown type": `create-project` still runs this, and the answer has
     // to say what replaced it and how to write one today (review J).
     expect(message).toContain("replaced by `feature`");
-    expect(message).toContain("docs/TEMPLATES/FEATURE.template.md");
-    expect(message).toContain("docs/features/<slug>/feature.md");
+    expect(message).toContain("pdocs new feature <slug>");
     expect(existsSync(join(root, "docs/projects/oauth-upgrade"))).toBe(false);
   });
 
-  test("a project-scoped type then works against that folder", () => {
+  test("a legacy project folder is still an owner, as `project/<slug>`", () => {
     const root = tree();
     makeProject(root, "oauth-upgrade");
     const plan = run([
@@ -321,8 +307,8 @@ describe("pdocs new — a project folder, after the alias", () => {
       "plan",
       "--root",
       root,
-      "--project",
-      "oauth-upgrade",
+      "--owner",
+      "project/oauth-upgrade",
       "--format",
       "json",
     ]);
@@ -331,16 +317,13 @@ describe("pdocs new — a project folder, after the alias", () => {
       "docs/projects/oauth-upgrade/plan.md"
     );
 
-    // The template carries both kinds of link and `new` copies both verbatim.
-    // The real one is live and resolves, because the proposal is really there;
-    // the invented one ships as inline code, fixed once in the template rather
-    // than rewritten on every invocation.
+    // The owner's entry file is linked by `new` (D17) — a legacy project's is
+    // its proposal. The template's own example links ship as inline code.
     const body = readFileSync(
       join(root, "docs/projects/oauth-upgrade/plan.md"),
       "utf8"
     );
-    expect(body).toContain("[Link to proposal](./proposal.md)");
-    expect(body).not.toContain("`[Link to proposal](./proposal.md)`");
+    expect(body).toContain("- [Fixture Proposal](./proposal.md)");
     expect(body).toContain(
       "`[Architecture docs](../../architecture/doc-name.md)`"
     );
@@ -353,12 +336,9 @@ describe("pdocs new — a project folder, after the alias", () => {
     // exercise: a live link in a template is a promise that the document it
     // seeds will be able to keep, and the only links allowed to make that
     // promise are the ones a project's own documents satisfy.
-    const allowed = new Set([
-      "./proposal.md",
-      "./plan.md",
-      "../proposal.md",
-      "../plan.md",
-    ]);
+    // None: the owner's entry file is linked by `new --owner` (D17), and a
+    // sibling plan is not promised to exist, so both are inline-code notes.
+    const allowed = new Set<string>();
     for (const row of CREATABLE) {
       for (const rel of [row.template].flat()) {
         const raw = readFileSync(join(REPO_ROOT, rel as string), "utf8");
@@ -374,18 +354,27 @@ describe("pdocs new — a project folder, after the alias", () => {
     }
   });
 
-  test("a project-scoped type refuses a project that is not there", () => {
+  test("a legacy project that is not there is a not-found", () => {
     const root = tree();
-    const r = run(["new", "plan", "--root", root, "--project", "nowhere"]);
+    const r = run(["new", "plan", "--root", root, "--owner", "project/nowhere"]);
     expect(r.code).toBe(ExitCode.NotFound);
-    expect(r.stderr).toContain("no `nowhere`");
+    expect(r.stderr).toContain("nowhere");
   });
 
-  test("a project-scoped type refuses to stand alone", () => {
+  test("an owned type refuses to stand alone", () => {
     const root = tree();
     const r = run(["new", "session", "wiring", "--root", root]);
     expect(r.code).toBe(ExitCode.Usage);
-    expect(r.stderr).toContain("--project");
+    expect(r.stderr).toContain("--owner");
+  });
+
+  test("`--project` is gone: exit 2, naming `--owner`", () => {
+    const root = tree();
+    makeProject(root, "oauth-upgrade");
+    const r = run(["new", "plan", "--root", root, "--project", "oauth-upgrade"]);
+    expect(r.code).toBe(ExitCode.Usage);
+    expect(r.stderr).toContain("--owner");
+    expect(existsSync(join(root, "docs/projects/oauth-upgrade/plan.md"))).toBe(false);
   });
 });
 
@@ -417,7 +406,7 @@ describe("pdocs new — what it refuses to create", () => {
     const refused = ROWS.filter((r) => !r.creatable).map((r) => r.type);
     expect(refused).toContain("kickoff");
     expect(refused).toContain("artifact");
-    expect(refused).toHaveLength(13);
+    expect(refused).toHaveLength(12);
   });
 
   test("an unknown type lists the creatable ones", () => {
@@ -456,7 +445,7 @@ describe("pdocs new — names that try to leave the tree", () => {
   //
   // `pdocs new project ".."` used to resolve to the docs root's own parent,
   // write `docs/proposal.md`, and report `{"ok": true}` with exit 0. The alias
-  // is gone; the same names now reach the same code through `--project`. The very
+  // is gone; the same names now reach the same code through `--owner project/…`. The very
   // next `pdocs check` called that document `BAD type` and `ORPHAN` — the two
   // halves of the tool that read one registry precisely so they cannot
   // disagree, disagreeing, because a `.` survived the slug filter and
@@ -473,11 +462,11 @@ describe("pdocs new — names that try to leave the tree", () => {
   // one under test is worse than no case. It is covered in the `slugify` unit
   // test, where it does exercise the rule.
   for (const name of ["..", "...", "../..", "./.."]) {
-    test(`\`new plan --project ${JSON.stringify(name)}\` is refused and writes nothing`, () => {
+    test(`\`new plan --owner project/${name}\` is refused and writes nothing`, () => {
       const root = tree();
       const before = filesUnder(root);
 
-      const r = run(["new", "plan", "--project", name, "--root", root, "--format", "json"]);
+      const r = run(["new", "plan", "--owner", `project/${name}`, "--root", root, "--format", "json"]);
       expect(r.code).toBe(ExitCode.Usage);
       expect(r.stdout).toBe("");
       expect(JSON.parse(r.stderr).error.message).toContain("needs letters or digits");
@@ -504,10 +493,10 @@ describe("pdocs new — names that try to leave the tree", () => {
     expect(readFileSync(join(root, "docs/index.md"), "utf8")).toBe(index);
   });
 
-  test("`--project` cannot escape either", () => {
+  test("`--owner` cannot escape either", () => {
     const root = tree();
     makeProject(root, "oauth-upgrade");
-    const r = run(["new", "plan", "--root", root, "--project", ".."]);
+    const r = run(["new", "plan", "--root", root, "--owner", ".."]);
     expect(r.code).toBe(ExitCode.Usage);
     expect(existsSync(join(root, "docs/plan.md"))).toBe(false);
   });
@@ -531,7 +520,7 @@ describe("pdocs new — names that try to leave the tree", () => {
   });
 });
 
-describe("pdocs new — `--project` is read as a name, not a folder", () => {
+describe("pdocs new — `--owner project/<name>` is read as a name, not a folder", () => {
   test("a name that needed slugging finds the folder it slugs to", () => {
     // `new project "My Big Project"` created `my-big-project/`; `new plan
     // --project "My Big Project"` then exited 5 with a diagnostic recommending
@@ -544,8 +533,8 @@ describe("pdocs new — `--project` is read as a name, not a folder", () => {
       "plan",
       "--root",
       root,
-      "--project",
-      "My Big Project",
+      "--owner",
+      "project/My Big Project",
       "--format",
       "json",
     ]);
@@ -557,9 +546,9 @@ describe("pdocs new — `--project` is read as a name, not a folder", () => {
   });
 
   test("a project that is really not there is still a not-found", () => {
-    // The guard against fixing the above by making `--project` create folders.
+    // The guard against fixing the above by making `--owner` create folders.
     const root = tree();
-    const r = run(["new", "plan", "--root", root, "--project", "nowhere"]);
+    const r = run(["new", "plan", "--root", root, "--owner", "project/nowhere"]);
     expect(r.code).toBe(ExitCode.NotFound);
   });
 });
@@ -665,7 +654,7 @@ describe("pdocs new — the filename grammar", () => {
     const root = tree();
     makeProject(root, "p");
     const session = JSON.parse(
-      run(["new", "session", "an-item", "--project", "p", "--root", root, "--format", "json"])
+      run(["new", "session", "an-item", "--owner", "project/p", "--root", root, "--format", "json"])
         .stdout
     ).data.path;
     expect(session).toBe(`docs/projects/p/sessions/${today()}-an-item.md`);
@@ -824,8 +813,8 @@ describe("pdocs new --from", () => {
     const made = run([
       "new",
       "plan",
-      "--project",
-      "oauth-upgrade",
+      "--owner",
+      "project/oauth-upgrade",
       "--root",
       root,
       "--from",
@@ -912,8 +901,8 @@ describe("pdocs new — frontmatter", () => {
       "new",
       "report",
       "a-report",
-      "--project",
-      "p",
+      "--owner",
+      "project/p",
       "--root",
       root,
       "--lifecycle",
@@ -1271,6 +1260,110 @@ describe("pdocs new item", () => {
     expect(newItem(root, "x", "--kind", "task", "--priority", "p1").code).toBe(ExitCode.Usage);
     expect(newItem(root, "x", "--kind", "task", "--priority", "high").code).toBe(
       ExitCode.Success
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Features and --owner (plan Task 2.4, D17)
+// ---------------------------------------------------------------------------------------
+
+describe("pdocs new feature, and --owner", () => {
+  const json = (r: { stdout: string }) => JSON.parse(r.stdout).data;
+  const clean = (root: string) =>
+    expect(run(["check", "--root", root, "--format", "text"]).stdout).toContain(
+      "docs-lint: clean"
+    );
+
+  test("`new feature <slug>` opens features/<slug>/feature.md", () => {
+    const root = workTree();
+    const r = run(["new", "feature", "OAuth Upgrade", "--root", root, "--format", "json"]);
+    expect(r.stderr).toBe("");
+    expect(json(r).path).toBe("docs/features/oauth-upgrade/feature.md");
+    const f = fields(root, "docs/features/oauth-upgrade/feature.md");
+    expect(f.get("type")).toBe("feature");
+    expect(f.get("title")).toBe("Oauth Upgrade");
+    clean(root);
+
+    const again = run(["new", "feature", "oauth-upgrade", "--root", root]);
+    expect(again.code).toBe(ExitCode.Conflict);
+  });
+
+  test("a feature takes no --owner, and needs a name", () => {
+    const root = workTree();
+    expect(run(["new", "feature", "x", "--owner", "feature/a", "--root", root]).code).toBe(
+      ExitCode.Usage
+    );
+    expect(run(["new", "feature", "--root", root]).code).toBe(ExitCode.Usage);
+  });
+
+  test("`new plan --owner feature/a` writes features/a/plan.md, linked to its owner", () => {
+    const root = workTree();
+    const r = run(["new", "plan", "--owner", "feature/a", "--root", root, "--format", "json"]);
+    expect(r.stderr).toBe("");
+    expect(json(r).path).toBe("docs/features/a/plan.md");
+    expect(readFileSync(join(root, "docs/features/a/plan.md"), "utf8")).toContain(
+      "- [Feature A](./feature.md)"
+    );
+    clean(root);
+  });
+
+  test("`new session --owner item/<prefix>` promotes a single-file item first", () => {
+    const root = workTree();
+    newItem(root, "b", "--kind", "task");
+    const id = fields(root, "docs/items/b.md").get("id") as string;
+    const r = run([
+      "new",
+      "session",
+      "kickoff",
+      "--owner",
+      id.slice(0, 13),
+      "--root",
+      root,
+      "--format",
+      "json",
+    ]);
+    expect(r.stderr).toBe("");
+    const data = json(r);
+    expect(data.path).toBe(`docs/items/b/sessions/${today()}-kickoff.md`);
+    expect(data.promoted).toBe("docs/items/b/item.md");
+    expect(existsSync(join(root, "docs/items/b.md"))).toBe(false);
+    expect(existsSync(join(root, "docs/items/b/item.md"))).toBe(true);
+    expect(readFileSync(join(root, data.path), "utf8")).toContain("- [B](../item.md)");
+    clean(root);
+  });
+
+  test("`new plan --owner item/b` on a folder item links ./item.md and promotes nothing", () => {
+    const root = workTree();
+    newItem(root, "b", "--kind", "task");
+    run(["promote", "item/b", "--root", root]);
+    const r = run(["new", "plan", "--owner", "item/b", "--root", root, "--format", "json"]);
+    expect(json(r).path).toBe("docs/items/b/plan.md");
+    expect(json(r).promoted).toBeNull();
+    expect(readFileSync(join(root, "docs/items/b/plan.md"), "utf8")).toContain("- [B](./item.md)");
+    clean(root);
+  });
+
+  test("an owner that is not a feature or an item is refused, and nothing moves", () => {
+    const root = workTree();
+    newItem(root, "b", "--kind", "task");
+    for (const owner of ["cycle/2026-09-x", "feature/nope", "item/nope"])
+      expect(run(["new", "plan", "--owner", owner, "--root", root]).code).toBe(ExitCode.Usage);
+    expect(existsSync(join(root, "docs/items/b.md"))).toBe(true);
+  });
+
+  test("a refusal after the owner resolves does not promote the item", () => {
+    const root = workTree();
+    newItem(root, "b", "--kind", "task");
+    const r = run(["new", "plan", "--owner", "item/b", "--lifecycle", "nope", "--root", root]);
+    expect(r.code).toBe(ExitCode.Usage);
+    expect(existsSync(join(root, "docs/items/b.md"))).toBe(true);
+  });
+
+  test("a non-owned type refuses --owner", () => {
+    const root = workTree();
+    expect(run(["new", "playbook", "x", "--owner", "feature/a", "--root", root]).code).toBe(
+      ExitCode.Usage
     );
   });
 });

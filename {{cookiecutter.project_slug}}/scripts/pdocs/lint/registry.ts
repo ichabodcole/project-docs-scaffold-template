@@ -250,6 +250,12 @@ export interface RegistryRow {
    * passing, and never created. Deleted once this repository has migrated.
    */
   retired?: boolean;
+  /**
+   * True when `pdocs new <type> <name>` names the OWNER FOLDER it opens rather
+   * than the document's slug: `pdocs new feature oauth-upgrade` writes
+   * `features/oauth-upgrade/feature.md`. Only on an entity entry row.
+   */
+  namesScope?: boolean;
   /** Whether `pdocs new` will create one. */
   creatable: boolean;
   /** Why not, when `creatable` is false. This string is what `new` tells the caller. */
@@ -442,6 +448,8 @@ export const PROJECTS_FOLDER = "projects";
  */
 type Creation = {
   filename: FilenameShape;
+  /** See `RegistryRow.namesScope`. */
+  namesScope?: boolean;
   /** Docs-root-relative, joined with `config.docsRoot` below. `null` = none. */
   template: string | string[] | null;
   /** Set only where the template is not under the docs root. */
@@ -459,10 +467,6 @@ type Creation = {
  * inventing a convention rather than recording one. Add the second member the
  * day a real file needs it.
  */
-/** The fallback a refusal names until `pdocs new feature` is built. */
-const COPY_FEATURE =
-  "copy {docs}/TEMPLATES/FEATURE.template.md to {docs}/features/<slug>/feature.md";
-
 /**
  * Words a caller may still type that are no longer types, and what replaced
  * them. `pdocs new project` resolved to the proposal row until 9.0.0; skills
@@ -470,9 +474,7 @@ const COPY_FEATURE =
  * rather than "unknown type".
  */
 const RETIRED_WORD: Record<string, string> = {
-  project:
-    "`project` was replaced by `feature` in 9.0.0 (`pdocs new feature <slug>`, not built yet) — until then " +
-    COPY_FEATURE,
+  project: "`project` was replaced by `feature` in 9.0.0 — `pdocs new feature <slug>`",
 };
 
 /** Why `word` is no longer a type, with the docs root filled in; `null` when it
@@ -508,21 +510,20 @@ const CREATION: Record<string, Creation> = {
   brief: {
     filename: { kind: "slug", date: "day" },
     template: null,
-    uncreatableReason: `retired in 9.0.0; write the idea as a \`triage\` work item (\`pdocs new item <slug> --kind task\`) or as a feature — until \`pdocs new feature\` is built, ${COPY_FEATURE}`,
+    uncreatableReason:
+      "retired in 9.0.0; write the idea as a `triage` work item (`pdocs new item <slug> --kind task`) or as a feature (`pdocs new feature <slug>`)",
   },
   investigation: {
     filename: { kind: "slug", date: "day", suffix: "investigation" },
     template: null,
     uncreatableReason:
       "retired in 9.0.0; the replacement is a research work item and its write-up — " +
-      "`pdocs new item <slug> --kind research`, then, until `--owner` is built, copy " +
-      "{docs}/TEMPLATES/WRITE-UP.template.md to {docs}/items/<slug>/write-up.md and move " +
-      "{docs}/items/<slug>.md to {docs}/items/<slug>/item.md",
+      "`pdocs new item <slug> --kind research`, then `pdocs new write-up --owner item/<slug>`",
   },
   proposal: {
     filename: { kind: "fixed", name: "proposal.md" },
     template: null,
-    uncreatableReason: `retired in 9.0.0; a proposal is now a feature (\`pdocs new feature <slug>\`, not built yet) — until then ${COPY_FEATURE}`,
+    uncreatableReason: "retired in 9.0.0; a proposal is now a feature — `pdocs new feature <slug>`",
   },
   memory: {
     filename: { kind: "slug", date: "day" },
@@ -537,12 +538,12 @@ const CREATION: Record<string, Creation> = {
       "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`), or start one with `pdocs new playbook <slug>`",
   },
 
-  // The work taxonomy's entities. `pdocs new item` mints the `id`; a feature
-  // is created once `new` learns `--owner`.
+  // The work taxonomy's entities. `pdocs new feature <slug>` opens the
+  // feature's folder; `pdocs new item` mints the item's `id`.
   feature: {
     filename: { kind: "fixed", name: "feature.md" },
     template: "TEMPLATES/FEATURE.template.md",
-    uncreatableReason: `\`pdocs new feature\` is not built yet — ${COPY_FEATURE}`,
+    namesScope: true,
   },
   item: { filename: { kind: "slug", date: "none" }, template: "TEMPLATES/ITEM.template.md" },
 
@@ -811,6 +812,7 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
       lifecycle,
       extra,
       required,
+      ...(c.namesScope ? { namesScope: true } : {}),
       ...(RETIRED_TYPES.has(type) ? { retired: true } : {}),
       creatable: c.uncreatableReason === undefined,
       ...(c.uncreatableReason === undefined

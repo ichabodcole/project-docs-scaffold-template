@@ -39,7 +39,8 @@ For more guidance on design resolutions, see the projects README: ../README.md
 
 # [Design Resolution Title]
 
-**Related Proposal:** [Link to proposal](./proposal.md)
+**Related Proposal:** link the owner — `./feature.md` or `./item.md`
+(`pdocs new --owner` adds it under Related Documents)
 
 ---
 
@@ -144,7 +145,6 @@ be resolved above.]
 
 **Related Documents:**
 
-- [Proposal](./proposal.md)
 - `[Architecture docs](../../architecture/doc-name.md)` (if applicable)
 - `[Plan](./plan.md)` (created after resolution)
 

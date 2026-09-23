@@ -54,8 +54,10 @@ import {
 } from "../envelope.ts";
 import { OKF_STATUS, type Ctx } from "../lint/rules.ts";
 import {
+  ENTITY_FILE,
   type ExistingDocument,
   FIELD_VALUES,
+  ITEMS_FOLDER,
   PROJECTS_FOLDER,
   type RegistryRow,
   TYPE_ALIAS,
@@ -65,7 +67,8 @@ import {
 } from "../lint/registry.ts";
 import { collectPages, pageKeys } from "../pages.ts";
 import { uuidv7 } from "../uuid.ts";
-import { type WorkModel, collectWork, refFor, resolveRef } from "../work.ts";
+import { type WorkEntity, type WorkModel, collectWork, refFor, resolveRef } from "../work.ts";
+import { promoteItem } from "./promote.ts";
 
 /** `data` in the envelope. */
 export interface NewData {
@@ -75,6 +78,9 @@ export interface NewData {
   type: string;
   /** Every file written or modified, document first. */
   created: string[];
+  /** The item's new entry file, when `--owner` promoted a single-file item
+   *  to a folder to write into it; `null` otherwise. */
+  promoted: string | null;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -253,38 +259,138 @@ export function resolveType(ctx: Ctx, typeArg: string): ResolvedType {
       }
     );
 
-  return { row, namesScope: alias?.namesScope === true };
+  return { row, namesScope: alias?.namesScope === true || row.namesScope === true };
 }
 
 // ---------------------------------------------------------------------------------------
 // Resolving the path
 // ---------------------------------------------------------------------------------------
 
-/** The directory a row's documents live in, and the project it belongs to. */
+/** Where a document goes, and — for an owned document — what owns it. */
+export interface Placement {
+  /** The directory the document is written into. */
+  dir: string;
+  /** The owner's folder, for an owned document or an entity that opens one. */
+  ownerDir: string | null;
+  /** The owner's entry file (`feature.md`, `item.md`, or a legacy project's
+   *  `proposal.md`) as it will be once written — after any promotion. `new`
+   *  links it from the document (D17). `null` when there is nothing to link. */
+  entry: string | null;
+  ownerTitle: string | null;
+  /** A single-file item to promote to a folder before writing into it. */
+  promote: WorkEntity | null;
+}
+
+/** The owner folder whose entry file is this row's type: `features` for `feature`. */
+function ownerFolderOf(row: RegistryRow): string {
+  const found = Object.entries(ENTITY_FILE).find(([, e]) => e.type === row.type);
+  if (!found)
+    throw new CliError(
+      `the \`${row.type}\` row names its scope but no owner folder has it as its entry file.`,
+      ErrorKind.Internal,
+      ExitCode.Internal
+    );
+  return found[0];
+}
+
+const OWNER_FORMS = "`--owner feature/<slug>` or `--owner item/<slug-or-id>`";
+
+/**
+ * The directory a row's documents live in.
+ *
+ * - A `docs` or `root` row: its folder under the docs root. `--owner` is refused.
+ * - A row that names its scope (`feature`): the positional is the folder it
+ *   opens, `features/<slug>/`.
+ * - An owned row (plan, session, …): `--owner` names a feature or an item,
+ *   resolved like every other reference (`resolveRef`). A single-file item is
+ *   promoted to a folder first — by the caller, just before writing, so a
+ *   refusal leaves the tree alone.
+ *
+ * LEGACY, until this repository's Phase 5 migration: `--owner project/<slug>`
+ * names a folder under `projects/`, the owner the old types used. It is
+ * deleted with the retired types.
+ */
 export function resolveDirectory(
   ctx: Ctx,
   row: RegistryRow,
-  project: string | undefined
-): { dir: string; projectDir: string | null } {
-  if (row.scope !== "owner")
+  name: string | undefined,
+  owner: string | undefined,
+  model: () => WorkModel
+): Placement {
+  const none = { entry: null, ownerTitle: null, promote: null };
+  if (row.scope !== "owner") {
+    if (owner !== undefined)
+      throw new UsageError(
+        `a \`${row.type}\` does not live inside a feature or an item — drop --owner.`
+      );
     return {
       dir: row.folder ? join(ctx.docsRoot, row.folder) : ctx.docsRoot,
-      projectDir: null,
+      ownerDir: null,
+      ...none,
     };
+  }
 
-  if (project === undefined)
+  if (row.namesScope) {
+    if (owner !== undefined)
+      throw new UsageError(
+        `a \`${row.type}\` is not owned by anything — \`pdocs new ${row.type} <slug>\` opens its own folder; drop --owner.`
+      );
+    if (name === undefined)
+      throw new UsageError(
+        `\`${row.type}\` needs a name — the folder to open, e.g. \`pdocs new ${row.type} oauth-upgrade\`.`
+      );
+    const ownerDir = assertInside(
+      ctx.docsRoot,
+      join(ctx.docsRoot, ownerFolderOf(row), slugify(name))
+    );
+    return { dir: ownerDir, ownerDir, ...none };
+  }
+
+  if (owner === undefined)
     throw new UsageError(
-      `a \`${row.type}\` lives inside a project — pass \`--project <slug>\`.`
+      `a \`${row.type}\` lives inside a feature or an item — pass ${OWNER_FORMS}.`
     );
 
-  const projectDir = assertInside(
-    ctx.docsRoot,
-    join(ctx.docsRoot, PROJECTS_FOLDER, project)
-  );
+  // LEGACY — `projects/<slug>/`, until Phase 5 retires it.
+  const legacy = /^project\/(.*)$/.exec(owner);
+  if (legacy) {
+    const slug = slugify(legacy[1] as string);
+    const ownerDir = assertInside(ctx.docsRoot, join(ctx.docsRoot, PROJECTS_FOLDER, slug));
+    if (!existsSync(ownerDir))
+      throw new NotFoundError(
+        `no \`project/${slug}\` at ${relative(ctx.repoRoot, ownerDir)} — a legacy project owner must already exist; new work goes in a feature (\`pdocs new feature <slug>\`).`
+      );
+    const entry = join(ownerDir, ENTITY_FILE[PROJECTS_FOLDER]!.name);
+    const has = existsSync(entry);
+    return {
+      dir: row.folder ? join(ownerDir, row.folder) : ownerDir,
+      ownerDir,
+      entry: has ? entry : null,
+      ownerTitle: has ? titleOf(entry) : null,
+      promote: null,
+    };
+  }
+
+  const e = resolveRef(model(), owner, ["feature", "item"]);
+  const entryNow = join(ctx.repoRoot, e.path);
+  const promote = e.entity === "item" && e.folder === null ? e : null;
+  const ownerDir = promote ? entryNow.slice(0, -".md".length) : dirname(entryNow);
+  const entry = promote ? join(ownerDir, ENTITY_FILE[ITEMS_FOLDER]!.name) : entryNow;
   return {
-    dir: row.folder ? join(projectDir, row.folder) : projectDir,
-    projectDir,
+    dir: row.folder ? join(ownerDir, row.folder) : ownerDir,
+    ownerDir,
+    entry,
+    ownerTitle: e.title ?? e.slug,
+    promote,
   };
+}
+
+/** A document's `title`, or its file name. */
+function titleOf(abs: string): string {
+  const fields = parseFrontmatter(
+    /^---\n([\s\S]*?)\n---/.exec(readFileSync(abs, "utf8"))?.[1] ?? ""
+  );
+  return fields.get("title") ?? basename(abs, ".md");
 }
 
 /** The next `NN` for a numbered folder: the highest already there, plus one. */
@@ -657,19 +763,6 @@ function flagValue(
   return v;
 }
 
-/**
- * The alias that OPENS a scope — the one whose positional names the folder the
- * other project-scoped types then need.
- *
- * Looked up rather than written into the diagnostic, so the hint a caller is
- * given stays true if the alias is ever renamed, and so the one place this file
- * would otherwise have to say the word is the registry instead.
- */
-function scopeOpener(): string | null {
-  const found = Object.entries(TYPE_ALIAS).find(([, a]) => a.namesScope);
-  return found ? found[0] : null;
-}
-
 /** The addresses, `type` and `lifecycle` of everything already written. */
 export function existingDocuments(ctx: Ctx): ExistingDocument[] {
   return collectPages(ctx).map((page) => ({
@@ -721,7 +814,7 @@ export const newCommand: Command = {
   name: "new",
   summary: "Create a document: the type decides folder, filename and template.",
   usage:
-    "pdocs new <type> <name> [--title <t>] [--description <d>] [--project <slug>] " +
+    "pdocs new <type> <name> [--title <t>] [--description <d>] [--owner <feature/…|item/…>] " +
     "[--variant <v>] [--from <path>]",
   // `name` is NOT required and the two are not the same kind of optional: a
   // type whose filename the registry fixes — `proposal.md`, `plan.md` — takes
@@ -749,9 +842,11 @@ export const newCommand: Command = {
     },
     { flag: "--by", metavar: "<actor>", summary: "`generated.by`. Defaults to `pdocs`." },
     {
-      flag: "--project",
-      metavar: "<slug>",
-      summary: "The project folder, for a type that lives inside one.",
+      flag: "--owner",
+      metavar: "<ref>",
+      summary:
+        "What an owned document (plan, session, …) belongs to: feature/<slug> or item/<slug-or-id>. " +
+        "A single-file item is promoted to a folder first. LEGACY until 9.0.0's migration: project/<slug>.",
     },
     {
       flag: "--variant",
@@ -774,37 +869,18 @@ export const newCommand: Command = {
     const [typeArg, nameArg] = positionals;
     if (typeArg === undefined)
       throw new UsageError(
-        "new needs a type — `pdocs new playbook rollback` or `pdocs new plan --project oauth-upgrade`."
+        "new needs a type — `pdocs new playbook rollback` or `pdocs new plan --owner feature/oauth-upgrade`."
       );
 
     const { row, namesScope } = resolveType(ctx, typeArg);
 
-    // The alias case: the positional names the project folder, and the document
-    // inside it is the row's fixed one.
-    if (namesScope && nameArg === undefined)
-      throw new UsageError(
-        `\`${typeArg}\` needs a name — the folder to open, e.g. \`pdocs new ${typeArg} oauth-upgrade\`.`
-      );
-    // BOTH paths slugify. They used not to: `pdocs new project "My Big Project"`
-    // created `my-big-project/`, and `pdocs new plan --project "My Big Project"`
-    // then exited 5 saying no such project — and offered, as the fix, the
-    // command that had just worked. One flag was being read as a folder name
-    // and the other as a name to make a folder name out of. `--project` names
-    // the same thing `new project` was given, so it is read the same way.
-    const project = namesScope
-      ? slugify(nameArg as string)
-      : (() => {
-          const value = flagValue(flags, "--project");
-          return value === undefined ? undefined : slugify(value);
-        })();
+    let work: WorkModel | null = null;
+    const model = (): WorkModel => (work ??= collectWork(ctx));
+    const placement = resolveDirectory(ctx, row, nameArg, flagValue(flags, "--owner"), model);
+    const { dir } = placement;
+    // A row that names its scope takes its name as the folder, not the slug.
     const slug = namesScope ? undefined : nameArg;
-
-    const { dir, projectDir } = resolveDirectory(ctx, row, project);
-    if (projectDir !== null && !namesScope && !existsSync(projectDir))
-      throw new NotFoundError(
-        `no \`${project}\` at ${relative(ctx.repoRoot, projectDir)}` +
-          (scopeOpener() ? ` — \`pdocs new ${scopeOpener()} ${project}\` opens one.` : ".")
-      );
+    const scopeName = namesScope ? slugify(nameArg as string) : undefined;
 
     const date = today();
     // The second half of the containment guarantee: `resolveDirectory` proved
@@ -919,13 +995,19 @@ export const newCommand: Command = {
     if (!fills.has("title"))
       fills.set(
         "title",
-        scalar(titleFromSlug(row, slug ? slugify(slug) : (project as string)))
+        // A fixed-name document (`plan.md`) is named for what it belongs to.
+        scalar(
+          titleFromSlug(
+            row,
+            slug
+              ? slugify(slug)
+              : (scopeName ?? basename(placement.ownerDir ?? ctx.docsRoot))
+          )
+        )
       );
     fills.set("generated", `{ by: ${flagValue(flags, "--by") ?? "pdocs"}, at: ${date} }`);
 
     // ---- --from: the source document, and on a type that declares it, `from:` ----------
-    let work: WorkModel | null = null;
-    const model = (): WorkModel => (work ??= collectWork(ctx));
     const from = flagValue(flags, "--from");
     const source =
       from === undefined ? null : resolveFrom(ctx, from, row.extra.includes("from") ? model : null);
@@ -954,6 +1036,13 @@ export const newCommand: Command = {
 
     // ---- the body ----------------------------------------------------------------------
     let out = body;
+    // The owner's entry file, linked from the document it owns (D17). The
+    // templates cannot carry it: a feature's is `feature.md` and an item's is
+    // `item.md`, and one template serves both.
+    if (placement.entry !== null) {
+      const href = relative(dir, placement.entry).replace(/^(?!\.)/, "./");
+      out = appendRelated(out, `- [${placement.ownerTitle}](${href})`);
+    }
     if (source !== null) {
       const abs = source.abs;
       const href = relative(dir, abs).replace(/^(?!\.)/, "./");
@@ -988,6 +1077,10 @@ export const newCommand: Command = {
       : null;
 
     // ---- write -------------------------------------------------------------------------
+    // Promotion is the first write, and the last thing that can refuse has
+    // already run: an item is only turned into a folder that is then written to.
+    const promoted =
+      placement.promote === null ? null : promoteItem(ctx, placement.promote).to;
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, `---\n${frontmatter}\n---\n${out}`);
     const created = [rel];
@@ -996,10 +1089,11 @@ export const newCommand: Command = {
       created.push(relative(ctx.repoRoot, indexPath));
     }
 
-    const data: NewData = { path: rel, type: row.type, created };
+    const data: NewData = { path: rel, type: row.type, created, promoted };
     if (format === "json") printEnvelope("new", data);
     else {
       console.log(rel);
+      if (promoted !== null) console.log(`  promoted its owner to ${promoted}`);
       for (const other of created.slice(1)) console.log(`  + catalog line in ${other}`);
     }
     return ExitCode.Success;
