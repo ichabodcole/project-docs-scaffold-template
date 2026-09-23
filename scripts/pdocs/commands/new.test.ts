@@ -27,10 +27,10 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
-import { stripCode } from "../docs-lint/index.ts";
+import { parseFrontmatter, stripCode } from "../docs-lint/index.ts";
 import { ExitCode } from "../envelope.ts";
 import { childEnv } from "../test-env.ts";
-import { type RegistryRow, buildRegistry } from "../lint/registry.ts";
+import { FIELD_VALUES, type RegistryRow, buildRegistry } from "../lint/registry.ts";
 import {
   catalogEntry,
   frontmatterShapes,
@@ -254,6 +254,10 @@ function invocation(row: RegistryRow, root: string): string[] {
     "json",
   ];
   if (row.scope === "owner") args.push("--project", seedProject(root, row));
+  // A key the row requires is passed with the first value its vocabulary
+  // allows — `item`'s `--kind`. `id` is minted, never passed.
+  for (const key of row.required)
+    if (FIELD_VALUES[key]) args.push(`--${key}`, FIELD_VALUES[key]![0] as string);
   if (Array.isArray(row.template))
     args.push("--variant", variantName(row.template[0] as string));
   return args;
@@ -285,9 +289,9 @@ describe("pdocs new — every creatable type, then the gate", () => {
     });
   }
 
-  test("the loop covered every creatable row, and there are 12", () => {
+  test("the loop covered every creatable row, and there are 13", () => {
     expect(covered.sort()).toEqual(CREATABLE.map((r) => r.type).sort());
-    expect(CREATABLE).toHaveLength(12);
+    expect(CREATABLE).toHaveLength(13);
   });
 });
 
@@ -413,7 +417,7 @@ describe("pdocs new — what it refuses to create", () => {
     const refused = ROWS.filter((r) => !r.creatable).map((r) => r.type);
     expect(refused).toContain("kickoff");
     expect(refused).toContain("artifact");
-    expect(refused).toHaveLength(14);
+    expect(refused).toHaveLength(13);
   });
 
   test("an unknown type lists the creatable ones", () => {
@@ -1056,5 +1060,217 @@ describe("insertCatalogEntry", () => {
       "](./playbooks/a-fairly-long-playbook-title-playbook.md) —"
     );
     for (const line of lines.slice(1)) expect(line.startsWith("  ")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Work items (plan Task 2.3)
+// ---------------------------------------------------------------------------------------
+
+const V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+/** Frontmatter of a written document, as the lint parses it. */
+function fields(root: string, rel: string): Map<string, string> {
+  const raw = readFileSync(join(root, rel), "utf8");
+  return parseFrontmatter(/^---\n([\s\S]*?)\n---/.exec(raw)![1] as string);
+}
+
+/** A feature and a cycle written by hand, and `lint.scopes` declared. */
+function workTree(): string {
+  const root = tree();
+  const config = JSON.parse(readFileSync(join(root, ".project-docs.json"), "utf8"));
+  config.lint.scopes = ["lint", "cli"];
+  writeFileSync(join(root, ".project-docs.json"), JSON.stringify(config, null, 2));
+  const write = (rel: string, body: string) => {
+    mkdirSync(dirname(join(root, rel)), { recursive: true });
+    writeFileSync(join(root, rel), body);
+  };
+  write(
+    "docs/features/a/feature.md",
+    page(
+      {
+        type: "feature",
+        title: "Feature A",
+        description: "A fixture feature.",
+        status: "draft",
+        lifecycle: "active",
+        generated: "{ by: new-test, at: 2026-01-01 }",
+      },
+      "# Feature A\n"
+    )
+  );
+  write(
+    "docs/features/a/sessions/2026-01-02-kickoff.md",
+    page(
+      {
+        type: "session",
+        title: "Kickoff",
+        description: "A fixture session.",
+        status: "stable",
+        generated: "{ by: new-test, at: 2026-01-02 }",
+      },
+      "# Kickoff\n"
+    )
+  );
+  write(
+    "docs/cycles/2026-09-x.md",
+    page(
+      {
+        type: "cycle",
+        title: "Cycle X",
+        description: "A fixture cycle.",
+        status: "draft",
+        lifecycle: "planned",
+        generated: "{ by: new-test, at: 2026-01-01 }",
+      },
+      "# Cycle X\n"
+    )
+  );
+  return root;
+}
+
+const newItem = (root: string, ...args: string[]) =>
+  run(["new", "item", ...args, "--root", root, "--format", "json"]);
+
+describe("pdocs new item", () => {
+  test("writes items/<slug>.md with a v7 id, the kind, `triage`, and `generated`", () => {
+    const root = workTree();
+    const r = newItem(root, "fix-hook", "--kind", "bug");
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(ExitCode.Success);
+    expect(JSON.parse(r.stdout).data.path).toBe("docs/items/fix-hook.md");
+
+    const f = fields(root, "docs/items/fix-hook.md");
+    expect(f.get("type")).toBe("item");
+    expect(f.get("id")).toMatch(V7);
+    expect(f.get("kind")).toBe("bug");
+    expect(f.get("lifecycle")).toBe("triage");
+    expect(f.get("generated")).toBe(`{ by: pdocs, at: ${today()} }`);
+    expect(run(["check", "--root", root, "--format", "text"]).stdout).toContain(
+      "docs-lint: clean"
+    );
+  });
+
+  test("two items get two ids", () => {
+    const root = workTree();
+    newItem(root, "one", "--kind", "task");
+    newItem(root, "two", "--kind", "task");
+    expect(fields(root, "docs/items/one.md").get("id")).not.toBe(
+      fields(root, "docs/items/two.md").get("id")
+    );
+  });
+
+  test("--kind missing exits 2 and lists the kinds", () => {
+    const root = workTree();
+    const r = newItem(root, "fix-hook");
+    expect(r.code).toBe(ExitCode.Usage);
+    const err = JSON.parse(r.stderr).error;
+    expect(err.message).toContain("--kind");
+    expect(err.choices).toEqual(["task", "bug", "chore", "research"]);
+    expect(existsSync(join(root, "docs/items/fix-hook.md"))).toBe(false);
+  });
+
+  test("--kind outside the vocabulary exits 2", () => {
+    const root = workTree();
+    const r = newItem(root, "fix-hook", "--kind", "story");
+    expect(r.code).toBe(ExitCode.Usage);
+    expect(r.stderr).toContain("task");
+  });
+
+  test("--id is not a flag: pdocs writes the id", () => {
+    const root = workTree();
+    const r = newItem(root, "x", "--kind", "task", "--id", "0190f4b2-7c3a-7d4e-8f00-00000000000a");
+    expect(r.code).toBe(ExitCode.Usage);
+  });
+
+  test("--parent must resolve to a feature, through the lint's own resolution", () => {
+    const root = workTree();
+    const bad = newItem(root, "x", "--kind", "task", "--parent", "feature/nope");
+    expect(bad.code).toBe(ExitCode.Usage);
+    expect(bad.stderr).toContain("feature/nope");
+    expect(existsSync(join(root, "docs/items/x.md"))).toBe(false);
+
+    const ok = newItem(root, "x", "--kind", "task", "--parent", "feature/a");
+    expect(ok.code).toBe(ExitCode.Success);
+    expect(fields(root, "docs/items/x.md").get("parent")).toBe("feature/a");
+  });
+
+  test("--cycle takes the cycle's slug, and refuses one that is not there", () => {
+    const root = workTree();
+    expect(newItem(root, "x", "--kind", "task", "--cycle", "2026-01-nope").code).toBe(
+      ExitCode.Usage
+    );
+    expect(newItem(root, "x", "--kind", "task", "--cycle", "2026-09-x").code).toBe(
+      ExitCode.Success
+    );
+    expect(fields(root, "docs/items/x.md").get("cycle")).toBe("2026-09-x");
+  });
+
+  test("--scope is checked against lint.scopes", () => {
+    const root = workTree();
+    const bad = newItem(root, "x", "--kind", "task", "--scope", "ui");
+    expect(bad.code).toBe(ExitCode.Usage);
+    expect(bad.stderr).toContain("lint.scopes");
+    expect(newItem(root, "x", "--kind", "task", "--scope", "cli").code).toBe(ExitCode.Success);
+    expect(fields(root, "docs/items/x.md").get("scope")).toBe("cli");
+  });
+
+  test("--from writes `from:` AND the Related link — one flag, both jobs", () => {
+    const root = workTree();
+    const r = newItem(
+      root,
+      "follow-up",
+      "--kind",
+      "chore",
+      "--from",
+      "docs/features/a/sessions/2026-01-02-kickoff.md"
+    );
+    expect(r.stderr).toBe("");
+    expect(fields(root, "docs/items/follow-up.md").get("from")).toBe(
+      "features/a/sessions/2026-01-02-kickoff.md"
+    );
+    expect(readFileSync(join(root, "docs/items/follow-up.md"), "utf8")).toContain(
+      "[Kickoff](../features/a/sessions/2026-01-02-kickoff.md)"
+    );
+    expect(run(["check", "--root", root, "--format", "text"]).stdout).toContain(
+      "docs-lint: clean"
+    );
+  });
+
+  test("--from also takes a reference, and writes its full form", () => {
+    const root = workTree();
+    const r = newItem(root, "from-feature", "--kind", "task", "--from", "feature/a");
+    expect(r.stderr).toBe("");
+    expect(fields(root, "docs/items/from-feature.md").get("from")).toBe("feature/a");
+    expect(readFileSync(join(root, "docs/items/from-feature.md"), "utf8")).toContain(
+      "(../features/a/feature.md)"
+    );
+  });
+
+  test("--blocked-by takes an id prefix and writes the full UUID", () => {
+    const root = workTree();
+    newItem(root, "first", "--kind", "task");
+    const id = fields(root, "docs/items/first.md").get("id") as string;
+    const r = newItem(root, "second", "--kind", "task", "--blocked-by", id.slice(0, 13));
+    expect(r.stderr).toBe("");
+    expect(fields(root, "docs/items/second.md").get("blocked_by")).toBe(`[${id}]`);
+    expect(run(["check", "--root", root, "--format", "text"]).stdout).toContain(
+      "docs-lint: clean"
+    );
+  });
+
+  test("--blocked-by with a reference that names nothing exits 2", () => {
+    const root = workTree();
+    const r = newItem(root, "second", "--kind", "task", "--blocked-by", "item/nope");
+    expect(r.code).toBe(ExitCode.Usage);
+    expect(existsSync(join(root, "docs/items/second.md"))).toBe(false);
+  });
+
+  test("--priority is checked against its vocabulary", () => {
+    const root = workTree();
+    expect(newItem(root, "x", "--kind", "task", "--priority", "p1").code).toBe(ExitCode.Usage);
+    expect(newItem(root, "x", "--kind", "task", "--priority", "high").code).toBe(
+      ExitCode.Success
+    );
   });
 });

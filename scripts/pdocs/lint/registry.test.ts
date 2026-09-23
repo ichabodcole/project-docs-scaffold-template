@@ -40,6 +40,15 @@ import {
 import { context, schemaLifecycles, templateProblems } from "./rules.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
+/** The parts of a validation input the cycle predicate does not read. */
+const NO_TREE = {
+  resolve: (): never => {
+    throw new Error("the cycle predicate resolves nothing");
+  },
+  scopes: [],
+  set: () => {},
+};
+
 const ROWS = buildRegistry(DEFAULT_CONFIG);
 
 /**
@@ -106,7 +115,6 @@ const UNCREATABLE = [
   "summary",
   "index",
   "feature",
-  "item",
   ...RETIRED,
 ];
 
@@ -170,9 +178,9 @@ describe("the registry covers the type system", () => {
 });
 
 describe("what `pdocs new` can create", () => {
-  test("twelve creatable types; the other fourteen say why not", () => {
+  test("thirteen creatable types; the other thirteen say why not", () => {
     const creatable = ROWS.filter((r) => r.creatable).map((r) => r.type);
-    expect(creatable).toHaveLength(12);
+    expect(creatable).toHaveLength(13);
     expect(ROWS.filter((r) => !r.creatable).map((r) => r.type).sort()).toEqual(
       [...UNCREATABLE].sort()
     );
@@ -344,10 +352,12 @@ describe("aliases and pre-write validation", () => {
         ).toBe("owner");
   });
 
-  test("`cycle` is the only row that declares a validate predicate", () => {
-    expect(ROWS.filter((r) => r.validate !== undefined).map((r) => r.type)).toEqual([
-      "cycle",
-    ]);
+  test("`cycle` and `item` are the rows that declare a validate predicate", () => {
+    expect(
+      ROWS.filter((r) => r.validate !== undefined)
+        .map((r) => r.type)
+        .sort()
+    ).toEqual(["cycle", "item"]);
   });
 
   // A cycle's scope is derived from the items that name it, so the predicate no
@@ -359,6 +369,7 @@ describe("aliases and pre-write validation", () => {
       type: "cycle",
       fields: new Map([["scope", "[project/nowhere]"]]),
       documents: [],
+      ...NO_TREE,
     });
     expect(problems).toEqual([]);
   });
@@ -376,7 +387,7 @@ describe("aliases and pre-write validation", () => {
     const validate = cycle.validate as NonNullable<RegistryRow["validate"]>;
 
     expect(
-      validate({ type: "cycle", fields: new Map([["lifecycle", "active"]]), documents })
+      validate({ type: "cycle", fields: new Map([["lifecycle", "active"]]), documents, ...NO_TREE })
     ).toEqual([
       {
         kind: "conflict",
@@ -386,7 +397,7 @@ describe("aliases and pre-write validation", () => {
 
     // `planned` beside an active one is fine; the invariant is about `active`.
     expect(
-      validate({ type: "cycle", fields: new Map([["lifecycle", "planned"]]), documents })
+      validate({ type: "cycle", fields: new Map([["lifecycle", "planned"]]), documents, ...NO_TREE })
     ).toEqual([]);
   });
 });
@@ -729,20 +740,29 @@ describe("the retired types", () => {
 });
 
 describe("an uncreatable work type names the fallback that works today (review J)", () => {
-  // Until `pdocs new item` and `--owner` land, the only way to write a work
-  // document is to copy its template. Every refusal names the exact file.
+  // Every refusal to create a work document names what to run instead: the
+  // `pdocs` command where one exists, and the exact template to copy where
+  // none does yet.
   const templatePathsIn = (reason: string) =>
     [...reason.matchAll(/docs\/TEMPLATES\/[A-Z-]+\.template\.md/g)].map((m) => m[0]);
 
-  test("feature, item and the work-shaped retired types each name a template that exists", () => {
-    for (const type of ["feature", "item", "proposal", "backlog", "fragment", "brief", "investigation"]) {
+  test("the retired item-shaped types name `pdocs new item`", () => {
+    for (const type of ["backlog", "fragment", "brief", "investigation"])
+      expect({ type, reason: row(type).uncreatableReason }).toEqual({
+        type,
+        reason: expect.stringContaining("pdocs new item <slug>") as never,
+      });
+    expect(row("investigation").uncreatableReason).toContain("--kind research");
+  });
+
+  test("feature, proposal, brief and investigation name a template that exists", () => {
+    for (const type of ["feature", "proposal", "brief", "investigation"]) {
       const reason = row(type).uncreatableReason as string;
       const paths = templatePathsIn(reason);
       expect({ type, named: paths.length > 0 }).toEqual({ type, named: true });
       for (const p of paths) expect({ type, p, exists: existsSync(join(REPO_ROOT, p)) }).toEqual({ type, p, exists: true });
     }
     expect(row("feature").uncreatableReason).toContain("docs/features/<slug>/feature.md");
-    expect(row("item").uncreatableReason).toContain("docs/items/<slug>.md");
     expect(row("investigation").uncreatableReason).toContain("WRITE-UP.template.md");
   });
 
@@ -753,9 +773,9 @@ describe("an uncreatable work type names the fallback that works today (review J
 
   test("the paths follow the configured docs root", () => {
     const moved = buildRegistry({ ...DEFAULT_CONFIG, docsRoot: "documentation" });
-    expect(moved.find((r) => r.type === "item")?.uncreatableReason).toContain(
-      "documentation/TEMPLATES/ITEM.template.md"
+    expect(moved.find((r) => r.type === "feature")?.uncreatableReason).toContain(
+      "documentation/TEMPLATES/FEATURE.template.md"
     );
-    expect(moved.find((r) => r.type === "item")?.uncreatableReason).not.toContain("{docs}");
+    expect(moved.find((r) => r.type === "feature")?.uncreatableReason).not.toContain("{docs}");
   });
 });

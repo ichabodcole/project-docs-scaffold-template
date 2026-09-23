@@ -67,6 +67,13 @@ export const KINDS = ["task", "bug", "chore", "research"];
  *  `**Status:**` did. */
 export const PRIORITIES = ["urgent", "high", "medium", "low"];
 
+/** The `extra` fields whose values are a closed set, and the set. `pdocs new`
+ *  and `pdocs set` refuse anything outside it before writing. */
+export const FIELD_VALUES: Record<string, readonly string[]> = {
+  kind: KINDS,
+  priority: PRIORITIES,
+};
+
 // ---------------------------------------------------------------------------------------
 // The source tables
 // ---------------------------------------------------------------------------------------
@@ -301,6 +308,28 @@ export interface ValidationInput {
   /** The frontmatter about to be written, parsed. */
   fields: ReadonlyMap<string, string>;
   documents: readonly ExistingDocument[];
+  /**
+   * Resolve a reference the way the lint does (`resolveRef` in `work.ts`, over
+   * the tree as it stands). Throws a usage error when it names nothing, or
+   * more than one thing, or the wrong kind of thing.
+   */
+  resolve: (ref: string, kinds: ReadonlyArray<"feature" | "item" | "cycle">) => ResolvedRef;
+  /** `lint.scopes` in `.project-docs.json`. */
+  scopes: readonly string[];
+  /**
+   * Replace a field's value in the document about to be written. How a
+   * validator hands back the CANONICAL form of what it resolved: a caller may
+   * type an id prefix, and the document carries the full id (D6).
+   */
+  set: (key: string, value: string) => void;
+}
+
+/** What `ValidationInput.resolve` hands back: enough to write the reference. */
+export interface ResolvedRef {
+  entity: "feature" | "item" | "cycle";
+  slug: string;
+  id: string | null;
+  path: string;
 }
 
 /**
@@ -430,9 +459,7 @@ type Creation = {
  * inventing a convention rather than recording one. Add the second member the
  * day a real file needs it.
  */
-/** The two fallbacks a refusal names until `pdocs new` writes work documents. */
-const COPY_ITEM =
-  "copy {docs}/TEMPLATES/ITEM.template.md to {docs}/items/<slug>.md and give it a lowercase UUID `id`";
+/** The fallback a refusal names until `pdocs new feature` is built. */
 const COPY_FEATURE =
   "copy {docs}/TEMPLATES/FEATURE.template.md to {docs}/features/<slug>/feature.md";
 
@@ -470,26 +497,27 @@ const CREATION: Record<string, Creation> = {
   backlog: {
     filename: { kind: "slug", date: "day" },
     template: null,
-    uncreatableReason: `retired in 9.0.0; the replacement is a work item (\`pdocs new item <slug> --kind task\`, not built yet) — until then ${COPY_ITEM}`,
+    uncreatableReason: "retired in 9.0.0; the replacement is a work item — `pdocs new item <slug> --kind task`",
   },
   fragment: {
     filename: { kind: "slug", date: "day" },
     template: null,
-    uncreatableReason: `retired in 9.0.0; the replacement is a \`triage\` work item (\`pdocs new item <slug> --kind task\`, not built yet) — until then ${COPY_ITEM}`,
+    uncreatableReason:
+      "retired in 9.0.0; the replacement is a `triage` work item — `pdocs new item <slug> --kind task` (a new item starts in `triage`)",
   },
   brief: {
     filename: { kind: "slug", date: "day" },
     template: null,
-    uncreatableReason: `retired in 9.0.0; write the idea as a feature or a \`triage\` work item — until \`pdocs new\` makes them, ${COPY_FEATURE}, or ${COPY_ITEM}`,
+    uncreatableReason: `retired in 9.0.0; write the idea as a \`triage\` work item (\`pdocs new item <slug> --kind task\`) or as a feature — until \`pdocs new feature\` is built, ${COPY_FEATURE}`,
   },
   investigation: {
     filename: { kind: "slug", date: "day", suffix: "investigation" },
     template: null,
     uncreatableReason:
-      "retired in 9.0.0; the replacement is a research work item and its write-up " +
-      "(`pdocs new item <slug> --kind research`, not built yet) — until then copy " +
-      "{docs}/TEMPLATES/ITEM.template.md to {docs}/items/<slug>/item.md with `kind: research` " +
-      "and a lowercase UUID `id`, and {docs}/TEMPLATES/WRITE-UP.template.md to {docs}/items/<slug>/write-up.md",
+      "retired in 9.0.0; the replacement is a research work item and its write-up — " +
+      "`pdocs new item <slug> --kind research`, then, until `--owner` is built, copy " +
+      "{docs}/TEMPLATES/WRITE-UP.template.md to {docs}/items/<slug>/write-up.md and move " +
+      "{docs}/items/<slug>.md to {docs}/items/<slug>/item.md",
   },
   proposal: {
     filename: { kind: "fixed", name: "proposal.md" },
@@ -509,18 +537,14 @@ const CREATION: Record<string, Creation> = {
       "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`), or start one with `pdocs new playbook <slug>`",
   },
 
-  // The work taxonomy's entities. Created by `pdocs new` once it learns
-  // `--owner` and writes an `id`; until then, written from the template.
+  // The work taxonomy's entities. `pdocs new item` mints the `id`; a feature
+  // is created once `new` learns `--owner`.
   feature: {
     filename: { kind: "fixed", name: "feature.md" },
     template: "TEMPLATES/FEATURE.template.md",
     uncreatableReason: `\`pdocs new feature\` is not built yet — ${COPY_FEATURE}`,
   },
-  item: {
-    filename: { kind: "slug", date: "none" },
-    template: "TEMPLATES/ITEM.template.md",
-    uncreatableReason: `\`pdocs new item\` is not built yet — ${COPY_ITEM}`,
-  },
+  item: { filename: { kind: "slug", date: "none" }, template: "TEMPLATES/ITEM.template.md" },
 
   // Owned, dated.
   report: {
@@ -621,6 +645,47 @@ const CREATION: Record<string, Creation> = {
  * every answer in one place.
  */
 const VALIDATION: Record<string, Validator> = {
+  // A work item's references resolve, and are written in their full form
+  // (D6): `--parent` a feature, `--cycle` a cycle's slug, `--blocked-by` item
+  // ids. `scope` names one value `lint.scopes` declares. The same resolution
+  // the lint runs over the tree afterwards, so nothing `new` writes is a
+  // finding on the next `pdocs check`.
+  item: ({ fields, resolve, scopes, set }) => {
+    const problems: ValidationProblem[] = [];
+    const value = (key: string) =>
+      (fields.get(key) ?? "").trim().replace(/^(["'])(.*)\1$/, "$2");
+
+    const parent = value("parent");
+    if (parent) set("parent", `feature/${resolve(parent, ["feature"]).slug}`);
+
+    const cycle = value("cycle");
+    if (cycle)
+      set("cycle", resolve(cycle.startsWith("cycle/") ? cycle : `cycle/${cycle}`, ["cycle"]).slug);
+
+    const blockers = (fields.get("blocked_by") ?? "")
+      .replace(/^\[|\]$/g, "")
+      .split(",")
+      .map((b) => b.trim().replace(/^(["'])(.*)\1$/, "$2"))
+      .filter(Boolean);
+    if (blockers.length)
+      set(
+        "blocked_by",
+        `[${blockers.map((b) => resolve(b, ["item"]).id ?? b).join(", ")}]`
+      );
+
+    const scope = value("scope");
+    if (scope && !scopes.includes(scope))
+      problems.push({
+        kind: "usage",
+        message:
+          `--scope: \`${scope}\` is not declared — declare it in lint.scopes in .project-docs.json` +
+          (scopes.length ? ` (declared: ${scopes.join(", ")})` : " (none are declared yet)") +
+          ".",
+      });
+
+    return problems;
+  },
+
   // "`pdocs new cycle` refuses to open a second active cycle." A cycle's
   // scope used to be resolved here too; it is derived from the items that
   // name the cycle now, so `scope:` is only kept in `extra` for the legacy

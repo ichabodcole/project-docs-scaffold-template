@@ -55,6 +55,7 @@ import {
 import { OKF_STATUS, type Ctx } from "../lint/rules.ts";
 import {
   type ExistingDocument,
+  FIELD_VALUES,
   PROJECTS_FOLDER,
   type RegistryRow,
   TYPE_ALIAS,
@@ -63,6 +64,8 @@ import {
   retiredWordReason,
 } from "../lint/registry.ts";
 import { collectPages, pageKeys } from "../pages.ts";
+import { uuidv7 } from "../uuid.ts";
+import { type WorkModel, collectWork, refFor, resolveRef } from "../work.ts";
 
 /** `data` in the envelope. */
 export interface NewData {
@@ -638,9 +641,12 @@ const EXTRA_FLAGS = [
   ...new Set([...defaultRegistryIndex().values()].flatMap((r) => r.extra)),
 ]
   // `from:` is an item field, and `--from` is already the flag that names the
-  // source document; one flag serves both (Task 2.3 wires the field).
-  .filter((key) => key !== "from")
+  // source document; one flag serves both. `id:` is minted, never typed.
+  .filter((key) => key !== "from" && key !== "id")
   .sort();
+
+/** A field's flag: `blocked_by` is `--blocked-by`. */
+export const flagFor = (key: string): string => `--${key.replace(/_/g, "-")}`;
 
 function flagValue(
   flags: Record<string, string | true>,
@@ -674,14 +680,37 @@ function existingDocuments(ctx: Ctx): ExistingDocument[] {
   }));
 }
 
-/** `--from`, as a path that resolves, tried repo-relative and then
- *  docs-relative — an agent holding a `find` result has the first, and a person
- *  reading a folder README has the second. */
-function resolveFrom(ctx: Ctx, from: string): string {
+/**
+ * `--from`, as a file that resolves, tried repo-relative and then docs-relative
+ * — an agent holding a `find` result has the first, and a person reading a
+ * folder README has the second.
+ *
+ * On a type that declares a `from:` field (`model` is passed), the field's
+ * value comes back too, in the form D6 stores: a document's docs-root-relative
+ * path, or — when `--from` is a reference rather than a path — the entity's
+ * full form (an item's id, `feature/<slug>`, `cycle/<slug>`), linked through
+ * its entity file.
+ */
+function resolveFrom(
+  ctx: Ctx,
+  from: string,
+  model: (() => WorkModel) | null
+): { abs: string; field?: string } {
   const cleaned = from.replace(/^\.\//, "");
   for (const base of [ctx.repoRoot, ctx.docsRoot]) {
     const abs = resolve(base, cleaned);
-    if (existsSync(abs) && statSync(abs).isFile()) return abs;
+    if (!existsSync(abs) || !statSync(abs).isFile()) continue;
+    if (model === null) return { abs };
+    const within = relative(ctx.docsRoot, abs);
+    if (within.startsWith("..") || within === "")
+      throw new UsageError(
+        `--from: \`${from}\` is outside the docs root — \`from:\` names a document under it.`
+      );
+    return { abs, field: within.split(sep).join("/") };
+  }
+  if (model !== null && /^(feature|item|cycle)\/|^[0-9a-f-]{8,}$/i.test(cleaned)) {
+    const e = resolveRef(model(), cleaned);
+    return { abs: join(ctx.repoRoot, e.path), field: refFor(e) };
   }
   throw new NotFoundError(
     `--from: no file at \`${from}\` (tried it against the repository root and the docs root).`
@@ -735,7 +764,7 @@ export const newCommand: Command = {
       summary: "The document this one came out of; linked from its Related section.",
     },
     ...EXTRA_FLAGS.map((key) => ({
-      flag: `--${key}`,
+      flag: flagFor(key),
       metavar: "<value>",
       summary: `\`${key}:\` — only on a type that declares it.`,
     })),
@@ -830,17 +859,42 @@ export const newCommand: Command = {
       fills.set(key, asWritten(key, value));
     }
 
+    const rowFlags = row.extra.filter((e) => EXTRA_FLAGS.includes(e)).map(flagFor);
     for (const key of EXTRA_FLAGS) {
-      const value = flagValue(flags, `--${key}`);
+      const flag = flagFor(key);
+      const value = flagValue(flags, flag);
       if (value === undefined) continue;
       if (!row.extra.includes(key))
         throw new UsageError(
-          `--${key} is not a field of \`${row.type}\`${
-            row.extra.length ? ` — it takes ${row.extra.map((e) => `--${e}`).join(", ")}` : ""
+          `${flag} is not a field of \`${row.type}\`${
+            rowFlags.length ? ` — it takes ${rowFlags.join(", ")}` : ""
           }.`,
-          { token: `--${key}`, choices: row.extra.map((e) => `--${e}`) }
+          { token: flag, choices: rowFlags }
+        );
+      const closed = FIELD_VALUES[key];
+      if (closed && !closed.includes(value))
+        throw new UsageError(
+          `${flag}: \`${value}\` is not a ${key} — ${closed.join(" | ")}.`,
+          { token: value, choices: [...closed] }
         );
       fills.set(key, asWritten(key, value));
+    }
+
+    // The keys this row REQUIRES beyond the universal ones. An `id` is minted
+    // here and never typed (a UUIDv7, so ids sort by filing time). Any other
+    // must be passed: the template's value is an example, and a default would
+    // file every bug as a task.
+    for (const key of row.required) {
+      if (key === "id") {
+        fills.set("id", uuidv7());
+        continue;
+      }
+      if (fills.has(key)) continue;
+      const closed = FIELD_VALUES[key];
+      throw new UsageError(
+        `a \`${row.type}\` needs ${flagFor(key)}${closed ? ` — ${closed.join(" | ")}` : ""}.`,
+        closed ? { token: flagFor(key), choices: [...closed] } : { token: flagFor(key) }
+      );
     }
 
     // A LIST THE CALLER DID NOT FILL keeps whatever the template put there, and
@@ -869,23 +923,39 @@ export const newCommand: Command = {
       );
     fills.set("generated", `{ by: ${flagValue(flags, "--by") ?? "pdocs"}, at: ${date} }`);
 
+    // ---- --from: the source document, and on a type that declares it, `from:` ----------
+    let work: WorkModel | null = null;
+    const model = (): WorkModel => (work ??= collectWork(ctx));
+    const from = flagValue(flags, "--from");
+    const source =
+      from === undefined ? null : resolveFrom(ctx, from, row.extra.includes("from") ? model : null);
+    if (source?.field !== undefined) fills.set("from", scalar(source.field));
+
     // ---- validate, before anything is written ------------------------------------------
-    const frontmatter = rewriteFrontmatter(block, fills);
-    const resolved = parseFrontmatter(frontmatter);
+    let frontmatter = rewriteFrontmatter(block, fills);
+    let resolved = parseFrontmatter(frontmatter);
+    const canonical = new Map<string, string>();
     for (const problem of row.validate?.({
       type: row.type,
       fields: resolved,
       documents: existingDocuments(ctx),
+      resolve: (ref, kinds) => resolveRef(model(), ref, kinds),
+      scopes: ctx.config.lint.scopes,
+      set: (key, value) => canonical.set(key, value),
     }) ?? [])
       throw problem.kind === "conflict"
         ? new ConflictError(problem.message)
         : new UsageError(problem.message);
+    if (canonical.size) {
+      for (const [key, value] of canonical) fills.set(key, value);
+      frontmatter = rewriteFrontmatter(block, fills);
+      resolved = parseFrontmatter(frontmatter);
+    }
 
     // ---- the body ----------------------------------------------------------------------
     let out = body;
-    const from = flagValue(flags, "--from");
-    if (from !== undefined) {
-      const abs = resolveFrom(ctx, from);
+    if (source !== null) {
+      const abs = source.abs;
       const href = relative(dir, abs).replace(/^(?!\.)/, "./");
       const fields = parseFrontmatter(
         /^---\n([\s\S]*?)\n---/.exec(readFileSync(abs, "utf8"))?.[1] ?? ""
