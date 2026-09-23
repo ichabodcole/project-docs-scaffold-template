@@ -302,6 +302,21 @@ describe("pdocs promote", () => {
     expect(r.code).toBe(ExitCode.Success);
   });
 
+  test("the tracked-file listing ignores a hook's GIT_INDEX_FILE (review 8)", () => {
+    // `git commit -a` hands its hook a GIT_INDEX_FILE. A git spawned with that
+    // environment reads the wrong index — here one that does not exist, so it
+    // lists nothing — and the repository README's link to the item is left
+    // broken. `gitEnv()` strips the variable; this fails if move.ts stops
+    // passing it.
+    const root = tree();
+    const r = Bun.spawnSync(["bun", CLI, "promote", "item/x", "--root", root, "--format", "json"], {
+      cwd: REPO_ROOT,
+      env: childEnv({ GIT_INDEX_FILE: join(root, "no-such-index") }),
+    });
+    expect(r.stderr.toString()).toBe("");
+    expect(readFileSync(join(root, "README.md"), "utf8")).toContain("(docs/items/x/item.md)");
+  });
+
   test("promoting an item that is already a folder is a no-op and exits 0", () => {
     const root = tree();
     promote(root, "item/x");
