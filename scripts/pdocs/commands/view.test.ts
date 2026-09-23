@@ -192,6 +192,18 @@ describe("pdocs view", () => {
     expect(y.closable).toBe(true);
   });
 
+  test("an empty cycle is not closable (review 5)", () => {
+    const root = tree();
+    writeFileSync(
+      join(root, "docs/cycles/2026-11-empty.md"),
+      cycle.replace("lifecycle: active", "lifecycle: planned")
+    );
+    const r = run(["view", "cycle", "2026-11-empty", "--root", root, "--format", "json"]);
+    const d = JSON.parse(r.stdout).data;
+    expect(d.items).toEqual([]);
+    expect(d.closable).toBe(false);
+  });
+
   test("scope <name>: the features and items in it", () => {
     expect(slugs(data("scope", "cli").items)).toEqual(["auth", "f-active"]);
     expect(slugs(data("scope", "lint").items)).toEqual(["g-review"]);

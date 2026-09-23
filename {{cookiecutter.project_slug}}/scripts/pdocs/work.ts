@@ -405,7 +405,8 @@ export function viewFeature(
 
 /**
  * `cycle <slug>`: the items that name the cycle — its scope is derived from
- * them — and whether it can close: every one finished or dropped.
+ * them — and whether it can close: it has at least one item, and every one
+ * is finished or dropped.
  */
 export function viewCycle(
   model: WorkModel,
@@ -415,7 +416,10 @@ export function viewCycle(
   return {
     cycle,
     items,
-    closable: items.every((e) => e.group === "completed" || e.group === "cancelled"),
+    // An empty cycle has done nothing, so there is nothing to close (review 5).
+    closable:
+      items.length > 0 &&
+      items.every((e) => e.group === "completed" || e.group === "cancelled"),
   };
 }
 
