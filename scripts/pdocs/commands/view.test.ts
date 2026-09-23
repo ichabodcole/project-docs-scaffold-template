@@ -256,4 +256,15 @@ describe("pdocs view", () => {
     expect(r.stdout).toContain("started");
     expect(r.stdout).toContain("docs/items/f-active.md");
   });
+
+  test("text output shows an item's 12-character short id; JSON keeps the full id (D18)", () => {
+    // Read from ROOT's own file: a later `tree()` reassigns IDS.
+    const full = /\nid: (\S+)/.exec(
+      readFileSync(join(ROOT, "docs/items/f-active.md"), "utf8")
+    )![1] as string;
+    const text = run(["view", "board", "--root", ROOT, "--format", "text"]).stdout;
+    expect(text).toContain(full.slice(0, 12));
+    expect(text).not.toContain(full);
+    expect(JSON.stringify(data("board"))).toContain(full);
+  });
 });

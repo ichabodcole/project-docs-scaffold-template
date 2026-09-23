@@ -216,6 +216,13 @@ describe("pdocs set", () => {
     ]);
   });
 
+  test("text output shows ids short; JSON keeps them full (D18)", () => {
+    const root = tree();
+    const text = run(["set", "item/fix-hook", "--blocked-by", B, "--root", root, "--format", "text"]).stdout;
+    expect(text).toContain(`blocked_by: (none) -> [${B.slice(0, 12)}]`);
+    expect(text).not.toContain(B);
+  });
+
   test("the tree is clean after a run of changes", () => {
     const root = tree();
     set(root, "item/fix-hook", "--lifecycle", "active", "--assignee", "seat-2", "--scope", "cli");

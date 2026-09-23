@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { UsageError } from "./envelope.ts";
 import { type Ctx, context } from "./lint/rules.ts";
-import { collectWork, resolveRef } from "./work.ts";
+import { collectWork, resolveRef, shortId } from "./work.ts";
 
 const roots: string[] = [];
 afterAll(() => {
@@ -158,6 +158,19 @@ describe("resolveRef", () => {
     const msg = (err as Error).message;
     expect(msg).toContain("docs/items/fix-hook.md");
     expect(msg).toContain("docs/items/big/item.md");
+  });
+
+  test("an ambiguity names each candidate by its 12-character short id (D18)", () => {
+    let msg = "";
+    try {
+      resolveRef(work, "0190f4b2");
+    } catch (e) {
+      msg = (e as Error).message;
+    }
+    expect(msg).toContain(`${A.slice(0, 12)} docs/items/fix-hook.md`);
+    expect(msg).toContain(`${B.slice(0, 12)} docs/items/big/item.md`);
+    expect(msg).not.toContain(A);
+    expect(shortId(A)).toBe("0190f4b2-7c3");
   });
 
   test("a prefix shorter than 8 characters is refused", () => {

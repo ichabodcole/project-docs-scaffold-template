@@ -75,6 +75,7 @@ import {
   entitiesBySlug,
   refFor,
   resolveRef,
+  shortId,
 } from "../work.ts";
 import { promoteItem } from "./promote.ts";
 import { movedTo } from "../links-rewrite.ts";
@@ -1131,6 +1132,8 @@ export const newCommand: Command = {
     if (format === "json") printEnvelope("new", data);
     else {
       console.log(rel);
+      const id = fills.get("id");
+      if (id !== undefined) console.log(`  id ${shortId(id)}`);
       if (promoted !== null) console.log(`  promoted its owner to ${promoted}`);
       for (const other of created.slice(1)) console.log(`  + catalog line in ${other}`);
     }

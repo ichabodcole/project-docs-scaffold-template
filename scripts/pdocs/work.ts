@@ -213,6 +213,21 @@ export function collectWork(ctx: Ctx): WorkModel {
 /** The shortest id prefix `resolveRef` accepts (D6). */
 export const MIN_PREFIX = 8;
 
+/**
+ * How long an id is when `pdocs` PRINTS it for a person or an agent to copy
+ * (D18): views, refusal and ambiguity messages, `new` and `set` text output.
+ * JSON always carries the full id, and a reference still needs only 8.
+ */
+export const SHORT_ID = 12;
+
+export const shortId = (id: string): string => id.slice(0, SHORT_ID);
+
+/** `text` with every full UUID in it shortened (D18). */
+export const shortenIds = (text: string): string =>
+  text.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, (id) =>
+    shortId(id)
+  );
+
 const FORMS =
   "a full item id, a unique id prefix of 8+ characters, `item/<slug>`, `feature/<slug>` or `cycle/<slug>`";
 
@@ -243,7 +258,7 @@ export function resolveRef(
     if (found.length > 1)
       throw new UsageError(
         `\`${ref}\` is ambiguous — it names ${found.length} entities: ${found
-          .map((e) => e.path)
+          .map((e) => (e.id ? `${shortId(e.id)} ${e.path}` : e.path))
           .join(", ")}. Use a longer id prefix or the full id.`,
         { token: ref, choices: found.map((e) => e.path) }
       );

@@ -7,6 +7,8 @@ import type { Command, Invocation } from "../cli.ts";
 import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import {
   GROUPS,
+  SHORT_ID,
+  shortId,
   type WorkEntity,
   collectWork,
   resolveRef,
@@ -76,7 +78,9 @@ export const VIEWS: ReadonlyArray<{ name: string; arg?: string; summary: string 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function line(e: ViewEntry): string {
-  return `  ${(e.lifecycle ?? "-").padEnd(8)}  ${(e.priority ?? "-").padEnd(6)}  ${e.path}${
+  // An item's short id (D18), so the line can be copied into `pdocs set`.
+  const id = (e.id ? shortId(e.id) : "-").padEnd(SHORT_ID);
+  return `  ${id}  ${(e.lifecycle ?? "-").padEnd(8)}  ${(e.priority ?? "-").padEnd(6)}  ${e.path}${
     e.title ? `  — ${e.title}` : ""
   }`;
 }

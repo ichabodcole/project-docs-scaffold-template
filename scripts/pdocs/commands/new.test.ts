@@ -1140,6 +1140,14 @@ describe("pdocs new item", () => {
     );
   });
 
+  test("text output names the new item's 12-character short id (D18)", () => {
+    const root = workTree();
+    const text = run(["new", "item", "fix-hook", "--kind", "bug", "--root", root, "--format", "text"]).stdout;
+    const id = fields(root, "docs/items/fix-hook.md").get("id") as string;
+    expect(text).toContain(`id ${id.slice(0, 12)}`);
+    expect(text).not.toContain(id);
+  });
+
   test("two items get two ids", () => {
     const root = workTree();
     newItem(root, "one", "--kind", "task");
