@@ -756,11 +756,40 @@ describe("the emitted declaration", () => {
   test("what a verb declares is what its rejection enumerates", () => {
     // THE BINDING, asserted from outside the process. `declaredArgs` is the one
     // call behind both, so a flag can only ever be in both or in neither.
-    for (const verb of ["check", "find", "new", "orphans", "schema", "help"]) {
+    for (const verb of [
+      "check",
+      "find",
+      "new",
+      "orphans",
+      "view",
+      "set",
+      "promote",
+      "archive",
+      "schema",
+      "help",
+    ]) {
       const declared = at(declaration(), [verb]).args.map((a) => a.name);
       const { stderr } = run([verb, "--acc-not-a-flag"]);
       expect(JSON.parse(stderr).error.choices).toEqual(declared);
     }
+  });
+
+  test("the work verbs are declared, with the positional each takes", () => {
+    const d = declaration();
+    for (const verb of ["set", "promote", "archive"])
+      expect(at(d, [verb]).positionals).toEqual([{ name: "ref", required: true }]);
+    expect(at(d, ["view"]).positionals).toEqual([
+      { name: "view", required: true },
+      { name: "arg", required: false },
+    ]);
+    const names = (verb: string) => at(d, [verb]).args.map((a) => a.name);
+    expect(names("view")).toContain("--since");
+    expect(names("set")).toContain("--blocked-by");
+    expect(names("set")).toContain("--unset");
+    expect(names("set")).not.toContain("--accept");
+    expect(names("new")).toContain("--blocked-by");
+    for (const flag of ["--kind", "--parent", "--cycle", "--scope", "--id"])
+      expect(names("find")).toContain(flag);
   });
 
   test("check declares --against, a string", () => {

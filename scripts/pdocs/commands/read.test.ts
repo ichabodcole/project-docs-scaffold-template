@@ -778,3 +778,104 @@ describe("pageKeys — features and items", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// find over the work taxonomy (plan Task 2.9)
+// ---------------------------------------------------------------------------------------
+
+describe("pdocs find — work filters", () => {
+  const BUG = "0190f4b2-7c3a-7d4e-8f00-00000000000a";
+  const TASK = "0190f4c9-1d2e-7f00-8a00-00000000000b";
+  const item = (id: string, extra: Record<string, string>) =>
+    page({
+      type: "item",
+      title: "An item",
+      description: "Something to do.",
+      status: "draft",
+      lifecycle: "backlog",
+      id,
+      generated: "{ by: read-test, at: 2026-09-01 }",
+      ...extra,
+    });
+  const WORK = tree({
+    "docs/SCHEMA.md": SCHEMA,
+    "docs/features/a/feature.md": page({
+      type: "feature",
+      title: "A",
+      description: "A feature.",
+      status: "draft",
+      lifecycle: "active",
+      scope: "cli",
+      generated: "{ by: read-test, at: 2026-09-01 }",
+    }),
+    "docs/cycles/2026-09-x.md": page({
+      type: "cycle",
+      title: "X",
+      description: "A cycle.",
+      status: "draft",
+      lifecycle: "active",
+      generated: "{ by: read-test, at: 2026-09-01 }",
+    }),
+    "docs/items/the-bug.md": item(BUG, {
+      kind: "bug",
+      cycle: "2026-09-x",
+      parent: "feature/a",
+      scope: "cli",
+    }),
+    "docs/items/the-task/item.md": item(TASK, { kind: "task", cycle: "2026-09-x" }),
+  });
+  // The tree above uses the legacy config; add the new owners to it.
+  const cfgPath = join(WORK, ".project-docs.json");
+  const cfg = JSON.parse(readFileSync(cfgPath, "utf8"));
+  cfg.lint.workbench.push("features", "items");
+  cfg.lint.scopes = ["cli"];
+  writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+
+  const find = (...args: string[]) => {
+    const r = run(["find", ...args, "--format", "json", "--root", WORK]);
+    return { ...r, out: r.code === 0 ? JSON.parse(r.stdout).data : null };
+  };
+  const paths = (...args: string[]) =>
+    find(...args).out.matches.map((m: { path: string }) => m.path);
+
+  test("--kind and --cycle, ANDed", () => {
+    expect(paths("--kind", "bug", "--cycle", "2026-09-x")).toEqual(["docs/items/the-bug.md"]);
+    expect(paths("--cycle", "2026-09-x")).toEqual([
+      "docs/items/the-bug.md",
+      "docs/items/the-task/item.md",
+    ]);
+  });
+
+  test("--parent, --scope", () => {
+    expect(paths("--parent", "feature/a")).toEqual(["docs/items/the-bug.md"]);
+    expect(paths("--scope", "cli")).toEqual([
+      "docs/features/a/feature.md",
+      "docs/items/the-bug.md",
+    ]);
+  });
+
+  test("--id takes a prefix, in any case", () => {
+    expect(paths("--id", "0190f4c9")).toEqual(["docs/items/the-task/item.md"]);
+    expect(paths("--id", TASK.toUpperCase())).toEqual(["docs/items/the-task/item.md"]);
+    expect(paths("--id", "0190f4")).toHaveLength(2);
+  });
+
+  test("a match carries id, kind, parent, cycle and scope", () => {
+    const [m] = find("--kind", "bug").out.matches;
+    expect(m).toMatchObject({
+      id: BUG,
+      kind: "bug",
+      parent: "feature/a",
+      cycle: "2026-09-x",
+      scope: "cli",
+    });
+    const [f] = find("--type", "feature").out.matches;
+    expect(f).toMatchObject({ id: null, kind: null, parent: null, cycle: null, scope: "cli" });
+  });
+
+  test("a filter that cannot be applied is refused, not answered with nothing", () => {
+    expect(find("--kind", "story").code).toBe(ExitCode.Usage);
+    expect(find("--parent", "a").code).toBe(ExitCode.Usage);
+    expect(find("--id", "not-hex!").code).toBe(ExitCode.Usage);
+  });
+});

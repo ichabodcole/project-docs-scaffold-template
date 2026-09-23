@@ -52,6 +52,10 @@ import {
  *  `project/<folder>` until this repository has migrated. */
 const LEGACY_PROJECT_ENTRY = ENTITY_FILE[PROJECTS_FOLDER]!.type;
 
+/** A frontmatter value with its surrounding quotes removed; `null` when absent. */
+const unquoted = (v: string | undefined): string | null =>
+  v === undefined || v === "" ? null : v.replace(/^(["'])(.*)\1$/, "$2");
+
 /** One document, flattened. Every field is either frontmatter as written or
  *  something derived from the file's position — nothing here is a judgement. */
 export interface Page {
@@ -75,6 +79,12 @@ export interface Page {
   lifecycle: string | null;
   /** A work item's `id`, as written (quotes removed); `null` elsewhere. */
   id: string | null;
+  /** A work item's `kind`; `null` elsewhere. */
+  kind: string | null;
+  /** The work fields a `find` filters on, as written (quotes removed). */
+  parent: string | null;
+  cycle: string | null;
+  scope: string | null;
   tags: string[];
   /** Raw `type/slug` entries, as written. Unresolved on purpose: whether an
    *  edge points at a real page is the lint's question. */
@@ -146,7 +156,11 @@ export function collectPages(ctx: Ctx): Page[] {
       description: fields.get("description") ?? null,
       status: fields.get("status") ?? null,
       lifecycle: fields.get("lifecycle") ?? null,
-      id: fields.get("id")?.replace(/^(["'])(.*)\1$/, "$2") ?? null,
+      id: unquoted(fields.get("id")),
+      kind: unquoted(fields.get("kind")),
+      parent: unquoted(fields.get("parent")),
+      cycle: unquoted(fields.get("cycle")),
+      scope: unquoted(fields.get("scope")),
       tags: yamlList(fields.get("tags")),
       related: yamlList(fields.get("related")),
       date: parseGenerated(fields.get("generated"))?.at ?? null,
