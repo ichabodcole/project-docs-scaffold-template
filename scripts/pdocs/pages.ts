@@ -27,7 +27,7 @@
 // a caller ends up fixing it in the wrong place.
 
 import { readFileSync } from "node:fs";
-import { basename, dirname, relative } from "node:path";
+import { basename, dirname, relative, sep } from "node:path";
 import {
   checkLinks,
   parseFrontmatter,
@@ -59,6 +59,10 @@ export interface Page {
    *  vocabulary any read command speaks, so a `find` result can be handed
    *  straight back to `backlinks`. */
   path: string;
+  /** The same path relative to the docs root, `/`-separated. Positions are
+   *  read from this, so a folder that happens to share a name with an owner
+   *  (`items/items/`) cannot be mistaken for one. */
+  docsPath: string;
   tier: "library" | "workbench";
   /** The type the document's POSITION says it carries; `""` when its folder
    *  declares none. Not the `type:` field — a document whose frontmatter
@@ -135,6 +139,7 @@ export function collectPages(ctx: Ctx): Page[] {
 
     pages.push({
       path: file.rel,
+      docsPath: relative(ctx.docsRoot, file.path).split(sep).join("/"),
       tier: file.tier,
       type: file.type,
       title: fields.get("title") ?? null,
@@ -199,31 +204,48 @@ export function pageAliasKeys(page: Page): string[] {
 
   // The work taxonomy's entities are named by their slug — the folder, or a
   // single-file item's own name — wherever they sit, `_archive/` included, and
-  // an item by its `id` as well (plan D6).
+  // an item by its `id` as well (plan D6). The owner is the folder DIRECTLY
+  // under the docs root, never a same-named folder further down.
   if (page.type === "feature" || page.type === "item") {
-    const owner = page.type === "feature" ? FEATURES_FOLDER : ITEMS_FOLDER;
-    const segs = page.path.split("/");
-    const at = segs.lastIndexOf(owner);
-    if (at >= 0) {
-      let rest = segs.slice(at + 1);
-      if (rest[0] === "_archive" && rest.length > 1) rest = rest.slice(1);
-      const entry = ENTITY_FILE[owner]!.name;
-      const slug =
-        rest.length === 1 && page.type === "item"
-          ? basename(rest[0] as string, ".md")
-          : rest.length === 2 && rest[1] === entry
-            ? (rest[0] as string)
-            : null;
-      if (slug) keys.push(`${page.type}/${slug}`);
-    }
+    const slug = entitySlug(page);
+    if (slug) keys.push(`${page.type}/${slug}`);
     if (page.type === "item" && page.id) keys.push(`item/${page.id}`);
   }
   return keys;
 }
 
+/**
+ * An entity's slug from its docs-root position: `items/<slug>.md`,
+ * `items/<slug>/item.md` or `features/<slug>/feature.md`, with an optional
+ * `_archive/` after the owner. `null` for anything else.
+ */
+function entitySlug(page: Page): string | null {
+  const owner = page.type === "feature" ? FEATURES_FOLDER : ITEMS_FOLDER;
+  const segs = page.docsPath.split("/");
+  if (segs[0] !== owner) return null;
+  let rest = segs.slice(1);
+  if (rest[0] === "_archive" && rest.length > 1) rest = rest.slice(1);
+  if (rest.length === 1 && page.type === "item")
+    return basename(rest[0] as string, ".md");
+  if (rest.length === 2 && rest[1] === ENTITY_FILE[owner]!.name)
+    return rest[0] as string;
+  return null;
+}
+
+/** True for a folder entity's entry file, whose `type/slug` key would be
+ *  `item/item` or `feature/feature` — a key every such entity shares. */
+function isEntityEntryFile(page: Page): boolean {
+  return (
+    (page.type === "feature" || page.type === "item") &&
+    basename(page.path) === ENTITY_FILE[page.type === "feature" ? FEATURES_FOLDER : ITEMS_FOLDER]!.name
+  );
+}
+
 /** Every address a page answers to: its `type/slug` key, plus any alias. */
 export function pageKeys(page: Page): string[] {
-  const key = pageKey(page);
+  // A folder entity's basename key names every folder entity and identifies
+  // none (the `proposal/proposal` trap); its slug key is in the aliases.
+  const key = isEntityEntryFile(page) ? null : pageKey(page);
   return [...new Set([...(key === null ? [] : [key]), ...pageAliasKeys(page)])];
 }
 

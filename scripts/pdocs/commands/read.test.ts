@@ -718,6 +718,11 @@ describe("pageKeys — features and items", () => {
       "docs/items/big/item.md": entity("item", { id: ID_FOLDER, kind: "task" }),
       "docs/items/_archive/gone.md": entity("item", { id: ID_ARCHIVED, kind: "chore" }),
       "docs/projects/legacy/proposal.md": entity("proposal", { lifecycle: "draft" }),
+      // An item folder that happens to be called `items`.
+      "docs/items/items/item.md": entity("item", {
+        id: "0190f4b2-7c3a-7d4e-8f00-00000000000d",
+        kind: "task",
+      }),
     };
     for (const [rel, body] of Object.entries(files)) {
       mkdirSync(dirname(join(root, rel)), { recursive: true });
@@ -745,6 +750,21 @@ describe("pageKeys — features and items", () => {
     expect(keys.get("docs/items/_archive/gone.md")).toEqual(
       expect.arrayContaining(["item/gone", `item/${ID_ARCHIVED}`])
     );
+  });
+
+  // `item/item` and `feature/feature` name every folder entity and identify
+  // none — the `proposal/proposal` trap again.
+  test("a folder entity does not answer to its entry file's basename (review G)", () => {
+    const keys = keysByPath();
+    expect(keys.get("docs/items/big/item.md")).not.toContain("item/item");
+    expect(keys.get("docs/features/auth/feature.md")).not.toContain("feature/feature");
+    expect(keys.get("docs/features/_archive/old/feature.md")).not.toContain("feature/feature");
+  });
+
+  test("the owner is the folder directly under the docs root (review G)", () => {
+    const keys = keysByPath().get("docs/items/items/item.md");
+    expect(keys).toContain("item/items");
+    expect(keys).not.toContain("item/item");
   });
 
   test("no key is listed twice", () => {
