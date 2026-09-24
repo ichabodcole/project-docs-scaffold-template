@@ -76,7 +76,7 @@ stays green on every commit, and no commit needs `--no-verify`.
 - [ ] `generate-dev-plan` and `dev-kickoff` name the playbooks they consulted,
       or say none applied, from `pdocs find` output. `finalize-branch`,
       `dev-kickoff`, release and handoff each honour a named playbook override.
-- [ ] `docs/STYLE.md` is seeded and recorded in the seed manifest. The playbook
+- [x] `docs/STYLE.md` is seeded and recorded in the seed manifest. The playbook
       template is Goal · Steps · Verification.
 - [ ] `grep -rn "type: memory\|type: lesson" docs/ '{{cookiecutter.project_slug}}/docs/'`
       returns nothing. This repository has no `backlog/`, `briefs/`,
@@ -714,9 +714,9 @@ first, then mirrored, then formatted with `npx prettier --write`.
 
 **Validation:**
 
-- [ ] `npm run check` is green, including `check:mirror`, and the generated
+- [x] `npm run check` is green, including `check:mirror`, and the generated
       payload passes `pdocs check`.
-- [ ] A cold-read agent is given `docs/items/README.md`, `docs/SCHEMA.md` and
+- [x] A cold-read agent is given `docs/items/README.md`, `docs/SCHEMA.md` and
       `docs/TEMPLATES/ITEM.template.md`, plus what they link to. It can file an
       item and say who moves it next, without asking.
 

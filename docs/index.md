@@ -200,3 +200,7 @@ What has been happening lately, for a cold start. — see
   — pdocs new item/feature, promote, set, archive and view operate on the work
   model, and every move rewrites markdown links, reference definitions and
   path-form from values so the next check still passes.
+- [The scaffold's prose describes the work taxonomy](./memories/2026-09-24-scaffold-prose-for-work-taxonomy.md)
+  — SCHEMA.md, the category READMEs and the templates describe features, items
+  and cycles as the pdocs code behaves, STYLE.md is seeded, and playbooks are
+  Goal · Steps · Verification.
