@@ -28,8 +28,8 @@ value the lint would reject.
 
   title, description, kind   whoever files the item
   id                         `pdocs new item`, once
-  status                     `draft` when filed; `stable` once shaping has
-                             settled the definition of done
+  status                     OKF's document-trust marker. It keeps this
+                             value; no workflow step moves it
   lifecycle                  `triage` when an agent files it. The user decides
                              at triage (the triage-items skill proposes):
                              `backlog`, `ready`, or `dropped`. Shaping sets

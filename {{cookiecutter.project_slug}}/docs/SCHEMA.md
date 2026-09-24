@@ -367,10 +367,11 @@ Every field has a named writer. A field nobody writes goes stale.
 | `released_in` | feature, item | no       | the version that first shipped it                     | `sweep-project`, at release. Never checked: `pdocs view unreleased` lists what lacks it |
 
 `title`, `description`, `status` and `generated` are required on every document,
-as in [Frontmatter](#frontmatter--every-page). On an item, `status` is `draft`
-when it is filed and `stable` once shaping has settled its definition of done;
-the work's state is `lifecycle`, never `status`. An item's body carries its
-definition of done. There are no estimates and no due dates.
+as in [Frontmatter](#frontmatter--every-page). On an item, `status` is OKF's
+document-trust marker: it keeps the value the template gives it, and no workflow
+step moves it. Where the work has got to is `lifecycle`, never `status`. An
+item's body carries its definition of done. There are no estimates and no due
+dates.
 
 `assignee` routes work to an agent or a seat. It does not track people, and it
 is optional because in the common case — one person and the agent they work with
@@ -390,8 +391,9 @@ is optional because in the common case — one person and the agent they work wi
 | → `dropped`                                | whoever decides against it. Nothing is deleted                                                                                                                                   | `pdocs set <ref> --lifecycle dropped`   |
 
 `init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
-in the project-docs Claude Code plugin. `init-branch` starts only an item in
-`backlog` or `ready`; an item in `triage` is triaged first.
+in the project-docs Claude Code plugin. `init-branch` offers the items
+`pdocs view ready` lists, and starts a `backlog` item only when the user names
+it; an item in `triage` is triaged first.
 
 `pdocs set` does not check who is calling: the triage step is a rule the skills
 follow, not a gate in the CLI. An agent does not move an item out of `triage` on

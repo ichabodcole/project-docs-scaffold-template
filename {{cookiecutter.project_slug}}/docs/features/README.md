@@ -104,6 +104,9 @@ A work item can own the same documents, created the same way with
   deviations from the plan, discoveries, what is left. Write one when something
   notable happened; skip it when nothing did. A step a future agent must follow
   goes in a playbook, not only in a session.
+- **`write-up.md`** — a finding written up. Usually a research item's job, but a
+  feature may record one of its own:
+  `pdocs new write-up --owner feature/<slug>`.
 - **`reports/`** — dated evidence gathered for the work: an audit, a benchmark,
   a survey of options.
 - **`artifacts/`** — freeform working material: codebase exploration, dependency

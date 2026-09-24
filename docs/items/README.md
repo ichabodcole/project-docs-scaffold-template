@@ -72,18 +72,20 @@ writes each field; [SCHEMA.md](../SCHEMA.md#fields) has the full table.
 
 ## States, and who moves an item
 
-| State     | Means                                                                  | Set by                                                             |
-| --------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `triage`  | Filed, and nobody has decided to take it on                            | `pdocs new item`, by default                                       |
-| `backlog` | Accepted, and not yet shaped                                           | triage                                                             |
-| `ready`   | Shaped and unblocked: an accepted definition of done, nothing blocking | triage, or shaping after acceptance                                |
-| `active`  | Being worked                                                           | `init-branch`, when a branch starts on a `backlog` or `ready` item |
-| `review`  | Waiting on a human or a reviewer                                       | whoever hands it over                                              |
-| `done`    | Landed                                                                 | `finalize-branch`                                                  |
-| `dropped` | Decided against. It stays in the tree                                  | whoever decides                                                    |
+| State     | Means                                                                  | Set by                                                |
+| --------- | ---------------------------------------------------------------------- | ----------------------------------------------------- |
+| `triage`  | Filed, and nobody has decided to take it on                            | `pdocs new item`, by default                          |
+| `backlog` | Accepted, and not yet shaped                                           | triage                                                |
+| `ready`   | Shaped and unblocked: an accepted definition of done, nothing blocking | triage, or shaping after acceptance                   |
+| `active`  | Being worked                                                           | `init-branch`, when a branch starts on it — see below |
+| `review`  | Waiting on a human or a reviewer                                       | whoever hands it over                                 |
+| `done`    | Landed                                                                 | `finalize-branch`                                     |
+| `dropped` | Decided against. It stays in the tree                                  | whoever decides                                       |
 
 `init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
-in the project-docs Claude Code plugin.
+in the project-docs Claude Code plugin. `init-branch` offers the items
+`pdocs view ready` lists, and starts a `backlog` item only when the user names
+it; it never starts an item in `triage`.
 
 **Items created by agents start in `triage`, and leave it through a triage step
 the user has seen.** If you are an agent that has just filed an item — a review
@@ -104,8 +106,11 @@ fixed"), the user is the one filing it: start it at `backlog`, or at `ready` if
 its definition of done is settled (`--lifecycle ready`).
 
 Shaping is writing or settling an accepted item's definition of done and its
-`blocked_by`. It moves a `backlog` item to `ready`, and it is when `status` goes
-from `draft` to `stable`: the description can now be relied on.
+`blocked_by`. It moves a `backlog` item to `ready`.
+
+An item's `status` is OKF's document-trust marker, not its state. It keeps the
+value the template gives it, and no workflow step moves it: `lifecycle` carries
+where the work has got to.
 
 `pdocs view backlog` lists everything unstarted, `pdocs view ready` what can be
 started now, and `pdocs view board` everything by state group.
@@ -146,6 +151,9 @@ A research item has three parts, kept in three files:
 - **`write-up.md`** is the answer: findings, options, recommendation. It carries
   no `lifecycle`; the item does.
 - **`reports/`** holds the evidence gathered on the way.
+
+Write-ups and reports are not reserved for research items: any item, or a
+feature, may own them.
 
 ```bash
 bun scripts/pdocs/cli.ts new item auth-providers --kind research
