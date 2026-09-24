@@ -23,13 +23,18 @@ without building the structure from scratch each time.
 This template creates a complete documentation structure for your project,
 including:
 
-- **Structured documentation folders** organized by purpose: permanent reference
-  (architecture, specifications, playbooks, etc.), discovery & assessment
-  (investigations, reports), and work tracking (projects, backlog)
+- **Structured documentation folders** in two parts: the library (architecture,
+  specifications, interaction design, playbooks), kept current, and the
+  workbench (features, work items, cycles), which tracks work and holds what it
+  produces
 - **README files** in each folder explaining purpose and best practices
-- **Template files** for quick-start document creation, including project-scoped
-  templates for proposals, plans, and sessions
-- **memories/** folder for quick onboarding context about recent work
+- **Template files** in `docs/TEMPLATES/` for features, work items and the
+  documents they own — plans, design resolutions, test plans, sessions,
+  write-ups, reports, handoffs
+- **`docs/SCHEMA.md` and `docs/STYLE.md`** — the frontmatter contract the lint
+  enforces, and how the prose is written
+- **The `pdocs` CLI** (`scripts/pdocs/`) — creates documents, checks the tree,
+  and derives backlogs and boards from the work items' fields
 - **CLAUDE.md** template with project context for AI assistants (in docs/)
 - **AGENTS.md** guidance file for AI coding assistants
 - **Project README** template with standard sections
@@ -172,18 +177,16 @@ docs/
 ├── specifications/
 ├── interaction-design/
 ├── playbooks/
-├── lessons-learned/
-├── fragments/
-├── briefs/
-│   └── TEMPLATES/
-├── reports/
-├── investigations/
-├── projects/
-│   └── TEMPLATES/
-├── backlog/
+├── features/
 │   └── _archive/
-├── memories/
+├── items/
+│   └── _archive/
+├── cycles/
+├── TEMPLATES/
 ├── README.md
+├── SCHEMA.md
+├── STYLE.md
+├── index.md
 ├── CLAUDE.md
 ├── AGENTS.md
 └── PROJECT_MANIFESTO.md
@@ -191,7 +194,7 @@ docs/
 
 ## Documentation Structure
 
-### Permanent Reference
+### The library
 
 Living documents that evolve over time — not tied to a specific body of work.
 
@@ -201,33 +204,25 @@ Living documents that evolve over time — not tied to a specific body of work.
   application does, organized by domain. Portable enough to rebuild in any stack
 - **`/docs/interaction-design`** — User experience flows documenting how users
   interact with features and subsystems
-- **`/docs/playbooks`** — Reusable implementation guides for recurring patterns
-  (migrations, integrations, refactors)
-- **`/docs/lessons-learned`** — Specific problems encountered and their
-  solutions, preserving hard-won knowledge
-- **`/docs/fragments`** — Incomplete observations and "something doesn't feel
-  right" moments captured for later consideration
+- **`/docs/playbooks`** — One guide per kind of recurring work, as Goal · Steps
+  · Verification. A playbook named for a lifecycle event overrides the skill
+  that owns it
 
-### Discovery & Assessment
+### The workbench
 
-Cross-cutting documents that precede and follow projects.
+- **`/docs/features`** — One folder per feature: `feature.md` (what it proposes,
+  and its state) with its design resolution, plan, test plan, sessions, reports
+  and artifacts beside it
+- **`/docs/items`** — Work items: tasks, bugs, chores and research questions,
+  each a single file until it owns documents. Items filed by agents start in
+  `triage`
+- **`/docs/cycles`** — What is in play right now; items join a cycle through
+  their `cycle:` field
+- **`features/_archive/`, `items/_archive/`** — Done or dropped work, moved by
+  `pdocs archive`
 
-- **`/docs/reports`** — Structured assessments of current state (code quality,
-  security, documentation status). Serve as discovery mechanisms that can
-  trigger investigations or projects
-- **`/docs/investigations`** — Research documents that explore questions before
-  committing to action. Determine whether a project is warranted
-
-### Work Tracking
-
-- **`/docs/projects`** — Co-located pipeline documents for defined bodies of
-  work. Each project folder contains its proposal, design resolution (optional),
-  plan, sessions, and artifacts together
-- **`/docs/backlog`** — Small, self-contained work items (bugs, minor refactors,
-  papercuts) that don't warrant a full project
-- **`/docs/projects/_archive`** — Completed project folders moved here when done
-- **`/docs/memories`** — Summaries of recent work for quick onboarding at the
-  start of new sessions
+Backlogs and boards are not documents: `bun scripts/pdocs/cli.ts view board`
+derives them from the items' fields.
 
 ## Customization
 

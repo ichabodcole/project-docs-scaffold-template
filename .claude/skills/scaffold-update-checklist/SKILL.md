@@ -42,13 +42,14 @@ The list below is what it walks; keep them in step and the check stays quiet.
 - `docs/README.md`
 - `docs/AGENTS.md`
 - `docs/SCHEMA.md` — the frontmatter contract
-- `docs/projects/README.md`
-- All files in `docs/projects/TEMPLATES/`
-- Category READMEs: `docs/architecture/README.md`, `docs/backlog/README.md`,
-  `docs/briefs/README.md`, `docs/cycles/README.md`, `docs/fragments/README.md`,
-  `docs/interaction-design/README.md`, `docs/investigations/README.md`,
-  `docs/lessons-learned/README.md`, `docs/memories/README.md`,
-  `docs/playbooks/README.md`, `docs/reports/README.md`,
+- `docs/STYLE.md` — the prose contract. **Seeded**, so its bytes are recorded:
+  copy the formatted file across rather than letting the two copies wrap
+  differently
+- All files in `docs/TEMPLATES/` — the work templates (feature, item, and every
+  owned document)
+- Category READMEs: `docs/architecture/README.md`, `docs/cycles/README.md`,
+  `docs/features/README.md`, `docs/interaction-design/README.md`,
+  `docs/items/README.md`, `docs/playbooks/README.md`,
   `docs/specifications/README.md`
 - Category templates: all `TEMPLATE*.md` files within those directories,
   including `docs/cycles/TEMPLATE.md`
@@ -105,13 +106,17 @@ live check over 19 file pairs and express nothing. Exempt a file only when THIS
 repo deliberately keeps a different copy from the payload, which is why
 `PROJECT_MANIFESTO.md` and `index.md` are the only two.
 
-**Which files are seeded** is decided by shape, in three places that must agree:
-`_is_seeded` in `hooks/post_gen_project.py`, `isSeeded` in the current
-`migrations/scripts/migrate-*.ts`, and the sentence in `docs/SCHEMA.md`. The
-authority is `scripts/pdocs/lint/registry.ts`, which declares a `template:` per
-type — and `scripts/seeded-coverage.test.ts` asserts the predicate covers every
-one of them. It exists because the first version matched `TEMPLATE` as a prefix
-and silently skipped `YYYY-MM-DD-TEMPLATE-investigation.md` and
+**Which files are seeded** is decided by shape — plus `docs/STYLE.md`, which is
+seeded by path: `SEEDED_PAGES` in `scripts/pdocs/seed.ts` and in
+`hooks/post_gen_project.py`, held equal by `scripts/post-gen-hook.test.ts`. A
+seeded page is recorded in the manifest but still linted (its links are
+checked), so it is **not** a template shape. The shapes live in three places
+that must agree: `_is_seeded` in `hooks/post_gen_project.py`, `isSeeded` in the
+current `migrations/scripts/migrate-*.ts`, and the sentence in `docs/SCHEMA.md`.
+The authority is `scripts/pdocs/lint/registry.ts`, which declares a `template:`
+per type — and `scripts/seeded-coverage.test.ts` asserts the predicate covers
+every one of them. It exists because the first version matched `TEMPLATE` as a
+prefix and silently skipped `YYYY-MM-DD-TEMPLATE-investigation.md` and
 `YYYY-MM-DD-TEMPLATE-report.md`, recording 17 of 19 while its own comment
 claimed shape matching meant nothing could be forgotten.
 
@@ -135,7 +140,12 @@ decision, not a convenience:
 
 **Not mirrored (project-specific):**
 
-- `docs/memories/*` — session continuity for this project only
+- This repository's pre-9.0.0 folders — `docs/backlog/`, `docs/briefs/`,
+  `docs/fragments/`, `docs/investigations/`, `docs/reports/`, `docs/projects/`,
+  `docs/memories/`, `docs/lessons-learned/`, their READMEs and templates. The
+  payload no longer ships them, and the mirror check walks the payload, so
+  nothing compares them. They stay until this repository runs the 9.0.0
+  migration
 - `docs/projects/<project-name>/*` — actual project work (proposals, sessions)
 - `AGENTS.md` and `CLAUDE.md` at project root (different from cookiecutter
   versions)
@@ -226,12 +236,15 @@ is the defect, not its absence.
 
 **Cookiecutter first (source of truth):**
 
-- [ ] Create/update template in
-      `{{cookiecutter.project_slug}}/docs/projects/TEMPLATES/` (or relevant
-      `{{cookiecutter.project_slug}}/docs/<category>/`)
-- [ ] Update `{{cookiecutter.project_slug}}/docs/projects/README.md` — folder
-      structure example, What Goes Where, add subsection with
-      when-to/when-not-to guidance, Templates list
+- [ ] Create/update template in `{{cookiecutter.project_slug}}/docs/TEMPLATES/`
+      (or relevant `{{cookiecutter.project_slug}}/docs/<category>/`)
+- [ ] For a document a feature or item owns: update
+      `{{cookiecutter.project_slug}}/docs/features/README.md` — the Layout tree,
+      "What a feature owns", and the Templates list — and check
+      `docs/items/README.md` still points there
+- [ ] Update `{{cookiecutter.project_slug}}/docs/SCHEMA.md` — the Lifecycle by
+      type table (the lint parses it) and, for an owned document, the position
+      table under Layout
 - [ ] Update `{{cookiecutter.project_slug}}/docs/README.md` — decision
       flowchart, documentation cycle string, Quick Reference, Special cases
 
@@ -426,8 +439,8 @@ patch-only changes.
 
 - [ ] Update `{{cookiecutter.project_slug}}/docs/README.md` — cycle string,
       decision flowchart, Quick Reference
-- [ ] Update `{{cookiecutter.project_slug}}/docs/projects/README.md` if it
-      references the pipeline
+- [ ] Update `{{cookiecutter.project_slug}}/docs/features/README.md`,
+      `docs/items/README.md` and `docs/AGENTS.md` if they reference the pipeline
 
 **Apply to this project via migration path:**
 
@@ -436,7 +449,7 @@ patch-only changes.
 - [ ] Validate it, one way per shape: a **script** runs `--dry-run` and then the
       run against a generated fixture (sync procedure step 3 has the command); a
       **guide** is followed as an end user would, against this project's own
-      `docs/README.md` and `docs/projects/README.md`, when its `Applies If` is
+      `docs/README.md` and `docs/features/README.md`, when its `Applies If` is
       true here — it is false here for `v2.6-to-v2.7`, so "apply it to our own
       docs" is unavailable for that migration
 

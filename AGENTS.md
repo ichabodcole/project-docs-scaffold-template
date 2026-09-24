@@ -18,12 +18,15 @@ The template is organized with these key directories:
 
 - `{{cookiecutter.project_slug}}/docs/` - Contains the documentation scaffold
   that gets generated, with READMEs explaining each subdirectory's purpose.
-  Organized into permanent reference (architecture, specifications,
-  interaction-design, playbooks, lessons-learned, fragments), discovery &
-  assessment (reports, investigations), and work tracking (projects, backlog,
-  cycles, \_archive, memories). Also carries the frontmatter layer:
-  `docs/SCHEMA.md` (the contract), `docs/index.md` (the catalog, seeded empty),
-  and `docs/cycles/`. No TypeScript: the gate moved out to `scripts/pdocs/`
+  Organized into the library (architecture, specifications, interaction-design,
+  playbooks), kept current, and the workbench (features, items, cycles, each of
+  `features/` and `items/` with an `_archive/`), which tracks work and holds the
+  documents it owns. `docs/TEMPLATES/` holds the work templates. Also carries
+  the frontmatter layer: `docs/SCHEMA.md` (the contract), `docs/STYLE.md` (the
+  prose contract, seeded), and `docs/index.md` (the catalog, seeded empty). No
+  TypeScript: the gate lives in `scripts/pdocs/`. This repository's own `docs/`
+  still uses the pre-9.0.0 folders (`projects/`, `backlog/`, `memories/`, …)
+  until it runs the 9.0.0 migration
 - `{{cookiecutter.project_slug}}/scripts/pdocs/` - The `pdocs` CLI: `cli.ts`
   (dispatch), `envelope.ts` (format, envelope, exit codes), `commands/`, and
   `lint/` (this schema's rules and the assembly that runs them). Zero
@@ -190,7 +193,8 @@ bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
 The type decides the folder, the filename shape and the template, and the CLI
 fills the frontmatter — for a library page it also writes the catalog line in
 [docs/index.md](./docs/index.md). The same CLI reads the tree: `check` (the
-gate, which is what `npm run docs:lint` runs), `find`, `backlinks`, `orphans`.
+gate, which is what `npm run docs:lint` runs), `find`, `view`, `backlinks`,
+`orphans`; and changes work in place: `set`, `promote`, `archive`.
 
 `bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
 [docs/SCHEMA.md](./docs/SCHEMA.md) is the frontmatter contract the gate
