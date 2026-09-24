@@ -1,28 +1,165 @@
 # Work Items
 
-A work item is one piece of work: a task, a bug, a chore, or a research
-question. It is a single file until it owns documents, then a folder.
+A work item is one unit of work, small enough to hand an agent: a task, a bug, a
+chore, or a research question. Its file says what the work is and what done
+looks like, and its frontmatter holds its state and every relationship it has.
 
-## Layout
+## Item or feature?
+
+- **File an item** for anything that can be described and done without arguing
+  its approach first: a bug, a refactor, a clear task, a question to answer.
+- **Write a feature** when the approach needs options weighed or the work will
+  split into several items. See [features/README.md](../features/README.md).
+- **An idea nobody has accepted** is still an item: file it and leave it in
+  `triage`.
+
+## Filing an item
+
+```bash
+bun scripts/pdocs/cli.ts new item fix-login-redirect --kind bug \
+  --title "Fix the login redirect loop" \
+  --description "Signing in from /settings loops back to /login; it should land on /settings."
+```
+
+This writes `docs/items/fix-login-redirect.md` from
+[ITEM.template.md](../TEMPLATES/ITEM.template.md) with a fresh `id`,
+`lifecycle: triage`, and `generated` filled in, and prints the id's first 12
+characters. `--kind` is required. Name the file in kebab-case, with no date.
+
+Then write the body: what is wrong or missing, and a **Definition of done** —
+observable results a reviewer can check without asking you.
+
+Pass what you know at creation as flags; each is checked before anything is
+written:
+
+| Flag                       | Sets                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `--parent feature/<slug>`  | the feature this item serves                                                    |
+| `--from <path or ref>`     | what spawned it: a session, a report, another item. Also links it from the body |
+| `--source <id>`            | an id outside this tree: an issue number                                        |
+| `--scope <name>`           | the part of the project it touches, declared in `lint.scopes`                   |
+| `--blocked-by <ref,ref>`   | items that must be `done` first                                                 |
+| `--priority`, `--assignee` | normally left to triage                                                         |
+| `--lifecycle backlog`      | only when a person who already wants the work files it                          |
+
+Do not copy the template by hand: the `id` must be a fresh UUID, and the CLI
+checks every reference. Change any field later with
+`bun scripts/pdocs/cli.ts set <ref> --<field> <value>`. The template lists who
+writes each field; [SCHEMA.md](../SCHEMA.md#fields) has the full table.
+
+## Kinds
+
+| `kind`     | Use it for                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `task`     | a change that adds or alters behaviour                                                     |
+| `bug`      | behaviour that is wrong: say what happens, what should happen, and how to see it           |
+| `chore`    | upkeep with no behaviour change: dependencies, tooling, clean-up                           |
+| `research` | a question to answer before deciding what to build — see [Research items](#research-items) |
+
+## States, and who moves an item
+
+| State     | Means                                                                  | Set by                                    |
+| --------- | ---------------------------------------------------------------------- | ----------------------------------------- |
+| `triage`  | Filed, and nobody has decided to take it on                            | `pdocs new item`, by default              |
+| `backlog` | Accepted, and not yet shaped                                           | triage                                    |
+| `ready`   | Has a definition of done and nothing blocking it; an agent can take it | triage or shaping                         |
+| `active`  | Being worked                                                           | `init-branch`, when a branch starts on it |
+| `review`  | Waiting on a human or a reviewer                                       | whoever hands it over                     |
+| `done`    | Landed                                                                 | `finalize-branch`                         |
+| `dropped` | Decided against. It stays in the tree                                  | whoever decides                           |
+
+**Items created by agents start in `triage`, and leave it through a triage step
+the user has seen.** If you are an agent that has just filed an item — a review
+finding, a bug you hit mid-task — leave it in `triage`. Do not accept it, drop
+it or prioritise it on your own judgement. At triage the `triage-items` skill
+proposes each item's disposition (`backlog`, `ready`, a `parent` feature to
+join, or `dropped`), its `priority`, and an `assignee` when it goes to a
+particular agent or seat; it applies them with `pdocs set` once the user has
+reviewed them. `pdocs set` does not enforce this — the skills do.
+
+An item filed by a person who already wants the work may start at `backlog` or
+`ready` (`--lifecycle ready`).
+
+`pdocs view backlog` lists everything unstarted, `pdocs view ready` what can be
+started now, and `pdocs view board` everything by state group.
+
+## A file, then a folder
+
+An item is a single file, `items/<slug>.md`, until it owns a document. Then it
+becomes a folder, `items/<slug>/item.md`, with the document beside it:
 
 ```
 items/
-├── <slug>.md             # a single-file item
-├── <slug>/
-│   ├── item.md           # the item, once it owns documents
-│   ├── write-up.md       # a research item's answer
-│   ├── sessions/
-│   ├── reports/
-│   └── artifacts/
-└── _archive/             # done or dropped items only
+├── bump-deps.md              # a single-file item
+├── fix-login-redirect/
+│   ├── item.md               # the item, once it owns something
+│   ├── plan.md
+│   └── sessions/2026-09-22-fix.md
+└── _archive/                 # done or dropped items only
 ```
 
-## Rules
+Creating an owned document promotes the item for you and rewrites every link to
+it:
 
-- An item carries `type: item`, a lowercase UUID `id`, a `kind`
-  (`task · bug · chore · research`) and a `lifecycle` from the item states in
-  [SCHEMA.md](../SCHEMA.md#state-groups).
-- Items created by agents start in `triage`.
-- An item leaves the tree only after it reaches `dropped`; the lint checks it.
-- Only an item in `done` or `dropped` may sit in `_archive/`.
-- The template is [ITEM.template.md](../TEMPLATES/ITEM.template.md).
+```bash
+bun scripts/pdocs/cli.ts new plan --owner item/fix-login-redirect
+```
+
+`pdocs promote item/<slug>` does the promotion alone. Never rename or move an
+item by hand; its `id` and the links to it are what the CLI keeps straight. An
+item owns the same documents a feature does — see
+[What a feature owns](../features/README.md#what-a-feature-owns).
+
+## Research items
+
+A research item has three parts, kept in three files:
+
+- **The item** is the asking: the question, the definition of done (the decision
+  the answer must support), and the state.
+- **`write-up.md`** is the answer: findings, options, recommendation. It carries
+  no `lifecycle`; the item does.
+- **`reports/`** holds the evidence gathered on the way.
+
+```bash
+bun scripts/pdocs/cli.ts new item auth-providers --kind research
+bun scripts/pdocs/cli.ts new write-up --owner item/auth-providers
+bun scripts/pdocs/cli.ts new report provider-survey --owner item/auth-providers
+```
+
+When the write-up is finished, set the item `done`. If it recommends building
+something, file the items with `--from item/<slug>`, or write the feature with
+`--from docs/items/<slug>/write-up.md` (a feature takes a path, not a reference,
+and links it from its Related section).
+
+## Relationships are fields
+
+A folder never means "these share a parent, a cycle or a state". Those are
+fields on the item:
+
+- `parent: feature/<slug>` — the feature it serves.
+- `cycle: <cycle file slug>` — the cycle it is in play in.
+- `blocked_by: [<id>, …]` — items that must land first.
+- `from:` — what spawned it. A review always writes it.
+
+The forms each takes are in [SCHEMA.md](../SCHEMA.md#references). Pass
+`item/<slug>` or an 8-character id prefix on the command line; `pdocs` writes
+the full id.
+
+## Nothing is deleted
+
+An item leaves the tree only after it reaches `dropped`. Deleting one that is
+not `dropped` is `ITEM DELETED` in `pdocs check`. To stop work on an item, set
+it `dropped`.
+
+## Archiving
+
+A `done` or `dropped` item may move to `items/_archive/`:
+
+```bash
+bun scripts/pdocs/cli.ts archive item/<slug>
+```
+
+It refuses an item in any other state, moves the file or folder, and rewrites
+every link to and from it. References by `id` keep working. Archiving is
+optional, and only `pdocs archive` does it; the lint reports anything in
+`_archive/` that is not `done` or `dropped`.

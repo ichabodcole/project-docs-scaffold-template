@@ -20,10 +20,10 @@ Add entries under their heading, below the ones already there; the sections read
 in the order the pages were written. A heading reading `_No pages yet._` is
 holding the place for the first entry — replace that line, don't add beneath it.
 
-The workbench (`backlog/`, `briefs/`, `investigations/`, `projects/`,
-`reports/`, `fragments/`, `cycles/`) is deliberately **not** catalogued. Those
-documents are found by their date and their folder README, they close, and
-nobody returns to them. See [SCHEMA.md](./SCHEMA.md) for the two tiers.
+The workbench (`features/`, `items/`, `cycles/`) is deliberately **not**
+catalogued. Its documents are found through the feature or item that owns them
+and through `pdocs find` and `pdocs view`. See [SCHEMA.md](./SCHEMA.md) for the
+two tiers.
 
 ## The tree itself
 
