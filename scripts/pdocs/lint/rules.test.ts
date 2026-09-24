@@ -665,6 +665,43 @@ describe("the graph tier — reachability and the catalog", () => {
     });
     expect(graphTier(ctx).problems).toEqual([]);
   });
+
+  // STYLE.md is seeded — the manifest records it — but it is a page people
+  // read and follow, not a form. Every manifest path used to be skipped as a
+  // template, which would have switched off its link checking.
+  describe("STYLE.md: seeded, and linted as a contract page", () => {
+    const style = "# How prose is written here\n\nSee [x](./nowhere.md).\n";
+    const tree = (withManifest: boolean) =>
+      fixture({
+        "docs/index.md": index("- [A](./memories/a.md) — The A memory."),
+        "docs/memories/a.md": page("A", "The A memory."),
+        "docs/SCHEMA.md": "# Contract\n",
+        "docs/STYLE.md": style,
+        ...(withManifest
+          ? {
+              "docs/.pdocs-seed.json": JSON.stringify({
+                version: "9.0.0",
+                files: { "STYLE.md": "0".repeat(64) },
+              }),
+            }
+          : {}),
+      });
+
+    for (const withManifest of [false, true])
+      test(`its links are checked${withManifest ? ", though the manifest records it" : ""}`, () => {
+        const problems = graphTier(tree(withManifest)).problems.join("\n");
+        expect(problems).toContain("STYLE.md");
+        expect(problems).toContain("nowhere.md");
+      });
+
+    for (const withManifest of [false, true])
+      test(`it needs no frontmatter and no catalog line${withManifest ? ", recorded or not" : ""}`, () => {
+        const ctx = tree(withManifest);
+        const about = graphTier(ctx).problems.filter((p) => p.includes("STYLE.md"));
+        expect(about.filter((p) => !p.includes("nowhere.md"))).toEqual([]);
+        expect(libraryFieldChecks(ctx)).toEqual([]);
+      });
+  });
 });
 
 describe("catalogEntries", () => {

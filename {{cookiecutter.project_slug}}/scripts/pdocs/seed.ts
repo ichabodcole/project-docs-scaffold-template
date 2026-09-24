@@ -66,6 +66,19 @@ export function isSeeded(path: string): boolean {
   );
 }
 
+/**
+ * Seeded PAGES: docs-root-relative paths the scaffold installs once and
+ * reconciles by hash like a template, but which are documents a reader follows
+ * rather than forms to copy. `STYLE.md` is the one today.
+ *
+ * Named by path, and matched by none of `isSeeded`'s shapes on purpose:
+ * `templateTest` in `lint/rules.ts` skips every template and every manifest
+ * path, and a seeded page must still have its links checked. The cookiecutter
+ * hook's `SEEDED_PAGES` records the same paths; `scripts/post-gen-hook.test.ts`
+ * holds the two equal.
+ */
+export const SEEDED_PAGES: ReadonlySet<string> = new Set(["STYLE.md"]);
+
 export interface SeedManifest {
   /** The scaffold version that wrote these hashes. `null` when there is no manifest. */
   version: string | null;

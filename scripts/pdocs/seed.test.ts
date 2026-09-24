@@ -12,7 +12,9 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import {
   MANIFEST_NAME,
+  SEEDED_PAGES,
   hashOf,
+  isSeeded,
   loadManifest,
   mayWrite,
   recordSeeded,
@@ -121,6 +123,27 @@ describe("a seeded file this version adds", () => {
     expect(
       (["keep-modified", "keep-unknown", "keep-deleted"] as const).map(mayWrite)
     ).toEqual([false, false, false]);
+  });
+});
+
+describe("seeded pages — seeded, but not templates", () => {
+  // STYLE.md is installed once and reconciled by hash like a template, and is
+  // read and followed like a document: its links are checked. So it is named
+  // here, by path, and the template shapes do not match it.
+  test("STYLE.md is the one seeded page", () => {
+    expect([...SEEDED_PAGES]).toEqual(["STYLE.md"]);
+  });
+
+  test("no seeded page matches a template shape", () => {
+    expect([...SEEDED_PAGES].filter((p) => isSeeded(p))).toEqual([]);
+  });
+
+  test("a seeded page is reconciled like a template", () => {
+    const root = docsRoot({ "STYLE.md": "# ours\n" });
+    const m = recordSeeded(root, [...SEEDED_PAGES], "9.0.0");
+    expect(verdictFor(m, root, "STYLE.md")).toBe("update");
+    writeFileSync(join(root, "STYLE.md"), "# theirs\n");
+    expect(verdictFor(m, root, "STYLE.md")).toBe("keep-modified");
   });
 });
 

@@ -29,7 +29,8 @@ function classify(rel: string): Class | null {
 
   if (name === ".gitkeep") return "structural";
 
-  // Seeded — any template.
+  // Seeded — the seeded pages, by path, and any template.
+  if (rel === "docs/STYLE.md") return "seeded";
   if (
     (name.includes("TEMPLATE") && name.endsWith(".md")) ||
     name.endsWith(".template.md")
@@ -87,6 +88,7 @@ describe("the ownership contract covers the payload", () => {
       "structural",
       ".gitkeep",
       "docs/CLAUDE.md",
+      "STYLE.md",
     ].filter((term) => !schema.includes(term));
     expect(missing).toEqual([]);
   });
@@ -96,6 +98,11 @@ describe("the ownership contract covers the payload", () => {
     // Nine work templates in `TEMPLATES/`, six category templates.
     expect(seeded.length).toBeGreaterThanOrEqual(15);
     for (const f of seeded) expect(f.endsWith(".md")).toBe(true);
+  });
+
+  test("STYLE.md ships, and is seeded", () => {
+    expect(existsSync(join(PAYLOAD, "docs/STYLE.md"))).toBe(true);
+    expect(classify("docs/STYLE.md")).toBe("seeded");
   });
 });
 

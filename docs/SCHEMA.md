@@ -87,6 +87,7 @@ ignored; the built-in row wins.
 ```
 docs/
   SCHEMA.md            ← this contract (exempt from its own rules)
+  STYLE.md             ← how prose is written here (contract page, seeded)
   index.md             ← the catalog: ONE line per library page
   README.md            ← how to choose a document type (contract page)
   PROJECT_MANIFESTO.md ← type: manifesto   (graph tier)
@@ -118,9 +119,9 @@ Not every row is present in every project. `PROJECT-SUMMARY.md` and the
 runs the summary command, and the second only if some other tool keeps a
 directory under your docs root.
 
-`README.md`, `AGENTS.md` and `CLAUDE.md` are **contract pages**: meta-documents
-about the tree rather than entries in its type system. They carry no
-frontmatter, and the lint checks only their links. So does this file.
+`README.md`, `AGENTS.md`, `CLAUDE.md` and `STYLE.md` are **contract pages**:
+meta-documents about the tree rather than entries in its type system. They carry
+no frontmatter, and the lint checks only their links. So does this file.
 
 A `TEMPLATE` is a form, not a document. Its links are placeholders by
 construction, so the lint skips it entirely. In the repository that maintains
@@ -365,11 +366,11 @@ rule that decides between them is: **does shipped tooling read it?** A fourth,
 **structural**, covers files that carry no content at all — the `.gitkeep`
 placeholders holding empty `_archive/` directories open.
 
-| Class      | What a migration does                     | Which files                                                                                                                                                                                                                |
-| ---------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                                                                                                              |
-| **Seeded** | Updates only while you have not edited it | every template, by exact name: `TEMPLATE.md`, `TEMPLATE-<variant>.md`, `YYYY-MM-DD-TEMPLATE-<type>.md`, `<name>.template.md`, and anything under a `TEMPLATES/` directory; plus every path `docs/.pdocs-seed.json` records |
-| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write                                                                                             |
+| Class      | What a migration does                     | Which files                                                                                                                                                                                                                                 |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Owned**  | Overwrites, every time                    | `docs/README.md`, `docs/AGENTS.md`, this file, every category `README.md`, `scripts/pdocs/**`                                                                                                                                               |
+| **Seeded** | Updates only while you have not edited it | `docs/STYLE.md`; every template, by exact name: `TEMPLATE.md`, `TEMPLATE-<variant>.md`, `YYYY-MM-DD-TEMPLATE-<type>.md`, `<name>.template.md`, and anything under a `TEMPLATES/` directory; plus every path `docs/.pdocs-seed.json` records |
+| **Theirs** | Never touches                             | `.project-docs.json`, root `AGENTS.md`/`CLAUDE.md`, `docs/PROJECT_MANIFESTO.md`, `docs/index.md`, and every document you write                                                                                                              |
 
 `.project-docs.json` is **theirs** with one exception a migration names when it
 happens: it sets the top-level `version` there, patched in place in the file's

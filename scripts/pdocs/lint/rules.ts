@@ -61,7 +61,7 @@ import {
   defaultRegistryIndex,
   registryIndex,
 } from "./registry.ts";
-import { isSeeded, loadManifest } from "../seed.ts";
+import { SEEDED_PAGES, isSeeded, loadManifest } from "../seed.ts";
 import { UUID_RE } from "../uuid.ts";
 
 /**
@@ -175,14 +175,16 @@ export function linkBoundary(ctx: Ctx): string {
  * with a dead pointer misroutes the next document written.
  *
  * Exported because `pages.ts` has to skip exactly these, and a second list of
- * meta-document names would drift from this one the first time a fifth is
- * added.
+ * meta-document names would drift from this one the first time another is
+ * added. `STYLE.md` is here as the prose contract beside `SCHEMA.md`'s
+ * structural one; it is also a seeded page (`SEEDED_PAGES` in `seed.ts`).
  */
 export const CONTRACT_BASENAMES = new Set([
   "README.md",
   "AGENTS.md",
   "CLAUDE.md",
   "SCHEMA.md",
+  "STYLE.md",
 ]);
 
 /**
@@ -219,6 +221,9 @@ export function templateTest(ctx: Ctx): (path: string) => boolean {
     const abs = isAbsolute(path) ? path : join(ctx.repoRoot, path);
     const rel = relative(ctx.docsRoot, abs);
     if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return false;
+    // A seeded PAGE is recorded like a template and read like a document: its
+    // links are checked. Skipping it here would switch that off.
+    if (SEEDED_PAGES.has(rel.split(sep).join("/"))) return false;
     return seeded.has(rel);
   };
 }

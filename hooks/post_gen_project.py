@@ -26,13 +26,20 @@ LAYER_NOTE = """     ───────────────────�
      it — which fields, which vocabularies, and what `check`
      enforces. Read it before creating or editing a document.
 
-     For quick onboarding on recent work, start with
-     [docs/memories/](./docs/memories/).
+     For what is in flight and what is waiting, run
+     `bun scripts/pdocs/cli.ts view board`.
      ─────────────────────────────────────────────────────
 """
 
 
 SEED_MANIFEST = ".pdocs-seed.json"
+
+# Docs-root-relative pages the scaffold seeds that are NOT templates: installed
+# once and reconciled by hash like one, but read and followed like a document.
+# Recorded by path, because no template shape matches them. The same set as
+# SEEDED_PAGES in scripts/pdocs/seed.ts; scripts/post-gen-hook.test.ts holds
+# the two equal.
+SEEDED_PAGES = ("STYLE.md",)
 
 
 def _is_seeded(name):
@@ -83,6 +90,12 @@ def write_seed_manifest(docs_dir, config_path):
             with open(absolute, "rb") as handle:
                 digest = hashlib.sha256(handle.read()).hexdigest()
             files[os.path.relpath(absolute, docs_dir)] = digest
+
+    for rel in SEEDED_PAGES:
+        absolute = os.path.join(docs_dir, rel)
+        if os.path.isfile(absolute):
+            with open(absolute, "rb") as handle:
+                files[rel] = hashlib.sha256(handle.read()).hexdigest()
 
     with open(os.path.join(docs_dir, SEED_MANIFEST), "w") as handle:
         json.dump(

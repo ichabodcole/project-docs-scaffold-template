@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -158,5 +158,55 @@ describe("a collision aborts and leaves the tree as it was found", () => {
     expect(Bun.file(join(parent, "docs", "mine.md")).size).toBeGreaterThan(0);
     expect(existsSync(join(slug, "scripts", "pdocs", "cli.ts"))).toBe(true);
     expect(existsSync(join(parent, "scripts"))).toBe(false);
+  });
+});
+
+/** Import the hook and evaluate `expr` against it, as JSON. */
+function hookEval(expr: string, cwd: string): unknown {
+  const driver = [
+    "import importlib.util, json",
+    `spec = importlib.util.spec_from_file_location("hook", ${JSON.stringify(HOOK)})`,
+    "m = importlib.util.module_from_spec(spec)",
+    "spec.loader.exec_module(m)",
+    `print(json.dumps(${expr}))`,
+  ].join("\n");
+  const r = spawnSync("python3", ["-c", driver], { cwd, encoding: "utf8", env: childEnv() });
+  expect(r.stderr).toBe("");
+  return JSON.parse(r.stdout);
+}
+
+describe("the seed manifest records STYLE.md", () => {
+  test("a docs-root STYLE.md is recorded beside the templates", () => {
+    const parent = mkdtempSync(join(tmpdir(), "pdocs-hook-seed-"));
+    const docs = join(parent, "docs");
+    mkdirSync(join(docs, "TEMPLATES"), { recursive: true });
+    mkdirSync(join(docs, "architecture"), { recursive: true });
+    writeFileSync(join(docs, "STYLE.md"), "# style\n");
+    writeFileSync(join(docs, "TEMPLATES", "ITEM.template.md"), "---\n---\n");
+    // Only the docs-root page is seeded; a page of the same name elsewhere is a document.
+    writeFileSync(join(docs, "architecture", "STYLE.md"), "# not ours\n");
+    writeFileSync(join(parent, ".project-docs.json"), '{"version": "9.0.0"}\n');
+
+    hookEval(`m.write_seed_manifest("docs", ".project-docs.json")`, parent);
+    const manifest = JSON.parse(readFileSync(join(docs, ".pdocs-seed.json"), "utf8"));
+    expect(Object.keys(manifest.files).sort()).toEqual([
+      "STYLE.md",
+      "TEMPLATES/ITEM.template.md",
+    ]);
+  });
+
+  test("the hook's seeded pages are seed.ts's", async () => {
+    const { SEEDED_PAGES } = await import("./pdocs/seed.ts");
+    expect(hookEval("sorted(m.SEEDED_PAGES)", tmpdir())).toEqual([...SEEDED_PAGES].sort());
+  });
+});
+
+describe("the note for a project's AGENTS.md", () => {
+  // `docs/memories/` is retired in 9.0.0; the board is where recent and
+  // in-flight work is visible now.
+  test("points at the board, not at memories", () => {
+    const note = hookEval("m.LAYER_NOTE", tmpdir()) as string;
+    expect(note).toContain("bun scripts/pdocs/cli.ts view board");
+    expect(note).not.toContain("memories");
   });
 });
