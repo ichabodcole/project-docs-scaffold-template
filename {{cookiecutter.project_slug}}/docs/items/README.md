@@ -15,16 +15,27 @@ looks like, and its frontmatter holds its state and every relationship it has.
 
 ## Filing an item
 
+`pdocs` here, and in every README, means `bun scripts/pdocs/cli.ts`, run from
+the repository root. There is no separate `pdocs` binary.
+
 ```bash
 bun scripts/pdocs/cli.ts new item fix-login-redirect --kind bug \
   --title "Fix the login redirect loop" \
-  --description "Signing in from /settings loops back to /login; it should land on /settings."
+  --description "Signing in from /settings loops back to /login; it should land on /settings." \
+  --by <your-model-or-name>
 ```
 
 This writes `docs/items/fix-login-redirect.md` from
 [ITEM.template.md](../TEMPLATES/ITEM.template.md) with a fresh `id`,
-`lifecycle: triage`, and `generated` filled in, and prints the id's first 12
-characters. `--kind` is required. Name the file in kebab-case, with no date.
+`lifecycle: triage` and `generated` filled in, and prints the id: its first 12
+characters as text, the full id with `--format json` (the default when the
+output is not a terminal). Name the file in kebab-case, with no date.
+
+- `--kind` is required.
+- Always pass `--title` and `--description`. Without them the title is the slug,
+  title-cased, and the description is the template's placeholder.
+- Pass `--by` with your model or your name. Without it `generated.by` records
+  `pdocs`, not the author.
 
 Then write the body: what is wrong or missing, and a **Definition of done** —
 observable results a reviewer can check without asking you.
@@ -32,15 +43,18 @@ observable results a reviewer can check without asking you.
 Pass what you know at creation as flags; each is checked before anything is
 written:
 
-| Flag                       | Sets                                                                            |
-| -------------------------- | ------------------------------------------------------------------------------- |
-| `--parent feature/<slug>`  | the feature this item serves                                                    |
-| `--from <path or ref>`     | what spawned it: a session, a report, another item. Also links it from the body |
-| `--source <id>`            | an id outside this tree: an issue number                                        |
-| `--scope <name>`           | the part of the project it touches, declared in `lint.scopes`                   |
-| `--blocked-by <ref,ref>`   | items that must be `done` first                                                 |
-| `--priority`, `--assignee` | normally left to triage                                                         |
-| `--lifecycle backlog`      | only when a person who already wants the work files it                          |
+| Flag                       | Sets                                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--parent feature/<slug>`  | the feature this item serves                                                                                                                                 |
+| `--from <path or ref>`     | what spawned it: a session, a report, another item. Also links it under a `## Related Documents` heading. Leave it out when nothing written spawned the item |
+| `--source <id>`            | an id outside this tree: an issue number                                                                                                                     |
+| `--scope <name>`           | the part of the project it touches, declared in `lint.scopes`                                                                                                |
+| `--blocked-by <ref,ref>`   | items that must be `done` first                                                                                                                              |
+| `--priority`, `--assignee` | left to triage                                                                                                                                               |
+| `--lifecycle backlog`      | only when the user wants the work — see below                                                                                                                |
+
+Leave `--cycle` and `--released-in` alone when filing: `init-branch` and
+`sweep-project` write them.
 
 Do not copy the template by hand: the `id` must be a fresh UUID, and the CLI
 checks every reference. Change any field later with
@@ -58,27 +72,40 @@ writes each field; [SCHEMA.md](../SCHEMA.md#fields) has the full table.
 
 ## States, and who moves an item
 
-| State     | Means                                                                  | Set by                                    |
-| --------- | ---------------------------------------------------------------------- | ----------------------------------------- |
-| `triage`  | Filed, and nobody has decided to take it on                            | `pdocs new item`, by default              |
-| `backlog` | Accepted, and not yet shaped                                           | triage                                    |
-| `ready`   | Has a definition of done and nothing blocking it; an agent can take it | triage or shaping                         |
-| `active`  | Being worked                                                           | `init-branch`, when a branch starts on it |
-| `review`  | Waiting on a human or a reviewer                                       | whoever hands it over                     |
-| `done`    | Landed                                                                 | `finalize-branch`                         |
-| `dropped` | Decided against. It stays in the tree                                  | whoever decides                           |
+| State     | Means                                                                  | Set by                                                             |
+| --------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `triage`  | Filed, and nobody has decided to take it on                            | `pdocs new item`, by default                                       |
+| `backlog` | Accepted, and not yet shaped                                           | triage                                                             |
+| `ready`   | Shaped and unblocked: an accepted definition of done, nothing blocking | triage, or shaping after acceptance                                |
+| `active`  | Being worked                                                           | `init-branch`, when a branch starts on a `backlog` or `ready` item |
+| `review`  | Waiting on a human or a reviewer                                       | whoever hands it over                                              |
+| `done`    | Landed                                                                 | `finalize-branch`                                                  |
+| `dropped` | Decided against. It stays in the tree                                  | whoever decides                                                    |
+
+`init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
+in the project-docs Claude Code plugin.
 
 **Items created by agents start in `triage`, and leave it through a triage step
 the user has seen.** If you are an agent that has just filed an item — a review
-finding, a bug you hit mid-task — leave it in `triage`. Do not accept it, drop
-it or prioritise it on your own judgement. At triage the `triage-items` skill
-proposes each item's disposition (`backlog`, `ready`, a `parent` feature to
-join, or `dropped`), its `priority`, and an `assignee` when it goes to a
-particular agent or seat; it applies them with `pdocs set` once the user has
-reviewed them. `pdocs set` does not enforce this — the skills do.
+finding, a bug you hit mid-task — leave it in `triage`: do not accept it, drop
+it, prioritise it, or start work on it on your own judgement. Writing its body
+and definition of done at filing is expected; that does not make it `ready`.
 
-An item filed by a person who already wants the work may start at `backlog` or
-`ready` (`--lifecycle ready`).
+At triage, the `triage-items` skill proposes for each item a state (`backlog`,
+`ready` or `dropped`), and optionally a `priority`, a `parent` feature to join
+and an `assignee` when it goes to a particular agent or seat. It applies them
+with `pdocs set` once the user has reviewed them. Without that skill, do the
+same by hand: show the user each item and the change you propose, and run
+`pdocs set` only after they agree. `pdocs set` does not check who is calling;
+this rule is the only guard.
+
+When the user asks you to file work they want done ("file that, I want it
+fixed"), the user is the one filing it: start it at `backlog`, or at `ready` if
+its definition of done is settled (`--lifecycle ready`).
+
+Shaping is writing or settling an accepted item's definition of done and its
+`blocked_by`. It moves a `backlog` item to `ready`, and it is when `status` goes
+from `draft` to `stable`: the description can now be relied on.
 
 `pdocs view backlog` lists everything unstarted, `pdocs view ready` what can be
 started now, and `pdocs view board` everything by state group.

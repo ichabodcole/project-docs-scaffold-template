@@ -22,7 +22,7 @@ documents are created beside it with `--owner feature/<slug>`.
 STATE. A feature never takes `triage`: it arrives already accepted.
   backlog  accepted, and still being shaped (a draft proposal)
   ready    approved to build
-  active   being built;  review  built, and being reviewed
+  active   being built;  review  built, waiting on a reviewer
   done     delivered;    dropped  decided against. Nothing is deleted.
 Change it with `pdocs set feature/<slug> --lifecycle <state>`. The work is
 tracked on items that name it: `parent: feature/<slug>`, and

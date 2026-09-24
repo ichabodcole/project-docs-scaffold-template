@@ -339,7 +339,8 @@ is a document **owned** by one of them.
 - **A research item** is the asking: the question, its definition of done, and
   its state. Its answer is the `write-up.md` it owns, and the evidence behind it
   is its `reports/`. Three files, kept apart.
-- **Create them with `pdocs`.** `pdocs new feature <slug>`,
+- **Create them with `pdocs`** — here and below, `pdocs` means
+  `bun scripts/pdocs/cli.ts`. `pdocs new feature <slug>`,
   `pdocs new item <slug> --kind <kind>`, `pdocs new cycle <slug>`, and
   `pdocs new <type> --owner feature/<slug>|item/<slug>` for an owned document,
   which also links the owner from its Related section. Change fields with
@@ -366,7 +367,9 @@ Every field has a named writer. A field nobody writes goes stale.
 | `released_in` | feature, item | no       | the version that first shipped it                     | `sweep-project`, at release. Never checked: `pdocs view unreleased` lists what lacks it |
 
 `title`, `description`, `status` and `generated` are required on every document,
-as in [Frontmatter](#frontmatter--every-page). An item's body carries its
+as in [Frontmatter](#frontmatter--every-page). On an item, `status` is `draft`
+when it is filed and `stable` once shaping has settled its definition of done;
+the work's state is `lifecycle`, never `status`. An item's body carries its
 definition of done. There are no estimates and no due dates.
 
 `assignee` routes work to an agent or a seat. It does not track people, and it
@@ -380,15 +383,20 @@ is optional because in the common case — one person and the agent they work wi
 | created → `triage`                         | an agent that files an item: a reviewer's finding, a bug hit mid-task                                                                                                            | `pdocs new item` (the default)          |
 | created → `backlog` / `ready`              | a person who already wants it                                                                                                                                                    | `pdocs new item … --lifecycle ready`    |
 | `triage` → `backlog`, `ready` or `dropped` | the user, at a triage step they have seen: the `triage-items` skill proposes each item's disposition, `priority`, `assignee` and `parent`, and applies them once the user agrees | `pdocs set <ref> --lifecycle backlog …` |
-| → `ready`                                  | shaping: writing the definition of done, and `blocked_by`                                                                                                                        | `pdocs set <ref> --lifecycle ready`     |
-| → `active`                                 | `init-branch`, when a branch starts on it                                                                                                                                        | `pdocs set <ref> --lifecycle active`    |
+| `backlog` → `ready`                        | shaping: settling an accepted item's definition of done and `blocked_by`                                                                                                         | `pdocs set <ref> --lifecycle ready`     |
+| `backlog` / `ready` → `active`             | `init-branch`, when a branch starts on it                                                                                                                                        | `pdocs set <ref> --lifecycle active`    |
 | → `review`                                 | whoever hands the work to a human or a reviewer to wait on                                                                                                                       | `pdocs set <ref> --lifecycle review`    |
 | → `done`                                   | `finalize-branch`, when the branch lands                                                                                                                                         | `pdocs set <ref> --lifecycle done`      |
 | → `dropped`                                | whoever decides against it. Nothing is deleted                                                                                                                                   | `pdocs set <ref> --lifecycle dropped`   |
 
+`init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
+in the project-docs Claude Code plugin. `init-branch` starts only an item in
+`backlog` or `ready`; an item in `triage` is triaged first.
+
 `pdocs set` does not check who is calling: the triage step is a rule the skills
 follow, not a gate in the CLI. An agent does not move an item out of `triage` on
-its own judgement.
+its own judgement. Without the `triage-items` skill, show the user each item and
+the change you propose, and run `pdocs set` only after they agree.
 
 A feature arrives already accepted, so it has no `triage`: `backlog` while it is
 being shaped, `ready` once it is approved to build.
@@ -470,15 +478,15 @@ Work items and features carry these states in `lifecycle`, and each state
 belongs to exactly one group. The lint parses this table and fails if the
 grouping it enforces disagrees. A feature never takes `triage`.
 
-| Group       | State     | Means                                          |
-| ----------- | --------- | ---------------------------------------------- |
-| `unstarted` | `triage`  | Filed, and nobody has decided to take it on    |
-| `unstarted` | `backlog` | Accepted, and not yet shaped                   |
-| `unstarted` | `ready`   | Shaped and unblocked, and can be picked up     |
-| `started`   | `active`  | Being worked                                   |
-| `started`   | `review`  | Built, and being reviewed                      |
-| `completed` | `done`    | Finished                                       |
-| `cancelled` | `dropped` | Will not be done; the record stays in the tree |
+| Group       | State     | Means                                                                  |
+| ----------- | --------- | ---------------------------------------------------------------------- |
+| `unstarted` | `triage`  | Filed, and nobody has decided to take it on                            |
+| `unstarted` | `backlog` | Accepted, and not yet shaped                                           |
+| `unstarted` | `ready`   | Shaped and unblocked: an accepted definition of done, nothing blocking |
+| `started`   | `active`  | Being worked                                                           |
+| `started`   | `review`  | Waiting on a human or a reviewer                                       |
+| `completed` | `done`    | Finished                                                               |
+| `cancelled` | `dropped` | Will not be done; the record stays in the tree                         |
 
 ## Archiving
 
@@ -525,8 +533,8 @@ was cut, what was learned) · **Sessions** (the branches worked under it).
 ## Hard rules
 
 0. **Read the neighbours first.** Before writing, read the folder's `README.md`
-   and one existing sibling of the same `type`. That sibling is the live example
-   for anything this contract does not spell out.
+   and, when there is one, an existing sibling of the same `type`. That sibling
+   is the live example for anything this contract does not spell out.
 1. **Plain Markdown only.** No framework components, no HTML beyond what GitHub
    renders. A page that needs an interactive widget is tooling, not a page.
 2. **Relative `.md` links** between documents

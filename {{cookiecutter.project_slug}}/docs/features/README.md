@@ -60,7 +60,7 @@ needs; a file with a name not listed above is an `artifact`.
 | `backlog` | Accepted, and still being shaped (a draft)     |
 | `ready`   | Approved to build                              |
 | `active`  | Being built                                    |
-| `review`  | Built, and being reviewed                      |
+| `review`  | Built, and waiting on a human or a reviewer    |
 | `done`    | Delivered                                      |
 | `dropped` | Decided against. The folder stays in the tree. |
 

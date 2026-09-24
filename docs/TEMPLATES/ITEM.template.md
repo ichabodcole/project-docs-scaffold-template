@@ -17,9 +17,10 @@ below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
 USAGE: `bun scripts/pdocs/cli.ts new item <slug> --kind <kind>` writes
 docs/items/<slug>.md from this file, with a fresh `id` and `lifecycle: triage`.
-Pass any field below as a flag: `--parent feature/<slug>`, `--blocked-by <id>`,
-`--from <path or ref>`. Do not copy this file by hand: the `id` must be a fresh
-UUID, and the CLI checks every reference before it writes.
+Pass `--title`, `--description` and `--by`, and what you know as flags:
+`--parent feature/<slug>`, `--blocked-by <ref,ref>`, `--from <path or ref>`.
+Do not copy this file by hand: the `id` must be a fresh UUID, and the CLI
+checks every reference before it writes.
 
 WHO WRITES EACH FIELD. Add an optional field only when it applies. After
 creation, change a field with `pdocs set <ref> --<field> <value>`; it refuses a
@@ -27,11 +28,14 @@ value the lint would reject.
 
   title, description, kind   whoever files the item
   id                         `pdocs new item`, once
+  status                     `draft` when filed; `stable` once shaping has
+                             settled the definition of done
   lifecycle                  `triage` when an agent files it. The user decides
                              at triage (the triage-items skill proposes):
                              `backlog`, `ready`, or `dropped`. Shaping sets
                              `ready`; init-branch sets `active`;
-                             finalize-branch sets `done`.
+                             finalize-branch sets `done`. An agent never
+                             moves an item out of `triage` itself.
 
   Optional:
   parent: feature/<slug>     whoever files it, or triage
