@@ -85,7 +85,7 @@ about `backlog`; a session-template link climbed one level too few; this repo's
 seed manifest lacks `STYLE.md`.
 
 All were fixed in `6becd89`, `86253bb` and `c8c7821` — small prose and help-text
-edits to a branch the accuracy reviewer had already passed, spot- checked by the
+edits to a branch the accuracy reviewer had already passed, spot-checked by the
 coordinator rather than re-reviewed. Final gate: `npm run check` 1471 pass,
 `npx tsc --noEmit` clean.
 
