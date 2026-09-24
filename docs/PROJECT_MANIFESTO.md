@@ -54,16 +54,16 @@ iteration through real projects, which is what this project is doing.
 
 - **Organize by lifecycle, not just type.** Different documents serve different
   purposes and have different lifetimes. Permanent reference docs (architecture,
-  specs) stay organized by type. Pipeline docs (proposals, design resolutions,
-  plans, sessions) are co-located by project so the full story of a body of work
-  lives in one folder. This hybrid approach emerged from real scaling pain — the
-  v2.0 restructuring was driven by traceability and archival problems in a flat,
-  type-only layout.
+  specs, playbooks) stay organized by type. Work documents (plans, design
+  resolutions, sessions) are owned by the feature or work item they serve and
+  live in its folder, so the full story of a body of work lives in one place.
+  This hybrid approach emerged from real scaling pain — the v2.0 restructuring
+  was driven by traceability and archival problems in a flat, type-only layout.
 
 - **AI is a first-class consumer.** The documentation structure is designed so
   AI assistants can navigate, generate, validate, and act on docs without
   special instructions. CLAUDE.md files provide project context, AGENTS.md
-  provides behavioral guidance, memories provide session continuity, and
+  provides behavioral guidance, `pdocs view` shows what is in flight, and
   document templates use consistent metadata that's easy for AI to parse.
 
 - **Convention over configuration.** Every folder has a README explaining its
@@ -72,16 +72,17 @@ iteration through real projects, which is what this project is doing.
   wonder "where does this go?" — the answer is always documented.
 
 - **Lightweight where possible, formal when valuable.** Not every task needs a
-  proposal and plan. The backlog folder exists for small work. Fragments capture
-  half-formed thoughts. The system provides a spectrum from informal (fragment)
-  to formal (project with proposal, design resolution, plan, sessions) and lets
-  the work determine the ceremony.
+  feature and a plan. A work item is a single file until it owns something. An
+  unaccepted idea is an item left in `triage`. The system provides a spectrum
+  from informal (a one-file item) to formal (a feature with a design resolution,
+  plan, test plan and sessions) and lets the work determine the ceremony.
 
 ## What It Does
 
 - **Generates a complete documentation scaffold** via Cookiecutter —
   pre-organized folders with READMEs, templates, and conventions for
-  architecture docs, specifications, investigations, projects, backlog, and more
+  architecture docs, specifications, playbooks, features, work items, cycles,
+  and more
 
 - **Provides a five-plugin Claude Code ecosystem** built around the scaffold:
   - **project-docs** — the core workflow plugin: 6 commands, 27 skills, 9 agents
@@ -103,10 +104,12 @@ iteration through real projects, which is what this project is doing.
   - **agent-bridge** — a `bridge-agent` skill for cross-project knowledge
     sharing and agent-to-agent communication via the agent-bridge MCP server.
 
-- **Manages the full documentation pipeline** from idea through completion:
-  brief → investigation → proposal → [design resolution] → plan → [test plan] →
-  implementation sessions → [sweep → archival], with each stage having defined
-  conventions and AI-assisted tooling. The final stage is a check-in rather than
+- **Manages the full work pipeline** from question through completion: research
+  item → feature → [design resolution] → plan → [test plan] → items → sessions →
+  [sweep → archival], with each stage having defined conventions and AI-assisted
+  tooling. Work items move through one state vocabulary (triage → backlog →
+  ready → active → review → done, or dropped), and backlogs and boards are views
+  `pdocs` derives from their fields. The final stage is a check-in rather than
   an automatic close: `sweep-project` reconciles a plan against what was built,
   and archives only on human confirmation.
 
@@ -119,10 +122,10 @@ iteration through real projects, which is what this project is doing.
   `DEV_KICKOFF.md` handoff documents, enabling multiple agents or developers to
   work on different features simultaneously with clear context boundaries.
 
-- **Maintains session continuity** through memories — short summaries of recent
-  work that eliminate the cold-start problem when a new AI session begins — and
-  through `ground-in-project`, a lightweight orientation alternative to a full
-  project-summary refresh.
+- **Maintains session continuity** through `pdocs view board` — the work in
+  flight, derived from the items' fields — and through `ground-in-project`, a
+  lightweight orientation alternative to a full project-summary refresh. What a
+  branch teaches that a future agent needs is appended to a playbook.
 
 ## What It Doesn't Do
 
@@ -137,16 +140,20 @@ iteration through real projects, which is what this project is doing.
   disk stays the whole product; the graph is something you can compute from it,
   not a service you have to run to read it.
 
-- **Records scope and state, not people or dates.** There are no tickets, Kanban
-  boards, story points, or status dashboards, and nothing here estimates
-  anything. The structure tracks _what_ work exists, _why_, and how far it has
-  got; tracking _who_ is doing it _by when_ belongs in your PM tool.
+- **Records scope and state, not people or dates.** There are no story points or
+  due dates, and nothing here estimates anything. A board is a view `pdocs`
+  derives from the items' fields, never a document someone maintains. The
+  structure tracks _what_ work exists, _why_, and how far it has got; tracking
+  _who_ is doing it _by when_ belongs in your PM tool. A work item's optional
+  `assignee` routes work to an agent or a seat — an Anthill team's seats have
+  handles and scopes of their own — and project-docs still does not track people
+  or dates.
 
-  There is one unit of work in play — the [cycle](./cycles/README.md) — and it
-  is not a sprint. A sprint is a fixed span of time you fit work into; a cycle
-  is a set of work that closes when the work ships or is cut, with an appetite
-  rather than an end date. At most one is active, which is the whole point: the
-  answer to "what are we doing" should be a thing, not a list.
+  There is one grouping of work in play — the [cycle](./cycles/README.md) — and
+  it is not a sprint. A sprint is a fixed span of time you fit work into; a
+  cycle is a set of work that closes when the work ships or is cut, with an
+  appetite rather than an end date. At most one is active, which is the whole
+  point: the answer to "what are we doing" should be a thing, not a list.
 
 - **Not a documentation generator.** This doesn't extract docs from code (like
   JSDoc or Sphinx). It provides the _human-authored_ documentation structure
@@ -162,10 +169,10 @@ iteration through real projects, which is what this project is doing.
   standard and are tested across multiple agent runtimes. If a feature can't be
   expressed as a portable skill, it doesn't belong here.
 
-- **Not a rigid process.** The pipeline (investigation → proposal →
-  [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) is a
-  convention, not a requirement. You can create a project with just a proposal.
-  You can skip investigations for clear features. The structure enables but
+- **Not a rigid process.** The pipeline (research item → feature →
+  [design-resolution] → plan → [test-plan] → items → sessions → [sweep →
+  archive]) is a convention, not a requirement. A feature can be just its
+  `feature.md`. You can skip research for clear work. The structure enables but
   doesn't enforce.
 
 - **Not a finished product.** Some parts are battle-tested (documentation
@@ -180,21 +187,22 @@ the defining architectural decision — the project moved from a flat, type-base
 hierarchy to a hybrid model after encountering real problems with traceability,
 link fragility, and archival at scale. The insight: permanent reference docs
 (architecture, specifications, playbooks) belong organized by type because
-they're long-lived and cross-cutting; pipeline docs (proposals, plans, sessions)
-belong organized by project because they tell the story of a specific body of
-work. Investigations and reports sit in between — they're cross-cutting
-discovery docs that precede and follow projects, serving as connective tissue.
+they're long-lived and cross-cutting; work documents (plans, sessions, reports)
+belong to the feature or work item they serve, because they tell the story of a
+specific body of work. The work taxonomy (2026-09) took that one step further:
+three entities — feature, work item, cycle — with every relationship between
+them a field rather than a folder.
 
 **The documentation cycle is a loop:**
 
 ```
-Brief → Investigation → Project (proposal → [design-resolution] → plan → [test-plan] → sessions → [sweep → archive]) → Report → ...
+Research item → Feature (feature.md → [design-resolution] → plan → [test-plan] → items → sessions → [sweep → archive]) → Research item → ...
 ```
 
-Briefs capture and refine ideas, investigations explore questions, projects
-execute work, and post-completion reports trigger the next cycle. This loop —
-with AI agents capable of driving each stage — is the core workflow the project
-enables.
+Research items explore questions, features and their items execute work, and
+what a finished feature reveals is filed as the next items or research. This
+loop — with AI agents capable of driving each stage — is the core workflow the
+project enables.
 
 ---
 
