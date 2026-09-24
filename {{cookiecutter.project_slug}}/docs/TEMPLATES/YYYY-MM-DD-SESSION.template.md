@@ -13,11 +13,12 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-USAGE: Copy this file to your project's `sessions/` folder, replacing YYYY-MM-DD with the current date
-and renaming to describe the session topic (e.g., 2026-02-09-initial-implementation.md).
+USAGE: `bun scripts/pdocs/cli.ts new session <topic> --owner feature/<slug>` (or
+`item/<slug>`) writes this as sessions/YYYY-MM-DD-<topic>.md in the owner's
+folder, dated today, and links the owner.
 
 This is your dev journal - write what's relevant, skip what's not. Sessions are informal and flexible.
-Focus on what stands out: deviations from plan, unexpected discoveries, lessons learned.
+Focus on what stands out: deviations from plan, unexpected discoveries, what you would do differently.
 
 Sessions serve two audiences:
 1. YOU (or future you) - reflecting on what happened, capturing context for later
@@ -27,14 +28,17 @@ Sessions serve two audiences:
 If everything went smoothly and there's nothing notable, you might only need a few lines.
 If you wrestled with a complex bug for hours, write as much as helps capture what happened.
 
-For more guidance on sessions, see the projects README: ../../README.md
+A step a future agent must follow does not stay here: add it, with its check, to
+the playbook for that kind of work (docs/playbooks/README.md).
+
+For more guidance, see the owner folder's README: ../../README.md
 -->
 
 # [Topic] — YYYY-MM-DD
 
 ## Context
 
-[What were you working on? Why? Link to related plan/proposal if applicable.]
+[What were you working on? Why? Link the plan if there is one.]
 
 ## What Happened
 
@@ -68,13 +72,10 @@ You don't need to list every file touched - focus on significant changes or
 anything that deviated from plan. Example: "Refactored src/foo/bar.ts to use
 pattern X instead of Y because of issue Z"]
 
-## Lessons Learned (Optional)
+## Next Time (Optional)
 
-[What would you do differently next time? What tips would help similar work in
-the future?
-
-This is especially valuable for capturing solutions to tricky problems or
-insights about the codebase.]
+[What would you do differently? If the answer is a step someone must follow,
+append it to the playbook for that kind of work and link the playbook here.]
 
 ## Follow-up (Optional)
 

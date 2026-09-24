@@ -15,14 +15,45 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-Optional fields, added when they apply: priority (urgent | high | medium |
-low), assignee, parent (feature/<slug>), scope (one value declared in
-lint.scopes), cycle (a cycle's slug), from, source, blocked_by (a list of item
-ids), released_in.
+USAGE: `bun scripts/pdocs/cli.ts new item <slug> --kind <kind>` writes
+docs/items/<slug>.md from this file, with a fresh `id` and `lifecycle: triage`.
+Pass any field below as a flag: `--parent feature/<slug>`, `--blocked-by <id>`,
+`--from <path or ref>`. Do not copy this file by hand: the `id` must be a fresh
+UUID, and the CLI checks every reference before it writes.
+
+WHO WRITES EACH FIELD. Add an optional field only when it applies. After
+creation, change a field with `pdocs set <ref> --<field> <value>`; it refuses a
+value the lint would reject.
+
+  title, description, kind   whoever files the item
+  id                         `pdocs new item`, once
+  lifecycle                  `triage` when an agent files it. The user decides
+                             at triage (the triage-items skill proposes):
+                             `backlog`, `ready`, or `dropped`. Shaping sets
+                             `ready`; init-branch sets `active`;
+                             finalize-branch sets `done`.
+
+  Optional:
+  parent: feature/<slug>     whoever files it, or triage
+  scope: <name>              whoever files it; one name from `lint.scopes`
+  from: <what spawned it>    whoever files it: an item id, `feature/<slug>`,
+                             `cycle/<slug>`, or a docs-root-relative path.
+                             A review always writes it.
+  source: <external id>      intake from outside the tree: an issue number
+  priority: urgent | high | medium | low       triage
+  assignee: <agent, seat or name>              triage, when it is routed
+  blocked_by: [<item id>, ...]                 shaping
+  cycle: <cycle file slug, e.g. 2026-09-auth>  init-branch, when one is active
+  released_in: <version>     sweep-project, at release. Never checked.
+
+docs/items/README.md has the states, the kinds and the rules.
 -->
 
 # [Title]
 
+[What is wrong or missing, and where. A bug: what happens, what should happen,
+and how to see it. Research: the question, and the decision its answer feeds.]
+
 ## Definition of done
 
-- [ ] [The observable result that closes this item]
+- [ ] [An observable result a reviewer can check without asking you]

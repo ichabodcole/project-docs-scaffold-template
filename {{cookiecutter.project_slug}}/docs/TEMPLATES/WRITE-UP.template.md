@@ -13,77 +13,76 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-IMPORTANT: If you haven't read the README.md in this directory, please read it first for context on when to
-create investigations and when NOT to create them.
+USAGE: a write-up is the answer a research item owns. File the question first
+(`pdocs new item <slug> --kind research`), then
+`bun scripts/pdocs/cli.ts new write-up --owner item/<slug>` writes this as
+docs/items/<slug>/write-up.md and links the item. The item holds the state;
+this file holds the findings and carries no `lifecycle`. Evidence gathered on
+the way goes in the item's `reports/`. See docs/items/README.md.
 
-USING THIS TEMPLATE:
-
-This template provides scaffolding to help structure your investigation - it's not a mandatory form.
-Use sections that help you communicate findings clearly. Adapt, merge, skip, or add sections as needed.
-The goal is to answer your question with clear evidence, not to fill in every blank.
-
-Focus on: What did you investigate? What did you find? What should happen next?
+Use the sections that help you answer the question with evidence. Adapt, merge
+or skip them.
 -->
 
-# Investigation: [Topic/Question]
+# Write-up: [Topic or Question]
 
-**Outcome:** [TBD | Proposal Recommended | No Action Needed | Needs More
-Research | Monitoring]
+**Outcome:** [Feature Recommended | Work Items Filed | No Action Needed | More
+Research Needed | Monitoring]
 
 ---
 
-## Question / Motivation
+## Question
 
-What are we investigating and why? What prompted this? What decision needs to be
-made?
+What is being answered, and what decision does the answer feed?
 
-## Current State Analysis
+## Current State
 
-What does the code/system look like today? Include relevant code references,
-metrics, patterns, or pain points.
+What does the code or system look like today? Include code references,
+measurements, patterns or pain points.
 
-## Investigation Findings
+## Findings
 
-What did we discover through analysis?
+### Evidence
 
-### Evidence Gathered
-
-[Code patterns, performance measurements, technology evaluations, concrete
-examples]
+[Code patterns, measurements, technology evaluations, concrete examples. Link
+the reports in `./reports/` that hold the detail.]
 
 ### Key Observations
 
-[What works well? What are the pain points? What patterns emerged?]
+[What works? What hurts? What patterns emerged?]
 
 ### Options Considered
 
-[If action might be needed, what are potential approaches? Include tradeoffs and
-complexity estimates. Don't forget "Do Nothing" as an option.]
+[If action might be needed: the possible approaches, their tradeoffs and their
+complexity. Include "do nothing".]
 
 ## Recommendation
 
-Based on findings, what should we do? (Check one and explain)
+Check one and explain:
 
-- [ ] **Create Proposal** - Action is warranted
-- [ ] **No Action Needed** - Current state is acceptable
-- [ ] **Monitor** - Watch for specific signals/thresholds
-- [ ] **More Research Needed** - Outstanding questions remain
+- [ ] **Propose a feature** — the work is big enough to plan
+- [ ] **File work items** — the work is a handful of tasks
+- [ ] **No action needed** — the current state is acceptable
+- [ ] **Monitor** — watch for named signals or thresholds
+- [ ] **More research needed** — questions remain
 
-**Rationale:** [Why this recommendation? What's the key deciding factor?]
+**Rationale:** [The deciding factor.]
 
 ## Next Steps
 
-[Concrete actions based on recommendation - create proposal, document decision,
-schedule follow-up, etc.]
+[What follows from the recommendation: the feature or items to file, the
+decision to record, the follow-up to schedule. When the research item is done,
+`pdocs set item/<slug> --lifecycle done`.]
 
 ## Open Questions (Optional)
 
-[Anything that remains unclear or needs further discussion]
+[What remains unclear.]
 
 ---
 
 **Related Documents:**
 
-- `[Code analyzed](../../src/path/to/code.ts)`
-- `[Related proposal](../projects/project-name/proposal.md)` (if created)
-- `[Related architecture](../architecture/architecture-name.md)`
+- `[Evidence](./reports/YYYY-MM-DD-topic-report.md)`
+- `[Code analyzed](../../../src/path/to/code.ts)`
+- `[Feature it led to](../../features/feature-name/feature.md)` (if created)
+- `[Related architecture](../../architecture/architecture-name.md)`

@@ -1,7 +1,7 @@
 ---
 type: handoff # REQUIRED (OKF §3). Do not change it — the folder decides it.
-title: "[Feature Name] Development Kickoff"
-description: "[One sentence: what the next developer is picking up.]"
+title: "Deployment Handoff — [Feature or Change Name]"
+description: "[One sentence: what shipping this work requires.]"
 tags: [area, feature] # 2-4 kebab-case keywords
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
 generated: { by: your-name-or-model, at: YYYY-MM-DD }
@@ -13,8 +13,11 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-USAGE: Copy this file to your project folder as `handoff.md` when the work
-requires specific deployment or integration steps to ship successfully.
+USAGE: `bun scripts/pdocs/cli.ts new handoff --owner feature/<slug>` (or
+`item/<slug>`) writes this as `handoff.md` in the owner's folder and links the
+owner.
+Create one when the work requires specific deployment or integration steps to
+ship successfully.
 
 Most projects won't need this — only create it when deployment involves more
 than merging code (e.g., database migrations, service redeployments, environment
@@ -23,7 +26,7 @@ config changes, manual coordination steps).
 Create this during branch finalization, when all steps are known.
 -->
 
-# Deployment Handoff — [Feature/Change Name]
+# Deployment Handoff — [Feature or Change Name]
 
 ## Prerequisites
 

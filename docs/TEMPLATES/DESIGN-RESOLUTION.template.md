@@ -14,46 +14,48 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-USAGE: Copy this file to your project folder as `design-resolution.md`.
+USAGE: `bun scripts/pdocs/cli.ts new design-resolution --owner feature/<slug>` (or
+`item/<slug>`) writes this as `design-resolution.md` in the owner's folder and links the
+owner.
 
 This template helps you crystallize system-level decisions before development
 planning begins. Think of it as collapsing ambiguity — locking in behavior,
 data shape, boundaries, and architectural positioning so the development plan
 can be concrete rather than speculative.
 
-This stage is optional. Use it when the proposal contains unresolved behavioral,
-structural, or architectural questions that would otherwise leak into planning
-or get resolved informally during implementation. Skip it when the proposal is
+This stage is optional. Use it when the feature leaves behavioral,
+structural, or architectural questions unresolved that would otherwise leak into
+planning or get resolved informally during implementation. Skip it when the feature is
 already precise enough to plan against directly.
 
-Not every section needs filling. Adapt based on the project's complexity — a
+Not every section needs filling. Adapt based on the work's complexity — a
 small feature might only need Boundaries and Irreversible Decisions. A complex
 system change might need all sections. The goal is clarity, not ceremony.
 
-This document is ephemeral — it lives in the project folder and does its job
+This document is ephemeral — it lives in its owner's folder and does its job
 during the development lifecycle. But it can serve as raw material for formal
 specifications or architecture docs after implementation is complete.
 
-For more guidance on design resolutions, see the projects README: ../README.md
+For more guidance, see the owner folder's README: ../README.md
 -->
 
 # [Design Resolution Title]
 
-**Related Proposal:** link the owner — `./feature.md` or `./item.md`
-(`pdocs new --owner` adds it under Related Documents)
+**Owner:** `./feature.md` or `./item.md` — `pdocs new --owner` links it under
+Related Documents
 
 ---
 
 ## Overview
 
-[1-2 paragraph summary connecting back to the proposal. State what this
-resolution clarifies — what ambiguities existed in the proposal that this
+[1-2 paragraph summary connecting back to the feature. State what this
+resolution clarifies — what ambiguities existed in the feature that this
 document resolves before planning begins.]
 
 ## System Behavior
 
 [What are the core entities and how do they behave? Focus on states,
-transitions, invariants, and failure modes. Skip this section if the proposal
+transitions, invariants, and failure modes. Skip this section if the feature
 already defines behavior precisely.]
 
 - What are the core entities?
@@ -100,7 +102,7 @@ exclusions and decisions that are deliberately postponed.]
 ## Architectural Positioning
 
 [Where does this fit in the system? Define layer ownership, dependencies, and
-constraints. Skip if the proposal already makes architectural placement clear.]
+constraints. Skip if the feature already makes architectural placement clear.]
 
 - Where does this live in the system?
 - What layer owns it?

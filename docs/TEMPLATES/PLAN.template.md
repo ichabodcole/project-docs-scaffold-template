@@ -14,7 +14,9 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-USAGE: Copy this file to your project folder as `plan.md`.
+USAGE: `bun scripts/pdocs/cli.ts new plan --owner feature/<slug>` (or
+`item/<slug>`) writes this as `plan.md` in the owner's folder and links the
+owner.
 
 This template helps you create a development roadmap - showing the route from current codebase to completed feature.
 Focus on pivotal points: complex areas, significant changes, migration concerns, key validation gates.
@@ -25,20 +27,20 @@ The developer drives; you're providing the map and calling out where things get 
 Adapt sections freely. Not every plan needs all sections (e.g., many won't need Rollback Plans or Observability).
 Ground your plan in the actual codebase - reference files, analyze current patterns, show the path forward.
 
-For more guidance on plans, see the projects README: ../README.md
+For more guidance, see the owner folder's README: ../README.md
 -->
 
 # [Feature Name] Implementation Plan
 
-**Related Proposal:** link the owner — `./feature.md` or `./item.md`
-(`pdocs new --owner` adds it under Related Documents)
+**Owner:** `./feature.md` or `./item.md` — `pdocs new --owner` links it under
+Related Documents
 
 ---
 
 ## Overview
 
-[1-2 paragraph summary connecting back to the proposal and outlining what this
-plan covers. Reference current codebase state and the path to implementation.]
+[1-2 paragraph summary connecting back to the owner and outlining what this plan
+covers. Reference current codebase state and the path to implementation.]
 
 ## Outcome & Success Criteria
 
@@ -148,4 +150,4 @@ feature work won't need this.]
 ## Implementation Notes
 
 [Optional section for implementation-specific context, decisions made during
-development, or lessons learned]
+development, or what the next plan should do differently]

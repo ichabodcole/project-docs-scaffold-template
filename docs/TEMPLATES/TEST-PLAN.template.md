@@ -14,14 +14,16 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-USAGE: Copy this file to your project folder as `test-plan.md`.
+USAGE: `bun scripts/pdocs/cli.ts new test-plan --owner feature/<slug>` (or
+`item/<slug>`) writes this as `test-plan.md` in the owner's folder and links the
+owner.
 
 This template helps you define structured verification scenarios for agent-
 implemented work. It's designed around the 80/20 rule: test what matters most,
 explicitly defer the rest.
 
 The test plan is created AFTER the development plan. It translates the
-proposal's goals and the plan's phases into concrete, prioritized verification
+feature's goals and the plan's phases into concrete, prioritized verification
 scenarios that an implementing agent can execute autonomously.
 
 When to use:
@@ -38,21 +40,20 @@ When to skip:
 The tiered system prevents the common failure mode of test plans — trying to
 test everything and testing nothing well.
 
-For more guidance on test plans, see the projects README: ../README.md
+For more guidance, see the owner folder's README: ../README.md
 -->
 
 # Test Plan: [Feature Name]
 
 **Related Plan:** `[Development Plan](./plan.md)`, if the owner has one\
-**Related Proposal:** link the owner — `./feature.md` or `./item.md`
-(`pdocs new --owner` adds it)
+**Owner:** `./feature.md` or `./item.md` — `pdocs new --owner` links it
 
 ---
 
 ## Overview
 
 [1-2 paragraphs describing what is being verified and why. Connect back to the
-proposal's goals and the plan's phases. State the scope of verification — what
+feature's goals and the plan's phases. State the scope of verification — what
 this test plan covers and what it intentionally leaves out.]
 
 ## Test Environment
@@ -117,13 +118,13 @@ _Always required. Cheap checks that the feature doesn't break anything._
 
 ### Tier 2 — Critical Path
 
-_Core user flows mapped from proposal goals. This is the real value of the test
-plan._
+_Core user flows mapped from the feature's goals. This is the real value of the
+test plan._
 
 #### T2-01: [Core user flow description]
 
 **Type:** UI/E2E | Unit | Integration\
-**Source:** Proposal goal: "[specific goal from proposal]"
+**Source:** Feature goal: "[specific goal from the feature]"
 
 **Steps:**
 
@@ -137,7 +138,7 @@ plan._
 
 ### Tier 3 — Edge Cases & Robustness
 
-_Backlog unless covering critical infrastructure. Explicitly deferred with
+_Deferred unless covering critical infrastructure. Explicitly deferred with
 rationale._
 
 #### T3-01: [Edge case description]
@@ -174,10 +175,11 @@ describe what's needed for them to become executable.]
 
 ## Visual Artifacts
 
-_Screenshots captured during UI/E2E verification, stored in the project's
-artifacts directory._
+_Screenshots captured during UI/E2E verification, stored in the owner's
+`artifacts/` folder._
 
-**Screenshot directory:** `docs/projects/<project-name>/artifacts/screenshots/`
+**Screenshot directory:** `docs/features/<slug>/artifacts/screenshots/` (or the
+item's folder)
 
 **Naming convention:** `<scenario-id>-<description>.png` (e.g.,
 `T2-01-create-document.png`)

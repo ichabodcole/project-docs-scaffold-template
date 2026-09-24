@@ -1,10 +1,10 @@
 ---
 type: feature # REQUIRED (OKF §3). Do not change it — the folder decides it.
-title: "[Proposal Title]"
+title: "[Feature Title]"
 description: "[One sentence: what this proposes and why.]"
 tags: [area, feature] # 2-4 kebab-case keywords
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: backlog # where the work has got to; see docs/SCHEMA.md
+lifecycle: backlog # backlog | ready | active | review | done | dropped
 generated: { by: your-name-or-model, at: YYYY-MM-DD }
 ---
 
@@ -14,23 +14,33 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
-USAGE: Copy this file to `features/<slug>/feature.md`.
+USAGE: `bun scripts/pdocs/cli.ts new feature <slug>` writes this as
+docs/features/<slug>/feature.md. This file is the feature: it argues for the
+change, and its `lifecycle` is the feature's state. Its plan, sessions and other
+documents are created beside it with `--owner feature/<slug>`.
 
-This template helps you tell the story of what you're proposing and why.
-Think of it as mapping out the major landmarks without detailing every step.
+STATE. A feature never takes `triage`: it arrives already accepted.
+  backlog  accepted, and still being shaped (a draft proposal)
+  ready    approved to build
+  active   being built;  review  built, and being reviewed
+  done     delivered;    dropped  decided against. Nothing is deleted.
+Change it with `pdocs set feature/<slug> --lifecycle <state>`. The work is
+tracked on items that name it: `parent: feature/<slug>`, and
+`pdocs view feature <slug>` lists them.
 
-Adapt sections as needed. Merge, skip, or add sections based on what helps tell your story clearly.
+Optional fields: `scope` (one name from `lint.scopes`) and `released_in` (the
+version that shipped it, written at release).
 
-Core questions to answer: What are we building? Why? What's the high-level approach? What's in/out of scope?
-
-For more guidance on proposals, see the projects README: ../README.md
+Answer: what are we building, why, what is the approach, and what is in and out
+of scope? Merge, skip or add sections as the argument needs. See the features
+README: ../README.md
 -->
 
-# [Proposal Title]
+# [Feature Title]
 
 ## Overview
 
-[1-2 paragraph summary of what this proposal is about and why it matters]
+[One or two paragraphs: what this feature is, and why it matters.]
 
 ## Problem Statement
 
@@ -90,7 +100,7 @@ code - that belongs in implementation plans]
 
 **Related Documents:**
 
-- `[Investigation](../../investigations/investigation-name.md)` (if applicable)
+- `[Research write-up](../../items/item-name/write-up.md)` (if applicable)
 - `[Architecture docs](../../architecture/doc-name.md)` (if applicable)
 
 ---
