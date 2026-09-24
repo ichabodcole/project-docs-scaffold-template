@@ -792,6 +792,18 @@ describe("the emitted declaration", () => {
       expect(names("find")).toContain(flag);
   });
 
+  // A first-time reader followed `help new` and was told --from takes a path
+  // (it takes a reference too) and was not told an item needs --kind.
+  test("`help new` says --from takes a path or a reference, and --kind is required for an item", () => {
+    const { code, stdout } = run(["help", "new", "--format", "text"]);
+    expect(code).toBe(0);
+    const line = (flag: string) =>
+      stdout.split("\n").find((l) => l.trimStart().startsWith(`${flag} `)) ?? "";
+    expect(line("--from")).toContain("<path-or-ref>");
+    expect(line("--from")).toMatch(/feature\/<slug>/);
+    expect(line("--kind")).toMatch(/Required for an `item`/);
+  });
+
   test("a retired flag is not declared: `new` does not list --project (review 12)", () => {
     expect(at(declaration(), ["new"]).args.map((a) => a.name)).not.toContain("--project");
   });

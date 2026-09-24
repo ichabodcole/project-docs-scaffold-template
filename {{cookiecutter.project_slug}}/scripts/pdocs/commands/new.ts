@@ -59,6 +59,7 @@ import {
   FEATURES_FOLDER,
   FIELD_VALUES,
   ITEMS_FOLDER,
+  KINDS,
   PROJECTS_FOLDER,
   type RegistryRow,
   TYPE_ALIAS,
@@ -825,7 +826,7 @@ export const newCommand: Command = {
   summary: "Create a document: the type decides folder, filename and template.",
   usage:
     "pdocs new <type> <name> [--title <t>] [--description <d>] [--owner <feature/…|item/…>] " +
-    "[--variant <v>] [--from <path>]",
+    "[--variant <v>] [--from <path-or-ref>]",
   // `--project` was the owner flag before 9.0.0; skills written against it still pass it.
   retiredFlags: {
     "--project": "`--project` was replaced by `--owner feature/<slug>` (or `item/<slug>`).",
@@ -869,13 +870,17 @@ export const newCommand: Command = {
     },
     {
       flag: "--from",
-      metavar: "<path>",
-      summary: "The document this one came out of; linked from its Related section.",
+      metavar: "<path-or-ref>",
+      summary:
+        "What this came out of, linked from its Related section: a document's path, or — on an " +
+        "item — a reference (an item id, item/<slug>, feature/<slug>, cycle/<slug>), also written to `from:`.",
     },
     ...EXTRA_FLAGS.map((key) => ({
       flag: flagFor(key),
       metavar: "<value>",
-      summary: `\`${key}:\` — only on a type that declares it.`,
+      summary:
+        `\`${key}:\` — only on a type that declares it.` +
+        (key === "kind" ? ` Required for an \`item\`: ${KINDS.join(" | ")}.` : ""),
     })),
   ],
 
