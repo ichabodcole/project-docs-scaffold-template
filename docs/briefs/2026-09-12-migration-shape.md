@@ -115,7 +115,7 @@ both were caught by review.
 - [ ] Should `migration-authoring` teach both shapes with a rule for choosing,
       or one shape with named exceptions?
 - [x] Is there a lesson page owed here? It was:
-      [A guard must be able to fail](../lessons-learned/a-guard-must-be-able-to-fail.md)
+      [the Writing Migrations playbook](../playbooks/writing-migrations-playbook.md)
       landed with the session record (`c7b17be`). It names both defects kept as
       evidence above and the replicated, cross-round shape they share.
 
@@ -125,7 +125,7 @@ Spawned [Migration Shape](../projects/migration-shape/proposal.md) on
 2026-09-12. The steps below are now that project's to carry.
 
 - [ ] Rewrite `migration-authoring/SKILL.md`, starting from
-      [A guard must be able to fail](../lessons-learned/a-guard-must-be-able-to-fail.md)
+      [the Writing Migrations playbook](../playbooks/writing-migrations-playbook.md)
       — the lesson is the input to the rewrite, not its output.
 - [ ] Correct `update-project-docs` § Creating New Migration Guides and
       `scaffold-update-checklist`'s two references.

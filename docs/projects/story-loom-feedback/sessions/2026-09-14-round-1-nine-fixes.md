@@ -62,8 +62,8 @@ whole plugin, so either agent's uncommitted edits failed the other's
 `check:dist`; pathspec commits run the hook with a temporary index that a
 fixture's `git status` inherits; and one plain commit swept the other's staged
 files once and was re-cut. Recorded in the
-[memory](../../../memories/2026-09-14-story-loom-feedback-round-1.md); next time
-the second implementer gets a worktree.
+[Changing a Shipped Skill playbook](../../../playbooks/changing-a-shipped-skill-playbook.md);
+next time the second implementer gets a worktree.
 
 ## Review
 

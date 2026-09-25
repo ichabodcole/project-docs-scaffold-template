@@ -263,7 +263,7 @@ Three things unit tests structurally cannot cover, each needing a real run:
 check, because it reports success. For each of the three manifest outcomes,
 deliberately produce the condition and confirm the failure fires. This repo has
 shipped guards that were structurally unable to report failure; see
-[What seven self-run phase gates missed](../../memories/2026-09-06-self-review-blind-spots.md).
+[the Changing pdocs playbook](../../playbooks/changing-pdocs-playbook.md).
 
 ## Assumptions & Constraints
 

@@ -160,7 +160,8 @@ fewer template sections.
   usual outcome is appending to an existing file.
 - _Consult goes hollow_ — an agent reports "nothing applies" without looking.
   Mitigation must be structural, not a wording rule; see
-  [A self-report can't be made verifiable by constraining its wording](../../memories/2026-09-02-self-reports-cannot-be-made-verifiable.md).
+  [the Changing a Shipped Skill playbook](../../playbooks/changing-a-shipped-skill-playbook.md),
+  step 3.
 - _Breaking for adopters who are not Cole._ Mitigation: Docs Foundation has
   landed, so keeping a retired type is configuration; and the change arrives as
   one major release with Work Taxonomy rather than two in succession.

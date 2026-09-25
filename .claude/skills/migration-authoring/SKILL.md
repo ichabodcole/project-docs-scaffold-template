@@ -410,10 +410,10 @@ cannot pass is the defect, not the reference.
 - [ ] **The guide-shaped headings**, `## Step-by-Step Migration` through
       `## Checklist`, are all present.
 
-## Lessons Learned
+## From the Writing Migrations playbook
 
-**[A guard must be able to fail](../../../docs/lessons-learned/a-guard-must-be-able-to-fail.md)**
-— its "Do this" clauses are authoring requirements here:
+**[Writing Migrations playbook](../../../docs/playbooks/writing-migrations-playbook.md)**
+— its steps on guards (steps 1–6) are authoring requirements here:
 
 - **Write the failing case first and watch it fail.** Before trusting a guard,
   break the thing it guards and confirm the guard reports it. If you cannot make
@@ -430,10 +430,10 @@ cannot pass is the defect, not the reference.
   someone else's repository later. A test guards it only while the test exists
   and only where it runs; a check inside the program guards every run.
 
-**[Migration Steps Must Be Uniformly Specific](../../../docs/lessons-learned/migration-steps-uniform-specificity.md)**
-— provide the artifact, never a description of it, at the same specificity in
-every step. It is the source of the guide-shaped principles above and applies to
-a script wherever the script asks a person to write content.
+**[Writing Migrations playbook](../../../docs/playbooks/writing-migrations-playbook.md)**,
+step 7 — provide the artifact, never a description of it, at the same
+specificity in every step. It is the source of the guide-shaped principles above
+and applies to a script wherever the script asks a person to write content.
 
 ---
 
@@ -455,5 +455,5 @@ a script wherever the script asks a person to write content.
   [v2.10: guards watched failing](../../../docs/projects/story-loom-feedback/artifacts/v2.10-guards-watched-failing.md)
 - [Scaffold Update Checklist](../scaffold-update-checklist/SKILL.md) — the
   release workflow that triggers a migration, and how each shape is validated
-- [Lessons Learned](../../../docs/lessons-learned/README.md) — where migration
-  authoring failures are documented
+- [Playbooks](../../../docs/playbooks/README.md) — where what migration
+  authoring taught is kept, as steps and checks

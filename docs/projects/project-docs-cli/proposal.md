@@ -299,6 +299,7 @@ lint move is delicate.
 - [The frontmatter contract](../../SCHEMA.md) — what the lint enforces
 - [OKF frontmatter layer](../../cycles/2026-09-okf-frontmatter-layer.md) — the
   closed cycle this follows
-- [What checking 137 documents turned up](../../memories/2026-09-04-okf-frontmatter-layer.md)
+- [Changing pdocs playbook](../../playbooks/changing-pdocs-playbook.md) — what
+  checking 137 documents turned up, as steps
 - [Project CLI toolkit recipe](../../../plugins/recipes/skills/recipes/library/project-cli-toolkit/RECIPE.md)
   — the pattern, published here and followed by `anthill`

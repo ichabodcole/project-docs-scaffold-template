@@ -109,7 +109,7 @@ would make the repair "run it". The tree it describes is what a partial
 round: a guard computed in one block and consumed in the next, and a count check
 that pattern-matched the manifest's own `version` line so an empty manifest
 passed. Neither was caught by a test; both were caught by review, and the lesson
-[A guard must be able to fail](../../lessons-learned/a-guard-must-be-able-to-fail.md)
+[the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
 records the class. The skill that teaches migration authoring does not yet point
 at it.
 
@@ -172,7 +172,7 @@ Three documents change, in dependency order:
    guide-shaped branch and to the script's own copy phases. The quality
    checklist is replaced by one the v2.9 migration passes and a prose guide with
    cross-block state fails. The skill's Lessons Learned section points at
-   [A guard must be able to fail](../../lessons-learned/a-guard-must-be-able-to-fail.md)
+   [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
    as the input it was written from.
 2. **`update-project-docs` § Creating New Migration Guides** describes both
    shapes and names the rule for choosing. Its mandated structure becomes the
@@ -371,7 +371,7 @@ known population and two fixtures.
 
 - [Migration Shape, and the Factory That Makes It](../../briefs/2026-09-12-migration-shape.md)
   — the brief this proposal is drawn from
-- [A guard must be able to fail](../../lessons-learned/a-guard-must-be-able-to-fail.md)
+- [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
   — the lesson the skill rewrite starts from
 - [Docs Foundation](../docs-foundation/proposal.md) — the project whose review
   produced the diagnosis, and which shipped `seed.ts` for the next migration to

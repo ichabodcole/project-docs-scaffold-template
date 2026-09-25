@@ -45,7 +45,8 @@ pipeline reported an internal fault on two verbs and nothing on the other five.
 
 Then the question that changed the session: does the payload's `package.json`
 make sense to ship? It did not, and neither did four other things. That argument
-is [its own memory](../../../memories/2026-09-08-shipped-ownership-boundary.md);
+is in
+[the Changing the Scaffold Payload playbook](../../../playbooks/changing-the-scaffold-payload-playbook.md);
 what belongs here is what removing them cost and what it exposed.
 
 | Removed                         | Why                                                   |
@@ -131,4 +132,4 @@ gate then rejects. Narrow — it needs a long slug and a long title — but a fr
 
 - [Proposal](../proposal.md)
 - [Landing session](2026-09-06-pdocs-cli-landing.md)
-- [What you ship says who owns it](../../../memories/2026-09-08-shipped-ownership-boundary.md)
+- [Changing the Scaffold Payload playbook](../../../playbooks/changing-the-scaffold-payload-playbook.md)

@@ -182,7 +182,7 @@ the best migration in the repository.
     checklist must be satisfiable in full by the v2.9 migration and must fail a
     prose guide carrying cross-block state.
   - **A Lessons Learned section** pointing at
-    [A guard must be able to fail](../../lessons-learned/a-guard-must-be-able-to-fail.md)
+    [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
     as the input the rewrite started from, with its "Do this" clauses restated
     as authoring requirements: write the failing case first; a shell check is
     `|| { echo "..."; exit 1; }`, never an echoed word; a wiring claim is tested
@@ -604,7 +604,7 @@ Four levels, in order of what each can prove:
    of its states: work to do, work already done, precondition false.
 2. **Guard tests, written failing first.** For every guard in the script: break
    the thing it guards, watch it report, restore. This is the requirement from
-   [A guard must be able to fail](../../lessons-learned/a-guard-must-be-able-to-fail.md),
+   [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md),
    and it is not satisfied by a test that passes on the first run — the failing
    observation is the deliverable, and it is recorded in the session note's
    `Guards watched failing` section rather than left as something the author
@@ -690,9 +690,9 @@ Revert the branch. `npm run check` proves the revert is complete because
 - [Proposal](./proposal.md)
 - [Migration Shape, and the Factory That Makes It](../../briefs/2026-09-12-migration-shape.md)
   — the origin brief
-- [A guard must be able to fail](../../lessons-learned/a-guard-must-be-able-to-fail.md)
+- [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
   — the requirement on every guard in the new script
-- [Migration Steps Must Be Uniformly Specific](../../lessons-learned/migration-steps-uniform-specificity.md)
+- [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
   — the principle that survives into the guide-shaped branch
 - [Docs Foundation](../docs-foundation/proposal.md) — shipped `seed.ts`, the API
   the migration after this one calls
