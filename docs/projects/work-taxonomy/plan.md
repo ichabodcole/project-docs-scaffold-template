@@ -69,11 +69,11 @@ stays green on every commit, and no commit needs `--no-verify`.
 - [x] `pdocs view` derives the backlog, the board, the ready-and-unblocked list,
       a feature's items, a cycle's scope, a scope's work, and "done without
       `released_in`". None of these is an authored file.
-- [ ] `init-branch` writes `active` and `cycle`. `finalize-branch` writes
+- [x] `init-branch` writes `active` and `cycle`. `finalize-branch` writes
       `done`, puts the session in the owner's folder, creates a born-`done` item
       for work that ran without one, and runs Reflect instead of writing a
       memory. All of this is in **one** revision of the skill.
-- [ ] `generate-dev-plan` and `dev-kickoff` name the playbooks they consulted,
+- [x] `generate-dev-plan` and `dev-kickoff` name the playbooks they consulted,
       or say none applied, from `pdocs find` output. `finalize-branch`,
       `dev-kickoff`, release and handoff each honour a named playbook override.
 - [x] `docs/STYLE.md` is seeded and recorded in the seed manifest. The playbook
@@ -826,13 +826,13 @@ on what it finds.
 
 **Validation:**
 
-- [ ] In a scratch project on the Phase 2 CLI: `init-branch` on a `ready` item,
+- [x] In a scratch project on the Phase 2 CLI: `init-branch` on a `ready` item,
       then `finalize-branch` on a branch that taught nothing. The item ends
       `done`, the session is in its folder, the commit carries the trailer, and
       no guidance document is created ("nothing this time").
-- [ ] A scratch project with `docs/playbooks/branch-finalization-playbook.md`:
+- [x] A scratch project with `docs/playbooks/branch-finalization-playbook.md`:
       `finalize-branch` follows it and says so.
-- [ ] `generate-dev-plan` output quotes the `pdocs find` result.
+- [x] `generate-dev-plan` output quotes the `pdocs find` result.
 
 **Known stale paths until this phase lands.** About 12 plugin skills and agents
 name `docs/projects/TEMPLATES/...`, which Task 1.4 moves to `docs/TEMPLATES/`.

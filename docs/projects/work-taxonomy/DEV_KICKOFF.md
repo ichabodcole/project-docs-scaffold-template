@@ -92,7 +92,7 @@ consumer.
 - [x] Phase 1 — schema, registry, lint
 - [x] Phase 2 — `pdocs` creation, promotion, `set`, `archive`, views
 - [x] Phase 3 — templates and prose
-- [ ] Phase 4 — skill audit and touch points
+- [x] Phase 4 — skill audit and touch points
 - [ ] Phase 5 — migration, dogfood, retirement
 - [ ] Phase 6 — second consumer, revision, release
 

@@ -53,4 +53,4 @@ _Written at close, not before._
 - feature/work-taxonomy-p1-schema-lint (landed 2026-09-22)
 - feature/work-taxonomy-p2-pdocs-verbs (landed 2026-09-22)
 - feature/work-taxonomy-p3-templates-prose (landed 2026-09-24)
-- feature/work-taxonomy-p4-skills (open)
+- feature/work-taxonomy-p4-skills (landed 2026-09-25)

@@ -204,3 +204,7 @@ What has been happening lately, for a cold start. — see
   — SCHEMA.md, the category READMEs and the templates describe features, items
   and cycles as the pdocs code behaves, STYLE.md is seeded, and playbooks are
   Goal · Steps · Verification.
+- [The project-docs skills write the work model](./memories/2026-09-25-skills-write-the-work-model.md)
+  — init-branch, finalize-branch, sweep-project, triage-items and the planning
+  skills now write items' and features' fields through pdocs, and
+  finalize-branch reflects into playbooks instead of writing a memory.
