@@ -64,7 +64,7 @@ exists only after that migration has run. Use it. Step 3 says how.
 
 **What triggers a version bump (with a migration guide):**
 
-- New documentation category added (e.g., `backlog/`, `memories/`)
+- New documentation category added (e.g., `cycles/`, `items/`)
 - Structural reorganization (e.g., flat dirs → project folders)
 - Template content changes that affect how documents are created
 - README convention changes that affect document lifecycle
@@ -320,6 +320,14 @@ The **Applies If** column is a shell test that is true when the migration is
 still needed. Run it before applying (Step 3) — the version number narrows the
 list, this settles it.
 
+**Narrow by version first, always.** The older rows test for paths that 9.0.0
+removes — `[ ! -d docs/projects ]` (v1→v2), `[ ! -d docs/briefs ]` (v2.4→v2.5),
+`docs/projects/TEMPLATES/…` (v2.0→v2.3, v2.3→v2.4) — so on a 9.0.0 tree those
+tests come back **true**. They are only meaningful on a tree whose version is
+inside the row's From range. A project with no version marker at all is dated by
+Step 1's detection before any row is tested; never run the whole column against
+it.
+
 | Migration                                                  | From    | To     | Applies If                                                                         | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------------------------------------- | ------- | ------ | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [migrations/v1-to-v2.md](migrations/v1-to-v2.md)           | pre-2.0 | 2.0.0  | `[ ! -d docs/projects ]`                                                           | **Legacy.** Flat dirs → project folders, add backlog/memories/specifications/fragments/interaction-design/reports                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -386,8 +394,8 @@ Every document carries a frontmatter block, and
 vocabularies, and what the lint (`bun scripts/pdocs/cli.ts check`) checks. Read
 it before creating or editing a document.
 
-For quick onboarding on recent work, start with
-[docs/memories/](./docs/memories/).
+For quick onboarding on recent work, start with the work board:
+`bun scripts/pdocs/cli.ts view board --features`.
 ```
 
 **The `SCHEMA.md` paragraph applies from v2.7 on** — that file is what the
@@ -500,7 +508,8 @@ bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
 The type decides the folder, the filename shape and the template, and the CLI
 fills the frontmatter — for a library page it also writes the catalog line in
 `docs/index.md`. The same CLI reads the tree: `check` (the gate), `find`,
-`backlinks`, `orphans`.
+`view`, `backlinks`, `orphans`; and changes work in place: `set`, `promote`,
+`archive`.
 
 `bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
 `docs/SCHEMA.md` is the frontmatter contract the gate enforces.
