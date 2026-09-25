@@ -80,6 +80,16 @@ export interface BacklinksData {
  * Such a target has no `type/slug` key, so it reports no `related` edges — and
  * correctly: nothing can write a `related:` edge to a contract page.
  */
+/**
+ * The key a target is REPORTED by: a work entity's own address
+ * (`feature/<slug>`, `item/<slug>`), which this command accepts back, rather
+ * than `pageKey`'s `feature/feature` that names every feature at once.
+ */
+function addressOf(page: Page): string | null {
+  const own = pageAliasKeys(page).find((k) => !/^item\/[0-9a-f]{8}-/.test(k));
+  return own ?? pageKey(page);
+}
+
 export function resolveTarget(
   repoRoot: string,
   pages: Page[],
@@ -92,7 +102,7 @@ export function resolveTarget(
     return {
       path: byPath.path,
       type: byPath.type,
-      key: pageKey(byPath),
+      key: addressOf(byPath),
       title: byPath.title,
     };
 
@@ -111,7 +121,7 @@ export function resolveTarget(
       return {
         path: page.path,
         type: page.type,
-        key: pageKey(page),
+        key: addressOf(page),
         title: page.title,
       };
     }
@@ -124,7 +134,7 @@ export function resolveTarget(
       return {
         path: page.path,
         type: page.type,
-        key: pageKey(page),
+        key: addressOf(page),
         title: page.title,
       };
     }

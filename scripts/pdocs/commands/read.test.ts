@@ -502,6 +502,19 @@ describe("pdocs backlinks", () => {
     expect(byAlias.data.target.path).toBe("docs/features/alpha/feature.md");
   });
 
+  test("an entity's key is its own address, which backlinks then accepts", () => {
+    const out = JSON.parse(
+      run(["backlinks", "docs/features/alpha/feature.md", "--format", "json", "--root", ROOT]).stdout
+    );
+    expect(out.data.target.key).toBe("feature/alpha");
+    const again = run(["backlinks", out.data.target.key, "--format", "json", "--root", ROOT]);
+    expect(again.code).toBe(ExitCode.Success);
+    const item = JSON.parse(
+      run(["backlinks", "docs/items/undated.md", "--format", "json", "--root", ROOT]).stdout
+    );
+    expect(item.data.target.key).toBe("item/undated");
+  });
+
   test("the retired `project/<name>` form is gone, and the refusal names the one that replaced it", () => {
     const { code, stderr } = run([
       "backlinks",
