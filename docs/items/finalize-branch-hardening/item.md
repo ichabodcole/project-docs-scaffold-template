@@ -8,7 +8,7 @@ status: stable
 lifecycle: done
 id: 01a0da55-e3a0-705e-b437-ac24a624aeee
 kind: task
-generated: { by: migrate-v2.10-to-v3.0, at: 2026-08-07 }
+generated: { by: migrate-v2.10-to-v3.0, at: 2026-09-02 }
 ---
 
 # Finalize branch hardening

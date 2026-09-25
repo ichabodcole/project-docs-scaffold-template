@@ -7,7 +7,7 @@ status: stable
 lifecycle: done
 id: 01a0da55-e3a0-705e-b437-ac24a624aee6
 kind: task
-generated: { by: migrate-v2.10-to-v3.0, at: 2026-03-15 }
+generated: { by: migrate-v2.10-to-v3.0, at: 2026-03-18 }
 ---
 
 # Html mockup skill improvements
