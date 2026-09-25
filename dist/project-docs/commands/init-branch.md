@@ -44,6 +44,9 @@ git checkout develop
 git pull
 ```
 
+If it fails because the branch has no remote or upstream, say so and carry on;
+if it fails on a conflict, stop and tell the user.
+
 ### Step 3: Handle Uncommitted Changes
 
 If `git status` shows changes:
@@ -66,12 +69,13 @@ stash/discard if the changes are unrelated to the new work.
 A branch usually starts one work item. Offer the ones ready to start:
 
 ```bash
-pdocs view ready
+pdocs view ready --format text
 ```
 
-It lists the `ready` items whose `blocked_by` items are all `done`, each with
-its short id, priority and path. Show the list and ask which one this branch
-starts, or whether it starts none.
+(`pdocs` prints JSON when its output is not a terminal; `--format text` gives
+the table.) It lists the `ready` items whose `blocked_by` items are all `done`,
+each with its short id, priority and path. Show the list and ask which one this
+branch starts, or whether it starts none.
 
 - **The user picks one from the list** — keep its reference, `item/<slug>`.
 - **The user names an item that is not listed** — check its state with
@@ -112,8 +116,10 @@ git checkout -b <type>/<description>
 **1. Find the active cycle**, if the project keeps `docs/cycles/`:
 
 ```bash
-pdocs find --type cycle --lifecycle active
+pdocs find --type cycle --lifecycle active --format text
 ```
+
+It prints the cycle's path; read the file's `title` from its frontmatter.
 
 - **Exactly one match** — tell the user which cycle it is and its `title`, and
   ask whether this branch belongs to it.
@@ -137,8 +143,8 @@ file name without `.md` (`2026-09-auth`). `pdocs set` refuses a value the lint
 would reject and names the valid ones. Membership lives on the item: never add a
 `scope:` list to the cycle file.
 
-Both edits change files on the new branch; they are committed with the branch's
-first commit and land with it.
+These changes — the item's fields and the cycle's Sessions line — stay
+uncommitted; they go in with the branch's first commit and land with it.
 
 **3. Record the branch in the cycle** (when it belongs to one): append a line to
 the cycle file's `## Sessions` section:
@@ -148,8 +154,9 @@ the cycle file's `## Sessions` section:
 ```
 
 Append under the existing entries, not at the top; the section reads
-chronologically. `finalize-branch` Step 6 changes `(open)` to
-`(landed YYYY-MM-DD)` when the branch lands.
+chronologically. If it has no entries yet, add the line after the section's
+comment. `finalize-branch` Step 6 changes `(open)` to `(landed YYYY-MM-DD)` when
+the branch lands.
 
 ### Branch Naming Conventions
 

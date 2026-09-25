@@ -86,6 +86,13 @@ and sets that item `active`, so look in this order:
    Ask the user to confirm it is this branch's.
 3. The user names one; `pdocs find --id <prefix>` resolves an id they paste.
 
+**Check the match's state.** The branch's item should be `active` —
+`init-branch` started it. A match in `triage`, `backlog` or `ready` did not come
+from `init-branch`: ask the user whether this branch is that item's work.
+**Never move a `triage` item on your own judgement** — a yes from the user is
+their decision to take it on; a no means none was found. A match already `done`
+or `dropped` is not this branch's; treat it as none found.
+
 **None found is allowed** — work often runs before anyone files an item. Say so,
 and Step 4 creates one for it. Keep the item's reference (`item/<slug>`) and its
 full `id` (the `id` field of `pdocs find --format json`) for Steps 2, 4, 6
@@ -235,14 +242,17 @@ not to skip.
    - **Ship verdict:** "End your report with a clear verdict — _Ready to merge:
      Yes / No / With fixes_ — and a one-sentence reasoning."
 
-5. **Move the work item to `review` as you dispatch** — the work is now waiting
-   on a reviewer:
+5. **Move the work item to `review` just before you dispatch** — the work is now
+   waiting on a reviewer — and tell the reviewer in the prompt that an
+   uncommitted `lifecycle: review` change in the item's file is expected:
 
    ```bash
    pdocs set item/<slug> --lifecycle review
    ```
 
-   Skip it when Step 0 found no item. It moves to `done` in Step 6.
+   Skip it when Step 0 found no item. It moves to `done` in Step 6. If the
+   review sends you back to fix things on the branch, it stays `review` while
+   you do; re-review what changed.
 
 6. Wait for the subagent's findings (or both, for dual review) before
    proceeding.
@@ -265,15 +275,19 @@ not to skip.
     --from <docs-root-relative path of the session document>
   ```
 
-  It starts in `triage` — the default, and the right state: the user decides at
+  Pass `--parent feature/<slug>` when the finding belongs to the same feature as
+  this branch's item, so the feature does not look finished without it. It
+  starts in `triage` — the default, and the right state: the user decides at
   triage whether it is worth doing. Don't pass `--lifecycle`, and don't set
   `priority`.
 
 - If the reviewer(s) produce a "Ready to merge: No" or "With fixes" verdict,
-  treat those fixes as blocking before Step 3. **Blocking attaches to the
-  concrete findings, not to the verdict label** — where the fixes behind a "With
-  fixes" are all subjective, that is the previous bullet's case: present them
-  and let the user decide.
+  treat those fixes as blocking before Step 3. **Only the user can defer a
+  blocking finding**: if they choose to land anyway, file it as a work item
+  (below) and record in the session's Review section who deferred it and why.
+  **Blocking attaches to the concrete findings, not to the verdict label** —
+  where the fixes behind a "With fixes" are all subjective, that is the previous
+  bullet's case: present them and let the user decide.
 - If the reviewer produces nothing actionable, that's a valid result — say so
   explicitly rather than pretending no review happened.
 - **State which reviewers ran and what each actually executed** — quoting the
@@ -347,23 +361,27 @@ pdocs new session <topic> --owner item/<slug> \
   --title "<Topic> — YYYY-MM-DD" --description "…" --by "<your model or name>"
 ```
 
-A single-file item is promoted to a folder first, and the CLI writes the link
-back to the owner (`../item.md`). **Use `--owner feature/<slug>` instead** when
-the branch is one of several building a feature whose folder already holds their
-sessions — the work tracked at the feature, not at one item. Either way, never
-create the file by hand: the CLI picks the dated filename, the template and the
-frontmatter.
+A single-file item is promoted to a folder first, and the CLI writes the
+session's link to its owner (`../item.md`) into the session's Related section.
+**Use `--owner feature/<slug>` instead** when the branch is one of several
+building a feature whose folder already holds their sessions — the work tracked
+at the feature, not at one item. Either way, never create the file by hand: the
+CLI picks the dated filename, the template and the frontmatter.
 
-Fill every field the command leaves as a placeholder. **The lint will not catch
-a placeholder** — it checks that each required key is present and non-empty, and
-`description: "[One sentence …]"` satisfies that perfectly well. So this is on
-you, not on the gate:
+Fill every placeholder the command leaves — the frontmatter below, and in the
+body the H1 (`# [Topic] — YYYY-MM-DD`: the CLI does not fill it from `--title`),
+and the template's example bullets under Related Documents (delete them; keep
+the owner link the CLI wrote). Add a `## Review` section for the census. For the
+frontmatter: **The lint will not catch a placeholder** — it checks that each
+required key is present and non-empty, and `description: "[One sentence …]"`
+satisfies that perfectly well. So this is on you, not on the gate:
 
 - `type: session` — written by the CLI; the folder decides it. Don't change it.
 - `title` — the session's topic and its date, matching the H1
 - `description` — one sentence saying what this session did. Not a paraphrase of
   the title; this is the line that has to earn a reader's click.
-- `tags` — 2–4 kebab-case keywords. The lint doesn't require them on workbench
+- `tags` — 2–4 kebab-case keywords, replacing the template's `[area, feature]`
+  (or pass `--tags` to `pdocs new`). The lint doesn't require them on workbench
   documents, but a session someone will search for later is worth tagging.
 - `status` — `stable`, as the template ships it. A session is a frozen record,
   complete the moment it is written; it is never a draft.
@@ -371,9 +389,12 @@ you, not on the gate:
 
 **Don't write `related:`.** `docs/SCHEMA.md` resolves those edges against
 library pages only, and a session, an item, a feature and a cycle are all
-workbench. Link the cycle in the body instead — a line under the session's own
-heading, `Part of [<cycle title>](<relative path>/cycles/<slug>.md)`, which is a
-real link the lint checks. From `items/<slug>/sessions/` and from
+workbench. Link the cycle in the body instead — when the item is in the cycle
+(its `cycle:` names it; if the branch belongs to the active cycle and the item
+doesn't name it yet, run `pdocs set item/<slug> --cycle <cycle-slug>` first) — a
+line under the session's own heading,
+`Part of [<cycle title>](<relative path>/cycles/<slug>.md)`, which is a real
+link the lint checks. From `items/<slug>/sessions/` and from
 `features/<slug>/sessions/` that path is `../../../cycles/<slug>.md`.
 
 A session carries **no `lifecycle`** — writing one is a lint error. See
@@ -546,10 +567,12 @@ action to perform, not a recommendation to offer. Do them without asking.
      ```
 
      A cycle's work is the items that name it (`cycle: <slug>`); nothing lists
-     it in the cycle file. The view reports `closable: yes` when the cycle has
-     at least one item and every one is `done` or `dropped` — which, after this
-     step's `pdocs set`, may now include this branch's item. If it reports
-     `closable: no`, say which items are holding it and stop there.
+     it in the cycle file, and items that don't name it — a follow-up just filed
+     in `triage`, say — don't hold it open. The view reports `closable: yes`
+     when the cycle has at least one item and every one is `done` or `dropped` —
+     which, after this step's `pdocs set`, may now include this branch's item.
+     If it reports `closable: no`, say which items are holding it and stop
+     there.
 
      When it is closable, offer to invoke `sweep-project` with `cycle/<slug>` as
      its target — it routes to its Cycle Path. Closing a cycle means writing its
@@ -570,11 +593,13 @@ and moves (the item's state, plan reconciliation, a promotion, any
 files). Scope the staging to `docs/` rather than staging everything, so
 unrelated uncommitted code doesn't ride along.
 
-**This commit carries the work item's trailer.** End its message with the item's
-full `id`, as a git trailer:
+**Re-run the documentation lint first** (below), then commit. **This commit
+carries the work item's trailer.** End its message with the item's full `id`, as
+a git trailer, in one final paragraph with any other trailers:
 
 ```bash
-git commit -m "docs: session record for <branch>" -m "Work-Item: <full item id>"
+git commit -m "docs: session record for <branch>" -m "Work-Item: <full item id>
+Co-Authored-By: …"
 ```
 
 Use the full id from `pdocs find --type item --format json`, not the 12
@@ -591,8 +616,7 @@ If Step 8 lands on a single-commit squash, this commit folds into it — that's
 expected. Committing here still matters: it keeps the documentation work
 recoverable and reviewable as its own step before any history rewriting.
 
-**Re-run the documentation lint before committing**, if the project has one
-(Step 3):
+**The lint run before that commit**, if the project has one (Step 3):
 
 ```bash
 bun scripts/pdocs/cli.ts check
@@ -680,6 +704,10 @@ precedence over the strategies below — and say that you did.
    fails open, so the anchor is not optional.
 
 2. **Look for a project-owned landing policy.** Check, in order:
+   - `docs/playbooks/branch-finalization-playbook.md` (the override at the top
+     of this file). If it says how to land, that is the policy: follow it, and
+     it waives this step's "announce and ask" and the squash checkpoint as far
+     as it says. Still compute and surface step 1's branch facts.
    - Root `AGENTS.md`, then root `CLAUDE.md`, for a `## Branch Landing Policy`
      heading (exact match).
    - If that section only points to another file (e.g. "see
