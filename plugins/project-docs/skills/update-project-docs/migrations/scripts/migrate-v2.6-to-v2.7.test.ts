@@ -42,12 +42,6 @@ import {
 } from "./migrate-v2.8-to-v2.9.ts";
 import {
   CONTRACT_BASENAMES as LINT_CONTRACT_BASENAMES,
-  DURABLE_TYPE as LINT_DURABLE,
-  PROJECT_FILE_TYPE as LINT_PROJECT_FILE,
-  PROJECT_SPEC,
-  RENDERER_KEYS as LINT_RENDERER_KEYS,
-  ROOT_PAGE_TYPE as LINT_ROOT_PAGE,
-  SPEC,
   isTemplate as lintIsTemplate,
 } from "../../../../../../scripts/pdocs/lint/rules.ts";
 import {
@@ -396,6 +390,39 @@ function fixtureB({ seeded = true }: { seeded?: boolean } = {}): string {
   );
   return root;
 }
+
+/**
+ * The lint of the release this migration was written against, loaded from its
+ * tag rather than from the working tree. The codemod's tables are FROZEN to
+ * the v2.7-era vocabulary — `backlog`, `proposal`, `memory` and the rest — and
+ * the working tree's registry deletes those rows when 9.0.0 retires them
+ * (plan Phase 5). Compared against the live tables, this suite would go red on
+ * the day the retirement lands, for a script that has not changed.
+ */
+type EraRules = {
+  DURABLE_TYPE: Record<string, string>;
+  PROJECT_FILE_TYPE: Record<string, string>;
+  PROJECT_SPEC: Record<string, { lifecycle: string[] | null }>;
+  RENDERER_KEYS: readonly string[] | ReadonlySet<string>;
+  ROOT_PAGE_TYPE: Record<string, string>;
+  SPEC: Record<string, { type: string; lifecycle: string[] | null }>;
+};
+async function eraRules(): Promise<EraRules> {
+  const dir = mkdtempSync(join(tmpdir(), "migrate-v27-era-lint-"));
+  roots.push(dir);
+  const tar = join(dir, "pdocs.tar");
+  sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", tar, OWN_TAG, "scripts/pdocs"]);
+  sh(["tar", "-xf", tar, "-C", dir]);
+  return (await import(join(dir, "scripts/pdocs/lint/rules.ts"))) as EraRules;
+}
+const {
+  DURABLE_TYPE: LINT_DURABLE,
+  PROJECT_FILE_TYPE: LINT_PROJECT_FILE,
+  PROJECT_SPEC,
+  RENDERER_KEYS: LINT_RENDERER_KEYS,
+  ROOT_PAGE_TYPE: LINT_ROOT_PAGE,
+  SPEC,
+} = await eraRules();
 
 describe("the copied tables equal the ones the lint enforces", () => {
   test("folder → type, for the library", () => {
