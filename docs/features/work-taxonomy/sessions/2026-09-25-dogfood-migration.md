@@ -160,6 +160,33 @@ backlog items, 8 investigations and 2 cycles; step 1 expected 35 memories.
   or `lessons-learned/` takes its template's seed record with it (this
   repository's manifest still carried both).
 
+## Why this repository's ids stay long
+
+The 70 items here carry ids minted before the first-commit-time rule
+(`1d8bdb7`): the 48 the run filed in one burst, and the items filed since, a
+day's worth at a time. They are correct and unique, and `pdocs` prints each as
+its shortest unique prefix (D25) — which, for ids a millisecond apart, is nearly
+the whole id. A re-mint by the new rule was written and run: every item took a
+time from git (none fell back to `generated.at`) and every prefix differed
+within 13 characters. It was not committed. The deletion check reads an id
+rewritten in place as the old item leaving the tree, by design, so the re-mint
+reported 68 `ITEM DELETED` findings (the two `dropped` items were exempt). The
+owner chose to leave the ids rather than add machinery for changing one; an
+adopter's run mints properly.
+
+The minting fix avoided a trap: `git log --follow --diff-filter=A` also follows
+COPIES, and a new document that resembles an older sibling — two backlog items
+from one template — read as a copy (`C082`) and took the sibling's time.
+`commitTime` walks the `--follow` log through renames only and stops at the
+first add or copy.
+
+The same review found born items dated by their earliest session: the
+description lookup reversed the session list in place (`44db294`). Four items
+here carried the wrong date and were corrected —
+`html-mockup-skill-improvements` (2026-03-15 → 03-18),
+`finalize-branch-hardening` (08-07 → 09-02), `spellbook-feedback` (09-15 →
+09-22), `toolbox-plugin` (03-22 → 03-26).
+
 ## Retirement
 
 `4f50c62` removed the retired rows, their folders, `PROJECT_FILE_TYPE`,
