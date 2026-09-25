@@ -1102,6 +1102,9 @@ the release ships.
      `--dry-run` on a v2.10 tree with no flag reaches phase 3 (D16).
    - Bump plugins by hand: `project-docs` 4.0.0; `operator` and `hivemind`
      minor.
+   - Set the `guidance-lifecycle` feature to its real state (it ships in this
+     release) with `pdocs set feature/guidance-lifecycle --lifecycle done`, and
+     `work-taxonomy` likewise once the release has landed.
    - Rebuild `dist/` and run `npm run check`.
    - Review pruning migrations below the oldest version any known consumer is on
      (see the consumer population).
