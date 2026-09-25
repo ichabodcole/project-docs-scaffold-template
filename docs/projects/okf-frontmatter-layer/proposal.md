@@ -23,11 +23,11 @@ moves.** The existing `docs/` layout stays exactly as it is; what changes is
 that each document becomes addressable, queryable, and checkable by tooling.
 
 This is **phase one** of the
-[Knowledge Wiki Layer](../../briefs/2026-07-23-knowledge-wiki-layer.md) idea.
-The brief and its two July investigations resolved the structure (hybrid: a
-topical system track and an atomic practice track under one schema). The
-original plan was to prove that by pulling the durable docs into a `docs/wiki/`
-root. Using the same pattern in
+[Knowledge Wiki Layer](artifacts/2026-07-23-knowledge-wiki-layer.md) idea. The
+brief and its two July investigations resolved the structure (hybrid: a topical
+system track and an atomic practice track under one schema). The original plan
+was to prove that by pulling the durable docs into a `docs/wiki/` root. Using
+the same pattern in
 [agent-cli-conformance](https://github.com/ichabodcole/agent-cli-conformance)
 since August showed that most of the value comes from the metadata layer and the
 lint, not from where the files sit. So phase one ships the layer on the current
@@ -383,7 +383,7 @@ README, ~110 documents, the payload mirror, and five skills touched.
 
 **Related Documents:**
 
-- [Brief: Knowledge Wiki Layer](../../briefs/2026-07-23-knowledge-wiki-layer.md)
+- [Brief: Knowledge Wiki Layer](artifacts/2026-07-23-knowledge-wiki-layer.md)
 - [Investigation: Wiki structure & OKF schema](../../investigations/2026-07-23-wiki-structure-and-okf-schema-investigation.md)
 - [Investigation: Wiki tooling boundary](../../investigations/2026-07-23-wiki-tooling-boundary-investigation.md)
 - [Investigation: Work-cycle taxonomy landscape](../../investigations/2026-09-03-work-cycle-taxonomy-landscape-investigation.md)

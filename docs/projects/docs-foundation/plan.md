@@ -24,7 +24,7 @@ documentation and no `find` validation. Treat it as a spike result, not as
 finished work.
 
 Source: [proposal](./proposal.md). Evidence:
-[brief](../../briefs/2026-09-11-guidance-layer-and-touch-points.md).
+[brief](../guidance-lifecycle/artifacts/2026-09-11-guidance-layer-and-touch-points.md).
 
 ## Outcome & Success Criteria
 

@@ -63,5 +63,5 @@ libraries)?
 
 **Related Documents:**
 
-- [Brief](../../briefs/2026-03-13-markdown-slide-decks.md)
+- [Brief](artifacts/2026-03-13-markdown-slide-decks.md)
 - [Investigation: Markdown Slide Deck Tooling](../../investigations/_archive/2026-03-13-markdown-slide-deck-tooling.md)

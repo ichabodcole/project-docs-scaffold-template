@@ -369,7 +369,7 @@ known population and two fixtures.
 
 **Related Documents:**
 
-- [Migration Shape, and the Factory That Makes It](../../briefs/2026-09-12-migration-shape.md)
+- [Migration Shape, and the Factory That Makes It](artifacts/2026-09-12-migration-shape.md)
   — the brief this proposal is drawn from
 - [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
   — the lesson the skill rewrite starts from

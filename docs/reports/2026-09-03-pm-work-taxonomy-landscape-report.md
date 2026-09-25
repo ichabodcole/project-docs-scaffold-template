@@ -10,6 +10,9 @@ generated: { by: unknown, at: 2026-09-03 }
 
 # PM Work-Taxonomy Landscape: intent, grouping, and in-play units
 
+For
+[the work-cycle taxonomy landscape investigation](../investigations/2026-09-03-work-cycle-taxonomy-landscape-investigation.md).
+
 Context: solo developer + AI coding agents, markdown-in-git planning
 (`docs/projects/<name>/proposal.md`, `plan.md`, `sessions/`, `docs/backlog/`).
 Looking for the missing concept: a container for "scope of work currently in

@@ -27,7 +27,8 @@ Focus on: What did you investigate? What did you find? What should happen next?
 
 ## Question / Motivation
 
-The [Knowledge Wiki Layer brief](../briefs/2026-07-23-knowledge-wiki-layer.md)
+The
+[Knowledge Wiki Layer brief](../projects/okf-frontmatter-layer/artifacts/2026-07-23-knowledge-wiki-layer.md)
 proposes pulling project-docs' _durable_ docs out of the flat `docs/` list and
 structuring them as an OKF-conformant, graph-shaped wiki. Two structural
 questions must be answered before that idea is proposal-ready:
@@ -305,7 +306,7 @@ sibling investigation. A proposal should wait for both.
 ## Open Questions (Optional)
 
 - Relationship to **HiveMind** (cross-project knowledge base) and the
-  [HiveMind playbook catalog](../briefs/2026-07-10-hivemind-playbook-catalog.md)
+  [HiveMind playbook catalog](../projects/hivemind-playbook-catalog/artifacts/2026-07-10-hivemind-playbook-catalog.md)
   thread — is a per-project wiki the _local_ instance of the same OKF format
   that feeds HiveMind? (Cross-project scope; likely its own investigation.)
 
@@ -313,11 +314,11 @@ sibling investigation. A proposal should wait for both.
 
 **Related Documents:**
 
-- [Knowledge Wiki Layer brief](../briefs/2026-07-23-knowledge-wiki-layer.md)
+- [Knowledge Wiki Layer brief](../projects/okf-frontmatter-layer/artifacts/2026-07-23-knowledge-wiki-layer.md)
   (parent)
 - Reference implementation: `dreamwood/dream-flute/docs/wiki/` (`SCHEMA.md`,
   `lint.ts`, OKF frontmatter, dual render)
-- [HiveMind playbook catalog brief](../briefs/2026-07-10-hivemind-playbook-catalog.md)
+- [HiveMind playbook catalog brief](../projects/hivemind-playbook-catalog/artifacts/2026-07-10-hivemind-playbook-catalog.md)
   (converging cross-project thread)
 - Durable folders under review: `../architecture/`, `../specifications/`,
   `../interaction-design/`, `../playbooks/`, `../lessons-learned/`,

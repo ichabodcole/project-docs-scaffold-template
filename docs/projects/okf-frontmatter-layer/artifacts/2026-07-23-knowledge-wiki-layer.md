@@ -1,11 +1,10 @@
 ---
-type: brief
+type: artifact
 title: "Knowledge Wiki Layer — a durable, graph-shaped documentation surface"
 description:
   docs/ mixes durable knowledge that should grow with ephemeral artifacts that
   close, and treats both the same way.
 status: stable
-lifecycle: spent
 generated: { by: unknown, at: 2026-07-23 }
 ---
 
@@ -208,7 +207,8 @@ works well, _then_ let the cross-project pattern emerge from evidence.
 - Workshop session, 2026-07-23
 - Reference implementation: `dreamwood/dream-flute/docs/wiki/` (SCHEMA.md,
   lint.ts, OKF frontmatter, dual render)
-- Related: [HiveMind playbook catalog](2026-07-10-hivemind-playbook-catalog.md)
+- Related:
+  [HiveMind playbook catalog](../../hivemind-playbook-catalog/artifacts/2026-07-10-hivemind-playbook-catalog.md)
   (the cross-project knowledge-cycle thread this converges with)
 
 ---
@@ -217,9 +217,9 @@ works well, _then_ let the cross-project pattern emerge from evidence.
 
 **Spent 2026-09-04.** All four of its next steps are done, in the order it set:
 both investigations concluded, and
-[project/okf-frontmatter-layer](../projects/okf-frontmatter-layer/proposal.md)
-dogfooded the layer in project-docs before the cookiecutter template was touched
-— which is what the brief asked for, and what caught most of the defects.
+[project/okf-frontmatter-layer](../proposal.md) dogfooded the layer in
+project-docs before the cookiecutter template was touched — which is what the
+brief asked for, and what caught most of the defects.
 
 Two of its assumptions did not survive contact. **The durable docs were not
 reshaped**: no folder moved, and the layer went on the flat list as it stands,

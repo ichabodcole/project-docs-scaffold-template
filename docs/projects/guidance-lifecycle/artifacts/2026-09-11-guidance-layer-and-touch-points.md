@@ -1,5 +1,5 @@
 ---
-type: brief
+type: artifact
 title: Guidance Layer & Lifecycle Touch Points
 description:
   Capture becomes guidance only through a deliberate promotion step;
@@ -7,7 +7,6 @@ description:
   override halves.
 tags: [touch-points, guidance, taxonomy]
 status: draft
-lifecycle: active # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5, at: 2026-09-11 }
 ---
 
@@ -185,4 +184,4 @@ whole ownership story.
 
 **Origin:**
 
-- [HiveMind Playbook Catalog & Apply Vocabulary](./2026-07-10-hivemind-playbook-catalog.md)
+- [HiveMind Playbook Catalog & Apply Vocabulary](../../hivemind-playbook-catalog/artifacts/2026-07-10-hivemind-playbook-catalog.md)

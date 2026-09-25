@@ -22,10 +22,10 @@ archived — as distinct from the timeless intent (a proposal) and from the
 documents that accrue while implementing (plan, sessions, artifacts).
 
 This was noticed on 2026-09-02 while grounding the
-[knowledge-wiki-layer](../briefs/2026-07-23-knowledge-wiki-layer.md) work, and
-articulated on 2026-09-03: the project folder is doing three jobs at once —
-holding the intent, coupling related documents, and recording execution — and
-the "in play" lifecycle belongs to the third job, which is the one a project
+[knowledge-wiki-layer](../projects/okf-frontmatter-layer/artifacts/2026-07-23-knowledge-wiki-layer.md)
+work, and articulated on 2026-09-03: the project folder is doing three jobs at
+once — holding the intent, coupling related documents, and recording execution —
+and the "in play" lifecycle belongs to the third job, which is the one a project
 folder cannot do because a project never opens or closes; it accumulates.
 
 The working hypothesis was a Shape Up-style **cycle**: a dated document that
@@ -334,7 +334,7 @@ record) rather than relocating what it holds.
 
 - [PM work-taxonomy landscape report](../reports/2026-09-03-pm-work-taxonomy-landscape-report.md)
 - [File-based work-tracking landscape report](../reports/2026-09-03-file-based-work-tracking-landscape-report.md)
-- [Knowledge Wiki Layer brief](../briefs/2026-07-23-knowledge-wiki-layer.md)
+- [Knowledge Wiki Layer brief](../projects/okf-frontmatter-layer/artifacts/2026-07-23-knowledge-wiki-layer.md)
 - [Wiki structure & OKF schema investigation](2026-07-23-wiki-structure-and-okf-schema-investigation.md)
 - [Project closure & archive touchpoint investigation](2026-08-07-project-closure-and-archive-touchpoint-investigation.md)
 - [Projects README](../projects/README.md) — the current project-folder contract

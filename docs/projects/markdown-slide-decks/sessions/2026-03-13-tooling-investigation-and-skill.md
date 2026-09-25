@@ -74,4 +74,4 @@ FeedbackSummary, TellMeMore).
 **Related Documents:**
 
 - [Investigation](../../../investigations/_archive/2026-03-13-markdown-slide-deck-tooling.md)
-- [Brief](../../../briefs/2026-03-13-markdown-slide-decks.md)
+- [Brief](../artifacts/2026-03-13-markdown-slide-decks.md)

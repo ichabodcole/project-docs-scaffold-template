@@ -116,4 +116,4 @@ tracked for a future branch):
 - [Architecture review](../reviews/architecture.md)
 - [Code-quality review](../reviews/code-quality.md)
 - [Agent-UX review](../reviews/agent-ux.md)
-- [Pre-ship review report](../../../reports/2026-05-22-tuskboard-skill-pre-ship-review.md)
+- [Pre-ship review report](../reports/2026-05-22-tuskboard-skill-pre-ship-review.md)

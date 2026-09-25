@@ -27,7 +27,8 @@ Focus on: What did you investigate? What did you find? What should happen next?
 
 ## Question / Motivation
 
-The [Knowledge Wiki Layer brief](../briefs/2026-07-23-knowledge-wiki-layer.md)
+The
+[Knowledge Wiki Layer brief](../projects/okf-frontmatter-layer/artifacts/2026-07-23-knowledge-wiki-layer.md)
 wants frontmatter standards solid enough to **build tooling around** — link
 lint, CLI navigation, a graph view — and it wants that tooling to eventually
 work _across_ projects. The sibling
@@ -157,7 +158,7 @@ CLI/graph UI** — should be confirmed cheaply before it shapes a proposal.
 
 **Related Documents:**
 
-- [Knowledge Wiki Layer brief](../briefs/2026-07-23-knowledge-wiki-layer.md)
+- [Knowledge Wiki Layer brief](../projects/okf-frontmatter-layer/artifacts/2026-07-23-knowledge-wiki-layer.md)
   (parent)
 - [Wiki structure & OKF schema investigation](2026-07-23-wiki-structure-and-okf-schema-investigation.md)
   (sibling — resolves structure + schema)

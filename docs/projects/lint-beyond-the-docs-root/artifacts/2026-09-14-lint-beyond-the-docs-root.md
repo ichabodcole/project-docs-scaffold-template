@@ -1,12 +1,11 @@
 ---
-type: brief
+type: artifact
 title: Lint Beyond the Docs Root
 description:
   pdocs sees one docs root and nothing widens it; a monorepo's app READMEs
   carrying the same frontmatter are invisible to check and find.
 tags: [lint, okf, monorepo]
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: active # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-fable-5-1, at: 2026-09-14 }
 ---
 
@@ -141,6 +140,6 @@ path rather than saying the root must hold a `SCHEMA.md`.
 - Story-loom's upgrade to the frontmatter layer, 2026-09-14, and the experiment
   above (a generated project, three config attempts, none reaching
   `apps/web/README.md`)
-- [Migration Shape](../projects/migration-shape/proposal.md) — the project that
-  made the migration preflight depend on the undeclared-folder rule this brief
-  has to restate
+- [Migration Shape](../../migration-shape/proposal.md) — the project that made
+  the migration preflight depend on the undeclared-folder rule this brief has to
+  restate

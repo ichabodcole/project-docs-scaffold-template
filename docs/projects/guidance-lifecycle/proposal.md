@@ -197,7 +197,7 @@ migration system, and a template rewrite.
 
 **Related Documents:**
 
-- [Guidance Layer & Lifecycle Touch Points](../../briefs/2026-09-11-guidance-layer-and-touch-points.md)
+- [Guidance Layer & Lifecycle Touch Points](artifacts/2026-09-11-guidance-layer-and-touch-points.md)
   — the census and measurements behind both projects
 - [Docs Foundation: Ownership Classes & Declarable Types](../docs-foundation/proposal.md)
   — the prerequisite project, shipped

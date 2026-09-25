@@ -688,7 +688,7 @@ Revert the branch. `npm run check` proves the revert is complete because
 **Related Documents:**
 
 - [Proposal](./proposal.md)
-- [Migration Shape, and the Factory That Makes It](../../briefs/2026-09-12-migration-shape.md)
+- [Migration Shape, and the Factory That Makes It](artifacts/2026-09-12-migration-shape.md)
   — the origin brief
 - [the Writing Migrations playbook](../../playbooks/writing-migrations-playbook.md)
   — the requirement on every guard in the new script

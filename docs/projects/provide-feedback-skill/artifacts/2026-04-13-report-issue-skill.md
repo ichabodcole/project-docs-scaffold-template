@@ -1,5 +1,5 @@
 ---
-type: brief
+type: artifact
 title: "`project-docs:report-issue` skill"
 description:
   A skill for reporting a bug in a shipped plugin from the project that hit it,
@@ -7,7 +7,6 @@ description:
 status: stable
 # "Approved for implementation" was the bold status. Approved is not built,
 # and nothing was: the brief is still live work.
-lifecycle: active
 generated: { by: unknown, at: 2026-04-13 }
 ---
 

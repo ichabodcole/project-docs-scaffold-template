@@ -1,5 +1,5 @@
 ---
-type: brief
+type: artifact
 title: Migration Shape, and the Factory That Makes It
 description:
   One migration was rebuilt as a script after three review rounds; the skill
@@ -7,7 +7,6 @@ description:
   guides were not touched.
 tags: [migrations, agent-execution, tooling]
 status: draft
-lifecycle: spent # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5, at: 2026-09-12 }
 ---
 
@@ -115,17 +114,17 @@ both were caught by review.
 - [ ] Should `migration-authoring` teach both shapes with a rule for choosing,
       or one shape with named exceptions?
 - [x] Is there a lesson page owed here? It was:
-      [the Writing Migrations playbook](../playbooks/writing-migrations-playbook.md)
+      [the Writing Migrations playbook](../../../playbooks/writing-migrations-playbook.md)
       landed with the session record (`c7b17be`). It names both defects kept as
       evidence above and the replicated, cross-round shape they share.
 
 ## Suggested Next Steps
 
-Spawned [Migration Shape](../projects/migration-shape/proposal.md) on
-2026-09-12. The steps below are now that project's to carry.
+Spawned [Migration Shape](../proposal.md) on 2026-09-12. The steps below are now
+that project's to carry.
 
 - [ ] Rewrite `migration-authoring/SKILL.md`, starting from
-      [the Writing Migrations playbook](../playbooks/writing-migrations-playbook.md)
+      [the Writing Migrations playbook](../../../playbooks/writing-migrations-playbook.md)
       — the lesson is the input to the rewrite, not its output.
 - [ ] Correct `update-project-docs` § Creating New Migration Guides and
       `scaffold-update-checklist`'s two references.
@@ -135,5 +134,5 @@ Spawned [Migration Shape](../projects/migration-shape/proposal.md) on
 
 **Origin:**
 
-- [Docs Foundation Implementation Plan](../projects/docs-foundation/plan.md) —
-  the project whose review produced this
+- [Docs Foundation Implementation Plan](../../docs-foundation/plan.md) — the
+  project whose review produced this

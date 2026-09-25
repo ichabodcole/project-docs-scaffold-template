@@ -12,6 +12,9 @@ generated: { by: unknown, at: 2026-09-03 }
 
 # File-Based Work-Tracking Landscape: repo-native units, status vocabularies, and closure
 
+For
+[the work-cycle taxonomy landscape investigation](../investigations/2026-09-03-work-cycle-taxonomy-landscape-investigation.md).
+
 > Correction (2026-09-03, verified against
 > [okf/SPEC.md](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)):
 > §7 below was read against OKF 0.1. The current spec is **0.2**: `type` is

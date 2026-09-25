@@ -1,11 +1,10 @@
 ---
-type: brief
+type: artifact
 title: Markdown Slide Decks
 description:
   Project documents are written for agents; a director deciding at a higher
   level needs the same content at a different density.
 status: stable
-lifecycle: active
 generated: { by: unknown, at: 2026-03-13 }
 ---
 

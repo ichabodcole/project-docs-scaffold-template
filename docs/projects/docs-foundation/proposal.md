@@ -221,7 +221,7 @@ changes.
 
 **Related Documents:**
 
-- [Guidance Layer & Lifecycle Touch Points](../../briefs/2026-09-11-guidance-layer-and-touch-points.md)
+- [Guidance Layer & Lifecycle Touch Points](../guidance-lifecycle/artifacts/2026-09-11-guidance-layer-and-touch-points.md)
   — the census and measurements behind both projects
 - [Guidance Lifecycle: Touch Points & Type Retirement](../guidance-lifecycle/proposal.md)
   — the dependent project this one unblocks
