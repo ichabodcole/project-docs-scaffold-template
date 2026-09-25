@@ -1,18 +1,21 @@
 ---
 name: workshop-idea
 description: >
-  Workshop a rough idea into a project brief through guided conversation. Use
-  when the user has an unrefined concept, a spark, or a fragment they want to
-  develop into something concrete — runs a two-phase Q&A (open exploration →
-  targeted resolution) and produces a brief in docs/briefs/. Takes priority over
-  create-project and create-investigation when the idea isn't yet refined enough
-  for those. Triggers when user says "I have an idea", "workshop this", "let's
-  explore a concept", "develop this fragment", "I want to build something new",
-  "let me tell you about this idea", or describes something unstructured that
-  needs shaping.
+  Workshop a rough idea into a brief through guided conversation, and give it a
+  home: a new feature in `backlog` whose feature.md opens with the brief, or a
+  work item in `triage` when it is not ready to be a feature. Use when the user
+  has an unrefined concept, a spark, or a rough note they want to develop into
+  something concrete — runs a two-phase Q&A (open exploration → targeted
+  resolution). Takes priority over create-project and create-investigation when
+  the idea isn't yet refined enough for those. Triggers when user says "I have
+  an idea", "workshop this", "let's explore a concept", "develop this fragment",
+  "I want to build something new", "let me tell you about this idea", or
+  describes something unstructured that needs shaping.
 allowed-tools:
   - Read
   - Write
+  - Edit
+  - Bash
   - Grep
   - Glob
   - AskUserQuestion
@@ -20,15 +23,17 @@ allowed-tools:
 
 # Workshop Idea
 
-Develop a rough idea into a concrete project brief through guided conversation.
+Develop a rough idea into a concrete brief through guided conversation, then
+give it a home in the docs.
 
 ## When to Use
 
 This skill sits at the very beginning of the documentation lifecycle — before
-investigations, before proposals, before projects. Use it when:
+research, before proposals, before features. Use it when:
 
 - The user has an idea but hasn't scoped or refined it yet
-- A fragment has grown interesting enough to develop further
+- A rough note (a `triage` item, a capture elsewhere) has grown interesting
+  enough to develop further
 - The user is starting something brand new and needs to figure out what it is
 - A feature spark for an existing project needs shaping
 - The user mentions inspiration from other apps, experiences, or concepts
@@ -68,8 +73,8 @@ yet. Listen, reflect, and follow the user's energy.
   right?" Unstated assumptions become misaligned expectations later.
 - **Explore the audience.** Who is this for? It might be the user themselves,
   and that's fine.
-- **Note references to existing work.** If the user mentions fragments, other
-  projects, or past conversations, read those for context.
+- **Note references to existing work.** If the user mentions notes, other
+  features, or past conversations, read those for context.
 
 **Guidelines:**
 
@@ -109,8 +114,9 @@ reach enough clarity to write the document.
 - If the user discovers new dimensions, it's fine to loop back to exploration
   briefly.
 
-**You'll know this phase is complete when you can fill every section of the
-brief template with concrete content (not placeholders).**
+**You'll know this phase is complete when you can write the brief — what it is,
+who it's for, why it matters, what it is not — with concrete content, not
+placeholders.**
 
 ### Synthesis — Present Your Understanding
 
@@ -121,43 +127,71 @@ Before writing anything, present your understanding back to the user:
 Cover: the vision, core use cases, what makes it interesting, and what it
 is/isn't. Get explicit confirmation before proceeding to write.
 
-### Output — Write the Brief
+### Output — Give the Brief a Home
 
-**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
-in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
-the file exists.
+`pdocs` below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
+repo root. There is no separate brief document: the brief becomes the opening of
+a **feature**, or the body of a **work item**. Ask the user which fits:
+
+- **A feature** — the idea is an outcome worth shaping, and the user wants it.
+  This is the usual home.
+
+  ```bash
+  pdocs new feature <name> --title "…" \
+    --description "<one sentence: what this is and why it matters>" \
+    --tags "<2-4,kebab-case>" --by "<your model or name>"
+  ```
+
+  It starts in `backlog`: accepted, and still being shaped. Write the brief into
+  `feature.md` — its problem, its why, who it is for, what it is and is not —
+  and **leave the solution, scope and technical sections as the template's
+  prompts**, to be written when the feature is shaped (`generate-proposal`, or
+  the user). A feature in `backlog` is allowed to be only a brief.
+
+- **A work item in `triage`** — the idea is worth keeping but nobody has decided
+  to pursue it yet ("park it"). It waits there for `triage-items`:
+
+  ```bash
+  pdocs new item <name> --kind task --title "…" \
+    --description "<one sentence: the idea>" --by "<your model or name>"
+  ```
+
+  Write the brief into the item's body. Leave its `lifecycle` at `triage`.
+
+Then:
 
 1. **Choose a name.** Kebab-case, descriptive. Ask the user if unsure.
-2. **Write the brief** to `docs/briefs/YYYY-MM-DD-<name>.md` using the template
-   at `docs/briefs/TEMPLATES/BRIEF.template.md` as scaffolding.
-3. **Set status** to Active.
-4. **Fill every section** with concrete content from the conversation — no
-   bracket placeholders.
-5. **Capture open questions** — things that came up but weren't resolved.
+2. **Fill every section you write** with concrete content from the conversation
+   — no bracket placeholders. Leave the template's own prompts in the sections
+   you are deliberately not writing yet.
+3. **Capture open questions** — things that came up but weren't resolved.
+4. Run `pdocs check`, and fix anything it reports about the file you wrote.
 
 ### Handoff — Suggest Next Steps
 
 Based on what emerged, suggest specific next steps with rationale. Common paths:
 
-- **Create a project** — "The idea is clear enough to start a proposal. I'd
-  suggest creating a project folder with `create-project`."
-- **Run investigations** — "There are open questions about [X] that need
-  research before proposing. I'd suggest creating investigations for [specific
+- **Shape the feature** — "The idea is clear enough to write the full proposal.
+  I'd suggest `generate-proposal` or filling in `feature.md`'s solution and
+  scope."
+- **Research first** — "There are open questions about [X] that need research
+  before proposing. I'd suggest `create-investigation` for [specific
   questions]."
 - **Write a manifesto** — "For a greenfield project this substantial, defining
   the manifesto first would ground future decisions."
-- **Park it** — "The idea is captured. When you're ready to pick it up, the
-  brief will be waiting."
+- **Park it** — "The idea is captured. When you're ready to pick it up, it will
+  be waiting in `pdocs view backlog`."
 
 Offer to kick off the first next step immediately.
 
 ## Important Guidelines
 
 - **Don't rush to the document.** The conversation IS the value. The brief is
-  just the artifact that captures it.
+  just what captures it.
 - **Preserve the user's voice.** The brief should feel like their idea, not a
   sanitized corporate document.
 - **YAGNI applies to briefs too.** If a section doesn't have meaningful content,
   skip it rather than filling it with generic language.
-- **The brief is not a proposal.** Don't drift into technical solutions, scope
-  definitions, or implementation approaches. Stay at the identity level.
+- **The brief is not yet a proposal.** Even written into a `feature.md`, stay at
+  the identity level. Don't drift into technical solutions, scope definitions,
+  or implementation approaches. Stay at the identity level.

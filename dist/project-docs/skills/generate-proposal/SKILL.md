@@ -1,38 +1,46 @@
 ---
 name: "generate-proposal"
 description: >
-  Create a project proposal from a completed investigation. Use when an
-  investigation has concluded with a "Proposal Recommended" outcome and the user
-  wants to formalize it into a project folder with proposal.md. Transforms
-  exploratory findings into a structured commitment. Triggers when user asks to
-  "create a proposal", "write a proposal from this investigation", "turn this
-  investigation into a proposal", or wants to move from research to action.
+  Create a feature — its feature.md is the proposal — from a completed
+  investigation: a research work item whose write-up recommends building
+  something. Transforms exploratory findings into a structured commitment, and
+  moves the feature to `ready` when its owner approves it. Triggers when user
+  asks to "create a proposal", "write a proposal from this investigation", "turn
+  this investigation into a proposal", "turn this research into a feature", or
+  wants to move from research to action.
 allowed-tools:
   - Read
   - Write
+  - Edit
+  - Bash
   - Grep
   - Glob
-  - Task
+  - Agent
 ---
 
 You are tasked with creating a formal feature proposal based on a completed
-investigation document.
+investigation.
 
-**Investigation to analyze:** `docs/investigations/$1`
+**Investigation to analyze:** `$1` — a research work item, `item/<slug>` (or its
+id). An investigation is two files in `docs/items/<slug>/`: `item.md`, the
+question and its state, and `write-up.md`, the findings and recommendation.
+`pdocs` below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
+repo root.
 
 **Your workflow:**
 
 1. **Read and understand the investigation**
-   - Read the full investigation document at `docs/investigations/$1`
+   - Read the item and its full `write-up.md` (and any `reports/` it cites)
    - Identify the key findings, evidence gathered, and recommendation
    - Understand what problem or opportunity was discovered
    - Note the options that were considered
 
 2. **Verify investigation recommends a proposal**
-   - Ensure the investigation outcome is "Proposal Recommended" or similar
-   - If the investigation concluded "No Action Needed," inform the user and ask
-     if they still want to proceed
-   - If investigation is still "Active," warn user it may be incomplete
+   - Ensure the write-up's Recommendation is to build something
+   - If it concluded "no action needed", inform the user and ask if they still
+     want to proceed
+   - If the item is still `active` (not `done`), warn the user the research may
+     be incomplete
 
 3. **Analyze relevant codebase context**
    - Search for code referenced in the investigation
@@ -42,7 +50,7 @@ investigation document.
 
 4. **Extract proposal elements from investigation**
    - **Problem Statement:** Use the investigation's motivation and findings
-   - **Current State:** Leverage the "Current State Analysis" section
+   - **Current State:** Leverage the write-up's "Current State" section
    - **Evidence:** Reference specific findings and data from investigation
    - **Options:** Build on "Options Considered" with deeper exploration
    - **Scope:** Define what's in/out based on investigation insights
@@ -55,31 +63,30 @@ investigation document.
    - Outline implementation complexity and risks
    - Suggest phased approach if appropriate
 
-6. **Create the project folder and proposal**
-   - Choose a descriptive project folder name (kebab-case, no date prefix):
-     e.g., `oauth-upgrade`, `search-enhancement`, `milkdown-editor`
-   - Create the project folder: `docs/projects/<project-name>/`
-   - Read the projects README at `docs/projects/README.md` to understand
-     conventions
-   - Use the proposal template at `docs/projects/TEMPLATES/PROPOSAL.template.md`
-     as scaffolding. (The docs root is `docsRoot` in `.project-docs.json` at the
-     repo root, default `docs/` — read it if the file exists.)
-   - Write the proposal to `docs/projects/<project-name>/proposal.md`
-   - **Fill the template's frontmatter block, every field** — the bracketed
-     values are placeholders, not defaults, and the lint fails on a placeholder
-     left in place: `title` matching the H1; `description` as one sentence
-     saying what this proposes and why; 2–4 kebab-case `tags`; `status: draft`;
-     `lifecycle: draft` (a proposal becomes `approved` when someone approves it,
-     not when it is written);
-     `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`. Leave
-     `related` out unless the proposal genuinely leans on a library page (a
-     playbook, a lesson, an architecture doc) — those keys are
-     `type/<basename-without-.md>` and are the only ones that resolve. The
-     investigation goes in the body's Related Documents section as a link, per
-     step 7.
+6. **Create the feature and write its proposal**
+   - Choose a descriptive name (kebab-case, no date prefix): e.g.,
+     `oauth-upgrade`, `search-enhancement`, `milkdown-editor`. Check it isn't
+     taken: `pdocs view board --features`.
+   - Create it with the CLI, linking the write-up it came from:
+
+     ```bash
+     pdocs new feature <name> \
+       --title "<Title>" --description "<one sentence: what this proposes and why>" \
+       --tags "<2-4,kebab-case>" --by "<your model or name>" \
+       --from docs/items/<research-slug>/write-up.md
+     ```
+
+     It creates `docs/features/<name>/feature.md` from the template, fills the
+     frontmatter, starts it in `backlog`, and writes the link to the write-up
+     into its Related section. Read `docs/features/README.md` for conventions.
+
+   - Fill every placeholder the template leaves; the lint does not catch one
+     left in place. Leave `related` out unless the proposal genuinely leans on a
+     library page (a playbook, an architecture doc) — those keys are
+     `type/<basename-without-.md>` and are the only ones that resolve.
    - Focus on high to mid-level ("capitals not gas stations")
    - Include relevant sections:
-     - **Metadata:** Related investigation link
+     - **Metadata:** the research item the proposal came from
      - **Problem Statement (The "Why"):** Why is action needed? (from
        investigation findings)
      - **Current State:** What exists today and what are the issues? (from
@@ -94,9 +101,15 @@ investigation document.
      form
 
 7. **Link documents together**
-   - Reference the investigation in the proposal's "Related Documents" section
-   - Note in the proposal: "This proposal is based on
-     `[Investigation: Topic](../../investigations/investigation-file.md)`"
+   - `--from` already put the write-up in the feature's Related section. Say in
+     the body: "This proposal is based on
+     `[Write-up: Topic](../../items/<research-slug>/write-up.md)`"
+   - If the research item is not yet `done`, and this proposal is its
+     conclusion, set it: `pdocs set item/<research-slug> --lifecycle done`
+
+8. **Approval** — the feature stays in `backlog` while it is being shaped. When
+   the owner says it is approved to build (now, or on a later run), move it:
+   `pdocs set feature/<name> --lifecycle ready`. Never on your own judgement.
 
 **Important guidelines:**
 
@@ -113,10 +126,11 @@ investigation document.
 
 **Output:**
 
-Create a project folder in `docs/projects/` with a `proposal.md` inside it.
-Inform the user of:
+Create a feature in `docs/features/<name>/` with its `feature.md`. Inform the
+user of:
 
-- The project folder name and location
+- The feature's name and location, and its state (`backlog`, or `ready` if the
+  owner approved it)
 - How the investigation findings informed the proposal
 - Key elements added beyond the investigation
 - Any concerns or questions that arose during the transformation
