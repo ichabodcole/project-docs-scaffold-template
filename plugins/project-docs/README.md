@@ -169,22 +169,22 @@ than commands and are the primary way the plugin delivers its workflows.
 
 ### Project Lifecycle Skills
 
-| Skill                        | Description                                                                                                                                                                                  |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                                                                                                                           |
-| `create-project`             | Create project folder with proposal scaffold in docs/projects/                                                                                                                               |
-| `create-investigation`       | Create investigation from rough idea or voice note                                                                                                                                           |
-| `generate-proposal`          | Create project proposal from completed investigation                                                                                                                                         |
-| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                                                                                                                                  |
-| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                                                                                                                                      |
-| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                                                                                                                                |
-| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                                                                                                                            |
-| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                                                                                                                           |
-| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies                                                                                                            |
-| `dev-discovery`              | Pre-planning technical discovery for complex features                                                                                                                                        |
-| `backlog-to-projects`        | Review backlog items and organize them into project groupings                                                                                                                                |
-| `update-project-docs`        | Upgrade docs structure to newer scaffold template version, including the v2.7 OKF frontmatter layer                                                                                          |
-| `sweep-project`              | Reconcile a project folder, backlog item, or cycle against what was actually built, then either record the remaining work or — on confirmation — archive it and update live cross-references |
+| Skill                        | Description                                                                                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                                                                                                                                            |
+| `create-project`             | Create project folder with proposal scaffold in docs/projects/                                                                                                                                                |
+| `create-investigation`       | Create investigation from rough idea or voice note                                                                                                                                                            |
+| `generate-proposal`          | Create project proposal from completed investigation                                                                                                                                                          |
+| `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                                                                                                                                                   |
+| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                                                                                                                                                       |
+| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                                                                                                                                                 |
+| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                                                                                                                                             |
+| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                                                                                                                                            |
+| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies                                                                                                                             |
+| `dev-discovery`              | Pre-planning technical discovery for complex features                                                                                                                                                         |
+| `triage-items`               | Propose a disposition for each work item in `triage` — accept, drop, priority, assignee, parent feature — with grouping and parallelism analysis; applies it with `pdocs set` only after the user has seen it |
+| `update-project-docs`        | Upgrade docs structure to newer scaffold template version, including the v2.7 OKF frontmatter layer                                                                                                           |
+| `sweep-project`              | Reconcile a project folder, backlog item, or cycle against what was actually built, then either record the remaining work or — on confirmation — archive it and update live cross-references                  |
 
 ### Research & Analysis Skills
 
