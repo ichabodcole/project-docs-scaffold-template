@@ -42,7 +42,8 @@
  *                          its docs/). Skips the network. `--scaffold` is an alias.
  *   --skip-format          do not run Prettier over the files this run creates.
  *   --force                write over uncommitted changes in the paths this run
- *                          touches. Without it the preflight stops on them.
+ *                          touches — on a re-run after a stop, over edits made
+ *                          since the stop. Without it the preflight stops on them.
  *
  * Exit codes: 0 success · 1 the migration could not complete · 2 bad invocation.
  */
@@ -78,13 +79,15 @@ const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
 const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.0.0";
 const MANIFEST_NAME = ".pdocs-seed.json";
 /**
- * The run's own record, at the project root, kept until a run completes: every
+ * The run's own record, kept until a run completes, inside the repository's git
+ * directory (`.git/`, so no `git add -A` commits it; at the project root, dotted,
+ * when there is no git): every
  * path this migration wrote (and the hash it left there), and — from the start of
  * phase 5 to the end of phase 7 — the plan itself. A re-run reads it to tell its
  * own uncommitted output from an edit of the adopter's, and to finish moves an
  * interrupted run had begun from the plan that began them.
  */
-export const STATE_NAME = ".pdocs-migrate-v2.10-to-v3.0.json";
+export const STATE_NAME = "pdocs-migrate-v2.10-to-v3.0.json";
 const PHASES = 12;
 /** `generated.by` on the documents this run creates. */
 export const ACTOR = "migrate-v2.10-to-v3.0";
@@ -1463,6 +1466,10 @@ interface Write {
   fm: string | null;
   /** Created by this run (a synthesized entity file): formatted before the record. */
   created: boolean;
+  /** The sha256 of the bytes this write replaces, taken when the plan is recorded
+   *  (null for a file the run creates). A resumed run writes only over these bytes,
+   *  over its own planned text, or over what it itself left — never over an edit. */
+  pre?: string | null;
 }
 
 interface Changes {
@@ -1497,6 +1504,8 @@ interface Ctx extends Options {
   manifestBefore: string | null;
   /** The run's record (see STATE_NAME); read at the start, saved as the run writes. */
   state: RunState;
+  /** Where the record lives: inside `.git/` when there is one. */
+  statePath: string;
   /** Whether this run is finishing an interrupted one from its recorded plan. */
   resumed: boolean;
   /** What this run removed that was not a document of the adopter's, for the last line. */
@@ -1516,8 +1525,10 @@ interface Journal {
 interface RunState {
   /** Project-relative path → the sha256 this run left there, or null for a path it removed. */
   written: Record<string, string | null>;
-  /** The plan, while phases 5 and 6 are writing it. */
+  /** The plan, while phases 5 to 7 are writing it. */
   journal: Journal | null;
+  /** What the whole migration has removed so far, across a stop and its re-run. */
+  removed: { templates: number; readmes: number; junk: number; folders: number };
 }
 
 const toJournal = (c: Changes): Journal => ({
@@ -1549,8 +1560,10 @@ function track(ctx: Ctx, abs: string): void {
 }
 
 function saveState(ctx: Ctx): void {
-  writeFileSync(join(ctx.root, STATE_NAME), `${JSON.stringify(ctx.state)}\n`);
+  writeFileSync(ctx.statePath, `${JSON.stringify(ctx.state)}\n`);
 }
+
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
 /** A path whose bytes are the ones this run left there — its own output, not an edit of yours. */
 const ours = (ctx: Ctx, rel: string) =>
@@ -1573,16 +1586,23 @@ function resolveContext(o: Options): Ctx {
     }
   }
   const docsRootName = typeof config?.docsRoot === "string" ? config.docsRoot : "docs";
-  let state: RunState = { written: {}, journal: null };
-  const statePath = join(root, STATE_NAME);
+  const zero = () => ({ templates: 0, readmes: 0, junk: 0, folders: 0 });
+  let state: RunState = { written: {}, journal: null, removed: zero() };
+  const gitDir = Bun.spawnSync(["git", "rev-parse", "--absolute-git-dir"], { cwd: existsSync(root) ? root : ".", stdout: "pipe", stderr: "pipe", env: gitEnv() });
+  const statePath =
+    gitDir.exitCode === 0 && gitDir.stdout.toString().trim() ? join(gitDir.stdout.toString().trim(), STATE_NAME) : join(root, `.${STATE_NAME}`);
   if (existsSync(statePath)) {
     try {
       const parsed = JSON.parse(readFileSync(statePath, "utf8")) as Partial<RunState>;
-      state = { written: parsed.written ?? {}, journal: parsed.journal ?? null };
+      state = { written: parsed.written ?? {}, journal: parsed.journal ?? null, removed: parsed.removed ?? zero() };
     } catch (e) {
       fail(
-        `${STATE_NAME} — the record an earlier run of this migration left — is not valid JSON: ${(e as Error).message}.\n` +
-          `   Delete it and re-run; without it, the re-run stops on every uncommitted change the earlier run made.`
+        `${statePath} — the record an earlier run of this migration left — is not valid JSON: ${(e as Error).message}.\n` +
+          `   Without it a re-run cannot tell its own changes from yours, nor finish a run stopped in phases 5 to 7\n` +
+          `   (the earlier run's output shows where it stopped). Recover without it: return the tree to its last\n` +
+          `   commit — \`git checkout -- . && git clean -fd -- ${docsRootName}\` — delete the record, and run the migration\n` +
+          `   from the start. Only if the earlier run stopped before phase 5 or after phase 7 may you instead delete the\n` +
+          `   record and re-run as you are; after a phase 5–7 stop that leaves documents moved but not converted.`
       );
     }
   }
@@ -1603,8 +1623,9 @@ function resolveContext(o: Options): Ctx {
     manifest: null,
     manifestBefore: null,
     state,
+    statePath,
     resumed: false,
-    removed: { templates: 0, readmes: 0, junk: 0, folders: 0 },
+    removed: state.removed,
   };
 }
 
@@ -1942,7 +1963,29 @@ function preflight(ctx: Ctx): void {
     // plan. A new plan made from a half-moved tree would find nothing to move.
     ctx.changes = fromJournal(ctx.state.journal);
     ctx.resumed = true;
-    ok(`resuming an interrupted run: the plan it recorded in ${STATE_NAME} is finished, not remade`);
+    ok(`resuming an interrupted run: the plan it recorded in ${ctx.statePath} is finished, not remade`);
+    // The recorded plan was made before the stop. It may write only over the bytes it
+    // planned to replace, over its own text, or over what this migration left there —
+    // never over an edit made since.
+    const changed: string[] = [];
+    for (const w of ctx.changes.writes) {
+      const at = existsSync(w.to) ? w.to : w.from && existsSync(w.from) ? w.from : null;
+      const now = at ? hashOf(at) : null;
+      const allowed = new Set<string | null>([w.pre ?? null, sha256(w.text)]);
+      for (const p of [w.to, w.from])
+        if (p && Object.hasOwn(ctx.state.written, projectRel(ctx, p))) allowed.add(ctx.state.written[projectRel(ctx, p)] as string | null);
+      if (w.created && now === null) continue;
+      if (!allowed.has(now)) changed.push(projectRel(ctx, at ?? w.to));
+    }
+    if (changed.length > 0 && !ctx.force)
+      fail(
+        `${changed.length} path(s) the recorded plan would write have changed since the run stopped:\n` +
+          changed.map((p) => `       ${p}`).join("\n") +
+          `\n\n   The plan was made before the stop, so finishing it would write over those edits. Move your edits\n` +
+          `   aside (or commit them and re-apply them after), put those paths back as the stop left them, and re-run —\n` +
+          `   or pass --force to write the recorded plan over them.`
+      );
+    if (changed.length > 0) note(`--force: the recorded plan is written over ${changed.length} path(s) changed since the stop: ${changed.join(", ")}`);
   } else ctx.changes = computeChanges(ctx);
   const changes = ctx.changes;
   const blockers = ctx.resumed ? [] : [...changes.plan.blockers, ...changes.templates.blockers];
@@ -1961,12 +2004,7 @@ function preflight(ctx: Ctx): void {
     // Dirt counts only in a path this run will write, and only when it is not this
     // migration's own uncommitted output — so a re-run after a stop, uncommitted,
     // is not stopped by what the earlier run did, nor by fixes made elsewhere.
-    const journalled = new Set<string>();
-    if (ctx.resumed)
-      for (const w of changes.writes) for (const p of [w.from, w.to]) if (p) journalled.add(projectRel(ctx, p));
-    const dirty = dirtyUnder(ctx, writeCandidates(ctx)).filter(
-      (p) => p !== STATE_NAME && !ours(ctx, p) && !journalled.has(p) && ![...journalled].some((j) => p.startsWith(`${j}/`))
-    );
+    const dirty = dirtyUnder(ctx, writeCandidates(ctx)).filter((p) => p !== `.${STATE_NAME}` && !ours(ctx, p));
     if (dirty.length > 0 && !ctx.force)
       fail(
         `${dirty.length} path(s) this run would write have uncommitted changes:\n` +
@@ -2133,6 +2171,7 @@ function moveDocuments(ctx: Ctx): void {
   // The plan is recorded BEFORE the first move, so a run stopped anywhere from here
   // to the end of phase 6 is finished by the next one from this same plan.
   if (!ctx.resumed) {
+    for (const w of c.writes) w.pre = w.from && existsSync(w.from) ? hashOf(w.from) : null;
     ctx.state.journal = toJournal(c);
     saveState(ctx);
   }
@@ -2542,7 +2581,7 @@ export function main(argv: string[]): number {
       );
     const c = ctx.changes as Changes;
     // The run is whole: its record has nothing left to tell a re-run.
-    rmSync(join(ctx.root, STATE_NAME), { force: true });
+    rmSync(ctx.statePath, { force: true });
     const rm = ctx.removed;
     say(
       `\nMigration complete. ${c.plan.moves.length} move(s), ${c.writes.length} document(s) written, no document of yours deleted; ` +
@@ -2559,7 +2598,7 @@ export function main(argv: string[]): number {
       }
     const state = ctx?.wrote
       ? `\n   The tree may be partly migrated. Re-running is safe: fix what the stop names — no need to commit first —\n` +
-        `   and run the same command. It recognises its own uncommitted changes from ${STATE_NAME}, finishes an\n` +
+        `   and run the same command. It recognises its own uncommitted changes from ${ctx.statePath}, finishes an\n` +
         `   interrupted move from the plan recorded there, and stops only on an edit of yours in a path it would write.`
       : `\n   Nothing was written.`;
     if (e instanceof MigrationError) {

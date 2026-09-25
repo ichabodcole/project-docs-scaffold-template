@@ -1367,6 +1367,7 @@ describe("an interrupted run is finished by re-running the same command, uncommi
       expect(again.out).toContain("Migration complete.");
       expect(outcome(root)).toEqual(uninterrupted());
       expect(existsSync(join(root, ".pdocs-migrate-v2.10-to-v3.0.json"))).toBe(false);
+      expect(existsSync(RECORD(root))).toBe(false);
     });
 });
 
@@ -1400,5 +1401,102 @@ describe("a red verify, worked without committing, then the same command", () =>
     expect(again.out).toContain("path(s) this run would write have uncommitted changes");
     expect(again.out).toContain("docs/SCHEMA.md");
     expect(again.out).not.toContain("docs/items/");
+  });
+});
+
+// ─── Recovery must never cost the adopter an edit ────────────────────────────
+
+const RECORD = (root: string) => join(root, ".git", "pdocs-migrate-v2.10-to-v3.0.json");
+
+describe("a resumed run and the edits made after the stop", () => {
+  const edited = ["docs/features/alpha/plan.md", "docs/features/alpha/feature.md", "docs/items/open-item.md", "README.md"];
+  const stopInPhase5 = () => {
+    const root = fixtureO();
+    chmodSync(join(root, "docs/backlog/2026-01-02-done-item.md"), 0o444);
+    const first = migrate(root);
+    expect(first.exitCode).toBe(1);
+    expect(first.out).toContain("[5/12]");
+    chmodSync(join(root, "docs/items/done-item.md"), 0o644);
+    return root;
+  };
+
+  test("stopped in phase 5: an edit to a moved document or a file the rewrite owes stops the re-run, and survives it", () => {
+    const root = stopInPhase5();
+    for (const f of edited) write(root, { [f]: `${read(root, f)}\nMY EDIT AFTER THE STOP\n` });
+    const again = migrate(root);
+    expect(again.exitCode).toBe(1);
+    for (const f of edited) expect(again.out).toContain(`       ${f}`);
+    expect(again.out).toContain("--force");
+    for (const f of edited) expect(read(root, f)).toContain("MY EDIT AFTER THE STOP");
+  });
+
+  test("stopped in phase 5, re-run with --force: the recorded plan is written over the edits, as documented", () => {
+    const root = stopInPhase5();
+    write(root, { "docs/items/open-item.md": `${read(root, "docs/items/open-item.md")}\nMY EDIT AFTER THE STOP\n` });
+    const again = migrate(root, ["--force"]);
+    expect(again.exitCode).toBe(0);
+    expect(again.out).toContain("--force: the recorded plan is written over 1 path(s) changed since the stop: docs/items/open-item.md");
+    expect(read(root, "docs/items/open-item.md")).not.toContain("MY EDIT AFTER THE STOP");
+  });
+
+  test("stopped in phase 6: an edit to a document phase 5 already wrote, or to the file it stopped on, stops the re-run", () => {
+    const root = fixtureO();
+    chmodSync(join(root, "README.md"), 0o444);
+    expect(migrate(root).out).toContain("[6/12]");
+    chmodSync(join(root, "README.md"), 0o644);
+    for (const f of ["docs/features/alpha/plan.md", "README.md"]) write(root, { [f]: `${read(root, f)}\nMY EDIT AFTER THE STOP\n` });
+    const again = migrate(root);
+    expect(again.exitCode).toBe(1);
+    expect(again.out).toContain("       docs/features/alpha/plan.md");
+    expect(again.out).toContain("       README.md");
+    expect(read(root, "README.md")).toContain("MY EDIT AFTER THE STOP");
+  });
+
+  test("the same, outside git: the resume's own hash check stops it", () => {
+    const root = stopInPhase5();
+    // Move the repository aside: no git, so no dirt check — only the record's hashes.
+    const record = readFileSync(RECORD(root), "utf8");
+    rmSync(join(root, ".git"), { recursive: true, force: true });
+    writeFileSync(join(root, ".pdocs-migrate-v2.10-to-v3.0.json"), record);
+    write(root, { "docs/items/open-item.md": `${read(root, "docs/items/open-item.md")}\nMY EDIT AFTER THE STOP\n` });
+    const again = migrate(root);
+    expect(again.exitCode).toBe(1);
+    expect(again.out).toContain("       docs/items/open-item.md");
+    expect(read(root, "docs/items/open-item.md")).toContain("MY EDIT AFTER THE STOP");
+  });
+});
+
+describe("the run's record", () => {
+  test("it lives inside .git, so no `git add -A` commits it", () => {
+    const root = fixtureO();
+    chmodSync(join(root, "README.md"), 0o444);
+    expect(migrate(root).exitCode).toBe(1);
+    chmodSync(join(root, "README.md"), 0o644);
+    expect(existsSync(RECORD(root))).toBe(true);
+    expect(existsSync(join(root, ".pdocs-migrate-v2.10-to-v3.0.json"))).toBe(false);
+    expect(git(root, "status", "--porcelain", "--untracked-files=all")).not.toContain("pdocs-migrate");
+  });
+
+  test("after a resume, the last line counts what the whole migration removed", () => {
+    const root = fixtureO();
+    chmodSync(join(root, "docs/briefs/TEMPLATES"), 0o555);
+    expect(migrate(root).out).toContain("[8/12]");
+    chmodSync(join(root, "docs/briefs/TEMPLATES"), 0o755);
+    const again = migrate(root);
+    expect(again.exitCode).toBe(0);
+    expect(again.out).toContain("6 retired owned README(s)");
+    expect(again.out).toContain("4 untouched retired template(s)");
+  });
+
+  test("a corrupt record stops the run and says how to recover without it", () => {
+    const root = fixtureO();
+    chmodSync(join(root, "README.md"), 0o444);
+    expect(migrate(root).exitCode).toBe(1);
+    chmodSync(join(root, "README.md"), 0o644);
+    writeFileSync(RECORD(root), "{ not json");
+    const again = migrate(root);
+    expect(again.exitCode).toBe(1);
+    expect(again.out).toContain("is not valid JSON");
+    expect(again.out).toContain("git checkout -- . && git clean -fd");
   });
 });
