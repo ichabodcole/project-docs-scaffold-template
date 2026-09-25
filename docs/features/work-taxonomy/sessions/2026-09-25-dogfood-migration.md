@@ -52,6 +52,60 @@ reviewed earlier on this branch (part one); this record is the run.
 | `dfd2b3b` | Guide fix: retype a brief to `artifact` when moving it                      |
 | `fc71f85` | Memories and lessons deleted (by the owner) with their index sections       |
 
+## Guidance Lifecycle's deletions
+
+- **39 memories** were deleted (the plan estimated 35, the proposal 30) and
+  **both lessons**, with their folders' README and TEMPLATE and their
+  `docs/index.md` sections — by the owner, after the permission check refused
+  the command (`fc71f85`).
+- **Twelve memories were drawn on** for the five playbooks:
+  `2026-09-02-completion-marks-and-silent-permissive-checks`,
+  `2026-09-02-self-reports-cannot-be-made-verifiable`,
+  `2026-09-04-okf-frontmatter-layer`, `2026-09-06-self-review-blind-spots`,
+  `2026-09-08-shipped-ownership-boundary`,
+  `2026-09-14-story-loom-feedback-round-1`,
+  `2026-09-15-owned-layer-under-a-strict-consumer`,
+  `2026-09-17-a-link-may-not-leave-the-repository`,
+  `2026-09-22-the-lint-strips-git-hook-variables`,
+  `2026-09-22-work-taxonomy-lint-beside-the-old`,
+  `2026-09-24-scaffold-prose-for-work-taxonomy`,
+  `2026-09-25-skills-write-the-work-model`. The two lessons became
+  `writing-migrations`. **The other 27 memories were deleted without being drawn
+  on** — records of what shipped, whose sessions still hold the detail.
+- **r1**, `2026-05-21-project-summary-report.md`, was deleted: its lasting
+  points are the "What earlier runs missed" checklist in `project-summary`
+  (D24).
+
+## The owner's placements, as decisions
+
+| Document                                                                               | Decision                                                                                         |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| b1 `2026-03-11-improve-skill-and-recipe-workflows`, b4 `2026-04-13-report-issue-skill` | A new project folder `provide-feedback-skill` owning both; born `done` (the skill shipped)       |
+| b2 `2026-03-11-ui-experimentation-framework`                                           | Its own folder; after the run `dropped`: covered by the HTML prototyping skill                   |
+| b5 `2026-07-10-hivemind-playbook-catalog`                                              | Its own folder; after the run `dropped`: HiveMind's concern, not this repository's               |
+| b3 `2026-03-13-markdown-slide-decks`                                                   | An artifact of `markdown-slide-decks`; a `triage` item asks whether the skill belongs in toolbox |
+| b6, b7, b8                                                                             | Artifacts of `okf-frontmatter-layer`, `guidance-lifecycle` and `migration-shape`                 |
+| b9 `2026-09-14-lint-beyond-the-docs-root`                                              | Its own folder; after the run `backlog` with scope `pdocs`                                       |
+| r1 `2026-05-21-project-summary-report`                                                 | Deleted (D24)                                                                                    |
+| r2 `2026-05-22-tuskboard-skill-pre-ship-review`                                        | `tusk-board`'s `reports/`                                                                        |
+| r3 `2026-05-28-cross-harness-event-push-landscape-report`                              | Its own folder's `reports/`; after the run `kind: research`, `done`                              |
+| r4 the two `2026-09-03-*-landscape-report`s                                            | Owned by the 09-03 investigation's research item, decided by a link added to each report         |
+
+## The plan's estimates against the run
+
+The plan (step 4) expected about 31 project folders, 19 archived ones, 11 plus 6
+backlog items, 8 investigations and 2 cycles; step 1 expected 35 memories.
+
+| Plan                                   | Run                                                                                                                            |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| About 31 live project folders          | 35: 22 features and 13 items born with no proposal — the prep's placements added folders                                       |
+| 19 archived, into `features/_archive/` | 20: 10 features into `features/_archive/`, and 10 with no proposal into `items/_archive/` (the plan assumed all were features) |
+| 11 plus 6 backlog items                | 17 (6 into `items/_archive/`)                                                                                                  |
+| 8 investigations                       | 8 research items                                                                                                               |
+| 2 cycles                               | 3 cycles had `scope:` moved off                                                                                                |
+| Not estimated                          | 8 reports moved; 48 ids minted                                                                                                 |
+| 35 memories                            | 39                                                                                                                             |
+
 ## Every stop
 
 1. The auto-mode permission check refused the command that deleted the memories
@@ -98,8 +152,13 @@ reviewed earlier on this branch (part one); this record is the run.
   must not fail a consumer's formatter); the template-count test counts against
   the payload.
 - Filed, not fixed: born items with no session should take their title and
-  description from what they own; migrated ids should be minted from each
-  document's date so their displayed prefixes differ.
+  description from what they own.
+- Fixed after review: `0fed0c1` mints each migrated id from its document's own
+  date (`generated.at`, else its first commit), and `abe093e` (D25) prints an id
+  as its shortest prefix unique in the tree, never under 12 — so this tree's 48
+  ids, already written, now display distinctly. `d6b20ce`: a deleted `memories/`
+  or `lessons-learned/` takes its template's seed record with it (this
+  repository's manifest still carried both).
 
 ## Retirement
 
