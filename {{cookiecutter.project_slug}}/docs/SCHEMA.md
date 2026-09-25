@@ -420,9 +420,10 @@ being shaped, `ready` once it is approved to build. Its writers:
 
 On the command line, `pdocs` also accepts `item/<slug>` and any unique id prefix
 of 8 or more characters wherever it takes an item, and **writes** the full id.
-It prints ids 12 characters long: an id begins with a timestamp, so ids filed
-close together share their first characters. `--format json` output carries the
-full id.
+It prints each id by its shortest prefix no other id in the tree shares, and
+never fewer than 12 characters: an id begins with a 12-character timestamp, so
+ids filed in the same instant share all of those. `--format json` output carries
+the full id.
 
 ### What the lint checks about work
 

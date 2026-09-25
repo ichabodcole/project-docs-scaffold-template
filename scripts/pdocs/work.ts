@@ -214,19 +214,35 @@ export function collectWork(ctx: Ctx): WorkModel {
 export const MIN_PREFIX = 8;
 
 /**
- * How long an id is when `pdocs` PRINTS it for a person or an agent to copy
- * (D18): views, refusal and ambiguity messages, `new` and `set` text output.
- * JSON always carries the full id, and a reference still needs only 8.
+ * The fewest characters of an id `pdocs` PRINTS for a person or an agent to
+ * copy (D25): views, refusal and ambiguity messages, `new` and `set` text
+ * output. JSON always carries the full id, and a reference still needs only 8.
  */
 export const SHORT_ID = 12;
 
-export const shortId = (id: string): string => id.slice(0, SHORT_ID);
+/**
+ * An id as `pdocs` prints it (D25): the shortest prefix no other id in `ids`
+ * shares, and never fewer than `SHORT_ID` characters — git's rule. Twelve
+ * characters are exactly UUIDv7's 48-bit timestamp, so ids minted in one
+ * burst share all twelve; a fixed length would print them alike.
+ */
+export function shortId(id: string, ids: Iterable<string> = []): string {
+  const others = [...ids].filter((o) => o !== id);
+  let n = SHORT_ID;
+  while (n < id.length && others.some((o) => o.startsWith(id.slice(0, n)))) n++;
+  return id.slice(0, n);
+}
 
-/** `text` with every full UUID in it shortened (D18). */
-export const shortenIds = (text: string): string =>
-  text.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, (id) =>
-    shortId(id)
+/** Every item id in the model: what a printed id must be unique among. */
+export const modelIds = (model: WorkModel): string[] => [...model.itemsById.keys()];
+
+/** `text` with every full UUID in it shortened against `ids` (D25). */
+export const shortenIds = (text: string, ids: Iterable<string> = []): string => {
+  const all = [...ids];
+  return text.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, (id) =>
+    shortId(id, all)
   );
+};
 
 const FORMS =
   "a full item id, a unique id prefix of 8+ characters, `item/<slug>`, `feature/<slug>` or `cycle/<slug>`";
@@ -258,7 +274,7 @@ export function resolveRef(
     if (found.length > 1)
       throw new UsageError(
         `\`${ref}\` is ambiguous — it names ${found.length} entities: ${found
-          .map((e) => (e.id ? `${shortId(e.id)} ${e.path}` : e.path))
+          .map((e) => (e.id ? `${shortId(e.id, modelIds(model))} ${e.path}` : e.path))
           .join(", ")}. Use a longer id prefix or the full id.`,
         { token: ref, choices: found.map((e) => e.path) }
       );

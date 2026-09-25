@@ -204,8 +204,9 @@ they do not take, with exit 2 and the valid set in `choices`.
 `new --owner`) take a reference to a feature, an item or a cycle:
 `feature/<slug>`, `item/<slug>`, `cycle/<slug>`, a full item id, or a unique id
 prefix of 8 or more characters. An ambiguous prefix exits 2 and lists the
-candidates. Ids are **printed** 12 characters long in text output, because ids
-filed close together share their first characters; JSON always carries the full
+candidates. In text output an id is **printed** as its shortest prefix no other
+id in the tree shares, never fewer than 12 characters — ids filed in the same
+instant share their whole 12-character timestamp. JSON always carries the full
 id, and frontmatter always stores it.
 
 ### `check` — the gate
@@ -483,7 +484,7 @@ item's full id, else `null`).
 
 **An item** needs `--kind` (`task`, `bug`, `chore`, `research`). It gets a fresh
 UUIDv7 `id` and starts in `triage` unless `--lifecycle` says otherwise; the text
-output prints the id's first 12 characters under the path.
+output prints the id's shortest unique prefix (12+ characters) under the path.
 
 **An owned document needs `--owner`**: `feature/<slug>` or `item/<slug>` (or an
 item id). It lands in that folder — a single-file item is promoted to a folder

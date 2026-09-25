@@ -8,6 +8,7 @@ import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import {
   GROUPS,
   SHORT_ID,
+  modelIds,
   shortId,
   type WorkEntity,
   collectWork,
@@ -77,9 +78,10 @@ export const VIEWS: ReadonlyArray<{ name: string; arg?: string; summary: string 
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-function line(e: ViewEntry): string {
-  // An item's short id (D18), so the line can be copied into `pdocs set`.
-  const id = (e.id ? shortId(e.id) : "-").padEnd(SHORT_ID);
+function line(e: ViewEntry, ids: readonly string[], width: number): string {
+  // An item's short id (D25): unique across the tree, so the line can be
+  // copied into `pdocs set`.
+  const id = (e.id ? shortId(e.id, ids) : "-").padEnd(width);
   return `  ${id}  ${(e.lifecycle ?? "-").padEnd(8)}  ${(e.priority ?? "-").padEnd(6)}  ${e.path}${
     e.title ? `  — ${e.title}` : ""
   }`;
@@ -166,10 +168,16 @@ export const view: Command = {
       return ExitCode.Success;
     }
 
+    const ids = modelIds(model);
+    const shown = [
+      ...Object.values((data.groups ?? {}) as Record<string, ViewEntry[]>).flat(),
+      ...((data.items ?? []) as ViewEntry[]),
+    ];
+    const width = Math.max(SHORT_ID, ...shown.map((e) => (e.id ? shortId(e.id, ids).length : 1)));
     if (data.groups) {
       for (const [group, items] of Object.entries(data.groups as Record<string, ViewEntry[]>)) {
         console.log(`${group} (${items.length})`);
-        for (const e of items) console.log(line(e));
+        for (const e of items) console.log(line(e, ids, width));
       }
       return ExitCode.Success;
     }
@@ -178,7 +186,7 @@ export const view: Command = {
     if (data.closable !== undefined) console.log(`closable: ${data.closable ? "yes" : "no"}`);
     const items = data.items as ViewEntry[];
     if (items.length === 0) console.log("  (none)");
-    for (const e of items) console.log(line(e));
+    for (const e of items) console.log(line(e, ids, width));
     return ExitCode.Success;
   },
 };

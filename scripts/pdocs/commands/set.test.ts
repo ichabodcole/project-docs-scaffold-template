@@ -216,7 +216,7 @@ describe("pdocs set", () => {
     ]);
   });
 
-  test("text output shows ids short; JSON keeps them full (D18)", () => {
+  test("text output shows ids short; JSON keeps them full (D25)", () => {
     const root = tree();
     const text = run(["set", "item/fix-hook", "--blocked-by", B, "--root", root, "--format", "text"]).stdout;
     expect(text).toContain(`blocked_by: (none) -> [${B.slice(0, 12)}]`);

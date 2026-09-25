@@ -160,17 +160,37 @@ describe("resolveRef", () => {
     expect(msg).toContain("docs/items/big/item.md");
   });
 
-  test("an ambiguity names each candidate by its 12-character short id (D18)", () => {
+  test("an ambiguity names each candidate by its short id, unique across the tree (D25)", () => {
     let msg = "";
     try {
       resolveRef(work, "0190f4b2");
     } catch (e) {
       msg = (e as Error).message;
     }
-    expect(msg).toContain(`${A.slice(0, 12)} docs/items/fix-hook.md`);
-    expect(msg).toContain(`${B.slice(0, 12)} docs/items/big/item.md`);
-    expect(msg).not.toContain(A);
+    // A and B differ only in their last characters, so each prints whole.
+    expect(msg).toContain(`${shortId(A, [A, B])} docs/items/fix-hook.md`);
+    expect(msg).toContain(`${shortId(B, [A, B])} docs/items/big/item.md`);
     expect(shortId(A)).toBe("0190f4b2-7c3");
+  });
+
+  test("a burst of ids displays distinctly: the shortest prefix unique across the tree, never under 12 (D25)", () => {
+    // Twelve characters are exactly UUIDv7's 48-bit timestamp, so ids minted in
+    // one millisecond share them all.
+    const burst = [
+      "01a0da55-e3a2-7383-9534-68a0893d1cd2",
+      "01a0da55-e3a2-7383-9534-68a0893d1cd8",
+      "01a0da55-e3a1-7730-bfcd-b3947706bfa0",
+      "0190f4b2-7c3a-7d4e-8f00-000000000001",
+    ];
+    const shown = burst.map((id) => shortId(id, burst));
+    expect(new Set(shown).size).toBe(burst.length);
+    expect(shown[0]).toBe("01a0da55-e3a2-7383-9534-68a0893d1cd2");
+    expect(shown[2]).toBe("01a0da55-e3a1");
+    expect(shown[3]).toBe("0190f4b2-7c3");
+    for (const [i, s] of shown.entries()) {
+      expect(s.length).toBeGreaterThanOrEqual(12);
+      expect(burst[i]!.startsWith(s)).toBe(true);
+    }
   });
 
   test("a prefix shorter than 8 characters is refused", () => {

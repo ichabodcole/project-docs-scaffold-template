@@ -26,7 +26,7 @@ import {
 } from "../lint/registry.ts";
 import { OKF_STATUS, documentProblems, workbenchDocuments } from "../lint/rules.ts";
 import { workProblems } from "../lint/work.ts";
-import { collectWork, resolveRef, scalar as unquote, shortenIds } from "../work.ts";
+import { collectWork, modelIds, resolveRef, scalar as unquote, shortenIds } from "../work.ts";
 import { existingDocuments, flagFor, rewriteFrontmatter, scalar } from "./new.ts";
 
 export interface SetChange {
@@ -235,7 +235,7 @@ export const set: Command = {
       console.log(data.path);
       for (const c of data.changes)
         console.log(
-          shortenIds(`  ${c.key}: ${c.before ?? "(none)"} -> ${c.after ?? "(none)"}`)
+          shortenIds(`  ${c.key}: ${c.before ?? "(none)"} -> ${c.after ?? "(none)"}`, modelIds(model))
         );
     }
     return ExitCode.Success;

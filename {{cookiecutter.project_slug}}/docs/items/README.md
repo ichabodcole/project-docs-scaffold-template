@@ -27,9 +27,10 @@ bun scripts/pdocs/cli.ts new item fix-login-redirect --kind bug \
 
 This writes `docs/items/fix-login-redirect.md` from
 [ITEM.template.md](../TEMPLATES/ITEM.template.md) with a fresh `id`,
-`lifecycle: triage` and `generated` filled in, and prints the id: its first 12
-characters as text, the full id with `--format json` (the default when the
-output is not a terminal). Name the file in kebab-case, with no date.
+`lifecycle: triage` and `generated` filled in, and prints the id: as text, its
+shortest prefix unique in the tree (12 characters or more); the full id with
+`--format json` (the default when the output is not a terminal). Name the file
+in kebab-case, with no date.
 
 - `--kind` is required.
 - Always pass `--title` and `--description`. Without them the title is the slug,

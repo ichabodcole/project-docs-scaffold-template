@@ -257,14 +257,19 @@ describe("pdocs view", () => {
     expect(r.stdout).toContain("docs/items/f-active.md");
   });
 
-  test("text output shows an item's 12-character short id; JSON keeps the full id (D18)", () => {
-    // Read from ROOT's own file: a later `tree()` reassigns IDS.
-    const full = /\nid: (\S+)/.exec(
-      readFileSync(join(ROOT, "docs/items/f-active.md"), "utf8")
-    )![1] as string;
+  test("text output shows each id by its shortest unique prefix, never under 12; JSON keeps the full id (D25)", () => {
+    // The fixture's ids are a burst: they share their first 24 characters, the
+    // way ids minted in one millisecond do. Twelve would print them all alike.
+    const idOf = (rel: string) =>
+      /\nid: (\S+)/.exec(readFileSync(join(ROOT, rel), "utf8"))![1] as string;
+    const full = idOf("docs/items/f-active.md");
     const text = run(["view", "board", "--root", ROOT, "--format", "text"]).stdout;
-    expect(text).toContain(full.slice(0, 12));
-    expect(text).not.toContain(full);
+    const shown = [...text.matchAll(/^ {2}([0-9a-f-]{12,36}) /gm)].map((m) => m[1] as string);
+    expect(shown.length).toBeGreaterThan(2);
+    expect(new Set(shown).size).toBe(shown.length);
+    for (const s of shown) expect(s.length).toBeGreaterThanOrEqual(12);
+    expect(shown).toContain(full.slice(0, shown.find((s) => full.startsWith(s))!.length));
+    expect(full.startsWith(shown.find((s) => full.startsWith(s))!)).toBe(true);
     expect(JSON.stringify(data("board"))).toContain(full);
   });
 });

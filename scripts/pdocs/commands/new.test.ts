@@ -1039,7 +1039,7 @@ describe("pdocs new item", () => {
     );
   });
 
-  test("text output names the new item's 12-character short id (D18)", () => {
+  test("text output names the new item's short id, 12+ characters (D25)", () => {
     const root = workTree();
     const text = run(["new", "item", "fix-hook", "--kind", "bug", "--root", root, "--format", "text"]).stdout;
     const id = fields(root, "docs/items/fix-hook.md").get("id") as string;
@@ -1047,7 +1047,7 @@ describe("pdocs new item", () => {
     expect(text).not.toContain(id);
   });
 
-  test("JSON output carries the new item's full id, and no id for other types (D18)", () => {
+  test("JSON output carries the new item's full id, and no id for other types (D25)", () => {
     const root = workTree();
     const data = JSON.parse(newItem(root, "fix-hook", "--kind", "bug").stdout).data;
     expect(data.id).toBe(fields(root, "docs/items/fix-hook.md").get("id"));

@@ -75,6 +75,7 @@ import {
   entitiesBySlug,
   refFor,
   resolveRef,
+  modelIds,
   shortId,
 } from "../work.ts";
 import { promoteItem } from "./promote.ts";
@@ -91,8 +92,8 @@ export interface NewData {
   /** The item's new entry file, when `--owner` promoted a single-file item
    *  to a folder to write into it; `null` otherwise. */
   promoted: string | null;
-  /** A new work item's full id; `null` for every other type (D18: JSON
-   *  always carries the full id, text prints its first 12 characters). */
+  /** A new work item's full id; `null` for every other type (D25: JSON
+   *  always carries the full id, text prints its shortest unique prefix, 12+ characters — D25). */
   id: string | null;
 }
 
@@ -1122,7 +1123,7 @@ export const newCommand: Command = {
     if (format === "json") printEnvelope("new", data);
     else {
       console.log(rel);
-      if (id !== null) console.log(`  id ${shortId(id)}`);
+      if (id !== null) console.log(`  id ${shortId(id, [...modelIds(model()), id])}`);
       if (catalog !== null) console.log(`  + catalog line in ${relative(ctx.repoRoot, indexPath)}`);
       if (promotion !== null) {
         console.log(`  promoted its owner to ${promotion.to}`);
