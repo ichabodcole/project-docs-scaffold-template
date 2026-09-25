@@ -1720,6 +1720,47 @@ function dirtyUnder(ctx: Ctx, paths: string[]): string[] {
 }
 
 /** The date a document was first committed; else the date in its name; else today. */
+/**
+ * The time, in ms, of the commit that first added `abs` — through any rename
+ * (`--follow`), so a document moved before the run keeps its own history.
+ * `null` when git has no history for it.
+ *
+ * Not `--diff-filter=A`: `--follow` also detects COPIES, and a new document
+ * that resembles an older sibling (two backlog items from one template) reads
+ * as a copy of it, which would hand it the sibling's time. The log is walked
+ * newest first instead, through renames only: a copy is where this file was
+ * added.
+ */
+export function commitTime(root: string, abs: string): number | null {
+  const r = run(["git", "log", "--follow", "--name-status", "--format=%x00%aI", "--", abs], root);
+  if (r.code !== 0) return null;
+  for (const entry of r.stdout.split("\0").filter((e) => e.trim())) {
+    const [time, ...rest] = entry.split("\n");
+    const status = rest.find((l) => /^[A-Z]/.test(l))?.[0];
+    if (status === "A" || status === "C") {
+      const ms = Date.parse(time as string);
+      return Number.isFinite(ms) ? ms : null;
+    }
+  }
+  return null;
+}
+
+/**
+ * One UUIDv7 per key, minted at its time (D25): ordered by time, then key, and
+ * strictly increasing — a tie, or a time not after the previous one, takes the
+ * previous millisecond plus one — so no two ids share a timestamp.
+ */
+export function mintIds(dated: ReadonlyArray<{ key: string; ms: number }>): Map<string, string> {
+  const ids = new Map<string, string>();
+  let prev = -1;
+  for (const { key, ms } of [...dated].sort((a, b) => a.ms - b.ms || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))) {
+    const at = Number.isFinite(ms) && ms > prev ? ms : prev + 1;
+    prev = at;
+    ids.set(key, uuidv7(at, crypto.getRandomValues(new Uint8Array(10))));
+  }
+  return ids;
+}
+
 function firstDate(ctx: Ctx, abs: string): string {
   const r = run(["git", "log", "--diff-filter=A", "--format=%as", "--", abs], ctx.root);
   const dates = r.code === 0 ? r.stdout.trim().split("\n").filter(Boolean) : [];
@@ -1817,32 +1858,33 @@ function computeChanges(ctx: Ctx): Changes {
   // --- the frontmatter each moved document ends with
   const dateOf = (rel: string) => firstDate(ctx, join(d, rel));
 
-  // --- the ids, minted from each item's own date (D25): a UUIDv7 begins with
+  // --- the ids, minted from each item's own time (D25): a UUIDv7 begins with
   // its timestamp, so ids minted in one burst share every character pdocs
-  // prints and sort in no useful order. Each id takes its document's date —
-  // `generated.at`, else the date of its latest session, else its first commit
-  // — and items that share a date are a millisecond apart, in path order.
-  const itemDates = plan.moves
+  // prints and sort in no useful order. Each id takes the time of the commit
+  // that first added its document — a born item's, its latest session — and
+  // only when git has no history for it, `generated.at` (a date, so a day's
+  // items fall back to midnight). `mintIds` keeps them strictly increasing.
+  const genAt = (rel: string) => {
+    const fm = splitFrontmatter(textOf(rel) ?? "").fm;
+    return (fm && /\bat:\s*(\d{4}-\d{2}-\d{2})/.exec(fmGet(fm, "generated") ?? "")?.[1]) || null;
+  };
+  const midnight = (date: string) => Date.parse(`${date}T00:00:00Z`);
+  const dated = plan.moves
     .filter((mv) => mv.kind !== "feature" && mv.kind !== "report")
     .map((mv) => {
-      let date: string | null = null;
       if (mv.kind === "born-item") {
         const sessions = files.filter((r) => r.startsWith(`${mv.from}/sessions/`)).sort();
-        date = sessions.length ? /(\d{4}-\d{2}-\d{2})/.exec(basename(sessions[sessions.length - 1] as string))?.[1] ?? null : null;
-        date ??= dateOf(files.find((r) => r.startsWith(`${mv.from}/`)) ?? mv.from);
-      } else {
-        const fm = splitFrontmatter(textOf(mv.from) ?? "").fm;
-        date = (fm && /\bat:\s*(\d{4}-\d{2}-\d{2})/.exec(fmGet(fm, "generated") ?? "")?.[1]) || dateOf(mv.from);
+        const latest = sessions[sessions.length - 1];
+        const first = latest ?? files.filter((r) => r.startsWith(`${mv.from}/`)).sort()[0] ?? mv.from;
+        const ms = commitTime(ctx.root, join(d, first));
+        if (ms !== null) return { key: mv.from, ms };
+        const named = latest ? /(\d{4}-\d{2}-\d{2})/.exec(basename(latest))?.[1] : undefined;
+        return { key: mv.from, ms: midnight(genAt(first) ?? named ?? dateOf(first)) };
       }
-      return { from: mv.from, ms: Date.parse(`${date}T00:00:00Z`) };
-    })
-    .sort((a, b) => a.ms - b.ms || (a.from < b.from ? -1 : 1));
-  let prev = -1;
-  for (const { from, ms } of itemDates) {
-    const at = Number.isFinite(ms) && ms > prev ? ms : prev + 1;
-    prev = at;
-    ids.set(from, uuidv7(at, crypto.getRandomValues(new Uint8Array(10))));
-  }
+      const ms = commitTime(ctx.root, join(d, mv.from));
+      return { key: mv.from, ms: ms ?? midnight(genAt(mv.from) ?? dateOf(mv.from)) };
+    });
+  for (const [k, v] of mintIds(dated)) ids.set(k, v);
   const frontmatterFor = (rel: string, text: string): { text: string; what: string | null } => {
     const e = entityOf.get(rel);
     const cycle = cycles.texts.get(rel);

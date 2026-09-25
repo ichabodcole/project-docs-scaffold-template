@@ -860,21 +860,51 @@ describe("the whole migration on fixture O", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("each migrated id is minted from its document's own date, so ids sort in filing order and no two share a timestamp", () => {
+  test("each migrated id is minted from the commit that first added its document, so ids sort in filing order and no two share a timestamp", () => {
     const { root } = wholeRun();
     const msOf = (id: string) => Number.parseInt(id.slice(0, 8) + id.slice(9, 13), 16);
-    const dayOf = (rel: string) => new Date(msOf(fmGet(fmOf(root, rel), "id") as string)).toISOString().slice(0, 10);
-    // The backlog items and the fragment carry generated.at 2026-01-01; the
-    // born item's latest session is dated 2026-01-08.
-    expect(dayOf("docs/items/open-item.md")).toBe("2026-01-01");
-    expect(dayOf("docs/items/a-thought.md")).toBe("2026-01-01");
-    expect(dayOf("docs/items/beta/item.md")).toBe("2026-01-08");
+    // Fixture O is one commit: every item takes that commit's time, and the
+    // ties are a millisecond apart.
+    const committed = Date.parse(git(root, "log", "--reverse", "--format=%aI").trim().split("\n")[0] as string);
+    for (const rel of ["docs/items/open-item.md", "docs/items/a-thought.md", "docs/items/beta/item.md"]) {
+      const ms = msOf(fmGet(fmOf(root, rel), "id") as string);
+      expect([rel, ms >= committed && ms < committed + 1000]).toEqual([rel, true]);
+    }
     const ids = readdirSync(join(root, "docs/items"), { recursive: true })
       .map(String)
       .filter((p) => (/^(_archive\/)?[^/]+\.md$/.test(p) && p !== "README.md") || /(^|\/)item\.md$/.test(p))
       .map((p) => fmGet(fmOf(root, `docs/items/${p}`), "id") as string);
     expect(ids.length).toBe(9);
     expect(new Set(ids.map((id) => id.slice(0, 13))).size).toBe(ids.length);
+  });
+
+  test("two items committed the same day at different times mint those times, in that order — and a file moved before the run keeps its first commit's time", () => {
+    const root = fixtureO();
+    const at = (iso: string, files: Record<string, string>, message: string) => {
+      write(root, files);
+      git(root, "add", "-A");
+      git(root, "commit", "-q", `--date=${iso}`, "-m", message);
+    };
+    // Path order is the reverse of time order, so a sort by path cannot pass.
+    // Each new item resembles fixture O's backlog items, which `--follow`
+    // reads as a copy: an add time taken through a copy would be fixture O's.
+    at("2026-02-01T09:00:00Z", { "docs/backlog/2026-02-01-zz-early.md": doc(common("backlog", "Early", "Filed first.", { lifecycle: "open" }), "# Early\n") }, "early");
+    at("2026-02-01T15:30:00Z", { "docs/backlog/2026-02-01-aa-late.md": doc(common("backlog", "Late", "Filed second.", { lifecycle: "open" }), "# Late\n") }, "late");
+    at("2026-02-02T08:00:00Z", { "docs/backlog/2026-02-02-moved-before.md": doc(common("backlog", "Moved", "Renamed before the run.", { lifecycle: "open" }), "# Moved\n") }, "moved, before");
+    git(root, "mv", "docs/backlog/2026-02-02-moved-before.md", "docs/backlog/2026-02-02-moved-after.md");
+    git(root, "commit", "-q", "--date=2026-03-01T12:00:00Z", "-m", "rename");
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const msOf = (rel: string) => {
+      const id = fmGet(fmOf(root, rel), "id") as string;
+      return Number.parseInt(id.slice(0, 8) + id.slice(9, 13), 16);
+    };
+    expect(msOf("docs/items/zz-early.md")).toBe(Date.parse("2026-02-01T09:00:00Z"));
+    expect(msOf("docs/items/aa-late.md")).toBe(Date.parse("2026-02-01T15:30:00Z"));
+    expect(msOf("docs/items/moved-after.md")).toBe(Date.parse("2026-02-02T08:00:00Z"));
+    // generated.at stays a date.
+    expect(fmGet(fmOf(root, "docs/items/zz-early.md"), "generated")).toContain("at: 2026-01-01 }");
   });
 
   test("memories and lessons are kept and declared; the config's other bytes are the adopter's", () => {
