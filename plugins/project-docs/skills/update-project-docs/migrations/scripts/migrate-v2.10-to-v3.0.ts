@@ -77,6 +77,14 @@ const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
 /** The scaffold release this migration was written against (plan D16). */
 const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.0.0";
 const MANIFEST_NAME = ".pdocs-seed.json";
+/**
+ * The run's own record, at the project root, kept until a run completes: every
+ * path this migration wrote (and the hash it left there), and — from the start of
+ * phase 5 to the end of phase 6 — the plan itself. A re-run reads it to tell its
+ * own uncommitted output from an edit of the adopter's, and to finish moves an
+ * interrupted run had begun from the plan that began them.
+ */
+export const STATE_NAME = ".pdocs-migrate-v2.10-to-v3.0.json";
 const PHASES = 12;
 /** `generated.by` on the documents this run creates. */
 export const ACTOR = "migrate-v2.10-to-v3.0";
@@ -1480,7 +1488,66 @@ interface Ctx extends Options {
   /** The record phase 8 builds and phase 9 writes; the manifest's text before. */
   manifest: SeedManifest | null;
   manifestBefore: string | null;
+  /** The run's record (see STATE_NAME); read at the start, saved as the run writes. */
+  state: RunState;
+  /** Whether this run is finishing an interrupted one from its recorded plan. */
+  resumed: boolean;
+  /** What this run removed that was not a document of the adopter's, for the last line. */
+  removed: { templates: number; readmes: number; junk: number; folders: number };
 }
+
+interface Journal {
+  plan: { moves: EntityMove[]; blockers: string[]; handled: string[]; junk: string[] };
+  templates: TemplatePlan;
+  cycles: { texts: Array<[string, string]>; itemCycle: Array<[string, string]>; notes: string[] };
+  physical: Array<[string, string]>;
+  writes: Write[];
+  repoMoves: Array<[string, string]>;
+  keptLibrary: string[];
+}
+
+interface RunState {
+  /** Project-relative path → the sha256 this run left there, or null for a path it removed. */
+  written: Record<string, string | null>;
+  /** The plan, while phases 5 and 6 are writing it. */
+  journal: Journal | null;
+}
+
+const toJournal = (c: Changes): Journal => ({
+  plan: { ...c.plan, handled: [...c.plan.handled] },
+  templates: c.templates,
+  cycles: { texts: [...c.cycles.texts], itemCycle: [...c.cycles.itemCycle], notes: c.cycles.notes },
+  physical: c.physical,
+  writes: c.writes,
+  repoMoves: c.repoMoves,
+  keptLibrary: c.keptLibrary,
+});
+
+const fromJournal = (j: Journal): Changes => ({
+  plan: { ...j.plan, handled: new Set(j.plan.handled) },
+  templates: j.templates,
+  cycles: { texts: new Map(j.cycles.texts), itemCycle: new Map(j.cycles.itemCycle), notes: j.cycles.notes },
+  physical: j.physical,
+  writes: j.writes,
+  repoMoves: j.repoMoves,
+  keptLibrary: j.keptLibrary,
+});
+
+const projectRel = (ctx: Ctx, abs: string) => relative(ctx.root, abs).split(sep).join("/");
+
+/** Record what this run left at `abs` (its hash, or null when it removed it). */
+function track(ctx: Ctx, abs: string): void {
+  ctx.wrote = true;
+  ctx.state.written[projectRel(ctx, abs)] = hashOf(abs);
+}
+
+function saveState(ctx: Ctx): void {
+  writeFileSync(join(ctx.root, STATE_NAME), `${JSON.stringify(ctx.state)}\n`);
+}
+
+/** A path whose bytes are the ones this run left there — its own output, not an edit of yours. */
+const ours = (ctx: Ctx, rel: string) =>
+  Object.hasOwn(ctx.state.written, rel) && ctx.state.written[rel] === hashOf(join(ctx.root, rel));
 
 function resolveContext(o: Options): Ctx {
   const root = resolve(o.root);
@@ -1499,6 +1566,19 @@ function resolveContext(o: Options): Ctx {
     }
   }
   const docsRootName = typeof config?.docsRoot === "string" ? config.docsRoot : "docs";
+  let state: RunState = { written: {}, journal: null };
+  const statePath = join(root, STATE_NAME);
+  if (existsSync(statePath)) {
+    try {
+      const parsed = JSON.parse(readFileSync(statePath, "utf8")) as Partial<RunState>;
+      state = { written: parsed.written ?? {}, journal: parsed.journal ?? null };
+    } catch (e) {
+      fail(
+        `${STATE_NAME} — the record an earlier run of this migration left — is not valid JSON: ${(e as Error).message}.\n` +
+          `   Delete it and re-run; without it, the re-run stops on every uncommitted change the earlier run made.`
+      );
+    }
+  }
   return {
     ...o,
     root,
@@ -1515,6 +1595,9 @@ function resolveContext(o: Options): Ctx {
     toFormat: [],
     manifest: null,
     manifestBefore: null,
+    state,
+    resumed: false,
+    removed: { templates: 0, readmes: 0, junk: 0, folders: 0 },
   };
 }
 
@@ -1539,6 +1622,31 @@ function pdocsCheck(root: string): { result: CheckResult | null; raw: string } {
   } catch {
     return { result: null, raw: r.stderr || r.stdout };
   }
+}
+
+/**
+ * Every project-relative path this run may write: the owned files, the config and
+ * the record, the templates it may update, move or remove, and every document the
+ * plan moves or rewrites.
+ */
+function writeCandidates(ctx: Ctx): string[] {
+  const c = ctx.changes as Changes;
+  const dn = (p: string) => `${ctx.docsRootName}/${p}`;
+  const out = new Set<string>([
+    "scripts/pdocs",
+    ".project-docs.json",
+    dn(MANIFEST_NAME),
+    ...OWNED_ROOT.map(dn),
+    ...OWNED_CATEGORIES.map((f) => dn(`${f}/README.md`)),
+    ...Object.keys(RETIRED_READMES).map(dn),
+    ...c.templates.moves.flat().map(dn),
+    ...c.templates.removals.map(dn),
+  ]);
+  const m = readManifest(ctx);
+  for (const rel of Object.keys(m.files)) if (verdictFor(m, ctx.docsRoot, rel) === "update") out.add(dn(rel));
+  for (const w of c.writes) for (const p of [w.from, w.to]) if (p) out.add(projectRel(ctx, p));
+  for (const [f, t] of c.physical) for (const p of [f, t]) out.add(projectRel(ctx, p));
+  return [...out];
 }
 
 /** Repository-relative paths git reports dirty under `paths` (project-relative). */
@@ -1822,9 +1930,15 @@ function preflight(ctx: Ctx): void {
 
   // THE PLAN, read-only. Built here so a judgment blocker stops the run before
   // the network is touched, and so the dirt check knows every file it writes.
-  const changes = computeChanges(ctx);
-  ctx.changes = changes;
-  const blockers = [...changes.plan.blockers, ...changes.templates.blockers];
+  if (ctx.state.journal) {
+    // An earlier run stopped between the first move and the last link: finish ITS
+    // plan. A new plan made from a half-moved tree would find nothing to move.
+    ctx.changes = fromJournal(ctx.state.journal);
+    ctx.resumed = true;
+    ok(`resuming an interrupted run: the plan it recorded in ${STATE_NAME} is finished, not remade`);
+  } else ctx.changes = computeChanges(ctx);
+  const changes = ctx.changes;
+  const blockers = ctx.resumed ? [] : [...changes.plan.blockers, ...changes.templates.blockers];
   if (blockers.length > 0)
     fail(
       `${blockers.length} judgment step(s) this migration will not take for you. Resolve each before the run —\n` +
@@ -1837,10 +1951,15 @@ function preflight(ctx: Ctx): void {
   if (git.code !== 0) note("not a git repository — nothing to report");
   else if (git.stdout.trim() === "") ok("git tree clean");
   else {
-    const outside = changes.writes
-      .filter((w) => w.from !== null && !w.from.startsWith(`${ctx.docsRoot}${sep}`))
-      .map((w) => relative(ctx.root, w.from as string));
-    const dirty = dirtyUnder(ctx, [ctx.docsRootName, "scripts/pdocs", ".project-docs.json", ...outside]);
+    // Dirt counts only in a path this run will write, and only when it is not this
+    // migration's own uncommitted output — so a re-run after a stop, uncommitted,
+    // is not stopped by what the earlier run did, nor by fixes made elsewhere.
+    const journalled = new Set<string>();
+    if (ctx.resumed)
+      for (const w of changes.writes) for (const p of [w.from, w.to]) if (p) journalled.add(projectRel(ctx, p));
+    const dirty = dirtyUnder(ctx, writeCandidates(ctx)).filter(
+      (p) => p !== STATE_NAME && !ours(ctx, p) && !journalled.has(p) && ![...journalled].some((j) => p.startsWith(`${j}/`))
+    );
     if (dirty.length > 0 && !ctx.force)
       fail(
         `${dirty.length} path(s) this run would write have uncommitted changes:\n` +
@@ -1946,8 +2065,8 @@ function refreshOwned(ctx: Ctx): void {
   const stale = filesIn(cliSrc).filter((rel) => !sameBytes(join(cliSrc, rel), join(cliDst, rel)));
   if (stale.length === 0) ok("scripts/pdocs/ already identical to the scaffold's");
   else {
-    ctx.wrote = true;
     cpSync(cliSrc, cliDst, { recursive: true });
+    for (const rel of stale) track(ctx, join(cliDst, rel));
     ok(`scripts/pdocs/ refreshed (${stale.length} file(s) written; the copy merges, so a file of your own there survives)`);
   }
 
@@ -1973,23 +2092,24 @@ function refreshOwned(ctx: Ctx): void {
       continue;
     }
     const existed = existsSync(dst);
-    ctx.wrote = true;
     mkdirSync(dirname(dst), { recursive: true });
     writeFileSync(dst, text);
+    track(ctx, dst);
     ok(`${ctx.docsRootName}/${rel} ${existed ? "replaced" : "installed"} (owned)`);
   }
   if (same) ok(`${same} owned file(s) already identical to the scaffold's`);
   for (const rel of filesIn(sDocs).filter((r) => basename(r) === ".gitkeep")) {
     if (existsSync(join(ctx.docsRoot, rel))) continue;
-    ctx.wrote = true;
     mkdirSync(dirname(join(ctx.docsRoot, rel)), { recursive: true });
     writeFileSync(join(ctx.docsRoot, rel), "");
+    track(ctx, join(ctx.docsRoot, rel));
     ok(`${ctx.docsRootName}/${rel} installed (structural)`);
   }
   for (const rel of Object.keys(RETIRED_READMES)) {
     if (!existsSync(join(ctx.docsRoot, rel))) continue;
-    ctx.wrote = true;
     rmSync(join(ctx.docsRoot, rel));
+    track(ctx, join(ctx.docsRoot, rel));
+    ctx.removed.readmes++;
     ok(`${ctx.docsRootName}/${rel} removed — owned, and its folder is retired; links to it now point at ${ctx.docsRootName}/${RETIRED_READMES[rel]}`);
   }
 }
@@ -2002,19 +2122,37 @@ function moveDocuments(ctx: Ctx): void {
     return;
   }
   const r = (p: string) => relative(ctx.root, p);
+  // The plan is recorded BEFORE the first move, so a run stopped anywhere from here
+  // to the end of phase 6 is finished by the next one from this same plan.
+  if (!ctx.resumed) {
+    ctx.state.journal = toJournal(c);
+    saveState(ctx);
+  }
   for (const [from, to] of c.physical) {
-    if (!existsSync(from)) fail(`${r(from)} is not there to move — the tree changed after the plan was made. Re-run.`);
-    if (existsSync(to)) fail(`${r(to)} already exists — this run will not move ${r(from)} over it.`);
-    ctx.wrote = true;
+    const fromThere = existsSync(from);
+    const toThere = existsSync(to);
+    if (!fromThere && toThere) {
+      note(`already moved: ${r(from)} → ${r(to)}`);
+      continue;
+    }
+    if (!fromThere) fail(`${r(from)} is not there to move, and ${r(to)} is not there either — the tree changed after the plan was made.`);
+    if (toThere) fail(`${r(to)} already exists — this run will not move ${r(from)} over it.`);
+    const inner = statSync(from).isDirectory() ? filesIn(from) : [""];
     mkdirSync(dirname(to), { recursive: true });
     renameSync(from, to);
+    for (const f of inner) {
+      track(ctx, f ? join(from, f) : from);
+      track(ctx, f ? join(to, f) : to);
+    }
     ok(`moved ${r(from)}${statSync(to).isDirectory() ? "/" : ""} → ${r(to)}${statSync(to).isDirectory() ? "/" : ""}`);
   }
   let fm = 0;
   for (const w of c.writes.filter((x) => x.from !== x.to || x.fm)) {
-    ctx.wrote = true;
-    mkdirSync(dirname(w.to), { recursive: true });
-    writeFileSync(w.to, w.text);
+    if (!existsSync(w.to) || readFileSync(w.to, "utf8") !== w.text) {
+      mkdirSync(dirname(w.to), { recursive: true });
+      writeFileSync(w.to, w.text);
+      track(ctx, w.to);
+    }
     if (w.fm) {
       fm++;
       ok(`${w.created ? "created" : "frontmatter"} ${r(w.to)} — ${w.fm}`);
@@ -2033,11 +2171,17 @@ function rewriteInPlace(ctx: Ctx): void {
   const c = ctx.changes as Changes;
   const inPlace = c.writes.filter((w) => w.from === w.to && !w.fm);
   for (const w of inPlace) {
-    ctx.wrote = true;
+    if (readFileSync(w.to, "utf8") === w.text) continue;
     writeFileSync(w.to, w.text);
+    track(ctx, w.to);
   }
   const wrong = inPlace.filter((w) => readFileSync(w.to, "utf8") !== w.text);
   if (wrong.length) fail(`${wrong.length} file(s) do not hold the rewritten links: ${wrong.map((w) => relative(ctx.root, w.to)).join(", ")}`);
+  // Every move and every text of the plan is on disk: from here a re-run plans afresh.
+  if (ctx.state.journal) {
+    ctx.state.journal = null;
+    saveState(ctx);
+  }
   const total = c.writes.reduce((n, w) => n + w.links, 0);
   ok(
     total === 0
@@ -2066,9 +2210,9 @@ function patchConfig(ctx: Ctx): void {
   } catch {
     verified = false;
   }
-  ctx.wrote = true;
   if (verified) writeFileSync(ctx.configPath, patched as string);
   else writeFileSync(ctx.configPath, reserialiseLike(intended, before));
+  track(ctx, ctx.configPath);
   for (const ch of changes) ok(ch);
   ok(verified ? "written in the file's own text; every other byte as it was" : "re-serialised, indent kept: the lint keys could not be patched in place");
 }
@@ -2095,22 +2239,25 @@ function reconcileSeeds(ctx: Ctx, version: string): void {
   for (const [from, to] of c.templates.moves) {
     if (!existsSync(join(d, from))) continue;
     if (existsSync(join(d, to))) fail(`${dn(to)} already exists — this run will not move ${dn(from)} over it.`);
-    ctx.wrote = true;
     mkdirSync(dirname(join(d, to)), { recursive: true });
     renameSync(join(d, from), join(d, to));
+    track(ctx, join(d, from));
+    track(ctx, join(d, to));
     ok(`template moved: ${dn(from)} → ${dn(to)}`);
   }
   for (const rel of c.templates.removals) {
     if (!existsSync(join(d, rel))) continue;
-    ctx.wrote = true;
     rmSync(join(d, rel));
+    track(ctx, join(d, rel));
+    ctx.removed.templates++;
     ok(`template removed: ${dn(rel)} — untouched since the scaffold recorded it; its type is retired`);
   }
   for (const rel of c.templates.dropped) delete m.files[rel];
   for (const rel of c.plan.junk) {
     if (!existsSync(join(d, rel))) continue;
-    ctx.wrote = true;
     rmSync(join(d, rel));
+    track(ctx, join(d, rel));
+    ctx.removed.junk++;
     note(`removed ${dn(rel)} — not a document`);
   }
   // Emptied legacy folders go; one that still holds anything stays, for the verify phase to name.
@@ -2120,7 +2267,11 @@ function reconcileSeeds(ctx: Ctx, version: string): void {
     if (empty) rmdirSync(abs);
     return empty;
   };
-  for (const f of LEGACY_FOLDERS) if (existsSync(join(d, f)) && prune(join(d, f))) ok(`${dn(f)}/ removed — empty`);
+  for (const f of LEGACY_FOLDERS)
+    if (existsSync(join(d, f)) && prune(join(d, f))) {
+      ctx.removed.folders++;
+      ok(`${dn(f)}/ removed — empty`);
+    }
 
   const sDocs = join(ctx.scaffoldDir, "docs");
   const shipped = [...filesIn(sDocs).filter((r) => isSeeded(r) && !r.split("/").includes("_archive")), ...[...SEEDED_PAGES].filter((p) => existsSync(join(sDocs, p)))].sort();
@@ -2138,9 +2289,9 @@ function reconcileSeeds(ctx: Ctx, version: string): void {
     tally[v] = (tally[v] ?? 0) + 1;
     if (mayWrite(v)) {
       const dst = within(d, rel) ?? join(d, rel);
-      ctx.wrote = true;
       mkdirSync(dirname(dst), { recursive: true });
       cpSync(join(sDocs, rel), dst);
+      track(ctx, join(d, rel)); // `dst` is the real path; the record is keyed as git reports it
       recorded.push(rel);
       ctx.toFormat.push(rel);
       ok(`${v === "update" ? "updated" : "installed"} ${dn(rel)}`);
@@ -2167,6 +2318,7 @@ function formatAndRecord(ctx: Ctx): void {
           `   produce a record your own formatter invalidates. Fix the formatter, or pass --skip-format; re-running is safe.\n\n` +
           indented(r.stderr || r.stdout)
       );
+    for (const f of rel) track(ctx, join(ctx.root, f));
     ok(`formatted ${rel.length} file(s) this run created or installed — before recording, never after; no document of yours was formatted`);
   }
   if (ctx.manifest === null) fail("no record to write — the seeds phase did not run.");
@@ -2177,8 +2329,8 @@ function formatAndRecord(ctx: Ctx): void {
   const after = serialiseManifest(m, ctx.manifestBefore);
   if (after === ctx.manifestBefore) ok(`${ctx.docsRootName}/${MANIFEST_NAME} unchanged (${Object.keys(m.files).length} entries, version ${m.version})`);
   else {
-    ctx.wrote = true;
     writeFileSync(join(ctx.docsRoot, MANIFEST_NAME), after);
+    track(ctx, join(ctx.docsRoot, MANIFEST_NAME));
     ok(`${ctx.docsRootName}/${MANIFEST_NAME} written: ${ctx.recorded.length} recorded at version ${m.version}, ${Object.keys(m.files).length} entries`);
   }
 }
@@ -2218,7 +2370,8 @@ function verify(ctx: Ctx): void {
       `\n   The moves STAY — every one is named above — and the version markers were NOT moved: this tree is not at\n` +
       `   9.0.0 until the check passes. The worklist is \`bun scripts/pdocs/cli.ts report --format text\`; the problems are:\n\n` +
       indented(r.problems.join("\n")) +
-      `\n\n   Re-running this migration is safe: every phase finds its work done, and the run passes once these are worked.`
+      `\n\n   Work them without committing, then run the same command: every phase finds its work done, the\n` +
+      `   uncommitted changes this run made are recognised as its own, and the run passes once these are worked.`
   );
 }
 
@@ -2234,8 +2387,8 @@ function bumpVersion(ctx: Ctx, version: string): void {
       const after = before.replace(RE, `docs_version: "${version}"`);
       if (after === before) ok(`${ctx.docsRootName}/README.md already at ${version}`);
       else {
-        ctx.wrote = true;
         writeFileSync(readme, after);
+        track(ctx, readme);
         ok(`${ctx.docsRootName}/README.md set to ${version}`);
       }
     }
@@ -2245,8 +2398,9 @@ function bumpVersion(ctx: Ctx, version: string): void {
     ok(`.project-docs.json already at ${version}`);
     return;
   }
-  ctx.wrote = true;
-  ok(`.project-docs.json set to ${version} — ${writeVersionInto(ctx.configPath, before, version)}`);
+  const how = writeVersionInto(ctx.configPath, before, version);
+  track(ctx, ctx.configPath);
+  ok(`.project-docs.json set to ${version} — ${how}`);
 }
 
 function cleanup(ctx: Ctx): void {
@@ -2371,11 +2525,26 @@ export function main(argv: string[]): number {
           `\n\n   Nothing was rolled back. Fix the phase the line names and re-run.`
       );
     const c = ctx.changes as Changes;
-    say(`\nMigration complete. ${c.plan.moves.length} move(s), ${c.writes.length} document(s) written, nothing deleted; the tree is at release ${version}.`);
+    // The run is whole: its record has nothing left to tell a re-run.
+    rmSync(join(ctx.root, STATE_NAME), { force: true });
+    const rm = ctx.removed;
+    say(
+      `\nMigration complete. ${c.plan.moves.length} move(s), ${c.writes.length} document(s) written, no document of yours deleted; ` +
+        `removed: ${rm.templates} untouched retired template(s), ${rm.readmes} retired owned README(s), ${rm.junk} non-document file(s) (.gitkeep, .DS_Store), ` +
+        `${rm.folders} emptied retired folder(s). The tree is at release ${version}.`
+    );
     return 0;
   } catch (e) {
+    if (ctx?.wrote)
+      try {
+        saveState(ctx);
+      } catch {
+        // The stop below is still the thing to report.
+      }
     const state = ctx?.wrote
-      ? `\n   The tree may be partly migrated. Re-running is safe: every phase reports\n   rather than repeats work it finds already done.`
+      ? `\n   The tree may be partly migrated. Re-running is safe: fix what the stop names — no need to commit first —\n` +
+        `   and run the same command. It recognises its own uncommitted changes from ${STATE_NAME}, finishes an\n` +
+        `   interrupted move from the plan recorded there, and stops only on an edit of yours in a path it would write.`
       : `\n   Nothing was written.`;
     if (e instanceof MigrationError) {
       console.error(`\nSTOPPED: ${(e as Error).message}${state}`);

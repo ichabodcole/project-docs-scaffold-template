@@ -84,7 +84,11 @@ const APPLIES_IF = "[ ! -d docs/items ] || [ -d docs/backlog ] || [ -d docs/proj
 
 const roots: string[] = [];
 afterAll(() => {
-  for (const r of roots) rmSync(r, { recursive: true, force: true });
+  for (const r of roots) {
+    // The recovery tests take write permission away; give it back so the tree can go.
+    Bun.spawnSync(["chmod", "-R", "u+w", r], { env: childEnv() });
+    rmSync(r, { recursive: true, force: true });
+  }
 });
 
 function tmp(prefix: string): string {
@@ -1237,5 +1241,118 @@ describe("wiring witnesses — each phase's call site, neutered", () => {
     const r = migrate(fixtureO(), [], { script: patchedScript("\n    cleanup(ctx);\n\n"), scaffold: null, env: { PATH: stubCookiecutter("copy") } });
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("the generated scaffold is still on disk");
+  });
+});
+
+// ─── Recovery: an interrupted run, and a re-run after a red verify ───────────
+
+/** Every file's text (or hash) with the minted ids blanked, the run-state file left out:
+ *  what "the same result as an uninterrupted run" compares. */
+function outcome(root: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [rel, h] of Object.entries(treeDigest(root))) {
+    if (rel.startsWith(".pdocs-migrate")) continue;
+    out[rel] = rel.endsWith(".md") ? read(root, rel).replace(/^id: .*$/m, "id: <id>").replace(/^cycle: .*$/m, (l) => l) : h;
+  }
+  return out;
+}
+
+let clean: Record<string, string> | null = null;
+/** The outcome of one uninterrupted run on O. */
+const uninterrupted = () => {
+  if (clean) return clean;
+  const root = fixtureO();
+  expect(migrate(root).exitCode).toBe(0);
+  clean = outcome(root);
+  return clean;
+};
+
+describe("an interrupted run is finished by re-running the same command, uncommitted", () => {
+  const cases: Array<[string, string, (root: string) => void, (root: string) => void]> = [
+    [
+      "phase 4: a retired README cannot be removed",
+      "[4/12]",
+      (root) => chmodSync(join(root, "docs/fragments"), 0o555),
+      (root) => chmodSync(join(root, "docs/fragments"), 0o755),
+    ],
+    [
+      "phase 5, mid-moves: a move out of investigations/_archive/ fails after others have landed",
+      "[5/12]",
+      (root) => chmodSync(join(root, "docs/investigations/_archive"), 0o555),
+      (root) => chmodSync(join(root, "docs/investigations/_archive"), 0o755),
+    ],
+    [
+      "phase 5, after the moves: a moved document cannot take its new frontmatter",
+      "[5/12]",
+      (root) => chmodSync(join(root, "docs/backlog/2026-01-02-done-item.md"), 0o444),
+      (root) => chmodSync(join(root, "docs/items/done-item.md"), 0o644),
+    ],
+    [
+      "phase 6: a file outside the docs cannot take its rewritten links",
+      "[6/12]",
+      (root) => chmodSync(join(root, "README.md"), 0o444),
+      (root) => chmodSync(join(root, "README.md"), 0o644),
+    ],
+    [
+      "phase 7: the config cannot be written",
+      "[7/12]",
+      (root) => chmodSync(join(root, ".project-docs.json"), 0o444),
+      (root) => chmodSync(join(root, ".project-docs.json"), 0o644),
+    ],
+    [
+      "phase 8: a retired template cannot be removed",
+      "[8/12]",
+      (root) => chmodSync(join(root, "docs/briefs/TEMPLATES"), 0o555),
+      (root) => chmodSync(join(root, "docs/briefs/TEMPLATES"), 0o755),
+    ],
+  ];
+  for (const [name, phase, breakIt, fixIt] of cases)
+    test(name, () => {
+      const root = fixtureO();
+      breakIt(root);
+      const first = migrate(root);
+      expect(first.exitCode).toBe(1);
+      expect(first.out).toContain(phase);
+      expect(first.out).toContain("The tree may be partly migrated");
+      fixIt(root);
+      const again = migrate(root);
+      if (again.exitCode !== 0) console.log(again.out);
+      expect(again.exitCode).toBe(0);
+      expect(again.out).toContain("Migration complete.");
+      expect(outcome(root)).toEqual(uninterrupted());
+      expect(existsSync(join(root, ".pdocs-migrate-v2.10-to-v3.0.json"))).toBe(false);
+    });
+});
+
+describe("a red verify, worked without committing, then the same command", () => {
+  test("the re-run recognises its own uncommitted output, keeps the adopter's fixes, and completes", () => {
+    const root = fixtureO({ "docs/memories/2026-01-22-bare.md": doc(common("memory", "Bare", "No tags."), "# Bare\n") });
+    const first = migrate(root);
+    expect(first.exitCode).toBe(1);
+    expect(first.out).toContain("MISSING tags");
+    expect(first.out).toContain("without committing");
+    // The adopter works the problem, and edits a moved document too — nothing committed.
+    write(root, {
+      "docs/memories/2026-01-22-bare.md": doc(common("memory", "Bare", "No tags.", { tags: "[history]" }), "# Bare\n"),
+      "docs/items/open-item.md": `${read(root, "docs/items/open-item.md")}\nMy note after the migration.\n`,
+    });
+    const index = read(root, "docs/index.md").replace("Something else that happened.", "Something else that happened.\n- [Bare](./memories/2026-01-22-bare.md) — No tags.");
+    write(root, { "docs/index.md": index });
+    const again = migrate(root);
+    if (again.exitCode !== 0) console.log(again.out);
+    expect(again.exitCode).toBe(0);
+    expect(read(root, "docs/items/open-item.md")).toContain("My note after the migration.");
+    expect(readJson(join(root, ".project-docs.json")).version).toBe("9.9.9");
+  });
+
+  test("an edit of the adopter's in a path the re-run would write still stops it", () => {
+    const root = fixtureO({ "docs/memories/2026-01-22-bare.md": doc(common("memory", "Bare", "No tags."), "# Bare\n") });
+    expect(migrate(root).exitCode).toBe(1);
+    write(root, { "docs/SCHEMA.md": `${read(root, "docs/SCHEMA.md")}\nmine\n` });
+    const again = migrate(root);
+    expect(again.exitCode).toBe(1);
+    expect(again.out).toContain("path(s) this run would write have uncommitted changes");
+    expect(again.out).toContain("docs/SCHEMA.md");
+    expect(again.out).not.toContain("docs/items/");
   });
 });
