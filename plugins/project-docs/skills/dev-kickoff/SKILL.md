@@ -1,57 +1,90 @@
 ---
 name: dev-kickoff
 description: >
-  Orchestrate the full proposal-to-implementation process, either via a git
-  worktree (isolated branch) or directly in the main repo. Use when the user has
-  a finalized proposal and is ready to begin development — creates a branch or
-  worktree, writes a DEV_KICKOFF.md handoff document, optionally runs
+  Orchestrate the full proposal-to-implementation process for a feature, either
+  via a git worktree (isolated branch) or directly in the main repo. Use when
+  the user has an approved feature (feature.md) and is ready to begin
+  development — consults the project's playbooks for this kind of work, starts
+  the branch through init-branch, moves the feature to `active`, writes a
+  DEV_KICKOFF.md handoff document in the feature's folder, and optionally runs
   dev-discovery and generates the development plan. Triggers when user says
   "kick off dev", "start implementation", "ready to implement", "let's build
-  this", or references a proposal that needs implementation. Replaces
+  this", or references a feature or proposal that needs implementation. Replaces
   parallel-worktree-dev.
 ---
 
 # Dev Kickoff
 
-Orchestrate development startup from a finalized proposal. Handles both worktree
-and main-repo strategies — creates the branch or worktree, writes a
-DEV_KICKOFF.md handoff document, and optionally runs discovery and planning.
+Orchestrate development startup from an approved feature. Handles both worktree
+and main-repo strategies — starts the branch or worktree, moves the feature to
+`active`, writes a DEV_KICKOFF.md handoff document, and optionally runs
+discovery and planning.
+
+**Playbook override:** if the project has
+`docs/playbooks/dev-kickoff-playbook.md`, follow the workflow there — it takes
+precedence over this file wherever the two differ — and say that you followed
+it, naming the file. Most projects don't have one.
+
+`pdocs` below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
+repo root. The docs root is `docsRoot` in `.project-docs.json` at the repo root,
+default `docs/`; paths below are written as `docs/`.
 
 ## When to Use
 
 Activate when:
 
-- User has a finalized `proposal.md` in `docs/projects/<name>/`
+- User has an approved feature in `docs/features/<slug>/` (`lifecycle: ready`)
 - User says "kick off dev", "start implementation", "let's implement this",
   "ready to implement"
-- A proposal is approved and needs a branch, kickoff doc, and discovery/planning
+- A feature is approved and needs a branch, kickoff doc, and discovery/planning
 
 **Key indicators:**
 
 - "Let's kick off development on X"
 - "Ready to start implementing the proposal"
-- "Create a worktree for this proposal"
+- "Create a worktree for this feature"
 - "Start a branch for this feature"
 
 ## Workflow
 
-### Step 1: Locate the Proposal
+### Step 1: Locate the Feature
 
-Identify the project:
+Identify the feature:
 
-- Infer from current context (recent discussion, project folder open)
-- Or ask: "Which project proposal are we kicking off?"
-
-**Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
-in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
-the file exists.
+- Infer from current context (recent discussion, the feature folder open)
+- Or ask: "Which feature are we kicking off?" — `pdocs view board --features`
+  lists them
 
 Read:
 
-- `docs/projects/<name>/proposal.md` (required)
-- `docs/projects/<name>/design-resolution.md` (if it exists)
+- `docs/features/<slug>/feature.md` (required)
+- `docs/features/<slug>/design-resolution.md` (if it exists)
+- Its work items: `pdocs view feature <slug>`
 
-### Step 2: Choose Strategy
+**Check its state.** It should be `ready` — approved to build. If it is still
+`backlog`, it hasn't been approved: say so and ask the owner whether it is
+approved now (then `pdocs set feature/<slug> --lifecycle ready`) or whether to
+stop. If it is already `active`, it was kicked off before; ask whether this is a
+new branch of the same feature.
+
+### Step 2: Consult the Playbooks for This Kind of Work
+
+Name the kind of work in a few words (a database migration, an auth integration,
+a new CLI verb), then run:
+
+```bash
+pdocs find --type playbook --format json
+```
+
+Read each match's `description` — that is the playbook index — and read in full
+the ones that apply. **Quote the evidence** in DEV_KICKOFF.md's Constraints and
+in your reply: the `path` of each playbook that applies and why; or, when
+`count` is 0 or none applies, the literal result —
+"`pdocs find --type playbook`: 0 matches" or "N playbooks, none for
+<kind of work>: <their paths>". A claim that nothing applies, with no query
+output behind it, is not a consult.
+
+### Step 3: Choose Strategy
 
 Ask the user:
 
@@ -59,9 +92,10 @@ Ask the user:
 > keeping main clean or parallel work) or directly in the **main repo**
 > (simpler, same codebase, same or fresh session)?"
 
-### Step 3A: Worktree Path
+### Step 4A: Worktree Path
 
-1. **Determine branch name** — derive from proposal title or ask user
+1. **Determine branch name** — derive from the feature slug, or from the work
+   item the branch starts (next step), or ask the user
    - Format: `feature/<hyphenated-name>` (or fix/refactor/chore as appropriate)
 
 2. **Create the worktree** using the bundled script:
@@ -70,85 +104,106 @@ Ask the user:
    bash plugins/project-docs/skills/dev-kickoff/scripts/create-worktree.sh <type> <name>
    ```
 
-   The script creates the worktree, copies `.env` files, and generates
-   `DEV_KICKOFF.md` in the worktree root from the template.
+   The script creates the worktree and its branch, copies `.env` files, and
+   generates `DEV_KICKOFF.md` in the worktree root from the template.
 
-3. **Edit DEV_KICKOFF.md in the worktree root** — fill in:
-   - **Mission** — 2-4 sentences summarizing the proposal (pre-fill from
-     proposal; do not leave as placeholder)
-   - **Source Documents** — verify proposal link, add design-resolution if
-     present
-   - **Constraints** — any decisions already made, patterns to follow, things to
-     avoid
+3. **Start the work, in the worktree** — the script created the branch, so run
+   the rest of `init-branch` there, not its branch-creation steps: its **Step
+   4** (pick the work item this branch starts, from `pdocs view ready`) and its
+   **Step 6**
+   (`pdocs set item/<slug> --lifecycle active --cycle <active cycle>`, and the
+   cycle's Sessions line). Then move the feature:
+
+   ```bash
+   pdocs set feature/<slug> --lifecycle active
+   ```
+
+   Run these inside the worktree, so the changes are on the new branch.
+
+4. **Edit DEV_KICKOFF.md in the worktree root** — fill in:
+   - **Mission** — 2-4 sentences summarizing the feature (pre-fill from
+     `feature.md`; do not leave as placeholder)
+   - **Source Documents** — the links to the feature's documents. From the
+     worktree root they are `docs/features/<slug>/feature.md` and its siblings;
+     `pdocs new kickoff` refuses (the template lives in this skill), so these
+     links, the owner link included, are yours to write
+   - **Constraints** — Step 2's consult result, decisions already made, patterns
+     to follow, things to avoid
    - **Strategy** — set to `Worktree`
    - **Completion** — leave as "do not merge" version (already in template)
 
-4. **Done** — tell the user:
+5. **Done** — tell the user:
    > "Worktree created at `.worktrees/<type>/<name>`. Open a new session there
    > and run `/project-docs:start-dev-kickoff` to begin."
 
-### Step 3B: Main-Repo Path
+### Step 4B: Main-Repo Path
 
-1. **Create branch** — follow the init-branch flow:
+1. **Start the branch with `init-branch`** — run the `init-branch` command in
+   full: it checks out and updates develop, handles uncommitted changes, offers
+   the work item to start (`pdocs view ready`), creates the branch, and sets the
+   item `active` and its `cycle`. Don't create the branch by hand: that skips
+   the item's state.
+
+2. **Move the feature to `active`:**
 
    ```bash
-   git checkout develop
-   git pull
-   git checkout -b <type>/<name>
+   pdocs set feature/<slug> --lifecycle active
    ```
 
-   If there are uncommitted changes on develop, handle them (stash or carry over
-   per init-branch conventions).
-
-2. **Write DEV_KICKOFF.md** to `docs/projects/<name>/DEV_KICKOFF.md`:
+3. **Write DEV_KICKOFF.md** to `docs/features/<slug>/DEV_KICKOFF.md`:
    - Use
      `plugins/project-docs/skills/dev-kickoff/templates/DEV_KICKOFF.template.md`
-     as the base
-   - Pre-fill **Mission** from the proposal summary (2-4 sentences — not a
-     placeholder)
+     as the base. `pdocs new kickoff` refuses by design, so write the file
+     yourself — including its **link to the owner**, `./feature.md`, which the
+     CLI writes for every other owned document
+   - Pre-fill **Mission** from the feature (2-4 sentences — not a placeholder)
    - Set **Strategy** to `Main repo`
-   - Link all source documents (proposal, design-resolution if present)
+   - Link the source documents relative to the file: `./feature.md`,
+     `./design-resolution.md` if present, `./plan.md` once it exists
+   - Put Step 2's consult result under **Constraints**
    - Set **Completion** to the main-repo version (run finalize-branch, then
      proceed with merge options)
 
-3. **Commit** the kickoff document:
+4. **Commit** the kickoff document and the state changes:
 
    ```bash
-   git add docs/projects/<name>/DEV_KICKOFF.md
-   git commit -m "docs: add dev kickoff for <name>"
+   bun scripts/pdocs/cli.ts check
+   git add docs/
+   git commit -m "docs: add dev kickoff for <slug>"
    ```
 
-4. **Ask** the user:
+5. **Ask** the user:
 
    > "Continue here (I'll run discovery and planning now) or open a fresh
    > session with `/project-docs:start-dev-kickoff`?"
-   - **Continue** → proceed to Step 4
+   - **Continue** → proceed to Step 5
    - **Fresh window** → done. Tell user: "Open a new session and run
      `/project-docs:start-dev-kickoff` to begin."
 
-### Step 4: Discovery and Planning (if continuing in same session)
+### Step 5: Discovery and Planning (if continuing in same session)
 
-**4a. Run dev-discovery** — use the `dev-discovery` skill to explore affected
+**5a. Run dev-discovery** — use the `dev-discovery` skill to explore affected
 codebase areas and write a discovery artifact to
-`docs/projects/<name>/artifacts/`.
+`docs/features/<slug>/artifacts/`.
 
-**4b. Assess UI prototyping** — if the proposal describes an admin UI,
-dashboard, or complex visual interface, ask the user whether to create HTML
-mockup prototypes before planning. Prototypes help resolve layout and
-interaction questions that would otherwise be speculative in the plan. Use the
+**5b. Assess UI prototyping** — if the feature describes an admin UI, dashboard,
+or complex visual interface, ask the user whether to create HTML mockup
+prototypes before planning. Prototypes help resolve layout and interaction
+questions that would otherwise be speculative in the plan. Use the
 `html-mockup-prototyping` skill if yes. Save prototypes to
-`docs/projects/<name>/artifacts/`.
+`docs/features/<slug>/artifacts/`.
 
-**4c. Run generate-dev-plan** — use the `generate-dev-plan` skill to create
-`docs/projects/<name>/plan.md`.
+**5c. Run generate-dev-plan** — use the `generate-dev-plan` skill with
+`feature/<slug>` to create `docs/features/<slug>/plan.md` and shape the
+feature's items.
 
-**4d. Have user review the plan** — wait for approval before proceeding.
+**5d. Have user review the plan** — wait for approval before proceeding.
 
-**4e. Assess test plan** — if the feature is complex (multiple systems, 3+
+**5e. Assess test plan** — if the feature is complex (multiple systems, 3+
 phases, complex state transitions), ask whether to run `generate-test-plan`.
 When in doubt, ask the user.
 
-**4f. Begin implementation** — proceed with the plan.
+**5f. Begin implementation** — proceed with the plan.
 
 ## DEV_KICKOFF.md Template Reference
 

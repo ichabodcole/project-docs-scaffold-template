@@ -1,4 +1,4 @@
-# Dev Kickoff: [Project name — derive from proposal title]
+# Dev Kickoff: [Feature name — derive from feature.md's title]
 
 **Branch:** `{{BRANCH}}`\
 **Created:** {{DATE}}\
@@ -8,32 +8,37 @@
 
 ## Mission
 
-[2-4 sentences describing what to build and why. Pre-fill from proposal — do not
-leave this as a placeholder.]
+[2-4 sentences describing what to build and why. Pre-fill from feature.md — do
+not leave this as a placeholder.]
 
 ## Source Documents
 
-**Project:**
+**Feature:**
 
-[Replace `<project-name>` with the actual project folder name in the links
-below]
+[Links are relative to where this file lives. In the feature's folder
+(`docs/features/<slug>/DEV_KICKOFF.md`) keep them as written. In a worktree's
+root, prefix each with `docs/features/<slug>/` and the manifesto link with
+`docs/`. Delete the lines that don't apply.]
 
-- [Proposal](docs/projects/<project-name>/proposal.md)
-- [Design Resolution](docs/projects/<project-name>/design-resolution.md) (if
-  applicable)
-- [Plan](docs/projects/<project-name>/plan.md) (created during kickoff)
-- [Test Plan](docs/projects/<project-name>/test-plan.md) (if applicable)
+- [Feature](./feature.md)
+- [Design Resolution](./design-resolution.md) (if applicable)
+- [Plan](./plan.md) (created during kickoff)
+- [Test Plan](./test-plan.md) (if applicable)
+- Work items: `bun scripts/pdocs/cli.ts view feature <slug>`
 
 **Background context:**
 
-- [Project Manifesto](docs/PROJECT_MANIFESTO.md) - Design principles
+- [Project Manifesto](../../PROJECT_MANIFESTO.md) - Design principles
 
 ## Constraints
 
-[Decisions already made, patterns to follow, things to avoid — check proposal
+[Decisions already made, patterns to follow, things to avoid — check feature.md
 and design-resolution.md. Write "None at this time" if there are no
 constraints.]
 
+- **Playbooks consulted:** [the paths of the playbooks that apply, from `bun
+  scripts/pdocs/cli.ts find --type playbook`, and why — or the literal result:
+  "0 matches", or "N playbooks, none for <kind of work>"]
 - [Constraint 1]
 - [Constraint 2]
 
@@ -42,8 +47,8 @@ constraints.]
 1. Read the project documents linked above
 2. Install dependencies (if starting in a fresh worktree or environment)
 3. Use the `dev-discovery` skill to understand the relevant codebase areas
-4. Create a development plan in the project folder using the `generate-dev-plan`
-   skill
+4. Create a development plan in the feature's folder using the
+   `generate-dev-plan` skill
 5. Have the user review the development plan and provide feedback
 6. Assess whether a test plan is needed — if the feature is complex (multiple
    systems, complex state, 3+ phases), use the `generate-test-plan` skill; if

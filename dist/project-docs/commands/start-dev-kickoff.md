@@ -24,10 +24,10 @@ Check in order:
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
-2. **Project folders** — use the Glob tool with pattern
-   `docs/projects/*/DEV_KICKOFF.md`
+2. **Feature and item folders** — use the Glob tool with the patterns
+   `docs/features/*/DEV_KICKOFF.md` and `docs/items/*/DEV_KICKOFF.md`
 
-If multiple files are found, ask: "I found DEV_KICKOFF.md in multiple projects.
+If multiple files are found, ask: "I found DEV_KICKOFF.md in several places.
 Which one should I start?"
 
 If none found, tell the user: "No DEV_KICKOFF.md found. Run
@@ -60,7 +60,7 @@ Execute the steps in the Workflow section of DEV_KICKOFF.md in order. Standard
 steps:
 
 1. Use the `dev-discovery` skill to understand relevant codebase areas
-2. Assess UI prototyping — if the proposal involves a complex UI (admin panel,
+2. Assess UI prototyping — if the feature involves a complex UI (admin panel,
    dashboard, multi-state interface), ask the user whether to create HTML mockup
    prototypes before planning. Use `html-mockup-prototyping` if yes.
 3. Use the `generate-dev-plan` skill to create the plan — wait for user review

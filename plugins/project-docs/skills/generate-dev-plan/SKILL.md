@@ -1,32 +1,56 @@
 ---
 name: "generate-dev-plan"
 description: >
-  Create a development plan from an existing proposal in docs/projects/. Use
-  when the user has a proposal.md and wants to plan implementation — reads the
-  proposal, optional design-resolution.md, analyzes the codebase, and generates
-  plan.md in the project folder using the PLAN template. Prefer this over
-  generic plan-writing skills when a docs/projects/ proposal exists. Triggers
-  when user asks to "create a dev plan", "plan this proposal", "generate a plan
-  from the proposal", "write implementation plan", or references a project
-  folder that needs a plan.md.
-allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
+  Create a development plan for a feature (or a work item) in docs/features/ or
+  docs/items/. Use when the user has a feature.md and wants to plan
+  implementation — consults the project's playbooks for this kind of work, reads
+  the feature, an optional design-resolution.md, analyzes the codebase,
+  generates plan.md in the owner's folder using the PLAN template, and shapes
+  the feature's work items (blocked_by, ready). Prefer this over generic
+  plan-writing skills when a docs/features/ feature exists. Triggers when user
+  asks to "create a dev plan", "plan this proposal", "plan this feature",
+  "generate a plan from the proposal", "write implementation plan", or
+  references a feature that needs a plan.md.
+allowed_tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ---
 
 You are tasked with creating a comprehensive development plan for implementing a
 feature proposal.
 
-**Project:** `docs/projects/$1`
+**Owner:** `$1` — a reference to what the plan belongs to: `feature/<slug>`
+(usual) or `item/<slug>` for a work item big enough to need a plan. A bare slug
+means `feature/<slug>`. The owner's folder is `docs/features/<slug>/` or
+`docs/items/<slug>/`. `pdocs` below means `bun scripts/pdocs/cli.ts`, the
+documentation CLI at the repo root; the docs root is `docsRoot` in
+`.project-docs.json` (default `docs/`).
 
 **Your workflow:**
 
+0. **Consult the playbooks for this kind of work** — first. Read the owner's
+   entry file far enough to name the kind of work in a few words (a database
+   migration, a new CLI verb, an auth integration), then run:
+
+   ```bash
+   pdocs find --type playbook --format json
+   ```
+
+   Read each match's `description` — that is the playbook index — and read in
+   full the ones that apply to this kind of work. **Quote the evidence in the
+   plan and in your reply**: the `path` of every playbook you applied, and a
+   one-line reason; or, when `count` is 0 or none applies, the literal result —
+   "`pdocs find --type playbook`: 0 matches" or "N playbooks, none for <kind of
+   work>: <their paths>". A claim that nothing applies, with no query output
+   behind it, is not a consult. What an applied playbook says becomes a
+   constraint or a step in the plan, attributed to it.
+
 1. **Read and understand the proposal**
-   - Read the project's proposal at `docs/projects/$1/proposal.md`
-   - Check if a design resolution exists at
-     `docs/projects/$1/design-resolution.md` and read it if present — use
-     resolved decisions, boundaries, and data model to ground the plan in
-     already-made system-level decisions
-   - Read the projects README at `docs/projects/README.md` to understand
-     conventions
+   - Read the owner's entry file: `feature.md` (or the item's `item.md`)
+   - Check if a design resolution exists at `design-resolution.md` in the same
+     folder and read it if present — use resolved decisions, boundaries, and
+     data model to ground the plan in already-made system-level decisions
+   - Read `docs/features/README.md` (or `docs/items/README.md`) for conventions
+   - For a feature, list the work items that already name it:
+     `pdocs view feature <slug>`
    - Identify the core features, requirements, and technical considerations
 
 2. **Analyze the current codebase**
@@ -56,11 +80,17 @@ feature proposal.
    - Consider performance, security, or UX implications
 
 5. **Create the development plan**
-   - Write the plan to `docs/projects/$1/plan.md` (same project folder as the
-     proposal)
-   - Use the plan template at `docs/projects/TEMPLATES/PLAN.template.md` as
-     scaffolding. (The docs root is `docsRoot` in `.project-docs.json` at the
-     repo root, default `docs/` — read it if the file exists.)
+   - Create the file with the CLI, which places it in the owner's folder, seeds
+     it from `docs/TEMPLATES/PLAN.template.md` and links the owner from its
+     Related section:
+
+     ```bash
+     pdocs new plan --owner feature/<slug> \
+       --title "…" --description "…" --by "<your model or name>"
+     ```
+
+     A single-file item given as owner is promoted to a folder first.
+
    - **Fill the template's frontmatter block, every field** — the bracketed
      values are placeholders, not defaults, and the lint fails on a placeholder
      left in place: `title` matching the H1; `description` as one sentence
@@ -68,11 +98,15 @@ feature proposal.
      `status: draft`; `lifecycle: draft` (it becomes `active` when
      implementation starts, which is not now);
      `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`. Leave
-     `related` out unless the plan leans on a library page — the proposal and
-     any design resolution sit in the same folder, which is the edge already.
+     `related` out unless the plan leans on a library page — a playbook you
+     applied in step 0 is one (`playbook/<basename-without-.md>`); the feature
+     and any design resolution sit in the same folder, which is the edge
+     already.
    - Think "gas stations on a road trip" — highlight important stops, not
      turn-by-turn directions
    - Include relevant sections:
+     - **Playbooks consulted**: step 0's evidence — the paths and why, or the
+       zero-match result
      - **Overview**: Summary of the proposal and implementation approach
      - **Outcome & Success Criteria**: Clear definition of done
      - **Approach Summary**: High-level implementation strategy, path from
@@ -141,8 +175,46 @@ When the project has a test framework, structure tasks as TDD cycles:
 - **YAGNI** — Only plan what the proposal requires, not speculative features
 - **Frequent commits** — Each task should end with a commit
 
-**Output:** Create a development plan at `docs/projects/$1/plan.md`. Inform the
-user of the location when complete.
+**Output:** Create a development plan at `plan.md` in the owner's folder. Inform
+the user of the location when complete, and quote step 0's consult result.
+
+## Shaping the Work Items
+
+Planning is where a feature's work gets **shaped**: each piece gets a settled
+definition of done and knows what it waits on. Once the user has reviewed the
+plan, for a feature, **list the items you propose to file and the `blocked_by`
+between them, and ask the user to approve the list.** Their approval is the
+triage step for these items — they are the user's own plan, seen and accepted —
+which is why they can skip `triage`. Without it, file nothing, or file them with
+no `--lifecycle` so they wait in `triage`.
+
+1. **File the items the plan names that don't exist yet**, one per phase or task
+   an agent could pick up on its own:
+
+   ```bash
+   pdocs new item <slug> --kind task --parent feature/<slug> --lifecycle backlog \
+     --title "…" --description "…" --by "<your model or name>"
+   ```
+
+   `backlog`, not `triage`, only because the user approved the list above. Write
+   each one's definition of done from the plan.
+
+2. **Set what each waits on**, from the plan's phase dependencies:
+
+   ```bash
+   pdocs set item/<slug> --blocked-by <id-or-item/slug>,…
+   ```
+
+3. **Move the shaped ones to `ready`** — an item whose definition of done is
+   settled. Blocked items can be `ready` too; `pdocs view ready` only offers the
+   unblocked ones:
+
+   ```bash
+   pdocs set item/<slug> --lifecycle ready
+   ```
+
+Leave alone any item already in `triage`: that is the user's call, through
+`triage-items`. Show `pdocs view feature <slug>` when you are done.
 
 ## After the Plan Is Created
 
@@ -166,5 +238,4 @@ plan** is warranted. Ask the user:
 - The plan is a single phase with straightforward validation
 - Testing strategy is adequately covered within the plan itself
 
-If the user agrees, run the `generate-test-plan` skill for the same project
-folder.
+If the user agrees, run the `generate-test-plan` skill for the same owner.
