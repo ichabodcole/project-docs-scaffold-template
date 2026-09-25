@@ -3,7 +3,7 @@ name: document-validation
 description:
   Methodology for validating documentation against codebases. Covers document
   type lifecycles, review steps, evidence gathering, and structured output. Use
-  when reviewing whether documentation (proposals, plans, architecture docs)
+  when reviewing whether documentation (features, plans, architecture docs)
   accurately reflects what the code actually does. Triggers when user says
   "validate this doc", "is this documentation accurate", "check docs against the
   code", "audit documentation", or wants to verify that written documentation
@@ -21,45 +21,40 @@ status, or archival readiness.
 Different document types follow different lifecycles. Apply the appropriate
 rules based on what you're reviewing.
 
-### Temporal Documents (Status-based, Can Be Archived)
-
-These documents have a lifecycle that ends in archival.
-
 **Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
-**Project Pipeline Documents** (`docs/projects/<name>/`)
+**Every document's type and state vocabulary is in `docs/SCHEMA.md`** — the
+**Lifecycle by type** table, which the lint parses, so it cannot drift. Read it
+there rather than trusting a summary. Where a document keeps its state is its
+frontmatter `lifecycle`, never a `**Status:**` line in the body; a body status
+line beside a `lifecycle` is itself a finding.
 
-Proposals, plans, and sessions live together in project folders. They share a
-lifecycle and are archived as a unit.
+### Work Documents (State in `lifecycle`, Archived by the CLI)
 
-- **Proposals** (`docs/projects/<name>/proposal.md`)
-  - Lifecycle: Draft → Approved → Implemented → Archived
-  - Archive when: All described features are implemented in code
-- **Plans** (`docs/projects/<name>/plan.md`)
-  - Lifecycle: Draft → Active → Complete → Archived
-  - Archive when: All phases complete, work is done
-- **Sessions** (`docs/projects/<name>/sessions/*.md`)
-  - Historical work logs, part of the project record
-- Archive the **entire project folder** to `docs/projects/_archive/<name>/` when
-  all work is complete
-- Status format: `**Status:** Archived (Implemented)` or
-  `**Status:** Archived (Superseded by X)`
+**Features and work items** (`docs/features/<slug>/feature.md`,
+`docs/items/<slug>.md` or `docs/items/<slug>/item.md`) are the entities; each
+carries a `lifecycle` (`backlog` · `ready` · `active` · `review` · `done` ·
+`dropped`, and `triage` for items). The documents they own live in their folder
+and are judged with them:
 
-**Investigations** (`docs/investigations/`)
+- **Plans** (`plan.md`) — `draft` · `active` · `completed` · `abandoned`
+- **Design resolutions**, **test plans** — their own vocabularies, in
+  `SCHEMA.md`
+- **Write-ups** (a research item's answer), **sessions**, **reports**,
+  **artifacts** — frozen records with no `lifecycle`; they are evidence, not
+  claims to verify
 
-- Lifecycle: In Progress → Complete
-- Archive when: Question answered, either led to proposal or concluded no action
-  needed
-- Archive to: `docs/investigations/_archive/`
-- Status format: `**Status:** Complete - [outcome]`
+**A feature is done when its work shipped and every item under it is `done` or
+`dropped`** (`bun scripts/pdocs/cli.ts view feature <slug>` lists them). A
+research item is done when its write-up reached a recommendation.
 
-**Reports** (`docs/reports/`)
-
-- Generated assessments, typically point-in-time
-- Archive when: Findings have been acted upon or are no longer relevant
-- Archive to: `docs/reports/_archive/`
+**Archival is never a move you recommend doing by hand.** A finished entity's
+record is its terminal `lifecycle`; moving it into `_archive/` is optional, and
+only `bun scripts/pdocs/cli.ts archive <ref>` does it (it refuses anything not
+`done` or `dropped`, and rewrites every link). Recommend the `sweep-project`
+skill, which reconciles, writes the state, and runs the archive.
 
 ### Evergreen Documents (Updated In Place, Rarely Archived)
 
@@ -87,22 +82,10 @@ These documents are living and should be updated rather than archived.
 
 **Playbooks** (`docs/playbooks/`)
 
-- Reusable patterns and procedures
-- Action: Update if outdated, don't archive unless obsolete
+- Imperative guidance for a kind of work: Goal · Steps · Verification
+- Action: Update if a step is outdated; a step that no longer applies is
+  removed, not annotated
 - Flag as: "Needs Update" or "Current"
-
-**Lessons Learned** (`docs/lessons-learned/`)
-
-- Reference material for specific solutions
-- Action: Update if solution changed, rarely archive
-- Flag as: "Needs Update" or "Current" or "Obsolete"
-
-### Special Types
-
-**Fragments** (`docs/fragments/`)
-
-- Incomplete thoughts, eventually become other docs or deleted
-- Review for: Should this become an investigation or proposal?
 
 ## Review Methodology
 
@@ -128,17 +111,18 @@ Search for evidence using multiple techniques:
 5. **Database changes**: Look at schema files for mentioned tables/columns
 6. **Git history**: `git log --oneline --all --grep="[keyword]"` for related
    commits
-7. **Session docs**: Search `docs/projects/*/sessions/` for implementation notes
+7. **Session docs**: Search `docs/features/*/sessions/` and
+   `docs/items/*/sessions/` for implementation notes
 
 ### Phase 3: Categorize Findings
 
-**For Temporal Documents (proposals, plans, investigations):**
+**For Work Documents (features, items, plans):**
 
-- **Complete/Implemented (100%)**: All objectives achieved, ready to archive
-- **Partially Complete (X%)**: Some items done, list what remains
-- **Not Started (0%)**: No evidence of implementation
-- **Superseded**: Replaced by different approach, archive with note
-- **Abandoned**: No longer relevant, archive with reason
+- **Complete (100%)**: All objectives achieved → `done` (plan: `completed`)
+- **Partially Complete (X%)**: Some items done, list what remains → `active`
+- **Not Started (0%)**: No evidence of implementation → leave its state
+- **Dropped**: Replaced by a different approach, or no longer relevant →
+  `dropped` (plan: `abandoned`), with the reason
 
 **For Evergreen Documents (architecture, playbooks, etc.):**
 
@@ -162,10 +146,9 @@ Structure your findings consistently:
 ```markdown
 ## Document Review: [filename]
 
-**Document Type:** [Proposal | Plan | Investigation | Architecture | etc.]
-**Current Status in Doc:** [What the document currently says] **Actual Status:**
-[Your determination] **Completion:** [100% | 75% | 50% | etc. - for temporal
-docs]
+**Document Type:** [Feature | Item | Plan | Architecture | etc.] **`lifecycle`
+in Doc:** [What the frontmatter says] **Actual State:** [Your determination]
+**Completion:** [100% | 75% | 50% | etc. - for work documents]
 
 ### Summary
 
@@ -190,14 +173,16 @@ docs]
 
 ### Recommendation
 
-**Action:** [Archive | Update Status | Update Content | No Action]
+**Action:** [Set State (then `sweep-project` to archive) | Update Content | No
+Action]
 
 **Specific Steps:**
 
 1. [Exact action to take]
 2. [Another action]
 
-**New Status:** `**Status:** [recommended status text]`
+**New `lifecycle`:**
+`[the value from docs/SCHEMA.md's vocabulary for this type]`
 ```
 
 ## Quality Checklist

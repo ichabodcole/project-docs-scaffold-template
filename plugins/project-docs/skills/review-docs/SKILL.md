@@ -15,7 +15,7 @@ docs-curator agent per document to ensure thorough investigation.
 Activate when:
 
 - User wants to audit documentation for accuracy
-- User asks to check if proposals/plans have been implemented
+- User asks to check if features/plans have been implemented
 - User wants to identify outdated documentation
 - User mentions "review docs", "check proposals", or "documentation audit"
 - After major features are completed and docs need validation
@@ -47,47 +47,45 @@ List the documents that need review:
 
 **Docs root:** paths below are written as `docs/`; the actual root is `docsRoot`
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
-the file exists.
+the file exists. `pdocs` below means `bun scripts/pdocs/cli.ts`.
 
 ```bash
-# List project proposals
-ls docs/projects/*/proposal.md
+# The work in flight — features and items, with their states
+pdocs view board --features
 
-# List project plans
-ls docs/projects/*/plan.md
+# Features, plans and sessions
+ls docs/features/*/feature.md docs/features/*/plan.md
 
-# List architecture docs
-ls docs/architecture/*.md
-
-# List specifications
-ls docs/specifications/*.md
+# Architecture docs, specifications, playbooks
+ls docs/architecture/*.md docs/specifications/*.md docs/playbooks/*.md
 ```
 
 Or use Glob to find specific patterns:
 
-- `docs/projects/*/proposal.md` - All project proposals
-- `docs/projects/*/plan.md` - All project plans
-- `docs/projects/*/sessions/*.md` - All project sessions
+- `docs/features/*/feature.md` - All live features
+- `docs/features/*/plan.md` - All plans
+- `docs/features/*/sessions/*.md`, `docs/items/*/sessions/*.md` - Sessions
 - `docs/architecture/*.md` - All architecture docs
 - `docs/specifications/*.md` - All specifications
+
+`features/_archive/` and `items/_archive/` hold finished work; skip them unless
+the user asks.
 
 ### Step 2: Categorize by Document Type
 
 Different document types have different review goals:
 
-**Temporal Documents** (check for completion/archival):
+**Work Documents** (check for completion; state lives in `lifecycle`):
 
-- `docs/projects/*/proposal.md` - Archive project when implemented
-- `docs/projects/*/plan.md` - Archive project when complete
-- `docs/investigations/` - Archive when concluded
-- `docs/reports/` - Archive when acted upon
+- `docs/features/*/feature.md` and its `plan.md` - is the feature done?
+- Items (`docs/items/`) still `active` or `review` - did the work land?
+- Research items - did the write-up reach a recommendation?
 
 **Evergreen Documents** (check for accuracy):
 
 - `docs/architecture/` - Update to match current code
 - `docs/specifications/` - Update to match current application behavior
 - `docs/playbooks/` - Update if procedures changed
-- `docs/lessons-learned/` - Update if solutions evolved
 - `docs/interaction-design/` - Update to match current UX
 
 ### Step 3: Assign Agents
@@ -100,11 +98,11 @@ Task(
   description: "Review [document-name]",
   prompt: "Review this document for accuracy and implementation status:
 
-  **Document:** docs/projects/feature-x/proposal.md
+  **Document:** docs/features/feature-x/feature.md
 
   Read the document, search the codebase for evidence of implementation,
   check git history for related commits, and provide your findings with
-  the recommended action (archive, update, no action)."
+  the recommended action (a new lifecycle, update, no action)."
 )
 ```
 
@@ -123,8 +121,8 @@ Task(...doc4...)
 As agents complete, collect their findings:
 
 1. **Group by recommended action:**
-   - Ready to archive (100% complete)
-   - Needs status update (partially complete)
+   - Finished (100% complete) — a terminal `lifecycle`, then optionally archived
+   - Needs a state change (partially complete, or drifted)
    - Needs content update (outdated sections)
    - No action needed (current and accurate)
 
@@ -133,10 +131,10 @@ As agents complete, collect their findings:
    ```markdown
    ## Documentation Review Results
 
-   ### Ready to Archive (5 documents)
+   ### Finished (5 features)
 
-   - projects/feature-x/ - Fully implemented
-   - projects/feature-y/ - Superseded by feature-z ...
+   - features/feature-x/ - Fully implemented
+   - features/feature-y/ - Superseded by feature-z ...
 
    ### Needs Update (2 documents)
 
@@ -151,10 +149,11 @@ As agents complete, collect their findings:
 
 ### Step 5: Execute Approved Actions
 
-For approved archives:
-
-1. Update status in document
-2. Move to `_archive/` subfolder
+For approved finished work, **invoke the `sweep-project` skill once per feature
+or item** (`feature/<slug>`, `item/<slug>`). It reconciles, writes the terminal
+`lifecycle`, and archives with `pdocs archive` — which checks the state and
+rewrites every link — after its own confirmation. Never set a state in a body
+`**Status:**` line, and never move a file into `_archive/` by hand.
 
 For approved updates:
 
@@ -200,42 +199,58 @@ Provide findings in the standard docs-curator output format.
 ## Example: Reviewing All Project Proposals
 
 ```bash
-# 1. List active project proposals (excluding archive)
-ls docs/projects/*/proposal.md | grep -v archive
+# 1. List the live features (archived ones live in features/_archive/)
+ls docs/features/*/feature.md
 
-# Result: 8 projects to review
+# Result: 8 features to review
 ```
 
 ```
 # 2. Launch 4 agents in parallel (first batch)
-Task(subagent_type: "docs-curator", description: "Review project-a proposal", prompt: "...")
-Task(subagent_type: "docs-curator", description: "Review project-b proposal", prompt: "...")
-Task(subagent_type: "docs-curator", description: "Review project-c proposal", prompt: "...")
-Task(subagent_type: "docs-curator", description: "Review project-d proposal", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review feature-a", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review feature-b", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review feature-c", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review feature-d", prompt: "...")
 ```
 
 ```
 # 3. After first batch completes, launch remaining 4
-Task(subagent_type: "docs-curator", description: "Review project-e proposal", prompt: "...")
+Task(subagent_type: "docs-curator", description: "Review feature-e", prompt: "...")
 ...
 ```
 
 ```
 # 4. Consolidate results and present to user
-"8 projects reviewed:
-- 5 ready for archive (fully implemented)
+"8 features reviewed:
+- 5 finished (fully implemented)
 - 2 partially complete (list what remains)
 - 1 not started
 
-Would you like me to archive the 5 completed project folders?"
+Would you like me to sweep the 5 finished features? (sweep-project sets them
+done and offers to archive each one.)"
 ```
 
 ## Generate Status Report
 
-After consolidating results, generate a report document:
+After consolidating results, write a report. A report is always owned by a
+feature or a work item, so a documentation review files a `kind: chore` item to
+own it — the item stays open until the report's recommendations have been acted
+on:
 
-- **Path:** `docs/reports/YYYY-MM-DD-doc-status-report.md`
-- **Report Type:** "Doc Status"
+```bash
+pdocs new item docs-review-YYYY-MM --kind chore --lifecycle active \
+  --title "Docs review — YYYY-MM" \
+  --description "Act on the findings of the YYYY-MM documentation review." \
+  --by "<your model or name>"
+pdocs new report doc-status --owner item/docs-review-YYYY-MM \
+  --title "Doc Status — YYYY-MM-DD" --description "…" \
+  --by "<your model or name>"
+```
+
+`--lifecycle active` because the user asked for this review. The report lands in
+`docs/items/docs-review-YYYY-MM/reports/`. Write its body under the frontmatter
+the CLI wrote. When every follow-up action is done (or filed as its own item),
+close the review: `pdocs set item/docs-review-YYYY-MM --lifecycle done`.
 
 **Report sections:**
 
@@ -243,17 +258,17 @@ After consolidating results, generate a report document:
   not started), top recommendations, overall documentation health assessment
 - **Scope** — Which document types were reviewed, date range
 - **Findings by Status:**
-  - **Completed & Archived** — Document name, archive path, brief summary,
-    evidence (files/commits)
+  - **Completed** — Document name, the `lifecycle` written, archive path if
+    swept, brief summary, evidence (files/commits)
   - **Partially Completed** — Document name, percentage, what's done, what
     remains, evidence
   - **Not Started** — Document name, reason if apparent
-  - **Abandoned/Obsolete** — Document name, archive path, reason
+  - **Dropped/Obsolete** — Document name, the `lifecycle` written, reason
   - **Needs Attention** — Documents requiring clarification or decision
 - **Summary Statistics** — Total reviewed, completed, partial, not started,
   abandoned
-- **Recommendations** — Prioritize partial completions, archive stale docs,
-  create investigations for uncertain items
+- **Recommendations** — Prioritize partial completions, sweep finished features,
+  open research items for uncertain ones
 - **Follow-up Actions** — Checklist of concrete next steps
 
 ## Checklist: Documentation Review
@@ -264,6 +279,7 @@ After consolidating results, generate a report document:
 - [ ] Wait for all agents to complete
 - [ ] Consolidate findings by recommended action
 - [ ] Present summary to user
-- [ ] Get approval before archiving/updating
-- [ ] Execute approved actions
+- [ ] Get approval before changing state or updating
+- [ ] Execute approved actions (finished work through `sweep-project`)
+- [ ] Write the report under its chore item
 - [ ] Report completion
