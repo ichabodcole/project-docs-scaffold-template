@@ -155,10 +155,12 @@ A research item has three parts, kept in three files:
 - **`reports/`** holds the evidence gathered on the way.
 
 Write-ups and reports are not reserved for research items: any item, or a
-feature, may own them. A report about the whole repository — a documentation
-review, a summary refresh — gets a `kind: chore` item of its own to own it (for
-example `docs-review-2026-09`), and that item is set `done` once the report has
-been acted on.
+feature, may own them. A report is **evidence** for the work that owns it — a
+survey, an audit, a benchmark — and never a record of a process: no skill writes
+one about its own run. A documentation review files each finding as a `triage`
+item with its evidence in the body; a project summary updates
+`PROJECT-SUMMARY.md` and nothing else; what an agent did on a branch is its
+session.
 
 ```bash
 bun scripts/pdocs/cli.ts new item auth-providers --kind research
