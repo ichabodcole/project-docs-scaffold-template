@@ -5,12 +5,14 @@ description: >
   this instead of generic branch-completion skills — determines the base branch,
   performs independent code review via subagent (verifying the reviewer can
   execute code first), runs quality checks (format, lint, types, test), creates
-  session documentation in docs/projects/, writes memory docs, checks test plan
-  results, and lands the branch per the project's own landing policy if one is
-  defined (squash, consolidate, or leave history untouched) back to the base.
-  Triggers when user says "finalize branch", "merge to develop", "merge to
-  main", "finish this branch", "ready to merge", "wrap up this work", or wants
-  to complete feature work with documentation and code review.
+  a session record in the work item's (or feature's) folder, runs a Reflect step
+  that usually ends "nothing this time", moves the work item to `review` and
+  then `done`, checks test plan results, and lands the branch per the project's
+  own landing policy if one is defined (squash, consolidate, or leave history
+  untouched) back to the base. Triggers when user says "finalize branch", "merge
+  to develop", "merge to main", "finish this branch", "ready to merge", "wrap up
+  this work", or wants to complete feature work with documentation and code
+  review.
 allowed_tools:
   [
     "Read",
@@ -29,6 +31,19 @@ allowed_tools:
 # Finalize Branch
 
 Code review, documentation, and merge workflow for completed branches.
+
+**Playbook override:** if the project has
+`docs/playbooks/branch-finalization-playbook.md`, follow the workflow there — it
+takes precedence over this file wherever the two differ — and say in your output
+that you followed it, naming the file. Most projects don't have one; the steps
+below stand on their own. Two narrower overrides apply at their own steps:
+`handoff-playbook.md` (Step 6) and `release-playbook.md` (Step 8).
+
+**`pdocs`** below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
+repo root. Every `pdocs` step applies only when that file exists; a project on
+an older scaffold has no work items, and those steps are skipped silently. The
+docs root is `docsRoot` in `.project-docs.json` at the repo root, default
+`docs/`.
 
 ## Workflow
 
@@ -58,6 +73,23 @@ delta.
 Once established, use this base branch in every subsequent command — the
 examples below use `<base>` as a placeholder. Replace it with the actual base
 branch name (e.g., `develop`, `main`, `trunk`) for execution.
+
+**Then resolve the branch's work item** — the item whose state this run moves.
+`init-branch` names the branch after the item it started (`<type>/<item-slug>`)
+and sets that item `active`, so look in this order:
+
+1. The branch's description matches an item's slug. List the items with
+   `pdocs find --type item --format json`; an item's slug is its file name
+   without `.md` (`items/<slug>.md`), or its folder's name
+   (`items/<slug>/item.md`).
+2. Exactly one item is `active`: `pdocs find --type item --lifecycle active`.
+   Ask the user to confirm it is this branch's.
+3. The user names one; `pdocs find --id <prefix>` resolves an id they paste.
+
+**None found is allowed** — work often runs before anyone files an item. Say so,
+and Step 4 creates one for it. Keep the item's reference (`item/<slug>`) and its
+full `id` (the `id` field of `pdocs find --format json`) for Steps 2, 4, 6
+and 7.
 
 ### Step 1: Understand Branch Scope
 
@@ -139,19 +171,20 @@ not to skip.
    must come from an execution-capable reviewer; a read-only one may appear only
    in a paired, clearly-labelled second-opinion role:
    - **A plan-aware reviewer** — prefer when the branch has an approved
-     `proposal.md`, `plan.md`, design resolution, or similar spec to validate
-     against. Look for an available agent or skill-driven review specialized for
-     plan-alignment ("did we build what we said we'd build?"), architecture, and
-     design-pattern review — check what's actually dispatchable in the current
-     environment rather than assuming a previously-known name still resolves.
-     **A skill-driven review does not discharge this step by itself:** the
-     census attaches to a dispatched agent, and a skill is not one. Route
-     through one if it helps, but census whatever it ultimately dispatches, and
-     the requirements here still apply to that — the execution log included.
-     **The best-shaped candidate here may well be read-only, and picking it
-     feels _more_ compliant than falling back — shape does not substitute for
-     the census.** If no plan-aware reviewer has shell access, brief a
-     general-purpose reviewer explicitly to check the diff against the plan.
+     `feature.md` (or an item with a definition of done), `plan.md`, design
+     resolution, or similar spec to validate against. Look for an available
+     agent or skill-driven review specialized for plan-alignment ("did we build
+     what we said we'd build?"), architecture, and design-pattern review — check
+     what's actually dispatchable in the current environment rather than
+     assuming a previously-known name still resolves. **A skill-driven review
+     does not discharge this step by itself:** the census attaches to a
+     dispatched agent, and a skill is not one. Route through one if it helps,
+     but census whatever it ultimately dispatches, and the requirements here
+     still apply to that — the execution log included. **The best-shaped
+     candidate here may well be read-only, and picking it feels _more_ compliant
+     than falling back — shape does not substitute for the census.** If no
+     plan-aware reviewer has shell access, brief a general-purpose reviewer
+     explicitly to check the diff against the plan.
    - **A confidence-filtered reviewer** — a tight, low-noise report focused on
      real bugs, security issues, and clear convention violations. These are
      frequently read-only. If your census says this one is, it is a labelled
@@ -202,7 +235,16 @@ not to skip.
    - **Ship verdict:** "End your report with a clear verdict — _Ready to merge:
      Yes / No / With fixes_ — and a one-sentence reasoning."
 
-5. Wait for the subagent's findings (or both, for dual review) before
+5. **Move the work item to `review` as you dispatch** — the work is now waiting
+   on a reviewer:
+
+   ```bash
+   pdocs set item/<slug> --lifecycle review
+   ```
+
+   Skip it when Step 0 found no item. It moves to `done` in Step 6.
+
+6. Wait for the subagent's findings (or both, for dual review) before
    proceeding.
 
 **After review:**
@@ -213,6 +255,20 @@ not to skip.
 - Address high-confidence issues (bugs, security, clear convention violations)
   before moving to quality checks.
 - For subjective or low-confidence suggestions, defer to the user.
+- **A finding that is real but not for this branch becomes a work item**, not a
+  line in a report that nobody reads again. Note each one now; file it in Step 4
+  once the session document exists, because a review writes `from:`:
+
+  ```bash
+  pdocs new item <slug> --kind <task|bug|chore> \
+    --title "…" --description "…" --by "<your model or name>" \
+    --from <docs-root-relative path of the session document>
+  ```
+
+  It starts in `triage` — the default, and the right state: the user decides at
+  triage whether it is worth doing. Don't pass `--lifecycle`, and don't set
+  `priority`.
+
 - If the reviewer(s) produce a "Ready to merge: No" or "With fixes" verdict,
   treat those fixes as blocking before Step 3. **Blocking attaches to the
   concrete findings, not to the verdict label** — where the fixes behind a "With
@@ -247,8 +303,8 @@ the repo root (the docs root is `docsRoot` in `.project-docs.json`, default
 bun scripts/pdocs/cli.ts check
 ```
 
-Run it **again in Step 7**, once the session document, the memory and any other
-new documentation are written but before they are committed. This run checks the
+Run it **again in Step 7**, once the session document and any other new
+documentation are written but before they are committed. This run checks the
 code you are landing; that run checks the documents you are about to land, which
 don't exist yet.
 
@@ -270,86 +326,122 @@ a trace; it survives the session and nothing else. A future reader asking "was
 this genuinely reviewed, or only reviewed-looking?" has this file and nothing
 else to go on.
 
-Always create in the relevant project's `docs/projects/<project-name>/sessions/`
-folder. If no project folder exists for this work, create the session in a new
-or existing project folder. See `docs/projects/README.md` for conventions.
+**Its owner is the work item from Step 0.** If Step 0 found none, create the
+item now — the work ran first, and this is its record:
 
-**If the session template carries a frontmatter block**
-(`docs/projects/TEMPLATES/YYYY-MM-DD-SESSION.template.md` opens with `---`),
-fill every field. **The lint will not catch a placeholder** — it checks that
-each required key is present and non-empty, and `title: "[Topic] — YYYY-MM-DD"`
-satisfies that perfectly well. The only placeholder it rejects is the date,
-because `YYYY-MM-DD` isn't one. So this is on you, not on the gate:
+```bash
+pdocs new item <slug> --kind <task|bug|chore|research> \
+  --title "…" --description "<one sentence: what this branch did>" \
+  --by "<your model or name>" --lifecycle review \
+  [--parent feature/<slug>]
+```
 
-- `type: session` — pre-filled and correct; the folder decides it. Don't change
-  it.
+It skips `triage` because the work is already built and the user asked for it to
+land; it moves to `done` in Step 6, so it lands born done. Give it `--parent`
+when the branch built part of a feature.
+
+Then create the session in the owner's `sessions/` folder:
+
+```bash
+pdocs new session <topic> --owner item/<slug> \
+  --title "<Topic> — YYYY-MM-DD" --description "…" --by "<your model or name>"
+```
+
+A single-file item is promoted to a folder first, and the CLI writes the link
+back to the owner (`../item.md`). **Use `--owner feature/<slug>` instead** when
+the branch is one of several building a feature whose folder already holds their
+sessions — the work tracked at the feature, not at one item. Either way, never
+create the file by hand: the CLI picks the dated filename, the template and the
+frontmatter.
+
+Fill every field the command leaves as a placeholder. **The lint will not catch
+a placeholder** — it checks that each required key is present and non-empty, and
+`description: "[One sentence …]"` satisfies that perfectly well. So this is on
+you, not on the gate:
+
+- `type: session` — written by the CLI; the folder decides it. Don't change it.
 - `title` — the session's topic and its date, matching the H1
 - `description` — one sentence saying what this session did. Not a paraphrase of
   the title; this is the line that has to earn a reader's click.
 - `tags` — 2–4 kebab-case keywords. The lint doesn't require them on workbench
-  documents (four keywords on forty session notes buys a tag cloud nobody
-  reads), but a session someone will search for later is worth tagging.
-- `status` — **the template ships `draft`; change it to `stable`.** A session is
-  a frozen record, complete the moment it is written; it is never a draft. This
-  is the one field where the template's own default is the wrong answer, and
-  nothing will tell you.
+  documents, but a session someone will search for later is worth tagging.
+- `status` — `stable`, as the template ships it. A session is a frozen record,
+  complete the moment it is written; it is never a draft.
 - `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`
 
 **Don't write `related:`.** `docs/SCHEMA.md` resolves those edges against
-library pages only, and a session, a project and a cycle are all workbench. Link
-the cycle in the body instead — a line under the session's own heading,
-`Part of [<cycle title>](../../../cycles/<slug>.md)`, which is a real link the
-lint checks.
+library pages only, and a session, an item, a feature and a cycle are all
+workbench. Link the cycle in the body instead — a line under the session's own
+heading, `Part of [<cycle title>](<relative path>/cycles/<slug>.md)`, which is a
+real link the lint checks. From `items/<slug>/sessions/` and from
+`features/<slug>/sessions/` that path is `../../../cycles/<slug>.md`.
 
 A session carries **no `lifecycle`** — writing one is a lint error. See
 `docs/SCHEMA.md` for why frozen records don't have a pipeline state.
 
-### Step 5: Create Memory
+**Now file the review's deferred findings** (Step 2), each with
+`--from <this session's path>`, and list them in the session under a short
+**Follow-up items** line so a reader of either can find the other.
 
-Create a short memory in `docs/memories/` summarizing what was done. Use the
-template at `docs/memories/TEMPLATE.md`. Name it
-`YYYY-MM-DD-short-description.md`. Skip for trivial changes where the commit
-message alone provides sufficient context.
+### Step 5: Reflect
 
-**A memory is a library page, not a workbench one**, in projects that keep the
-two tiers (`docs/SCHEMA.md` exists). That means two obligations a session
-document doesn't have:
+Ask one question, and answer it honestly:
 
-- Fill the frontmatter. A memory carries no `lifecycle`. `related:` is optional
-  and is **not** in the template — add the key yourself if the memory leans on a
-  playbook, a lesson, an architecture page or another memory, written as
-  `type/<basename-without-.md>`. **Edges resolve against library pages only**,
-  so there is no key for a project, a session or an investigation; link to those
-  in the body. Every entry must resolve or the lint reports `BAD related`.
-- **Add its line to `docs/index.md`**, under `## Memories`, in the form
-  `- [Title](./memories/<file>.md) — <description>`. Append under the existing
-  entries, not at the top; the section reads chronologically by filename date.
-  Let the formatter wrap it — the lint folds continuation lines back together
-  before matching, so a wrapped entry is fine and an unwrapped one will be
-  rewrapped in someone else's branch.
+> **Did this branch teach something that would save a future agent from
+> rediscovering it?**
 
-  The hook after the dash is the memory's own `description`, **copied
-  verbatim**. The lint compares them and reports `STALE HOOK` on drift, and a
-  library page missing from the catalog entirely is reported as `ORPHAN`. Grep
-  the output for both names.
+The bar is high and **the default answer is no.** Most branches do what they set
+out to do and teach nothing a future agent needs; the session record already
+holds what happened, and that is enough. When the answer is no, **say so out
+loud** — "Reflect: nothing this time." — and write nothing. That line is a real
+outcome, not a skipped step.
 
-  **In a project still `adopting`**, neither of those fails the build — the lint
-  reports and exits 0. Read its output rather than its exit code.
+When the answer is yes, the usual outcome is **appending to an existing
+playbook**, not writing a new document. Playbooks are indexed by the kind of
+work they cover, and their `description` is the index:
 
-Both are cheap to do now and annoying to reconstruct later, which is why they
-are here rather than in a sweep.
+```bash
+pdocs find --type playbook --format json
+```
+
+Pick the playbook for this kind of work and append a **Step** (an imperative
+instruction) and a **Verification** (how the next agent can tell the step was
+done) to its sections. Write it as an instruction, not as a story: no "we
+discovered", no "the journey". If no playbook fits and the lesson is genuinely
+reusable, propose a new one (`pdocs new playbook <slug>`, shaped Goal · Steps ·
+Verification) and ask the user before creating it. Quote the `pdocs find` output
+you chose from, so the choice can be checked.
+
+Never write a memory or a lesson: both types are retired. A playbook is a
+library page, so a new one needs its catalog line in `docs/index.md` —
+`pdocs new` writes it. Check that `pdocs check` reports no `ORPHAN` or
+`STALE HOOK`.
 
 ### Step 6: Assess Additional Documentation
 
 Present recommendations to user and get confirmation before creating new
-documents. **Plan reconciliation and the cycle's session line are the
-exceptions** — both edit a document that already exists, and both are actions to
-perform, not recommendations to offer. Do them without asking.
+documents. **The item's state, plan reconciliation and the cycle's session line
+are the exceptions** — each edits something that already exists, and each is an
+action to perform, not a recommendation to offer. Do them without asking.
+
+- **The work item moves to `done`.** The branch is landing, and this change is
+  committed with the session in Step 7, so it lands with the branch and is
+  discarded with it:
+
+  ```bash
+  pdocs set item/<slug> --lifecycle done
+  ```
+
+  Leave its parent feature alone: a feature is moved to `done` by
+  `sweep-project`, not by one branch.
 
 - **Handoff** — Does this work require specific deployment steps beyond merging
   code? (DB migrations, service redeployments, environment config changes,
-  manual coordination.) If so, create `handoff.md` in the project folder using
-  `docs/projects/TEMPLATES/HANDOFF.template.md`.
+  manual coordination.) If so, create one beside the session's owner:
+  `pdocs new handoff --owner item/<slug>` (or `feature/<slug>`). **If the
+  project has `docs/playbooks/handoff-playbook.md`, follow it** for what the
+  handoff must contain — it takes precedence over the template — and say that
+  you did.
 - **Architecture** — Did this change the system's structure in a way a future
   reader would need explained? If so, propose creating or updating a doc in
   `docs/architecture/` (see `docs/architecture/README.md` for conventions).
@@ -358,20 +450,22 @@ perform, not recommendations to offer. Do them without asking.
   `docs/interaction-design/README.md` for conventions).
 - **Specifications** — Check if `docs/specifications/` exists and whether
   changes affect documented behavior. Flag any that may need updating.
-- **Test plan** — If `docs/projects/<project-name>/test-plan.md` exists, verify
-  that a Results Addendum section is present with pass/fail/blocked statuses.
-  Flag any Tier 1 or Tier 2 scenarios without results. This is a soft check —
-  don't block the merge, but surface it to the user.
-- **Plan reconciliation** — If a `plan.md` or backlog item exists for this work,
-  reconcile it in place against what was actually built: mark the completed
-  items, update a `**Status:**` line if it holds one of the values its own
-  template defines (`docs/projects/TEMPLATES/PLAN.template.md` —
-  `Draft | Active | Completed | Superseded`). If the status is free-form
-  (`V1.5 shipped, awaiting merge`), leave it and report it verbatim; free-form
-  is usually _more_ informative than the enum. **Verify against the artifacts
-  and the session record, not against what the document currently claims** —
-  finished work routinely leaves plans unmarked, so an unmarked plan means
-  "unreconciled," not "unstarted."
+- **Test plan** — If the owner's folder (the item's, or its parent feature's)
+  holds a `test-plan.md`, verify that a Results Addendum section is present with
+  pass/fail/blocked statuses. Flag any Tier 1 or Tier 2 scenarios without
+  results. This is a soft check — don't block the merge, but surface it to the
+  user.
+- **Plan reconciliation** — If a `plan.md` exists for this work (in the item's
+  folder or its parent feature's), reconcile it in place against what was
+  actually built: mark the completed items, and when every phase is done set its
+  frontmatter `lifecycle` to `completed` (its vocabulary is
+  `draft · active · completed · abandoned`, per `docs/SCHEMA.md`'s **Lifecycle
+  by type** table — read it there). `pdocs set` changes features, items and
+  cycles only, so edit the plan's frontmatter line directly. Don't add a
+  `**Status:**` line to the body; `lifecycle` is the one place state lives.
+  **Verify against the artifacts and the session record, not against what the
+  document currently claims** — finished work routinely leaves plans unmarked,
+  so an unmarked plan means "unreconciled," not "unstarted."
 
   **Mark completion in whatever idiom the plan already uses** — checkboxes if it
   has them, a per-phase annotation or a short addendum note if that's how it
@@ -380,31 +474,30 @@ perform, not recommendations to offer. Do them without asking.
 
   Do the reconciliation here rather than deferring it. Updating the plan as the
   work lands is part of the work — it's what makes the document trustworthy
-  signal for whoever picks the project up next, instead of a field nobody
-  believes. Surfacing the gap without closing it just moves the debt.
+  signal for whoever picks the work up next. Surfacing the gap without closing
+  it just moves the debt.
 
   **What's soft here is the discrepancy, not the work.** Performing the
   reconciliation is mandatory. What doesn't block the merge is an item you
   genuinely can't resolve — you can't tell from the artifacts or the session
   record whether it shipped. Record that item as unresolved, say so in your
-  report, and carry on to Step 7. Don't read "soft" as license to skip the edit
-  because reconciling looked expensive. (Contrast the test-plan check above,
-  where "soft" does mean surface-only.)
+  report, and carry on to Step 7. (Contrast the test-plan check above, where
+  "soft" does mean surface-only.)
 
-  This makes no claim about whether the whole _project_ is finished. Most
-  branches land mid-project.
+- **Is the feature finished?** If the item has a `parent` feature, look at the
+  feature's items:
 
-  **If reconciliation comes back with every item in the plan complete** — not
-  merely the items this branch touched — ask whether this branch completes the
-  project, and offer to invoke the `sweep-project` skill — which handles
-  archival and cross-reference updates. **Pass it the project folder (or backlog
-  item) path explicitly** — derive it from the document you just reconciled: the
-  project folder is the parent directory of `plan.md`, and a backlog item is its
-  own path under `docs/backlog/`. `sweep-project` will not infer a target, by
-  design. Passing a path inside the project (say, the `plan.md` itself) is
-  harmless — it resolves upward to the project folder on its own. This mirrors
-  Step 8's delegation to `consolidate-long-branch`: present the option, then
-  invoke the skill once the user chooses.
+  ```bash
+  pdocs view feature <slug>
+  ```
+
+  If every item it lists is `done` or `dropped` — not merely this one — ask
+  whether this branch completes the feature, and offer to invoke the
+  `sweep-project` skill, which reconciles the feature, sets its terminal state
+  and archives it. **Pass it the reference explicitly** — `feature/<slug>` —
+  because `sweep-project` will not infer a target, by design. This mirrors Step
+  8's delegation to `consolidate-long-branch`: present the option, then invoke
+  the skill once the user chooses.
 
   **A yes here is not archival approval.** It means "go look" — `sweep-project`
   runs its own reconciliation and stops at its own confirmation gate before
@@ -415,10 +508,10 @@ perform, not recommendations to offer. Do them without asking.
   - **Name yourself as the caller when you invoke it.** `sweep-project` gates on
     a dirty `docs/` tree and carves out delegated runs, but nothing tells it who
     called — an unannounced run is treated as standalone. State that
-    `finalize-branch` Step 6 is invoking it, alongside the target path, or it
-    stops and asks about the documentation changes you just wrote.
-  - `sweep-project` re-reads from disk, so it sees the reconciliation you just
-    wrote. The second pass is idempotent, not duplicated work.
+    `finalize-branch` Step 6 is invoking it, alongside the target reference, or
+    it stops and asks about the documentation changes you just wrote.
+  - `sweep-project` re-reads from disk, so it sees the state you just wrote. The
+    second pass is idempotent, not duplicated work.
   - When invoked from here, it leaves its changes uncommitted for Step 7. If it
     archives, the squash in Step 8 operates on the post-move tree — which is
     correct. Step 8's sha scan deliberately does not: it reads the branch as it
@@ -429,8 +522,7 @@ perform, not recommendations to offer. Do them without asking.
   whose `lifecycle` is `active`:
 
   ```bash
-  ROOT=$(git rev-parse --show-toplevel)
-  grep -l '^lifecycle: active' "$ROOT"/docs/cycles/*.md 2>/dev/null | grep -v TEMPLATE
+  pdocs find --type cycle --lifecycle active
   ```
 
   No cycles directory, or no active cycle, means there is nothing to do here —
@@ -446,44 +538,54 @@ perform, not recommendations to offer. Do them without asking.
      cycle, or was created some other way), append it in the landed form rather
      than pretending it was tracked all along. This is an edit to perform, not a
      recommendation to offer.
-  2. **Ask whether the cycle is done**, but only once every entry in its
-     `scope:` has reached a terminal `lifecycle`.
+  2. **Ask whether the cycle is done**, but only when the cycle's view says it
+     can close:
 
-     A `scope:` entry is a `type/slug` reference, not a path: `project/<name>`
-     means the **folder** `docs/projects/<name>/`, which holds several documents
-     that each carry their own `lifecycle` — `proposal.md`, `plan.md`, and
-     sometimes `design-resolution.md` and `test-plan.md`. That entry is finished
-     when all of them are terminal, so a proposal at `implemented` beside a plan
-     still at `active` does **not** close it. `backlog/<item>` is a single file.
+     ```bash
+     pdocs view cycle <cycle-slug>
+     ```
 
-     Which values count as terminal is in `docs/SCHEMA.md`'s **Lifecycle by
-     type** table. Read it there rather than from memory; the lint parses that
-     table and fails if it disagrees, which makes it the one copy that can't
-     drift.
+     A cycle's work is the items that name it (`cycle: <slug>`); nothing lists
+     it in the cycle file. The view reports `closable: yes` when the cycle has
+     at least one item and every one is `done` or `dropped` — which, after this
+     step's `pdocs set`, may now include this branch's item. If it reports
+     `closable: no`, say which items are holding it and stop there.
 
-     Read the states from the scoped documents' frontmatter, not from this
-     branch. If any entry is still open, the cycle is still open: say which
-     entries are holding it and stop there.
+     When it is closable, offer to invoke `sweep-project` with `cycle/<slug>` as
+     its target — it routes to its Cycle Path. Closing a cycle means writing its
+     `## Outcome`, setting `lifecycle: closed` and `closed: <date>`, and moving
+     any remaining `(open)` session lines; that belongs where the rest of the
+     closing logic lives, not inlined here.
 
-     When they are all terminal, offer to invoke `sweep-project` with the cycle
-     file's path as its target — it takes a cycle as a target kind alongside a
-     project folder and a backlog item, and routes to its Cycle Path. Closing a
-     cycle means writing its `## Outcome`, setting `lifecycle: closed` and
-     `closed: <date>`, and moving any remaining `(open)` session lines; that
-     belongs where the rest of the closing logic lives, not inlined here.
-
-  **The cycle question is not the project question.** A cycle usually spans
-  several projects and a project usually spans several cycles, so answering one
+  **The cycle question is not the feature question.** A cycle usually spans
+  several features and a feature usually spans several cycles, so answering one
   tells you nothing about the other. Both prompts can fire on the same branch;
   ask them separately.
 
-### Step 7: Commit Documentation
+### Step 7: Commit the Session Record
 
 Stage and commit documentation changes under `docs/` — new files, and also edits
-and moves (plan reconciliation and any `sweep-project` archival land as
-modifications and renames, not as new files). Scope the staging to `docs/`
-rather than staging everything, so unrelated uncommitted code doesn't ride
-along.
+and moves (the item's state, plan reconciliation, a promotion, any
+`sweep-project` archival land as modifications and renames, not only as new
+files). Scope the staging to `docs/` rather than staging everything, so
+unrelated uncommitted code doesn't ride along.
+
+**This commit carries the work item's trailer.** End its message with the item's
+full `id`, as a git trailer:
+
+```bash
+git commit -m "docs: session record for <branch>" -m "Work-Item: <full item id>"
+```
+
+Use the full id from `pdocs find --type item --format json`, not the 12
+characters `pdocs` prints — a trailer has to resolve years later, when many more
+ids share that prefix. Put it beside any other trailers your project requires
+(`Co-Authored-By:` and the like), in one final paragraph.
+
+This commit is the one the trailer lives on under every landing policy. If Step
+8 squashes, **carry the trailer into the commit that absorbs this one** — the
+single squashed commit (Strategy A), or the chapter that holds the session
+record (Strategy B) — and check it survived in Step 8.5.
 
 If Step 8 lands on a single-commit squash, this commit folds into it — that's
 expected. Committing here still matters: it keeps the documentation work
@@ -497,10 +599,10 @@ bun scripts/pdocs/cli.ts check
 ```
 
 This is the run that checks what you just wrote — the session document, the
-memory, the reconciled plan, the cycle edit. Step 3's run happened before any of
-them existed. A missing `description`, a `lifecycle` outside its type's
-vocabulary, or a link to a document that moved all surface here and nowhere
-else.
+item's new state, the reconciled plan, the cycle edit, any follow-up items. Step
+3's run happened before any of them existed. A missing `description`, a
+`lifecycle` outside its type's vocabulary, or a link to a document that moved
+all surface here and nowhere else.
 
 ### Step 8: Determine Landing Policy and Execute
 
@@ -511,6 +613,11 @@ commits authored by more than one Anthill seat, each signing its own work with
 an `Anthill-Seat:` trailer — or wanting to bisect the reasoning behind a branch
 where documentation commits are rulings, not commentary). This skill's job is to
 find and follow that decision, not make it.
+
+**Landing on a release branch.** If this branch lands on `main` (or whatever
+branch the project releases from) and the project has
+`docs/playbooks/release-playbook.md`, follow it for the landing — it takes
+precedence over the strategies below — and say that you did.
 
 **How:**
 
@@ -557,13 +664,13 @@ find and follow that decision, not make it.
    Anthill project on which only one seat committed squashes normally.
 
    **About the sha scan.** It reads a committed ref rather than the working
-   tree: by this point the tree holds the session doc, memory, and reconciled
-   plan written in Steps 4–6, and scanning it lets this skill's own output veto
-   its own squash. It scans the branch rather than `<base>`, because a commit in
-   `<base>..HEAD` did not exist at `<base>` and nothing there could cite it —
-   the citations that matter were written on this branch, by the work itself. A
-   short sha is seven hex characters and can appear incidentally, so read each
-   hit before treating it as a veto.
+   tree: by this point the tree holds the session doc, the item's new state and
+   the reconciled plan written in Steps 4–6, and scanning it lets this skill's
+   own output veto its own squash. It scans the branch rather than `<base>`,
+   because a commit in `<base>..HEAD` did not exist at `<base>` and nothing
+   there could cite it — the citations that matter were written on this branch,
+   by the work itself. A short sha is seven hex characters and can appear
+   incidentally, so read each hit before treating it as a veto.
 
    **The `-C "$ROOT"` anchor is load-bearing.** `git grep`'s `'*.md'` pathspec
    resolves against the current directory, so running this from a package
@@ -672,6 +779,15 @@ sanity check:
 4. For Strategy B: the `consolidate-long-branch` skill's tree-equivalence check
    (Phase 5) is the authoritative correctness gate — confirm it ran and produced
    zero output.
+5. **The `Work-Item:` trailer survived.** It was on Step 7's commit; after a
+   squash it must be on the commit that absorbed that one:
+
+   ```bash
+   git log <base>..HEAD --format='%h %(trailers:key=Work-Item,valueonly)'
+   ```
+
+   Expect the item's full id on exactly one line. If it is missing, amend the
+   commit that holds the session record to add it back.
 
 This is a sanity check, not another code review. If anything looks wrong, stop
 and diagnose before offering completion options.
@@ -737,8 +853,11 @@ Ask for user confirmation at these points:
 - Before creating additional documentation (beyond session) — note that Step 6's
   plan reconciliation is exempt: it edits an existing document and is performed,
   not proposed
-- After reconciliation comes back fully complete, before delegating to
-  `sweep-project` (and again inside that skill, before anything is archived)
+- When every item of the parent feature is `done` or `dropped`, before
+  delegating to `sweep-project` (and again inside that skill, before anything is
+  archived)
+- Before creating a new playbook in Step 5 (appending to an existing one needs
+  no extra confirmation)
 - Before squashing commits (confirm landing policy found or absent, strategy A
   vs B, and commit message)
 - Before merging to the base branch
@@ -754,6 +873,9 @@ Ask for user confirmation at these points:
   commits from multiple Anthill seats or multiple human authors) to forbid
   squashing entirely.
 - **Always create session doc** — Even for smooth work
+- **Never write a memory or a lesson** — both types are retired. Step 5's
+  Reflect usually ends "nothing this time"; when it doesn't, it appends to a
+  playbook
 
 ## Common Mistakes
 
@@ -807,6 +929,12 @@ At completion, summarize:
 - **What each reviewer actually executed**, quoted from its execution log — not
   inferred from its tool list. Say it even when the answer is flattering
 - Quality check results
-- Documentation created/updated
-- Final commit message
-- Any follow-up items
+- The work item and its moves (`review`, then `done`) — or the item Step 4
+  created, born done
+- Documentation created/updated, with the session's path
+- **The Reflect outcome** — "nothing this time", or the playbook appended to,
+  quoting the `pdocs find` line you chose it from
+- Any playbook override followed (`branch-finalization`, `handoff`, `release`),
+  by path — or that none exists
+- Final commit message, and the commit carrying `Work-Item:`
+- Follow-up items filed from the review (their paths, all in `triage`)
