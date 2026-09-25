@@ -4,12 +4,12 @@ description: >
   Lightweight, ephemeral project orientation so Claude can hold an intelligent
   conversation about the project without doing a full deep scan. Reads anchor
   docs (PROJECT-SUMMARY, PROJECT_MANIFESTO, README, AGENTS/CLAUDE), scans recent
-  commits, and peeks at active projects and investigations — then gives a short
-  in-chat orientation. Does NOT write any files. Use this at the start of a
-  fresh session in an already-developed project when the user wants you to "get
-  up to speed" before discussing work. Triggers when user says "ground yourself
-  in this project", "get grounded", "orient yourself", "catch up on this
-  project", "get up to speed", or similar. Prefer this over the heavier
+  commits, and peeks at the work board (features, items, research) — then gives
+  a short in-chat orientation. Does NOT write any files. Use this at the start
+  of a fresh session in an already-developed project when the user wants you to
+  "get up to speed" before discussing work. Triggers when user says "ground
+  yourself in this project", "get grounded", "orient yourself", "catch up on
+  this project", "get up to speed", or similar. Prefer this over the heavier
   `/project-docs:project-summary` command when the user wants quick context
   rather than a durable summary artifact.
 allowed-tools:
@@ -88,14 +88,17 @@ kinds of changes (features, fixes, refactors), any obvious in-flight work.
 Light directory listings plus first-paragraph peeks. **Do not read full files**
 unless something specifically demands it.
 
-- `ls docs/projects/` — list active (non-`_archive`) project folders
-- For each active project folder, read just the first ~30 lines of `proposal.md`
-  (or whatever proposal-like file exists) to learn its purpose and status. Cap
-  at 5 projects; if more, sample the most recently modified.
-- `ls docs/investigations/` — list active investigations (skip `_archive`)
-- Glance at 1–2 most recent session notes across all projects:
-  `ls -t docs/projects/*/sessions/*.md 2>/dev/null | head -2`, read just the
-  title and first paragraph of each.
+- `bun scripts/pdocs/cli.ts view board --features` — the work in play, grouped
+  by state: what is started (`active`, `review`), what is waiting (`triage`,
+  `backlog`, `ready`). It is derived from frontmatter, so it is current.
+- For each started feature, read just the first ~30 lines of its `feature.md` to
+  learn its purpose. Cap at 5; if more, sample the most recently modified.
+- Glance at 1–2 most recent session notes:
+  `ls -t docs/features/*/sessions/*.md docs/items/*/sessions/*.md 2>/dev/null | head -2`,
+  read just the title and first paragraph of each.
+
+On a project without `scripts/pdocs/cli.ts`, list `docs/` and peek at whatever
+work folders it has instead.
 
 ### Step 4: Stop unless something demands deeper reading
 
@@ -103,8 +106,8 @@ You should now have enough to converse. Do **not**:
 
 - Read source code
 - Read architecture or specification documents
-- Read playbooks, lessons-learned, or memories unless one is clearly relevant to
-  a thread you're about to mention
+- Read playbooks unless one is clearly relevant to a thread you're about to
+  mention
 
 Exception: if Step 1–3 turns up a clear pointer like "see
 `docs/architecture/sync-engine.md` for details" _and_ that subsystem is
@@ -119,16 +122,16 @@ Output an in-chat orientation of roughly **150–250 words**. Use this shape:
 **What this is:** [1–2 sentences synthesized from the anchor docs — what the
 project does and why it exists]
 
-**Where things stand:** [Current branch, active projects, active investigations
-— concrete, not exhaustive]
+**Where things stand:** [Current branch, features and items in flight, open
+research — concrete, not exhaustive]
 
 **Recent activity:** [Themes from the last 30 days of commits and recent session
 notes — what's been getting attention]
 
 **Threads worth discussing:** [2–3 concrete things that look in-flight or
 unresolved, framed as conversation openers, not directives. For example: "the X
-migration in `docs/projects/x-migration/` looks close to a plan stage" or
-"there's an unresolved investigation on Y"]
+migration in `docs/features/x-migration/` is `ready` but has no plan yet" or
+"there's an open research item on Y"]
 ```
 
 After the orientation, **only if applicable**, add one short line:

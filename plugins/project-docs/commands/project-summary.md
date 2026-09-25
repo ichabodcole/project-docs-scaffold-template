@@ -20,6 +20,31 @@ summary:
 - **Refresh** — patch only the sections affected by recent changes; trust the
   rest. Cheap, suitable for keeping the summary current between major rebuilds.
 
+`pdocs` below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
+repo root.
+
+**Where the report goes.** `PROJECT-SUMMARY.md` is a root page of the docs. The
+discovery report is not: a report is always owned by a feature or a work item,
+so each run files a `kind: chore` item to own it. Create both before writing the
+report (Step R7 or Step 7):
+
+```bash
+pdocs new item project-summary-YYYY-MM-DD --kind chore --lifecycle active \
+  --title "Project summary — YYYY-MM-DD" \
+  --description "Rebuild (or refresh) docs/PROJECT-SUMMARY.md." \
+  --by "<your model or name>"
+pdocs new report project-summary --owner item/project-summary-YYYY-MM-DD \
+  --title "Project Summary Report — YYYY-MM-DD" --description "…" \
+  --by "<your model or name>"
+```
+
+`--lifecycle active` because the user asked for this run. The report lands at
+`docs/items/project-summary-YYYY-MM-DD/reports/YYYY-MM-DD-project-summary-report.md`,
+linked to its item. Write the report's body (below) under the frontmatter the
+CLI wrote. The report is acted on the moment the summary is written, so close
+the item when you finish (Step R8 or Step 9):
+`pdocs set item/project-summary-YYYY-MM-DD --lifecycle done`.
+
 ## Step 0: Decide Mode (run first, always)
 
 Parse arguments for explicit overrides:
@@ -66,8 +91,8 @@ git log --since="<last-updated>" --name-only --pretty=format: | sort -u | grep -
   Fastify, runtime version bumps).
 - New file in `docs/architecture/` or `docs/specifications/` that didn't exist
   before.
-- New entry in `docs/projects/` (excluding `_archive/`) or
-  `docs/investigations/` (excluding `_archive/`).
+- A new feature in `docs/features/` (excluding `_archive/`) —
+  `pdocs view board --features` lists the live ones.
 
 **Apply the decision rule:**
 
@@ -109,8 +134,9 @@ before Step 6 (synthesis):
   cross-cutting concerns
 - **Specifications explorer** — read all of `docs/specifications/`, return the
   domains specified and a one-line description of each
-- **Active projects explorer** — read each active folder under `docs/projects/`
-  (skip `_archive`), return `{name, status, brief purpose}` per project
+- **Active work explorer** — run `pdocs view board --features`, read the
+  `feature.md` of each feature not `done` or `dropped`, and return
+  `{name, lifecycle, brief purpose}` per feature, plus the items in flight
 - **Code structure explorer** — survey top-level source directories, identify
   entry points and major patterns, return a structural summary (do NOT read
   every file — directory + naming patterns are enough)
@@ -172,9 +198,8 @@ Categorize the changed paths into buckets:
 
 - `docs/architecture/*` — architecture changes
 - `docs/specifications/*` — specification changes
-- `docs/projects/*` — project status changes
-- `docs/investigations/*` — investigation status changes
-- `docs/playbooks/*`, `docs/lessons-learned/*` — pattern changes
+- `docs/features/*`, `docs/items/*` — work status changes
+- `docs/playbooks/*` — pattern changes
 - Package manifests (`package.json`, etc.) — dependency changes
 - Top-level dirs (`src/`, `apps/`, `packages/`, etc.) — code structure changes
 
@@ -183,18 +208,18 @@ Categorize the changed paths into buckets:
 For each section in the existing summary, decide whether to trust verbatim or
 re-examine:
 
-| Section                        | Re-examine if...                                                         |
-| ------------------------------ | ------------------------------------------------------------------------ |
-| **Overview**                   | Manifest deps changed significantly                                      |
-| **Core Technologies**          | Package manifest changed                                                 |
-| **Project Structure**          | Top-level code dirs added/removed/renamed                                |
-| **Documented Systems**         | `docs/architecture/` changed                                             |
-| **Application Specifications** | `docs/specifications/` changed                                           |
-| **Recent Activity**            | Always rebuild fresh (time-bounded by nature)                            |
-| **Current Direction**          | Always re-examine `docs/projects/` and `docs/investigations/` for status |
-| **Development Patterns**       | `docs/playbooks/` or `docs/lessons-learned/` changed                     |
-| **Quick Start**                | Package manifest scripts changed                                         |
-| **Key Insights**               | Trust verbatim unless deps or top-level structure changed                |
+| Section                        | Re-examine if...                                           |
+| ------------------------------ | ---------------------------------------------------------- |
+| **Overview**                   | Manifest deps changed significantly                        |
+| **Core Technologies**          | Package manifest changed                                   |
+| **Project Structure**          | Top-level code dirs added/removed/renamed                  |
+| **Documented Systems**         | `docs/architecture/` changed                               |
+| **Application Specifications** | `docs/specifications/` changed                             |
+| **Recent Activity**            | Always rebuild fresh (time-bounded by nature)              |
+| **Current Direction**          | Always re-examine the work — `pdocs view board --features` |
+| **Development Patterns**       | `docs/playbooks/` changed                                  |
+| **Quick Start**                | Package manifest scripts changed                           |
+| **Key Insights**               | Trust verbatim unless deps or top-level structure changed  |
 
 For each section that needs re-examination, do a **targeted** read of only the
 relevant files — not a full project scan.
@@ -208,22 +233,21 @@ git log --since="30 days ago" --oneline --no-merges | head -20
 git log --since="30 days ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -10
 ```
 
-Read 2-3 most recent session notes from `docs/projects/*/sessions/` to flavor
-the activity summary.
+Read 2-3 most recent session notes to flavor the activity summary:
+`ls -t docs/features/*/sessions/*.md docs/items/*/sessions/*.md 2>/dev/null | head -3`.
 
 ### Step R5: Always re-examine Current Direction
 
-Status changes in projects/investigations don't always show as file edits
-(status fields move around). Quick check:
+State lives in frontmatter, so read it from the derived board rather than from
+file edits:
 
 ```bash
-ls docs/projects/ | grep -v '_archive'
-ls docs/investigations/ | grep -v '_archive'
+pdocs view board --features
 ```
 
-For each active project, read the first ~20 lines of `proposal.md` to confirm
-status. Update the section's "Active Projects" / "In Progress Investigations"
-lists.
+Update the section's "Active Features" and "In Progress Research" lists from it:
+features and items in the started group (`active`, `review`), and research items
+(`kind: research`) not yet `done`.
 
 ### Step R6: Bump Last Updated, write the summary
 
@@ -232,7 +256,8 @@ verbatim sections exactly. Write the updated `docs/PROJECT-SUMMARY.md`.
 
 ### Step R7: Write slim refresh report
 
-Create `docs/reports/YYYY-MM-DD-project-summary-refresh-report.md`:
+File the item and its report as **Where the report goes** says (use
+`project-summary-refresh` as the report's name), and write this body:
 
 ```markdown
 # Project Summary Refresh Report
@@ -274,8 +299,8 @@ re-discovery, run `/project-docs:project-summary --full`._
 Tell the user:
 
 - **Summary:** Updated at `docs/PROJECT-SUMMARY.md` (refresh mode)
-- **Report:** Saved to
-  `docs/reports/YYYY-MM-DD-project-summary-refresh-report.md`
+- **Report:** Saved to the path `pdocs new report` printed, owned by
+  `item/project-summary-YYYY-MM-DD` — now set `done`
 - Brief list (2-3 bullets) of the most notable changes since the previous
   summary
 
@@ -308,26 +333,26 @@ Run this when Step 0 selected **full rebuild**.
 
 > **Prefer dispatching explorer subagents in parallel here** — see the
 > "Methodology: Sub-Explorer Dispatch" section above. One explorer per docs
-> category (architecture, specifications, projects, investigations) gives you
-> bounded scans and parallel speed. Synthesize their reports below.
+> category (architecture, specifications, features and items) gives you bounded
+> scans and parallel speed. Synthesize their reports below.
 
 - List all documents in each docs subdirectory:
   - `docs/architecture/` - What systems are documented?
   - `docs/specifications/` - What application behavior is specified?
-  - `docs/projects/` - What projects exist? Check each project folder for
-    proposal.md, plan.md, and sessions/
-  - `docs/investigations/` - What's being researched?
+  - `docs/features/` - What features exist? `pdocs view board --features` gives
+    each one's state; check each feature folder for `feature.md`, `plan.md` and
+    `sessions/`
+  - `docs/items/` - What work items are open, and which are research
+    (`pdocs find --type item --kind research`)?
   - `docs/playbooks/` - What patterns are codified?
-  - `docs/lessons-learned/` - What problems were solved?
-  - `docs/reports/` - What assessments exist?
 - Read key architecture documents to understand system design
-- Identify which proposals/plans are in active vs archive folders
+- Note which features are live and which are `done` or `dropped` (some sit in
+  `features/_archive/`)
 
 ### Step 4: Understand recent activity and current state
 
-- Check `docs/projects/*/sessions/` for recent session notes (read 3-5 most
-  recent across all projects)
-- Check `docs/memories/` for recent work summaries
+- Check `docs/features/*/sessions/` and `docs/items/*/sessions/` for recent
+  session notes (read 3-5 most recent across all of them)
 - Use git to find recently modified files:
   `git log --since="30 days ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -20`
 - Look at recent commits for context:
@@ -360,8 +385,8 @@ Based on your analysis, understand:
 
 ### Step 7: Create discovery report first
 
-Create `docs/reports/YYYY-MM-DD-project-summary-report.md` documenting your
-investigative process and findings.
+File the item and its report as **Where the report goes** says, and write the
+report documenting your investigative process and findings.
 
 Use this structure:
 
@@ -419,8 +444,8 @@ project summary at `docs/PROJECT-SUMMARY.md`.
 
 **Active vs Archived:**
 
-- Projects: X active, Y archived (check docs/projects/)
-- Investigations: X active
+- Features: X live, Y done or dropped (`pdocs view board --features`)
+- Research items: X open
 
 **Key Docs Read:**
 
@@ -526,7 +551,7 @@ evidence]
 
 - [ ] Consider documenting [undocumented system]
 - [ ] Update architecture docs for [recently changed area]
-- [ ] Archive completed proposals/plans from [date range]
+- [ ] Sweep finished features (`sweep-project`) from [date range]
 
 ---
 
@@ -597,8 +622,8 @@ src/ ├── components/ [if applicable] ├── services/ [if applicable] �
 - [Area 2]: [Brief description based on sessions/commits]
 
 **Recent Sessions:**
-- [Date]: [Session topic/focus] (see `docs/projects/<project>/sessions/...`)
-- [Date]: [Session topic/focus] (see `docs/projects/<project>/sessions/...`)
+- [Date]: [Session topic/focus] (see `docs/features/<slug>/sessions/...`)
+- [Date]: [Session topic/focus] (see `docs/items/<slug>/sessions/...`)
 
 **Notable Changes:**
 - [Summary of significant commits or features added]
@@ -607,11 +632,11 @@ src/ ├── components/ [if applicable] ├── services/ [if applicable] �
 
 [Based on proposals, plans, and recent activity - where is this project heading?]
 
-**Active Projects:**
-- [Project name] - [status: proposal only / planned / in progress] (see `docs/projects/<name>/`)
+**Active Features:**
+- [Feature name] - [lifecycle: backlog / ready / active / review] (see `docs/features/<slug>/`)
 
-**In Progress Investigations:**
-- [Investigation topic] (see `docs/investigations/...`)
+**In Progress Research:**
+- [Research question] (see `docs/items/<slug>/write-up.md`)
 
 [1-2 sentences summarizing the overall trajectory]
 
@@ -620,7 +645,6 @@ src/ ├── components/ [if applicable] ├── services/ [if applicable] �
 [Any established playbooks or patterns? How does the team work?]
 
 - **Playbooks:** [List any documented playbooks]
-- **Lessons Learned:** [Note if there's a strong lessons-learned practice]
 - **Documentation Approach:** [How documentation is maintained]
 
 ## Quick Start for New Contributors
@@ -650,8 +674,9 @@ src/ ├── components/ [if applicable] ├── services/ [if applicable] �
 After creating both files, tell the user:
 
 - **Summary:** Saved to `docs/PROJECT-SUMMARY.md` (polished end product)
-- **Report:** Saved to `docs/reports/YYYY-MM-DD-project-summary-report.md`
-  (discovery notes and findings)
+- **Report:** Saved to the path `pdocs new report` printed, owned by
+  `item/project-summary-YYYY-MM-DD` (discovery notes and findings) — now set
+  `done`
 - Brief executive summary of what the project is (2-3 sentences)
 - If this was an update, mention 2-3 key changes from previous summary
 - Remind them they can review the discovery report to see how you arrived at
