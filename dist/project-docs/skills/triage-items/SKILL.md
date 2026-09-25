@@ -45,8 +45,9 @@ pre-9.0.0 layout (`docs/backlog/`) runs the `update-project-docs` skill first.
 pdocs find --type item --lifecycle triage --format json
 ```
 
-Read every item it lists: its title, `kind`, definition of done, `from:` (what
-spawned it) and `source:` (where it came in from). For each one, note:
+Open every item it lists — `find` returns the frontmatter summary, not the body
+— and read its title, `kind`, definition of done, `from:` (what spawned it) and
+`source:` (where it came in from). For each one, note:
 
 - **Area** — which part of the codebase it touches
 - **Key files** — from its body, or from what spawned it
@@ -57,12 +58,14 @@ spawned it) and `source:` (where it came in from). For each one, note:
 Read the context it will land in, too:
 
 ```bash
-pdocs view board --features        # what is already in flight, and the features
-pdocs view backlog                 # what is already accepted and waiting
+pdocs find --type feature --format text   # the features an item could join
+pdocs view board --format text            # the items, by state group
+pdocs view backlog --format text          # everything unstarted, triage included
 ```
 
-An item that duplicates one already on the board is a drop candidate; one that
-fits an existing feature is a `parent` candidate.
+An item that duplicates one already on the board — or a phase already in a
+feature's `plan.md` — is a drop candidate; one that fits an existing feature is
+a `parent` candidate.
 
 Present the inventory as a table:
 
@@ -119,14 +122,19 @@ For every item in `triage`, propose:
 | `parent`     | `feature/<slug>`                     | From Step 2                                                                                                                                                                                      |
 | `blocked_by` | item ids                             | From Step 2's dependencies                                                                                                                                                                       |
 
-Give a one-line reason for each — especially for a drop. **Dropping is not
-deleting**: the item stays in the tree at `dropped`, which is how it shows that
-someone decided.
+Give a one-line reason for each — especially for a drop. **An item with no
+settled definition of done** (its body still the template's prompt) is not
+`ready`: propose `backlog`, or propose the definition of done itself for the
+user to approve with the rest. **Dropping is not deleting**: the item stays in
+the tree at `dropped`, which is how it shows that someone decided.
 
 Present the whole proposal at once — the groupings, the parallelism matrix, and
 one row per item — and ask the user, via `AskUserQuestion`, to approve it,
 change it, or reject parts of it. **Apply nothing before they answer.** An item
-the user skips stays in `triage`.
+the user skips stays in `triage`. Apply exactly what the answer approves: when
+it names a state for an item but is silent on a field you proposed (a `parent`,
+a `blocked_by`), ask, or leave that field off and list it in the summary as not
+applied.
 
 ## Step 4: Apply What the User Approved
 
@@ -145,6 +153,11 @@ pdocs set item/<slug> --lifecycle ready --priority high \
 pdocs set item/<slug> --lifecycle dropped
 ```
 
+For a drop, and for an accepted item whose definition of done the user approved,
+edit the item's body too: append the drop reason
+(`Dropped at triage, YYYY-MM-DD: <reason>.`), or write the definition of done.
+`pdocs set` changes frontmatter only, and a reason left in chat is lost.
+
 `pdocs set` refuses a value the lint would reject — an unknown priority, a
 `parent` that isn't a feature, a `blocked_by` that doesn't resolve — and names
 the valid ones. It accepts an 8+ character id prefix or `item/<slug>` and writes
@@ -155,7 +168,7 @@ Then check the tree:
 
 ```bash
 pdocs check
-pdocs view backlog
+pdocs view backlog --format text
 ```
 
 ## Step 5: Commit and Summarize

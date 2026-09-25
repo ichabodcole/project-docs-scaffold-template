@@ -51,7 +51,9 @@ documentation CLI at the repo root; the docs root is `docsRoot` in
    constraint or a step in the plan, attributed to it.
 
 1. **Read and understand the proposal**
-   - Read the owner's entry file: `feature.md` (or the item's `item.md`)
+   - Read the owner's entry file: `feature.md` (or the item's `item.md`). **If
+     its body is still the template's prompts**, there is nothing to plan from:
+     say so, and ask the user to fill it in (or run `generate-proposal`) first
    - Check if a design resolution exists at `design-resolution.md` in the same
      folder and read it if present — use resolved decisions, boundaries, and
      data model to ground the plan in already-made system-level decisions
@@ -96,7 +98,10 @@ documentation CLI at the repo root; the docs root is `docsRoot` in
        --title "…" --description "…" --by "<your model or name>"
      ```
 
-     A single-file item given as owner is promoted to a folder first.
+     A single-file item given as owner is promoted to a folder first. The CLI
+     fills the frontmatter, not the body: replace the template's H1
+     (`# [Feature Name] Implementation Plan`) and every other bracketed prompt,
+     and delete the template's guidance comments once you have used them.
 
    - **Fill the template's frontmatter block, every field** — the bracketed
      values are placeholders, not defaults, and the lint fails on a placeholder
@@ -112,7 +117,8 @@ documentation CLI at the repo root; the docs root is `docsRoot` in
    - Think "gas stations on a road trip" — highlight important stops, not
      turn-by-turn directions
    - Include relevant sections:
-     - **Playbooks consulted**: step 0's evidence — the paths and why, or the
+     - **Playbooks consulted** (first, as its own `##` section — the template
+       has no slot for it): step 0's evidence — the paths and why, or the
        zero-match result
      - **Overview**: Summary of the proposal and implementation approach
      - **Outcome & Success Criteria**: Clear definition of done
@@ -185,6 +191,9 @@ When the project has a test framework, structure tasks as TDD cycles:
 **Output:** Create a development plan at `plan.md` in the owner's folder. Inform
 the user of the location when complete, and quote step 0's consult result.
 
+After the plan is written, in this order: the user reviews it; you shape its
+items (below); then you ask about a test plan (the section after).
+
 ## Shaping the Work Items
 
 Planning is where a feature's work gets **shaped**: each piece gets a settled
@@ -203,8 +212,11 @@ no `--lifecycle` so they wait in `triage`.
      --title "…" --description "…" --by "<your model or name>"
    ```
 
-   `backlog`, not `triage`, only because the user approved the list above. Write
-   each one's definition of done from the plan.
+   `backlog`, not `triage`, only because the user approved the list above.
+   `pdocs new item` writes the frontmatter only: edit each item file's body —
+   its H1 and its `## Definition of done` — from the plan. An item the plan
+   names that already exists keeps its file; write its definition of done if its
+   body is still the template's prompt.
 
 2. **Set what each waits on**, from the plan's phase dependencies:
 
@@ -212,16 +224,18 @@ no `--lifecycle` so they wait in `triage`.
    pdocs set item/<slug> --blocked-by <id-or-item/slug>,…
    ```
 
-3. **Move the shaped ones to `ready`** — an item whose definition of done is
-   settled. Blocked items can be `ready` too; `pdocs view ready` only offers the
-   unblocked ones:
+3. **Move the shaped ones to `ready`** — an item whose definition of done you
+   have now written. Blocked items can be `ready` too; `pdocs view ready` only
+   offers the unblocked ones:
 
    ```bash
    pdocs set item/<slug> --lifecycle ready
    ```
 
 Leave alone any item already in `triage`: that is the user's call, through
-`triage-items`. Show `pdocs view feature <slug>` when you are done.
+`triage-items`. Show the user `pdocs view feature <slug> --format text` and
+`pdocs view ready --format text` when you are done — the second shows which
+items the `blocked_by` you set are holding back.
 
 ## After the Plan Is Created
 

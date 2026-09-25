@@ -74,10 +74,11 @@ Before starting, verify:
 
   ```bash
   [ -d "$ROOT/docs/items" ] || [ -d "$ROOT/docs/features" ] \
-    && echo "work layout: yes" || echo "pre-9.0.0 layout"
+    && echo "work layout: yes" || echo "older layout"
   ```
 
-  A project still on the older layout (`docs/projects/`, `docs/backlog/`) runs
+  Go by the folders, not by the version in `.project-docs.json`. A project still
+  on the older layout (`docs/projects/`, `docs/backlog/`, no `docs/items/`) runs
   the `update-project-docs` skill first. Say so and stop; don't move files by
   hand in the old layout.
 
@@ -88,6 +89,11 @@ Before starting, verify:
   on the one check that exists to prevent an unreadable diff. If `docs/` is
   dirty, say so and ask whether to proceed — don't refuse outright, since the
   user may legitimately be mid-session.
+
+  **Several targets in one session.** A second run that finds `docs/` dirty only
+  with the first run's own uncommitted changes is not a surprise: say so, and
+  offer to commit them first (one commit per target keeps each diff readable).
+  Anything else in the dirty set still gets the question.
 
   **Exception: invocation from `finalize-branch` Step 6.** That path _always_
   arrives with a dirty `docs/` — Step 4 wrote a session doc, and Step 6 just
@@ -152,6 +158,9 @@ standalone.
 
 Resolve it and read its state:
 
+The `view` commands take the bare slug — `pdocs view feature widget-export`, not
+`feature/widget-export`; `set`, `archive` and `find --id` take the reference.
+
 ```bash
 pdocs view feature <slug>                      # a feature, and its items
 pdocs find --type item --format json           # find an item by slug or id
@@ -161,7 +170,7 @@ pdocs view cycle <slug>                        # a cycle, its items, closable
 
 | State                                             | Action                                                                                                                                                              |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list the live ones (`pdocs view board --features`, or `pdocs find --type cycle`) so the user can correct the name.          |
+| Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.    |
 | Already under `_archive/`                         | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped` (`ARCHIVED NOT TERMINAL`). |
 | A cycle                                           | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                   |
 | A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                      |
@@ -239,9 +248,9 @@ which you are writing and why. Then, in the cycle file's body:
   `(landed YYYY-MM-DD)`. A closed cycle that still says a branch is open is the
   most visible way to get this wrong.
 
-**Leave `status:` alone.** `status` says whether the document can be trusted and
-`lifecycle` says where the work got to; a closed cycle is still a `stable`
-document, and more so than before.
+**Leave `status:` alone, whatever its value.** `status` says whether the
+document can be trusted and `lifecycle` says where the work got to; closing a
+cycle changes the second, not the first.
 
 **The Outcome is the point of the whole document.** Write what shipped, what was
 cut and why, and what was learned that will change how the next cycle is scoped.
@@ -407,6 +416,7 @@ truth, and the lint parses it; read it there. As of writing:
 | `plan`              | `draft` · `active` · `completed` · `abandoned`                            |
 | `design-resolution` | `draft` · `resolved` · `superseded`                                       |
 | `test-plan`         | `draft` · `ready` · `active` · `completed`                                |
+| `cycle`             | `planned` · `active` · `closed` · `abandoned`                             |
 
 So a feature at `done` beside a plan at `completed` is two documents each in
 their own terminal state — entirely consistent, and reporting it as a conflict
@@ -467,7 +477,10 @@ pdocs set feature/<slug> --released-in <version>
 ```
 
 Ask; never infer it from tags or dates. The field is optional and never checked,
-and `pdocs view unreleased` lists what lacks it — a reminder, not a failure.
+and `pdocs view unreleased` lists what lacks it — features and items alike — a
+reminder, not a failure. If the person says the feature's `done` items shipped
+in the same version, set it on them too
+(`pdocs set item/<slug> --released-in <version>`); otherwise leave them listed.
 
 Then the marks. **Write the update in whatever idiom the document already
 uses.** If it tracks with checkboxes, tick them. If it annotates phases,
@@ -484,6 +497,11 @@ a blanket find-and-replace across the file will do exactly that. This is not
 hypothetical: the first production run of this skill corrupted precisely such a
 line. Go item by item, or exclude code spans and fences before you touch
 anything.
+
+**Never tick a template placeholder.** A list item whose text is still the
+template's bracketed prompt (`- [ ] [Acceptance criterion 1]`) is scaffolding
+nobody filled in, not a claim. Leave it, and report the unfilled sections as a
+finding.
 
 **In narrative mode** (nothing item-shaped to update), the completeness question
 is the same one, just answered in prose: does every substantive commitment the
@@ -531,7 +549,9 @@ git -C "$ROOT" grep -nE "(features|items)/<slug>([/.)\"'[:space:]]|$)" -- '*.md'
 (`<slug>` is a placeholder — substitute the real slug; pasted verbatim, `<` and
 `>` are shell redirections. The boundary class keeps `foo` from matching
 `foo-v2`.) Drop the hits that are links `pdocs backlinks` already listed, and
-the entity's own files. Classify the rest:
+the entity's own files — but only when every match on the line is inside a link
+target; a line that holds both a link and a prose mention is still a prose hit.
+Classify the rest:
 
 | Kind                                                                                                                                 | Action                                                               |
 | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
@@ -655,7 +675,9 @@ silent no-op that reads like a failure.
 **Correctness checks, in order of authority:**
 
 1. `git diff` of the whole run — the primary check. Read it before accepting.
-2. `git status --short` — a move shows as renames, not deletes plus adds.
+2. `git add -A docs/ && git status --short` — once staged, a move shows as
+   renames (`R`). Unstaged, `git status` shows every move as a delete plus an
+   untracked folder; that is expected, not the failure.
 3. **The lint** — `pdocs check`. It is the only check that reads what you wrote
    into frontmatter, and the only one that runs at all on a cycle. A broken
    link, a `lifecycle` outside its type's vocabulary, an archived entity that is
