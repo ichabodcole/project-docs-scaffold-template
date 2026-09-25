@@ -56,15 +56,13 @@ a recent summary current.
   refresh; otherwise full rebuild.
 - **Refresh mode** — re-reads the existing summary, patches only sections
   affected by recent changes, always rebuilds Recent Activity and Current
-  Direction, writes a slim delta report
+  Direction
 - **Full rebuild mode** — re-discovers the project from scratch, dispatches
   parallel explorer subagents (architecture, specifications, features and items,
-  code structure) for bounded scans, writes a comprehensive discovery report
-- Generates two documents:
-  - `docs/PROJECT-SUMMARY.md` — polished overview for onboarding
-  - a discovery report (full rebuild) or delta report (refresh), owned by a
-    `kind: chore` item the run files and closes —
-    `docs/items/project-summary-YYYY-MM-DD/reports/`
+  code structure) for bounded scans
+- Writes one document, `docs/PROJECT-SUMMARY.md`, the polished overview for
+  onboarding. What it read and decided is told in the conversation; no report
+  file is written
 
 **Use cases:**
 
@@ -316,8 +314,11 @@ skill writes the retired folders.
   feature's or item's folder: plans, design resolutions, test plans, write-ups,
   sessions, handoffs. An investigation is a `research` item and its write-up.
   `workshop-idea` writes no brief, and no skill writes a memory or a lesson.
-- **Reports about the whole repository** (`project-summary`, `review-docs`) are
-  owned by a `kind: chore` item.
+- **No skill writes a process report** (D24). `project-summary` writes only
+  `PROJECT-SUMMARY.md` and tells the user what it read; `review-docs` files each
+  finding that needs work as a `triage` item, its evidence in the item's body,
+  and summarises in the conversation. A report is evidence owned by the work
+  that needed it — a research item's survey, a feature's audit.
 - `create-project`'s CLI reference documents the thirteen verbs.
 
 ### 3.13.0 (2026-09-17)

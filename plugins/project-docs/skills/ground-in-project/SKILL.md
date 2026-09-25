@@ -32,8 +32,7 @@ written.
 ## When NOT to Use
 
 - User wants a durable, polished summary artifact → use
-  `/project-docs:project-summary` instead (it writes `docs/PROJECT-SUMMARY.md`
-  and a discovery report)
+  `/project-docs:project-summary` instead (it writes `docs/PROJECT-SUMMARY.md`)
 - User wants to deeply understand a specific subsystem → read the relevant
   architecture/specification docs directly
 - Brand-new or empty project → there is nothing meaningful to ground in; suggest

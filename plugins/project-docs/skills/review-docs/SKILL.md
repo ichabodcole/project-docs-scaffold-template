@@ -158,7 +158,7 @@ rewrites every link — after its own confirmation. Never set a state in a body
 For approved updates:
 
 1. Make the specific changes identified
-2. Or create tasks for the user to address
+2. Or leave them as items — see **File the findings** below
 
 ## Batch Size Guidelines
 
@@ -230,46 +230,44 @@ Would you like me to sweep the 5 finished features? (sweep-project sets them
 done and offers to archive each one.)"
 ```
 
-## Generate Status Report
+## File the findings
 
-After consolidating results, write a report. A report is always owned by a
-feature or a work item, so a documentation review files a `kind: chore` item to
-own it — the item stays open until the report's recommendations have been acted
-on:
+A review writes **no report file** (plan D24: reports are evidence owned by work
+that exists for its own sake, and a skill writes no process report). Every
+finding that needs work and was not done in Step 5 becomes a work item of its
+own, where that work will happen — a partial completion, an outdated section, a
+document needing a decision, a gap:
 
 ```bash
-pdocs new item docs-review-YYYY-MM --kind chore --lifecycle active \
-  --title "Docs review — YYYY-MM" \
-  --description "Act on the findings of the YYYY-MM documentation review." \
-  --by "<your model or name>"
-pdocs new report doc-status --owner item/docs-review-YYYY-MM \
-  --title "Doc Status — YYYY-MM-DD" --description "…" \
+pdocs new item update-api-design-section-3 --kind chore \
+  --title "Update section 3 of the API design page" \
+  --description "Section 3 describes the v1 endpoints; the code serves v2." \
   --by "<your model or name>"
 ```
 
-`--lifecycle active` because the user asked for this review. The report lands in
-`docs/items/docs-review-YYYY-MM/reports/`. Write its body under the frontmatter
-the CLI wrote. When every follow-up action is done (or filed as its own item),
-close the review: `pdocs set item/docs-review-YYYY-MM --lifecycle done`.
+Pick `--kind bug` when the document states something false about behaviour,
+`chore` otherwise. The item starts in `triage` — the default, because you filed
+it on your own judgement (D8), and the user decides at triage whether it is
+worth doing. Write the **evidence** in the item's body under the frontmatter the
+CLI wrote: the document and section, what it says, what the code or history
+shows instead (files, commits), and what done looks like. A finding about one
+feature or item names it: add `--parent feature/<slug>` for a feature.
 
-**Report sections:**
+Then **summarise in the conversation**, not in a file:
 
-- **Executive Summary** — High-level findings (X completed, Y partially done, Z
-  not started), top recommendations, overall documentation health assessment
-- **Scope** — Which document types were reviewed, date range
-- **Findings by Status:**
-  - **Completed** — Document name, the `lifecycle` written, archive path if
-    swept, brief summary, evidence (files/commits)
-  - **Partially Completed** — Document name, percentage, what's done, what
-    remains, evidence
-  - **Not Started** — Document name, reason if apparent
-  - **Dropped/Obsolete** — Document name, the `lifecycle` written, reason
-  - **Needs Attention** — Documents requiring clarification or decision
-- **Summary Statistics** — Total reviewed, completed, partial, not started,
-  abandoned
-- **Recommendations** — Prioritize partial completions, sweep finished features,
-  open research items for uncertain ones
-- **Follow-up Actions** — Checklist of concrete next steps
+- **Executive summary** — X finished, Y partially done, Z not started; overall
+  health of the documentation in a sentence
+- **Scope** — which document types were reviewed
+- **What was done** — each feature or item swept (its `lifecycle` and archive
+  path), each document updated
+- **What was filed** — each new item's reference and title
+- **Summary statistics** — total reviewed, finished, partial, not started,
+  dropped
+
+What you learned about how to review is not a finding: if the review taught
+something a future review needs, it is a step in the playbook for reviews
+(`docs/playbooks/`), and a session record holds what this run did when the
+review ran on a branch.
 
 ## Checklist: Documentation Review
 
@@ -281,5 +279,5 @@ close the review: `pdocs set item/docs-review-YYYY-MM --lifecycle done`.
 - [ ] Present summary to user
 - [ ] Get approval before changing state or updating
 - [ ] Execute approved actions (finished work through `sweep-project`)
-- [ ] Write the report under its chore item
-- [ ] Report completion
+- [ ] File each remaining finding as a `triage` item, evidence in its body
+- [ ] Summarise the review in the conversation — no report file

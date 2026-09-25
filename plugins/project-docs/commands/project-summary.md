@@ -10,9 +10,8 @@ argument-hint: "[--full | --refresh]"
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
-Generate or update `docs/PROJECT-SUMMARY.md` and a discovery report. The command
-auto-selects between two modes based on how much has changed since the existing
-summary:
+Generate or update `docs/PROJECT-SUMMARY.md`. The command auto-selects between
+two modes based on how much has changed since the existing summary:
 
 - **Full rebuild** — re-discover the project from scratch. Slow but complete.
   This is what runs when no summary exists, when structural shifts are detected,
@@ -23,27 +22,30 @@ summary:
 `pdocs` below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
 repo root.
 
-**Where the report goes.** `PROJECT-SUMMARY.md` is a root page of the docs. The
-discovery report is not: a report is always owned by a feature or a work item,
-so each run files a `kind: chore` item to own it. Create both before writing the
-report (Step R7 or Step 7):
+**No report.** The summary is the durable output; the command writes nothing
+else. Your notes on what you read and how you decided are scratch — keep them in
+the conversation, not in `docs/`. Only if the user explicitly asks to keep them
+does a report get written, and then it needs an owner the user names:
+`pdocs new report project-summary --owner feature/<slug>|item/<slug>`. A gap or
+a recommendation you notice goes into what you tell the user at the end; file a
+`triage` item for it only if they ask (`pdocs new item <slug> --kind chore`).
 
-```bash
-pdocs new item project-summary-YYYY-MM-DD --kind chore --lifecycle active \
-  --title "Project summary — YYYY-MM-DD" \
-  --description "Rebuild (or refresh) docs/PROJECT-SUMMARY.md." \
-  --by "<your model or name>"
-pdocs new report project-summary --owner item/project-summary-YYYY-MM-DD \
-  --title "Project Summary Report — YYYY-MM-DD" --description "…" \
-  --by "<your model or name>"
-```
+**What earlier runs missed** — check each, in both modes:
 
-`--lifecycle active` because the user asked for this run. The report lands at
-`docs/items/project-summary-YYYY-MM-DD/reports/YYYY-MM-DD-project-summary-report.md`,
-linked to its item. Write the report's body (below) under the frontmatter the
-CLI wrote. The report is acted on the moment the summary is written, so close
-the item when you finish (Step R8 or Step 9):
-`pdocs set item/project-summary-YYYY-MM-DD --lifecycle done`.
+- **Name the project by where the work is, not by its README.** The README
+  describes what the project was set up to be; `git log --since` over the last
+  weeks shows which directories actually change. When they differ (a template
+  repository whose plugins get most of the commits, say), frame the summary
+  around the active surface.
+- **Read build and distribution outputs as evidence of intent.** A checked-in
+  `dist/`, a packaging manifest or a publish workflow says who consumes the
+  project; follow it to the document that explains it.
+- **Say when a category is empty.** If `docs/architecture/` or
+  `docs/specifications/` has no pages, write that in the summary rather than
+  dropping the section — an empty category is a finding about the project.
+- **Read state from fields, never from prose.** A feature's or item's state is
+  its `lifecycle`; `pdocs view board --features` lists them. A status written in
+  a document's body ("Approved (in flight)") is history, not state.
 
 ## Step 0: Decide Mode (run first, always)
 
@@ -169,7 +171,7 @@ references across boundaries.
 - **Dispatch explorers in parallel** for the bounded scans above
 - Synthesize their reports into the summary structure — this is the irreducible
   orchestrator work
-- Write both files yourself (summary + report)
+- Write the summary yourself
 
 ### When NOT to dispatch
 
@@ -254,55 +256,17 @@ features and items in the started group (`active`, `review`), and research items
 Update the `**Last Updated:** YYYY-MM-DD` header to today's date. Preserve all
 verbatim sections exactly. Write the updated `docs/PROJECT-SUMMARY.md`.
 
-### Step R7: Write slim refresh report
+### Step R7: Present results
 
-File the item and its report as **Where the report goes** says (use
-`project-summary-refresh` as the report's name), and write this body:
-
-```markdown
-# Project Summary Refresh Report
-
-**Report Date:** YYYY-MM-DD **Report Type:** Project Summary Refresh **Generated
-By:** project-summary command (refresh mode)
-
-## Refresh Decision
-
-- **Previous summary date:** YYYY-MM-DD
-- **Commits since:** N
-- **Files touched since:** N
-- **Structural shifts detected:** None / [list]
-- **Mode chosen:** Refresh
-
-## Sections Patched
-
-- **[Section name]** — [What changed and why it was re-examined]
-- **[Section name]** — [What changed and why it was re-examined]
-
-## Sections Trusted Verbatim
-
-- **[Section name]** — [Brief reason, e.g., "no architecture docs changed"]
-- **[Section name]** — [Brief reason]
-
-## Notable Changes Since Last Summary
-
-- [Brief bullet about a meaningful shift]
-- [Brief bullet]
-
----
-
-_This refresh patched only the sections affected by recent changes. For a full
-re-discovery, run `/project-docs:project-summary --full`._
-```
-
-### Step R8: Present results
-
-Tell the user:
+Tell the user, in the conversation — there is no report file:
 
 - **Summary:** Updated at `docs/PROJECT-SUMMARY.md` (refresh mode)
-- **Report:** Saved to the path `pdocs new report` printed, owned by
-  `item/project-summary-YYYY-MM-DD` — now set `done`
+- **Why refresh:** the previous summary's date, commits and files touched since,
+  and whether any structural shift was found
+- **Sections patched**, each with what changed, and **sections trusted
+  verbatim**, each with why
 - Brief list (2-3 bullets) of the most notable changes since the previous
-  summary
+  summary, and any gap worth work (offer to file it as a `triage` item)
 
 ---
 
@@ -383,183 +347,7 @@ Based on your analysis, understand:
 - **What's been happening recently?** (last 30 days)
 - **What direction is it heading?** (based on proposals, plans, recent work)
 
-### Step 7: Create discovery report first
-
-File the item and its report as **Where the report goes** says, and write the
-report documenting your investigative process and findings.
-
-Use this structure:
-
-```markdown
-# Project Summary Report
-
-**Report Date:** YYYY-MM-DD **Report Type:** Project Summary Discovery
-**Generated By:** project-summary command (full rebuild mode)
-
-## Investigation Scope
-
-This report documents the investigative process used to create/update the
-project summary at `docs/PROJECT-SUMMARY.md`.
-
-## Previous Summary Status
-
-[If no previous summary existed:]
-
-- **Status:** No previous summary found
-- **Implication:** This is the first comprehensive project summary for this
-  codebase
-
-[If previous summary existed:]
-
-- **Last Updated:** [date from previous summary]
-- **Previous Status:** [status from previous summary]
-- **Key Points from Previous Summary:**
-  - [bullet point 1]
-  - [bullet point 2]
-  - [bullet point 3]
-
-## Discovery Process
-
-### Project Foundation Analysis
-
-**Files Examined:**
-
-- README.md: [brief notes on what you found]
-- package.json: [key dependencies, scripts noted]
-- [Other config files]: [brief notes]
-
-**Tech Stack Discovered:**
-
-- [List technologies found and where you found evidence of them]
-
-### Documentation State
-
-**Architecture Docs:**
-
-- [List what exists, note if comprehensive or sparse]
-
-**Specifications:**
-
-- [List what domains are specified, note coverage and currency]
-
-**Active vs Archived:**
-
-- Features: X live, Y done or dropped (`pdocs view board --features`)
-- Research items: X open
-
-**Key Docs Read:**
-
-- [List 3-5 most important docs you read for context]
-
-### Recent Activity Analysis
-
-**Session Notes Reviewed:**
-
-- [List recent sessions and what they revealed]
-
-**Git Analysis:**
-
-- Time period: Last 30 days
-- Most modified files: [list top 5-10]
-- Active areas: [what areas of codebase are seeing changes]
-- Recent commit themes: [patterns in commit messages]
-
-### Code Structure Inspection
-
-**Entry Points Found:**
-
-- [List main entry points]
-
-**Directory Structure:**
-
-- [Key directories and what you inferred about them]
-
-**Patterns Observed:**
-
-- [Note any architectural patterns you discovered]
-
-## Key Findings
-
-### What This Project Actually Is
-
-[1-2 paragraphs describing what you discovered the project to be, based on
-evidence]
-
-### Changes from Previous Summary
-
-[If previous summary existed:]
-
-- **Scope Changes:** [Has the project grown/changed direction?]
-- **New Systems:** [Any new architecture documented?]
-- **Completed Work:** [What proposals/plans have been implemented?]
-- **Technology Changes:** [Any new dependencies or tech shifts?]
-
-[If no previous summary:]
-
-- N/A - This is the first summary
-
-### Current State Assessment
-
-- **Maturity:** [Early development / Active development / Mature / Maintenance]
-- **Health Indicators:**
-  - Documentation: [Well-documented / Partially documented / Sparse]
-  - Activity: [Active / Moderate / Low]
-  - Direction: [Clear / Evolving / Uncertain]
-
-### Recent Activity Highlights
-
-- [Finding 1 with evidence]
-- [Finding 2 with evidence]
-- [Finding 3 with evidence]
-
-### Current Direction
-
-**Based on active proposals:**
-
-- [What proposals suggest about future direction]
-
-**Based on recent work:**
-
-- [What actual commits/sessions suggest about direction]
-
-**Alignment:** [Do proposals and actual work align, or are they diverging?]
-
-## Insights & Observations
-
-[2-5 notable things you discovered that will inform the summary:]
-
-- [Insight 1]
-- [Insight 2]
-- [Insight 3]
-
-## Summary Generation Notes
-
-**Approach:**
-
-- [How you'll frame the overview]
-- [What key points to emphasize]
-- [What to include in "Key Insights" section]
-
-**Decisions Made:**
-
-- [Any judgment calls about what to include/exclude]
-- [How you're categorizing the project status]
-
-## Recommendations
-
-[Optional - if you notice gaps or opportunities:]
-
-- [ ] Consider documenting [undocumented system]
-- [ ] Update architecture docs for [recently changed area]
-- [ ] Sweep finished features (`sweep-project`) from [date range]
-
----
-
-_This report documents the discovery process for generating the project summary.
-The polished summary can be found at `docs/PROJECT-SUMMARY.md`._
-```
-
-### Step 8: Generate polished project summary
+### Step 7: Generate polished project summary
 
 Create `docs/PROJECT-SUMMARY.md` as the polished end product.
 
@@ -669,18 +457,16 @@ src/ ├── components/ [if applicable] ├── services/ [if applicable] �
 *This summary was generated by analyzing the codebase, documentation, and recent activity. It represents the actual state of the project as discovered, not just stated intentions.*
 ```
 
-### Step 9: Present results to user
+### Step 8: Present results to user
 
-After creating both files, tell the user:
+After writing the summary, tell the user, in the conversation — there is no
+report file:
 
-- **Summary:** Saved to `docs/PROJECT-SUMMARY.md` (polished end product)
-- **Report:** Saved to the path `pdocs new report` printed, owned by
-  `item/project-summary-YYYY-MM-DD` (discovery notes and findings) — now set
-  `done`
+- **Summary:** Saved to `docs/PROJECT-SUMMARY.md`
 - Brief executive summary of what the project is (2-3 sentences)
-- If this was an update, mention 2-3 key changes from previous summary
-- Remind them they can review the discovery report to see how you arrived at
-  your conclusions
+- If this was an update, 2-3 key changes from the previous summary
+- What you read to get there, in a few lines, and any gap or recommendation
+  worth work (offer to file each as a `triage` item)
 
 ---
 
