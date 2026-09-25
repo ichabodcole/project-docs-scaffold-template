@@ -35,7 +35,7 @@ consumer.
 **Project:**
 
 - [Proposal](./proposal.md)
-- [Plan](./plan.md) — six phases; decisions D1–D15 in one table are
+- [Plan](./plan.md) — six phases; decisions D1–D22 in one table are
   authoritative
 - [Test Plan](./test-plan.md) — 4 smoke, 11 critical path, 4 deferred
 - [Guidance Lifecycle proposal](../guidance-lifecycle/proposal.md) — ships in
