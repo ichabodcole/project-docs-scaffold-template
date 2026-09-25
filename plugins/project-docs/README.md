@@ -51,19 +51,20 @@ a recent summary current.
 
 - **Decides mode automatically** based on change volume since the existing
   summary: commits, files touched, and structural shifts (new top-level dirs,
-  major dep changes, new architecture/specifications/projects). Thresholds:
+  major dep changes, new architecture/specifications/features). Thresholds:
   under 40 commits AND under 60 files touched AND no structural shifts →
   refresh; otherwise full rebuild.
 - **Refresh mode** — re-reads the existing summary, patches only sections
   affected by recent changes, always rebuilds Recent Activity and Current
   Direction, writes a slim delta report
 - **Full rebuild mode** — re-discovers the project from scratch, dispatches
-  parallel explorer subagents (architecture, specifications, projects, code
-  structure) for bounded scans, writes a comprehensive discovery report
+  parallel explorer subagents (architecture, specifications, features and items,
+  code structure) for bounded scans, writes a comprehensive discovery report
 - Generates two documents:
   - `docs/PROJECT-SUMMARY.md` — polished overview for onboarding
-  - `docs/reports/YYYY-MM-DD-project-summary-{report,refresh-report}.md` —
-    discovery notes (full rebuild) or delta notes (refresh)
+  - a discovery report (full rebuild) or delta report (refresh), owned by a
+    `kind: chore` item the run files and closes —
+    `docs/items/project-summary-YYYY-MM-DD/reports/`
 
 **Use cases:**
 
@@ -171,20 +172,20 @@ than commands and are the primary way the plugin delivers its workflows.
 
 | Skill                        | Description                                                                                                                                                                                                   |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workshop-idea`              | Workshop a rough idea into a project brief via guided conversation                                                                                                                                            |
-| `create-project`             | Create project folder with proposal scaffold in docs/projects/                                                                                                                                                |
-| `create-investigation`       | Create investigation from rough idea or voice note                                                                                                                                                            |
-| `generate-proposal`          | Create project proposal from completed investigation                                                                                                                                                          |
+| `workshop-idea`              | Workshop a rough idea into a brief via guided conversation; it opens a new `backlog` feature or becomes a `triage` item                                                                                       |
+| `create-project`             | Create a feature (`pdocs new feature`) — its `feature.md` is the proposal — and move it to `ready` on the owner's word                                                                                        |
+| `create-investigation`       | Turn a rough idea or voice note into a research work item and its write-up; set the item `done` when it concludes                                                                                             |
+| `generate-proposal`          | Create a feature from a completed research item's write-up                                                                                                                                                    |
 | `generate-design-resolution` | Resolve design ambiguity via structured Q&A before planning                                                                                                                                                   |
-| `generate-dev-plan`          | Create development plan from proposal in docs/projects/                                                                                                                                                       |
-| `generate-test-plan`         | Generate tiered verification scenarios from plan and proposal                                                                                                                                                 |
-| `finalize-branch`            | Code review, documentation, and merge workflow for completed work                                                                                                                                             |
-| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents                                                                                                                                            |
-| `dev-kickoff`                | Orchestrate proposal-to-implementation for both worktree and main-repo strategies                                                                                                                             |
+| `generate-dev-plan`          | Consult the playbooks, write a feature's `plan.md`, and shape its work items (`blocked_by`, `ready`)                                                                                                          |
+| `generate-test-plan`         | Generate tiered verification scenarios from a feature's plan and proposal                                                                                                                                     |
+| `finalize-branch`            | Code review, the session record in the work item's folder, Reflect, the item to `review` then `done`, and the landing                                                                                         |
+| `review-docs`                | Orchestrate documentation review with parallel docs-curator agents; its report is owned by a chore item                                                                                                       |
+| `dev-kickoff`                | Consult the playbooks, start the branch through init-branch, move the feature to `active`, and write DEV_KICKOFF.md — worktree or main repo                                                                   |
 | `dev-discovery`              | Pre-planning technical discovery for complex features                                                                                                                                                         |
 | `triage-items`               | Propose a disposition for each work item in `triage` — accept, drop, priority, assignee, parent feature — with grouping and parallelism analysis; applies it with `pdocs set` only after the user has seen it |
 | `update-project-docs`        | Upgrade docs structure to newer scaffold template version, including the v2.7 OKF frontmatter layer                                                                                                           |
-| `sweep-project`              | Reconcile a project folder, backlog item, or cycle against what was actually built, then either record the remaining work or — on confirmation — archive it and update live cross-references                  |
+| `sweep-project`              | Reconcile a feature, a work item or a cycle against what was actually built, write its terminal state and `released_in`, and — on confirmation — archive it with `pdocs archive`                              |
 
 ### Research & Analysis Skills
 
@@ -242,20 +243,21 @@ This plugin is designed for projects using the documentation structure from
 
 ```
 docs/
-├── projects/          # Co-located project folders (proposal + plan + sessions)
-│   ├── TEMPLATES/     # Proposal, plan, and session templates
-│   └── _archive/      # Completed project folders
-├── backlog/           # Small, self-contained work items
-├── memories/          # Quick-reference summaries of recent work
-├── reports/           # Generated assessments and analysis
-├── investigations/    # Research and exploration documents
-├── playbooks/         # Reusable implementation guides
+├── features/          # A feature per folder: feature.md (the proposal), plan, sessions, …
+│   └── _archive/      # Features that are done or dropped, moved by `pdocs archive`
+├── items/             # Work items: one file each, or a folder once it owns documents
+│   └── _archive/      # Items that are done or dropped
+├── cycles/            # What is in play now; membership lives on the items
+├── TEMPLATES/         # The work templates: feature, item, plan, session, …
+├── playbooks/         # Imperative guides per kind of work: Goal · Steps · Verification
 ├── architecture/      # System design documentation
 ├── specifications/    # Technology-agnostic behavior descriptions
-├── interaction-design/ # User experience flow documentation
-├── lessons-learned/   # Problem-solution documentation
-└── fragments/         # Incomplete observations and breadcrumbs
+└── interaction-design/ # User experience flow documentation
 ```
+
+Backlog, board and roadmap are views `pdocs view` derives from the items'
+fields, not folders. Projects still on the older layout (`projects/`,
+`backlog/`, `memories/`, …) upgrade with the `update-project-docs` skill.
 
 ## Requirements
 
@@ -278,6 +280,45 @@ docs/
    significantly
 
 ## Version History
+
+### 4.0.0 (2026-09-24)
+
+**Work Taxonomy and Guidance Lifecycle.** The skills move onto the 9.0.0 docs
+model — features, work items and cycles, with state in `lifecycle` — and every
+field has a named writer. Breaking: a skill is removed, one is added, and no
+skill writes the retired folders.
+
+- **`triage-items` replaces `backlog-to-projects`.** It lists the items in
+  `triage`, proposes accept or drop with `priority`, `assignee`, `parent` and
+  `blocked_by`, keeps the grouping and parallelism analysis, and applies nothing
+  until the user has seen the proposal.
+- **`finalize-branch`, one revision.** It resolves the branch's work item, moves
+  it to `review` when the review starts and `done` when the branch lands, writes
+  the session into the item's folder (`pdocs new session --owner`), creates a
+  born-done item for work that ran without one, and files review findings as
+  `triage` items with `from:`. **Step 5 is Reflect**, replacing "Create Memory":
+  its default is "nothing this time", and its usual positive outcome appends a
+  Step and a Verification to a playbook. The session-record commit carries
+  `Work-Item: <uuid>`. The cycle question reads `pdocs view cycle`'s `closable`.
+- **Consult and override.** `generate-dev-plan` and `dev-kickoff` run
+  `pdocs find --type playbook` and quote the result. `finalize-branch`,
+  `dev-kickoff`, release and handoff honour
+  `docs/playbooks/<event>-playbook.md`.
+- **State writers.** `init-branch` starts a `ready` item (offered from
+  `pdocs view ready`) and sets its `cycle`; `create-project` and
+  `generate-proposal` move a feature to `ready` on the owner's word;
+  `dev-kickoff` moves it to `active`; `sweep-project` to `done`, and writes
+  `released_in` when a person supplies it; `create-investigation` and the
+  `investigator` agent close a research item.
+- **`sweep-project`** archives with `pdocs archive`, which moves the entity and
+  rewrites every link; its hand-rolled discovery and `git mv` are gone.
+- **Owned documents** are created with `pdocs new <type> --owner` in the
+  feature's or item's folder: plans, design resolutions, test plans, write-ups,
+  sessions, handoffs. An investigation is a `research` item and its write-up.
+  `workshop-idea` writes no brief, and no skill writes a memory or a lesson.
+- **Reports about the whole repository** (`project-summary`, `review-docs`) are
+  owned by a `kind: chore` item.
+- `create-project`'s CLI reference documents the thirteen verbs.
 
 ### 3.13.0 (2026-09-17)
 
