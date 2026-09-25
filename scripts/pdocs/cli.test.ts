@@ -1127,6 +1127,14 @@ generated: { by: cli-test, at: 2026-01-01 }
     expect(out.error.choices).toContain("playbook");
   });
 
+  test("a retired type is refused by name, with its replacement, as `new` does", () => {
+    const { code, stderr } = run(["find", "--type", "backlog", "--root", tree({})]);
+    expect(code).toBe(ExitCode.Usage);
+    const message: string = JSON.parse(stderr).error.message;
+    expect(message).toContain("retired in 9.0.0");
+    expect(message).toContain("pdocs new item <slug> --kind task");
+  });
+
   test("a type this project declared is accepted", () => {
     // THE REGRESSION GUARD. The obvious implementation of the test above
     // validates against the built-in list, which rejects exactly the types

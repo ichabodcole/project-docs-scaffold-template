@@ -18,7 +18,8 @@
 import type { Command, Invocation } from "../cli.ts";
 import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import { type Page, collectPages } from "../pages.ts";
-import { KINDS, buildRegistry } from "../lint/registry.ts";
+import { KINDS, buildRegistry, retiredWordReason } from "../lint/registry.ts";
+import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 
 /** A match, minus the edges. Whoever wants those asks `pdocs graph` or
  *  `pdocs backlinks` — `find` answers "which documents", not "what cites
@@ -81,6 +82,10 @@ export function parseFilters(
   const type = value("--type");
   if (type !== undefined && !knownTypes.includes(type)) {
     const choices = [...new Set(knownTypes)].sort();
+    // A type retired in 9.0.0 is named as such, with its replacement — the
+    // same refusal `pdocs new` gives, not "unknown type".
+    const retired = retiredWordReason(type, DEFAULT_CONFIG);
+    if (retired !== null) throw new UsageError(`--type: ${retired}.`, { token: type, choices });
     throw new UsageError(
       `--type: \`${type}\` is not a type in this project. Known: ${choices.join(", ")}.`,
       { token: type, choices }
