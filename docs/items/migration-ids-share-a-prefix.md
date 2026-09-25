@@ -5,7 +5,7 @@ description:
   The migration mints every id in one burst, so all share the 12 characters
   pdocs displays (D18) and a short id identifies nothing.
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: triage # triage | backlog | ready | active | review | done | dropped
+lifecycle: done
 id: 01a0da5f-ca2a-7268-a49e-67d8a4f4c55c
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-25 }
