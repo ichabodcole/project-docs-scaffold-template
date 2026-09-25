@@ -735,6 +735,35 @@ export function linkTargets(text: string): string[] {
   return out;
 }
 
+/**
+ * Links (in a file now at `file`) whose target is EXACTLY a key of `folderMap`
+ * — a retired folder itself, `../backlog/` — respelled to its successor. A link
+ * to anything inside the folder is left alone: that is the move map's job.
+ * PURE; run after `rewriteLinks`, so every link already reads from `file`.
+ */
+export function rewriteFolderLinks(text: string, file: string, folderMap: ReadonlyMap<string, string>): { text: string; changed: number } {
+  const edits: Array<{ start: number; end: number; value: string }> = [];
+  for (const m of stripCode(text).matchAll(MARKDOWN_LINK_RE)) {
+    if (m[1] === undefined || m.index === undefined) continue;
+    const start = m.index + 2;
+    const written = text.slice(start, start + m[1].length);
+    const target = written.trim().replace(/^<(.*)>$/, "$1");
+    if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
+    const hash = target.indexOf("#");
+    const pathPart = hash === -1 ? target : target.slice(0, hash);
+    if (pathPart === "" || isAbsolute(pathPart)) continue;
+    const to = folderMap.get(resolve(dirname(file), pathPart));
+    if (to === undefined) continue;
+    let rel = relative(dirname(file), to).split(sep).join("/");
+    if (pathPart.endsWith("/")) rel += "/";
+    if (pathPart.startsWith("./") && !rel.startsWith(".")) rel = `./${rel}`;
+    edits.push({ start, end: start + m[1].length, value: written.replace(pathPart, rel) });
+  }
+  let out = text;
+  for (const e of edits.reverse()) out = out.slice(0, e.start) + e.value + out.slice(e.end);
+  return { text: out, changed: edits.length };
+}
+
 /** Docs-relative path a link in `fromRel` resolves to. */
 export const resolveRel = (fromRel: string, link: string) => posix.normalize(posix.join(posix.dirname(fromRel), link));
 
@@ -1171,7 +1200,7 @@ export function buildMoveMap(files: string[], textOf: (rel: string) => string | 
     const out = new Set(linkTargets(textOf(rel) ?? "").map((l) => resolveRel(rel, l)));
     const linked = features.filter((f) => [...out].some((t) => t === f.from || t.startsWith(`${f.from}/`)));
     blockers.push(
-      `${rel} — a brief. Move it into its owner's artifacts/ folder${linked.length === 1 ? ` (suggested: ${linked[0]!.from}/artifacts/, the one project it links to)` : ""}, or delete it. The run turns an artifact's type to \`artifact\`.`
+      `${rel} — a brief. Move it into its owner's artifacts/ folder${linked.length === 1 ? ` (suggested: the one project it links to, ${linked[0]!.from}/artifacts/)` : ""}, or delete it. The run turns an artifact's type to \`artifact\`.`
     );
   }
 
@@ -1619,7 +1648,11 @@ function computeChanges(ctx: Ctx): Changes {
   for (const [from, to] of Object.entries(TEMPLATE_RENAMES)) linkMap.set(join(d, from), join(d, to));
   for (const [from, to] of Object.entries(RETIRED_TEMPLATES)) linkMap.set(join(d, from), join(d, to));
   for (const [from, to] of Object.entries(RETIRED_READMES)) linkMap.set(join(d, from), join(d, to));
-  for (const [from, to] of Object.entries(FOLDER_SUCCESSOR)) if (!linkMap.has(join(d, from))) linkMap.set(join(d, from), join(d, to));
+  // A link to a retired FOLDER itself goes to its successor. Only the folder: the link map
+  // carries descendants too, and a link into a retired folder that nothing moved — one
+  // already broken, or to a brief the adopter deleted — must stay as written, for the
+  // verify phase to name, rather than be respelled into a second broken path.
+  const folderMap = new Map(Object.entries(FOLDER_SUCCESSOR).map(([f, t]) => [join(d, f), join(d, t)]));
 
   // --- the frontmatter each moved document ends with
   const dateOf = (rel: string) => firstDate(ctx, join(d, rel));
@@ -1703,9 +1736,10 @@ function computeChanges(ctx: Ctx): Changes {
     const rel = fromAbs.startsWith(`${d}${sep}`) ? relative(d, fromAbs).split(sep).join("/") : null;
     const fmStep = rel ? frontmatterFor(rel, original) : { text: original, what: null };
     const l = rewriteLinks(fmStep.text, fromAbs, toAbs, linkMap, existsSync);
-    const f = rewriteFromField(l.text, d, linkMap);
+    const g = rewriteFolderLinks(l.text, toAbs, folderMap);
+    const f = rewriteFromField(g.text, d, linkMap);
     if (fromAbs === toAbs && f.text === original) continue;
-    writes.push({ from: fromAbs, to: toAbs, text: f.text, links: l.changed + f.changed, fm: fmStep.what, created: false });
+    writes.push({ from: fromAbs, to: toAbs, text: f.text, links: l.changed + g.changed + f.changed, fm: fmStep.what, created: false });
   }
 
   // --- the entity files this run creates

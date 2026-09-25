@@ -56,6 +56,7 @@ import {
   researchLifecycle,
   rewriteExcludeGlob,
   rewriteFromField,
+  rewriteFolderLinks,
   rewriteLinks,
   SEEDED_PAGES,
   slugOf,
@@ -245,7 +246,7 @@ describe("buildMoveMap — over an in-memory file list", () => {
       "briefs/TEMPLATES/BRIEF.template.md": "form\n",
     });
     const b = p.blockers.join("\n");
-    expect(b).toContain("briefs/2026-01-01-idea.md — a brief. Move it into its owner's artifacts/ folder (suggested: projects/a/artifacts/");
+    expect(b).toContain("briefs/2026-01-01-idea.md — a brief. Move it into its owner's artifacts/ folder (suggested: the one project it links to, projects/a/artifacts/");
     expect(b).toContain("briefs/2026-01-02-loose.md — a brief. Move it into its owner's artifacts/ folder, or delete it");
     expect(b).not.toContain("BRIEF.template.md");
   });
@@ -327,6 +328,16 @@ describe("planCycles — membership moves onto the items", () => {
     expect(fmList("scope: [a, b]", "scope")).toEqual(["a", "b"]);
     expect(fmList("scope:\n  [\n    a,\n    b,\n  ]", "scope")).toEqual(["a", "b"]);
     expect(fmList("scope:\n  - a\n  - b\nafter: []", "scope")).toEqual(["a", "b"]);
+  });
+});
+
+describe("rewriteFolderLinks — a link to a retired folder itself, and nothing inside it", () => {
+  test("the folder link goes to its successor; a link into the folder that nothing moved is left as written", () => {
+    const map = new Map([["/r/docs/backlog", "/r/docs/items"], ["/r/docs/projects", "/r/docs/features"]]);
+    const text = "[a](docs/backlog/) [b](docs/projects) [c](docs/projects/gone.md) [d](./docs/backlog/#x) `[e](docs/backlog/)`\n";
+    const r = rewriteFolderLinks(text, "/r/README.md", map);
+    expect(r.text).toBe("[a](docs/items/) [b](docs/features) [c](docs/projects/gone.md) [d](./docs/items/#x) `[e](docs/backlog/)`\n");
+    expect(r.changed).toBe(3);
   });
 });
 
@@ -1002,7 +1013,7 @@ describe("guards that must be able to fire", () => {
     const root = fixtureO({ "docs/briefs/2026-01-20-idea.md": doc(common("brief", "Idea", "An idea.", { lifecycle: "active" }), "# Idea\n\nFor [alpha](../projects/alpha/proposal.md).\n") });
     const before = treeDigest(root);
     const r = migrate(root);
-    stops(r, "docs/briefs/2026-01-20-idea.md — a brief. Move it into its owner's artifacts/ folder (suggested: projects/alpha/artifacts/");
+    stops(r, "docs/briefs/2026-01-20-idea.md — a brief. Move it into its owner's artifacts/ folder (suggested: the one project it links to, projects/alpha/artifacts/");
     expect(treeDigest(root)).toEqual(before);
   });
 
