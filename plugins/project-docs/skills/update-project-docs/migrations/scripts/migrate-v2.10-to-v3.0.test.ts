@@ -860,6 +860,23 @@ describe("the whole migration on fixture O", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  test("each migrated id is minted from its document's own date, so ids sort in filing order and no two share a timestamp", () => {
+    const { root } = wholeRun();
+    const msOf = (id: string) => Number.parseInt(id.slice(0, 8) + id.slice(9, 13), 16);
+    const dayOf = (rel: string) => new Date(msOf(fmGet(fmOf(root, rel), "id") as string)).toISOString().slice(0, 10);
+    // The backlog items and the fragment carry generated.at 2026-01-01; the
+    // born item's latest session is dated 2026-01-08.
+    expect(dayOf("docs/items/open-item.md")).toBe("2026-01-01");
+    expect(dayOf("docs/items/a-thought.md")).toBe("2026-01-01");
+    expect(dayOf("docs/items/beta/item.md")).toBe("2026-01-08");
+    const ids = readdirSync(join(root, "docs/items"), { recursive: true })
+      .map(String)
+      .filter((p) => (/^(_archive\/)?[^/]+\.md$/.test(p) && p !== "README.md") || /(^|\/)item\.md$/.test(p))
+      .map((p) => fmGet(fmOf(root, `docs/items/${p}`), "id") as string);
+    expect(ids.length).toBe(9);
+    expect(new Set(ids.map((id) => id.slice(0, 13))).size).toBe(ids.length);
+  });
+
   test("memories and lessons are kept and declared; the config's other bytes are the adopter's", () => {
     const { root } = wholeRun();
     expect(existsSync(join(root, "docs/memories/2026-01-14-first-memory.md"))).toBe(true);

@@ -1804,7 +1804,6 @@ function computeChanges(ctx: Ctx): Changes {
       fileMap.set(mv.from, to);
       entityOf.set(mv.from, { move: mv, role: mv.kind === "report" ? "owned" : "entry" });
     }
-    if (mv.kind !== "feature" && mv.kind !== "report") ids.set(mv.from, uuidv7());
   }
   for (const [from, to] of Object.entries(TEMPLATE_RENAMES)) linkMap.set(join(d, from), join(d, to));
   for (const [from, to] of Object.entries(RETIRED_TEMPLATES)) linkMap.set(join(d, from), join(d, to));
@@ -1817,6 +1816,33 @@ function computeChanges(ctx: Ctx): Changes {
 
   // --- the frontmatter each moved document ends with
   const dateOf = (rel: string) => firstDate(ctx, join(d, rel));
+
+  // --- the ids, minted from each item's own date (D25): a UUIDv7 begins with
+  // its timestamp, so ids minted in one burst share every character pdocs
+  // prints and sort in no useful order. Each id takes its document's date —
+  // `generated.at`, else the date of its latest session, else its first commit
+  // — and items that share a date are a millisecond apart, in path order.
+  const itemDates = plan.moves
+    .filter((mv) => mv.kind !== "feature" && mv.kind !== "report")
+    .map((mv) => {
+      let date: string | null = null;
+      if (mv.kind === "born-item") {
+        const sessions = files.filter((r) => r.startsWith(`${mv.from}/sessions/`)).sort();
+        date = sessions.length ? /(\d{4}-\d{2}-\d{2})/.exec(basename(sessions[sessions.length - 1] as string))?.[1] ?? null : null;
+        date ??= dateOf(files.find((r) => r.startsWith(`${mv.from}/`)) ?? mv.from);
+      } else {
+        const fm = splitFrontmatter(textOf(mv.from) ?? "").fm;
+        date = (fm && /\bat:\s*(\d{4}-\d{2}-\d{2})/.exec(fmGet(fm, "generated") ?? "")?.[1]) || dateOf(mv.from);
+      }
+      return { from: mv.from, ms: Date.parse(`${date}T00:00:00Z`) };
+    })
+    .sort((a, b) => a.ms - b.ms || (a.from < b.from ? -1 : 1));
+  let prev = -1;
+  for (const { from, ms } of itemDates) {
+    const at = Number.isFinite(ms) && ms > prev ? ms : prev + 1;
+    prev = at;
+    ids.set(from, uuidv7(at, crypto.getRandomValues(new Uint8Array(10))));
+  }
   const frontmatterFor = (rel: string, text: string): { text: string; what: string | null } => {
     const e = entityOf.get(rel);
     const cycle = cycles.texts.get(rel);
