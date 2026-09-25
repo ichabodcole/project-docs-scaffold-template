@@ -244,6 +244,20 @@ describe("buildMoveMap — over an in-memory file list", () => {
     expect(b).toContain("reports/2026-01-04-two-report.md — a report with 2 possible owners");
   });
 
+  test("a report two investigations link is decided by the one it links to itself", () => {
+    const report = "reports/2026-01-05-shared-report.md";
+    const files = {
+      "investigations/2026-01-01-a.md": `${FM("type: investigation\nlifecycle: active")}[r](../${report})\n`,
+      "investigations/2026-01-02-b.md": `${FM("type: investigation\nlifecycle: active")}[r](../${report})\n`,
+      [report]: FM("type: report"),
+    };
+    const ambiguous = plan(files);
+    expect(ambiguous.blockers.join("\n")).toContain("Add a link from the report to the investigation it belongs to");
+    const decided = plan({ ...files, [report]: `${FM("type: report")}For [b](../investigations/2026-01-02-b.md).\n` });
+    expect(decided.blockers).toEqual([]);
+    expect(decided.moves.find((m) => m.from === report)?.to).toBe("items/b/reports/2026-01-05-shared-report.md");
+  });
+
   test("a brief is always a judgment step, with the one project it links to suggested", () => {
     const p = plan({
       "projects/a/proposal.md": FM("type: proposal\nlifecycle: draft"),

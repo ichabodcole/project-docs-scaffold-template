@@ -1193,9 +1193,13 @@ export function buildMoveMap(files: string[], textOf: (rel: string) => string | 
     handled.add(rel);
     const text = textOf(rel) ?? "";
     const out = new Set(linkTargets(text).map((l) => resolveRel(rel, l)));
-    const owners = research.filter(
-      (r) => out.has(r.from) || linkTargets(textOf(r.from) ?? "").some((l) => resolveRel(r.from, l) === rel)
-    );
+    // The report's own link decides: a report that links to exactly one investigation
+    // belongs to it, whatever else links to the report. Otherwise, any link either way.
+    const linkedFrom = research.filter((r) => out.has(r.from));
+    const owners =
+      linkedFrom.length === 1
+        ? linkedFrom
+        : research.filter((r) => out.has(r.from) || linkTargets(textOf(r.from) ?? "").some((l) => resolveRel(r.from, l) === rel));
     if (owners.length === 1) {
       moves.push({ kind: "report", from: rel, to: `${owners[0]!.to}/reports/${basename(rel)}`, archived });
       continue;
@@ -1203,7 +1207,7 @@ export function buildMoveMap(files: string[], textOf: (rel: string) => string | 
     blockers.push(
       owners.length === 0
         ? `${rel} — a report with no owner: no investigation links to it, and it links to none. Link it from the investigation it belongs to, or move it into the owning project's reports/ folder (docs/projects/<slug>/reports/).`
-        : `${rel} — a report with ${owners.length} possible owners (${owners.map((o) => o.from).join(", ")}). Leave the link between it and one of them only, or move it into the owning project's reports/ folder.`
+        : `${rel} — a report with ${owners.length} possible owners (${owners.map((o) => o.from).join(", ")}). Add a link from the report to the investigation it belongs to — the report's own link decides — or move it into the owning project's reports/ folder.`
     );
   }
 
