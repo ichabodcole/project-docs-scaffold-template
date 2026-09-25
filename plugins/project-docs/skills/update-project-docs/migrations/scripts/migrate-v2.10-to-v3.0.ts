@@ -2135,7 +2135,10 @@ function formatAndRecord(ctx: Ctx): void {
       );
     ok(`formatted ${rel.length} file(s) this run created or installed — before recording, never after; no document of yours was formatted`);
   }
+  if (ctx.manifest === null) fail("no record to write — the seeds phase did not run.");
   const m = ctx.manifest as SeedManifest;
+  // What the formatter changed in a file this run created is now its planned text.
+  for (const w of (ctx.changes as Changes).writes) if (w.created && existsSync(w.to)) w.text = readFileSync(w.to, "utf8");
   for (const r of ctx.recorded) m.files[r] = hashOf(join(ctx.docsRoot, r)) as string;
   const after = serialiseManifest(m, ctx.manifestBefore);
   if (after === ctx.manifestBefore) ok(`${ctx.docsRootName}/${MANIFEST_NAME} unchanged (${Object.keys(m.files).length} entries, version ${m.version})`);
