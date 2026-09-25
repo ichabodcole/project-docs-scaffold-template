@@ -78,7 +78,7 @@ stays green on every commit, and no commit needs `--no-verify`.
       `dev-kickoff`, release and handoff each honour a named playbook override.
 - [x] `docs/STYLE.md` is seeded and recorded in the seed manifest. The playbook
       template is Goal · Steps · Verification.
-- [ ] `grep -rn "type: memory\|type: lesson" docs/ '{{cookiecutter.project_slug}}/docs/'`
+- [x] `grep -rn "type: memory\|type: lesson" docs/ '{{cookiecutter.project_slug}}/docs/'`
       returns nothing. This repository has no `backlog/`, `briefs/`,
       `fragments/`, `investigations/`, `reports/`, `projects/`, `memories/` or
       `lessons-learned/`. `_archive/` exists only as `items/_archive/` and
@@ -86,7 +86,7 @@ stays green on every commit, and no commit needs `--no-verify`.
 - [x] `pdocs archive <ref>` refuses an entity that is not in a terminal state,
       and otherwise moves it into its owner folder's `_archive/`, rewriting its
       inbound and outbound links. `sweep-project` drives it.
-- [ ] The migration script and its guide ship together. The script has been run
+- [x] The migration script and its guide ship together. The script has been run
       to completion here, and on one other consumer, and was revised from that
       run.
 - [ ] `npm run check` is green, and the payload has been checked by generating
@@ -1062,10 +1062,10 @@ every script change that the run forced.
 
 **Validation:**
 
-- [ ] Every migration test is green, and the guards were seen failing.
-- [ ] This repository is on the new layout, and `npm run check` is green after
+- [x] Every migration test is green, and the guards were seen failing.
+- [x] This repository is on the new layout, and `npm run check` is green after
       retirement.
-- [ ] The session records what the move took. Script fixes the run forced have
+- [x] The session records what the move took. Script fixes the run forced have
       landed, each with a test.
 
 **Dependencies:** Phases 1 and 2 (for the script). Phase 3 (for the dogfood).

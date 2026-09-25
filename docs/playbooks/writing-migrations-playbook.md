@@ -52,6 +52,11 @@ is `.claude/skills/migration-authoring/SKILL.md`.
     coverage ward), and what to do about each.
 12. Test re-running after every kind of stop, uncommitted: a re-run must finish
     what the stop left, and never write over an edit made since.
+13. Follow every recovery instruction the script or guide gives, literally, on a
+    fixture that also holds unrelated uncommitted work and untracked files.
+    Recovery advice must be reversible and scoped: stash, never a whole-tree
+    `git clean` or `git checkout -- .`, and name how to restore untracked files
+    (`stash@{0}^3`).
 
 ## Verification
 
@@ -64,3 +69,5 @@ is `.claude/skills/migration-authoring/SKILL.md`.
 - [ ] The test's scaffold comes from a `git archive` of the release tag, and the
       script's cookiecutter call carries `--checkout <that tag>`.
 - [ ] No test lists `scripts/pdocs/` files as a literal expected diff.
+- [ ] Following each recovery instruction literally on such a fixture loses
+      nothing, and the message test asserts it names no whole-tree clean.
