@@ -140,6 +140,7 @@ overturn it in one place.
 | D20 (added 2026-09-24)          | **State writers.** A feature moves to `ready` on the owner's word, through `create-project` or `generate-proposal`; to `active` through `dev-kickoff`; to `done` or `dropped` through `sweep-project`. An item moves to `review` through `finalize-branch` when its review starts, and to `done` when the branch lands. A research item that concludes outside a branch is set `done` by `create-investigation` or the `investigator` agent. `dev-kickoff` goes through `init-branch` (`active` and `cycle`), and writes the kickoff document's owner link itself, since `pdocs new kickoff` refuses. | The Task 4.0 audit found no named writer for a feature's states, for `review`, or for research done in conversation. A field nobody writes goes stale.                                                                                                                                           |
 | D21 (added 2026-09-24)          | **The `Work-Item:` trailer goes on the session-record commit** that `finalize-branch` makes (Step 7), not on "the landing commit".                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | That commit exists under every landing policy — squash, consolidate, or history left untouched — while "the landing commit" is a different commit under each, and does not exist at all on a fast-forward.                                                                                       |
 | D22 (added 2026-09-24)          | **`triage-items` keeps `backlog-to-projects`' grouping and parallelism analysis**: beside accept or drop, `priority`, `assignee` and `parent`, it proposes which items share a feature and which can run in parallel. It applies nothing until the user has seen the proposal.                                                                                                                                                                                                                                                                                                                        | The analysis was the part of `backlog-to-projects` with no other home, and grouping is now the `parent` field.                                                                                                                                                                                   |
+| D23 (added 2026-09-25)          | **Clarifies D8: items an agent creates start in `triage` unless the user has just approved them.** When the user approves a list of items in the same exchange — a plan's item list in `generate-dev-plan`, a research question they asked for in `create-investigation` — the agent files them in the state the user approved (`backlog`, `ready` or `active`). Anything an agent files on its own judgement, such as a review finding or an intake, still starts in `triage`.                                                                                                                       | The approval the user gives to a list they have just read is the triage step itself. Making them triage the same items a second time would add friction and no safeguard.                                                                                                                        |
 
 ### Versions
 
@@ -1032,6 +1033,25 @@ every script change that the run forced.
    - Delete the legacy fixture rows from the goldens.
    - Mirror, then `npm run check`. Then re-run `pdocs check` on the dogfooded
      tree: this is the check that the script's phase-10 assertion stood in for.
+
+7. **File what Phase 4 left for later**, once `items/` exists, as `triage` items
+   (`pdocs new item <slug> --kind chore`):
+   - The optional items in the
+     [skill audit](./artifacts/skill-audit.md#proposed-optional-items).
+   - The five CLI gaps the Phase 4 validation walks found:
+     - `pdocs new --title` does not fill the template's H1.
+     - `find`'s JSON has no `slug`.
+     - `backlinks` reports a feature's key as `feature/feature`.
+     - `set` drops the inline comment on a `lifecycle:` line.
+     - The lint passes a template's placeholder body and H1.
+   - This repository's two open backlog items become items when the migration
+     converts them. Narrow each one:
+     - `2026-09-04-plugin-skills-hardcode-flat-docs-paths`: Phase 4's skills
+       create documents with `pdocs new`, which resolves the folder. What
+       remains is the hand-written `DEV_KICKOFF.md` and artifacts.
+     - `2026-09-02-task-agent-tool-name-drift`: the four `allowed_tools`
+       declarations now say `Agent`. What remains is the cosmetic
+       `<uses Task tool>` narration in the agents' description examples.
 
 **Validation:**
 
