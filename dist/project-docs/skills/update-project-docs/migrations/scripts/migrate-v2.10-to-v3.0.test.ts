@@ -52,6 +52,8 @@ import {
   patchTopLevelVersion,
   planCycles,
   planTemplates,
+  positionalType,
+  scopeEntryPath,
   renameRecord,
   researchLifecycle,
   rewriteExcludeGlob,
@@ -324,6 +326,27 @@ describe("planCycles — membership moves onto the items", () => {
     expect(c.notes.join("\n")).toContain("is active and names project/f");
   });
 
+  test("an item in two cycles' scope carries the active one, whichever file comes first", () => {
+    const closed = (s: string) => `---\ntype: cycle\nlifecycle: closed\nscope: [${s}]\n---\n\n# C\n`;
+    const active = (s: string) => `---\ntype: cycle\nlifecycle: active\nscope: [${s}]\n---\n\n# C\n`;
+    const e = "backlog/2026-01-01-a";
+    const later = planCycles(["cycles/2026-01-a.md", "cycles/2026-02-b.md"], (r) => (r.includes("-a.md") ? closed(e) : active(e)), moves);
+    expect(later.itemCycle.get("backlog/2026-01-01-a.md")).toBe("2026-02-b");
+    expect(later.notes.join("\n")).toContain("the active one");
+    const earlier = planCycles(["cycles/2026-01-a.md", "cycles/2026-02-b.md"], (r) => (r.includes("-a.md") ? active(e) : closed(e)), moves);
+    expect(earlier.itemCycle.get("backlog/2026-01-01-a.md")).toBe("2026-01-a");
+  });
+
+  test("a singular `fragment/` scope entry is mapped, and its item carries the cycle", () => {
+    expect(scopeEntryPath("fragment/2026-01-06-a-thought")).toBe("fragments/2026-01-06-a-thought");
+    expect(scopeEntryPath("fragments/x.md")).toBe("fragments/x");
+    expect(scopeEntryPath("investigation/q")).toBe("investigations/q");
+    expect(scopeEntryPath("brief/x")).toBeNull();
+    const fm = buildMoveMap(["fragments/2026-01-06-a-thought.md"], () => FM("type: fragment\nlifecycle: open")).moves;
+    const c = planCycles(["cycles/2026-01-c.md"], () => "---\ntype: cycle\nlifecycle: active\nscope: [fragment/2026-01-06-a-thought]\n---\n\n# C\n", fm);
+    expect(c.itemCycle.get("fragments/2026-01-06-a-thought.md")).toBe("2026-01-c");
+  });
+
   test("addToScope makes a Scope section when there is none", () => {
     expect(addToScope("# C\n", "- x")).toBe("# C\n\n## Scope\n\n- x\n");
   });
@@ -343,6 +366,13 @@ describe("rewriteFolderLinks — a link to a retired folder itself, and nothing 
     expect(r.text).toBe("[a](docs/items/) [b](docs/features) [c](docs/projects/gone.md) [d](./docs/items/#x) `[e](docs/backlog/)`\n");
     expect(r.changed).toBe(3);
   });
+});
+
+describe("positionalType — a document's type from where it sits in its owner", () => {
+  test.each([
+    ["feature.md", "feature"], ["item.md", "item"], ["plan.md", "plan"], ["write-up.md", "write-up"], ["DEV_KICKOFF.md", "kickoff"],
+    ["sessions/2026-01-01-s.md", "session"], ["reports/2026-01-01-r-report.md", "report"], ["artifacts/n.md", "artifact"], ["design.md", "artifact"],
+  ])("%s → %s", (rel, type) => expect(positionalType(rel)).toBe(type));
 });
 
 describe("synthesizeFrontmatter — a legacy archive's document with none", () => {
@@ -597,6 +627,8 @@ const SHAPES: Record<string, string> = {
   "docs/projects/_archive/gamma/proposal.md": "# Proposal: Gamma\n\n**Date:** 2025-12-01 **Status:** Implemented\n\n## Problem\n\nGamma was needed. It shipped.\n",
   "docs/projects/_archive/gamma/sessions/2025-12-02-old.md": "# Old session\n\nIt went fine. [Proposal](../proposal.md)\n",
   "docs/projects/_archive/gamma/design.md": "Notes without a heading.\n",
+  "docs/projects/_archive/gamma/plan.md": "# Gamma plan\n\nBuild it, then ship it.\n",
+  "docs/projects/_archive/gamma/reports/2025-12-03-findings-report.md": "# Findings\n\nIt worked.\n",
   "docs/investigations/2026-01-10-question-investigation.md": doc(common("investigation", '"Investigation: question"', "Is it possible?", { lifecycle: "concluded" }), "# Question\n\nEvidence: [report](../reports/2026-01-11-evidence-report.md).\n"),
   "docs/investigations/_archive/2026-01-12-old-question.md": doc(common("investigation", "Old question", "An old question.", { lifecycle: "concluded" }), "# Old question\n\nAnswered.\n"),
   "docs/reports/2026-01-11-evidence-report.md": doc(common("report", "Evidence", "What was found."), "# Evidence\n\nFor [the question](../investigations/2026-01-10-question-investigation.md).\n"),
@@ -755,6 +787,11 @@ describe("the whole migration on fixture O", () => {
     expect([fmGet(gamma, "type"), fmGet(gamma, "lifecycle"), fmGet(gamma, "title")]).toEqual(["feature", "done", "Proposal: Gamma"]);
     expect(fmGet(fmOf(root, "docs/features/_archive/gamma/sessions/2025-12-02-old.md"), "type")).toBe("session");
     expect(fmGet(fmOf(root, "docs/features/_archive/gamma/design.md"), "type")).toBe("artifact");
+    // An owned document with no frontmatter, in a legacy archive: typed by position, in its closed state.
+    const plan = fmOf(root, "docs/features/_archive/gamma/plan.md");
+    expect([fmGet(plan, "type"), fmGet(plan, "lifecycle")]).toEqual(["plan", "completed"]);
+    const report = fmOf(root, "docs/features/_archive/gamma/reports/2025-12-03-findings-report.md");
+    expect([fmGet(report, "type"), fmGet(report, "lifecycle")]).toEqual(["report", null]);
   });
 
   test("the brief its owner moved into artifacts/ is an artifact now, with no lifecycle", () => {
