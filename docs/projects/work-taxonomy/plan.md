@@ -874,7 +874,7 @@ removed from the code.
 | `investigations/<date>-<slug>[-investigation].md` | `items/<slug>/item.md` (`kind: research`, active → active, concluded → done), with the document as `items/<slug>/write-up.md` (`type: write-up`, lifecycle removed)                                                                                                                                                                                                                                                                                                   |
 | `reports/*.md`                                    | `<owner>/reports/`, where the owner is the unique research item that links to it, or that it links to. Unresolved reports stop the preflight (judgment)                                                                                                                                                                                                                                                                                                               |
 | `briefs/*.md`                                     | Judgment, always. The preflight stops listing them, with a suggested owner (the unique feature it links to). The guide says: move each into its owner's `artifacts/`, or delete it before the run                                                                                                                                                                                                                                                                     |
-| `cycles/*.md` with `scope:`                       | `cycle: <slug>` is written onto each `backlog/` entry's new item, and `scope:` is removed. `project/` entries are listed in the cycle body's Scope section and reported. Active ones are a judgment step (create the items)                                                                                                                                                                                                                                           |
+| `cycles/*.md` with `scope:`                       | `cycle: <slug>` is written onto each `backlog/` entry's new item, and `scope:` is removed. `project/` entries are listed in the cycle body's Scope section (added only when missing) and reported. For an active cycle the run names the feature afterwards, for the adopter to file its items with `cycle:` — a post-run note, not a pre-run stop, since items cannot be created before the run                                                                      |
 | `memories/`, `lessons-learned/` (if present)      | Kept, and declared in `lint.types` (D11)                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `<folder>/_archive/…` (any legacy folder)         | Converted by the rows above, then placed in `items/_archive/` or `features/_archive/`, not flattened into the live folders. If the mapped state is not `done` or `dropped`, the entity goes to the live folder instead and is reported. Documents with no frontmatter get it synthesized: the type from the new position, the title from the H1, the description from the first sentence, `status: stable`, and `generated: { by: unknown, at: <first commit date> }` |
 
@@ -976,8 +976,8 @@ Every spawn (`bun`, `git`, `cookiecutter`) passes `env: childEnv()`.
 
 - `v2.10-to-v3.0.md` follows `v2.9-to-v2.10.md`: Summary, "This migration is a
   script", the three version numbers, What's New (both proposals), the judgment
-  steps to do **before** the run (briefs, reports, active cycles with project
-  scope), running it, and Verification.
+  steps to do **before** the run (briefs, reports), the post-run note for active
+  cycles with project scope, running it, and Verification.
 - It carries a section **"Your memories and lessons: keep or delete"** (D11):
   - **Keep** (the default): do nothing. The script declares `memories` and
     `lessons-learned` in `lint.types`, so they stay lintable but not creatable.
@@ -1014,7 +1014,9 @@ every script change that the run forced.
 4. **Run the script**: `--dry-run` first, read the move map, then the real run.
    It converts about 31 project folders, 19 archived ones (into
    `features/_archive/`), 11 plus 6 backlog items, 8 investigations and 2
-   cycles.
+   cycles. Confirm that `reconcileSeeds` recorded `docs/STYLE.md` in this repo's
+   `docs/.pdocs-seed.json` (it is identical to the scaffold's, so it is recorded
+   without being written).
 5. **Fix what the verify phase names**, then run `npm run check`.
    `.claude/skills/*` and root docs that link into `docs/` are in the rewrite's
    scope. Check `grep -rn "docs/projects/" .claude/ AGENTS.md README.md`.
@@ -1090,6 +1092,9 @@ the release ships.
      both `.project-docs.json` copies, and `VERSION` in both
      `scripts/pdocs/cli.ts` copies (`release-please-config.json`'s
      `extra-files`). Then run `npm run check:version`.
+   - Confirm the `project-docs-scaffold-template-v9.0.0` tag exists and that
+     `migrate-v2.10-to-v3.0.ts` fetches it without `--scaffold-dir`: a
+     `--dry-run` on a v2.10 tree with no flag reaches phase 3 (D16).
    - Bump plugins by hand: `project-docs` 4.0.0; `operator` and `hivemind`
      minor.
    - Rebuild `dist/` and run `npm run check`.
