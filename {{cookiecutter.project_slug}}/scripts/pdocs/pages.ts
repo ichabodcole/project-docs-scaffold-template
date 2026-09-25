@@ -41,16 +41,7 @@ import {
   libraryFiles,
   workbenchFiles,
 } from "./lint/rules.ts";
-import {
-  ENTITY_FILE,
-  FEATURES_FOLDER,
-  ITEMS_FOLDER,
-  PROJECTS_FOLDER,
-} from "./lint/registry.ts";
-
-/** The legacy project folder's entry type: a `proposal` answers to
- *  `project/<folder>` until this repository has migrated. */
-const LEGACY_PROJECT_ENTRY = ENTITY_FILE[PROJECTS_FOLDER]!.type;
+import { ENTITY_FILE, FEATURES_FOLDER, ITEMS_FOLDER } from "./lint/registry.ts";
 
 /** A frontmatter value with its surrounding quotes removed; `null` when absent. */
 const unquoted = (v: string | undefined): string | null =>
@@ -184,38 +175,18 @@ export function pageKey(page: Page): string | null {
 }
 
 /**
- * `project/<folder>` — how a PROJECT is addressed, which `type/slug` cannot do.
- *
- * `type/slug` is a library-tier scheme and SCHEMA.md says so: `related:` edges
- * "are resolved against library pages only". It works there because a library
- * page's basename is its own name. Extending it to the workbench broke on the
- * project folder, where every type has a FIXED filename — so `pageKey` answers
- * `proposal/proposal` for every project in the tree. That key names all of them
- * and identifies none, and it is the only string `pdocs new cycle --scope`
- * would accept: the documented `--scope project/oauth-upgrade` matched nothing.
- *
- * A project's name is its FOLDER, so that is what this keys on. The vocabulary
- * is not invented here — `TYPE_ALIAS` already spells it `project` for
- * `pdocs new project <name>`, `docs/cycles/TEMPLATE.md` writes `scope:` entries
- * as `project/[project-name]`, and the migration guide says the same. This
- * makes the tool agree with all three.
+ * The addresses an entity answers to beyond `type/slug`: a feature or an item
+ * by its slug — the folder, or a single-file item's own name — and an item by
+ * its `id` (plan D6). A work entity's files have FIXED names (`feature.md`,
+ * `item.md`), so `pageKey` alone would key every feature `feature/feature`.
  *
  * It is NOT a `related:` key and must not become one: `related:` still resolves
- * against library pages only, and the thin tier does not resolve it at all.
- * This is an ADDRESS a caller may type — for `--scope` and for `backlinks` —
- * which is why it lives beside `pageKey` rather than inside it.
+ * against library pages only. This is an ADDRESS a caller may type — for
+ * `--owner`, `--parent`, `set` and `backlinks` — which is why it lives beside
+ * `pageKey` rather than inside it.
  */
 export function pageAliasKeys(page: Page): string[] {
   const keys: string[] = [];
-  // `<docsRoot>/projects/<folder>/proposal.md` — the folder is the parent, and
-  // the grandparent proves this really is the project tree rather than a
-  // same-named type somewhere else.
-  if (page.type === LEGACY_PROJECT_ENTRY) {
-    const folder = basename(dirname(page.path));
-    if (folder && basename(dirname(dirname(page.path))) === PROJECTS_FOLDER)
-      keys.push(`project/${folder}`);
-  }
-
   // The work taxonomy's entities are named by their slug — the folder, or a
   // single-file item's own name — wherever they sit, `_archive/` included, and
   // an item by its `id` as well (plan D6). The owner is the folder DIRECTLY

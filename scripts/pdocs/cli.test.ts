@@ -84,18 +84,8 @@ function tree(
               "specifications",
               "interaction-design",
               "playbooks",
-              "lessons-learned",
-              "memories",
             ],
-            workbench: [
-              "backlog",
-              "briefs",
-              "investigations",
-              "projects",
-              "reports",
-              "fragments",
-              "cycles",
-            ],
+            workbench: ["features", "items", "cycles"],
             skip: ["_archive", "superpowers"],
           },
           ...config,
@@ -133,10 +123,10 @@ const CLEAN = { "docs/SCHEMA.md": SCHEMA, "docs/index.md": INDEX };
 /** One problem, in a workbench folder, of a class every tier agrees about. */
 const DIRTY = {
   ...CLEAN,
-  "docs/projects/x/proposal.md": `---
-type: proposal
+  "docs/features/x/feature.md": `---
+type: feature
 title: X
-description: A proposal whose lifecycle is outside its vocabulary.
+description: A feature whose lifecycle is outside its vocabulary.
 status: draft
 lifecycle: shipped
 generated: { by: cli-test, at: 2026-01-01 }
@@ -255,18 +245,8 @@ describe("pdocs check", () => {
           "specifications",
           "interaction-design",
           "playbooks",
-          "lessons-learned",
-          "memories",
         ],
-        workbench: [
-          "backlog",
-          "briefs",
-          "investigations",
-          "projects",
-          "reports",
-          "fragments",
-          "cycles",
-        ],
+        workbench: ["features", "items", "cycles"],
         skip: ["_archive", "superpowers"],
       },
     });
@@ -883,7 +863,7 @@ describe("stdout survives a real pipe", () => {
    *
    * Page COUNT is what drives it — `graph` emits identity and edges per node,
    * not prose — so the size comes from 400 documents rather than from long
-   * ones. `lifecycle: shipped` is outside the proposal vocabulary, giving every
+   * ones. `lifecycle: shipped` is outside the feature vocabulary, giving every
    * page one problem, which is what makes `check`'s output large too.
    */
   function bigTree(): string {
@@ -891,9 +871,9 @@ describe("stdout survives a real pipe", () => {
     const filler = "Nine tenths of a sentence, repeated to fill a buffer. ".repeat(6);
     for (let i = 0; i < 400; i++) {
       const n = String(i).padStart(3, "0");
-      files[`docs/projects/p-${n}/proposal.md`] = `---
-type: proposal
-title: Proposal ${n}
+      files[`docs/features/p-${n}/feature.md`] = `---
+type: feature
+title: Feature ${n}
 description: ${filler}
 status: draft
 lifecycle: shipped
@@ -901,7 +881,7 @@ tags: [fixture, bulk]
 generated: { by: cli-test, at: 2026-01-01 }
 ---
 
-# Proposal ${n}
+# Feature ${n}
 `;
     }
     return tree(files);
@@ -938,7 +918,7 @@ generated: { by: cli-test, at: 2026-01-01 }
 
   test("find and check survive the same pipe", () => {
     for (const args of [
-      ["find", "--type", "proposal", "--format", "json", "--root", root],
+      ["find", "--type", "feature", "--format", "json", "--root", root],
       ["check", "--format", "json", "--root", root],
     ]) {
       const { stdout } = piped(args);
@@ -1103,18 +1083,8 @@ describe("`find --type` validates against the project's own vocabulary", () => {
       "specifications",
       "interaction-design",
       "playbooks",
-      "lessons-learned",
-      "memories",
     ],
-    workbench: [
-      "backlog",
-      "briefs",
-      "investigations",
-      "projects",
-      "reports",
-      "fragments",
-      "cycles",
-    ],
+    workbench: ["features", "items", "cycles"],
     skip: ["_archive", "superpowers"],
   };
 
@@ -1153,7 +1123,7 @@ generated: { by: cli-test, at: 2026-01-01 }
     const out = JSON.parse(stderr);
     expect(out.ok).toBe(false);
     expect(out.error.details.token).toBe("nonsense");
-    expect(out.error.choices).toContain("memory");
+    expect(out.error.choices).toContain("feature");
     expect(out.error.choices).toContain("playbook");
   });
 

@@ -60,7 +60,6 @@ import {
   FIELD_VALUES,
   ITEMS_FOLDER,
   KINDS,
-  PROJECTS_FOLDER,
   type RegistryRow,
   TYPE_ALIAS,
   defaultRegistryIndex,
@@ -286,8 +285,7 @@ export interface Placement {
   dir: string;
   /** The owner's folder, for an owned document or an entity that opens one. */
   ownerDir: string | null;
-  /** The owner's entry file (`feature.md`, `item.md`, or a legacy project's
-   *  `proposal.md`) as it will be once written — after any promotion. `new`
+  /** The owner's entry file (`feature.md` or `item.md`) as it will be once written — after any promotion. `new`
    *  links it from the document (D17). `null` when there is nothing to link. */
   entry: string | null;
   ownerTitle: string | null;
@@ -319,10 +317,6 @@ const OWNER_FORMS = "`--owner feature/<slug>` or `--owner item/<slug-or-id>`";
  *   resolved like every other reference (`resolveRef`). A single-file item is
  *   promoted to a folder first — by the caller, just before writing, so a
  *   refusal leaves the tree alone.
- *
- * LEGACY, until this repository's Phase 5 migration: `--owner project/<slug>`
- * names a folder under `projects/`, the owner the old types used. It is
- * deleted with the retired types.
  */
 export function resolveDirectory(
   ctx: Ctx,
@@ -364,26 +358,6 @@ export function resolveDirectory(
     throw new UsageError(
       `a \`${row.type}\` lives inside a feature or an item — pass ${OWNER_FORMS}.`
     );
-
-  // LEGACY — `projects/<slug>/`, until Phase 5 retires it.
-  const legacy = /^project\/(.*)$/.exec(owner);
-  if (legacy) {
-    const slug = slugify(legacy[1] as string);
-    const ownerDir = assertInside(ctx.docsRoot, join(ctx.docsRoot, PROJECTS_FOLDER, slug));
-    if (!existsSync(ownerDir))
-      throw new NotFoundError(
-        `no \`project/${slug}\` at ${relative(ctx.repoRoot, ownerDir)} — a legacy project owner must already exist; new work goes in a feature (\`pdocs new feature <slug>\`).`
-      );
-    const entry = join(ownerDir, ENTITY_FILE[PROJECTS_FOLDER]!.name);
-    const has = existsSync(entry);
-    return {
-      dir: row.folder ? join(ownerDir, row.folder) : ownerDir,
-      ownerDir,
-      entry: has ? entry : null,
-      ownerTitle: has ? titleOf(entry) : null,
-      promote: null,
-    };
-  }
 
   const e = resolveRef(model(), owner, ["feature", "item"]);
   const entryNow = join(ctx.repoRoot, e.path);
@@ -864,7 +838,7 @@ export const newCommand: Command = {
       metavar: "<ref>",
       summary:
         "What an owned document (plan, session, …) belongs to: feature/<slug> or item/<slug-or-id>. " +
-        "A single-file item is promoted to a folder first. LEGACY until 9.0.0's migration: project/<slug>.",
+        "A single-file item is promoted to a folder first.",
     },
     {
       flag: "--variant",

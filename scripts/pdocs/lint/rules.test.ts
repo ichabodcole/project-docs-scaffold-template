@@ -23,7 +23,6 @@ import { basename, dirname, join, resolve } from "node:path";
 import {
   type Ctx,
   DURABLE_TYPE,
-  PROJECT_FILE_TYPE,
   SPEC,
   catalogEntries,
   context,
@@ -44,7 +43,7 @@ import {
 } from "./rules.ts";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import { childEnv } from "../test-env.ts";
-import { buildRegistry } from "./registry.ts";
+import { OWNED_FILE_TYPE, buildRegistry } from "./registry.ts";
 import { collect } from "./collect.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
@@ -56,10 +55,8 @@ afterAll(() => {
 });
 
 /**
- * The tier arrays this repository's own `.project-docs.json` states: the legacy
- * folders, still listed until this repository migrates. A fixture states them
- * because the DEFAULTS are the new layout, and the rules below were written
- * against the old one.
+ * The tier arrays a fixture states: the 9.0.0 layout, plus the two retired
+ * library folders an adopter may keep.
  */
 const LEGACY_TIERS = {
   durable: [
@@ -70,17 +67,11 @@ const LEGACY_TIERS = {
     "lessons-learned",
     "memories",
   ],
-  workbench: [
-    "backlog",
-    "briefs",
-    "investigations",
-    "projects",
-    "reports",
-    "fragments",
-    "cycles",
-    "features",
-    "items",
-  ],
+  workbench: ["cycles", "features", "items"],
+  // The two library folders 9.0.0 retires, kept the way an adopter keeps them
+  // (D11): declared, so the fixtures below that use them as "a library folder"
+  // stay lintable.
+  types: { memories: "memory", "lessons-learned": "lesson" },
 };
 
 /** A fixture repository: `.project-docs.json`, a docs root, and the files given. */
@@ -116,11 +107,11 @@ const GENERATED = "{ by: test, at: 2026-09-03 }";
 // ---------------------------------------------------------------------------------------
 
 describe("the thin tier — presence and vocabulary", () => {
-  test("a proposal with a lifecycle outside its vocabulary", () => {
+  test("a feature with a lifecycle outside its vocabulary", () => {
     const ctx = fixture({
-      "docs/projects/x/proposal.md":
+      "docs/features/x/feature.md":
         fm({
-          type: "proposal",
+          type: "feature",
           title: "X",
           description: "A thing.",
           status: "stable",
@@ -134,12 +125,12 @@ describe("the thin tier — presence and vocabulary", () => {
     expect(problems[0]).toContain('"shipped"');
     // The message names the vocabulary, because a reader who got it wrong does
     // not know what the right answers are.
-    expect(problems[0]).toContain("implemented");
+    expect(problems[0]).toContain("done");
   });
 
   test("the same value is fine on a plan, which has a different vocabulary", () => {
     const ctx = fixture({
-      "docs/projects/x/plan.md":
+      "docs/features/x/plan.md":
         fm({
           type: "plan",
           title: "X",
@@ -156,7 +147,7 @@ describe("the thin tier — presence and vocabulary", () => {
   // destroys what the document is for, so it is an error rather than an option.
   test("a session carrying a lifecycle at all", () => {
     const ctx = fixture({
-      "docs/projects/x/sessions/2026-09-03-a.md":
+      "docs/features/x/sessions/2026-09-03-a.md":
         fm({
           type: "session",
           title: "A",
@@ -172,13 +163,12 @@ describe("the thin tier — presence and vocabulary", () => {
 
   test("a document whose type does not match its position", () => {
     const ctx = fixture({
-      "docs/briefs/2026-09-03-a.md":
+      "docs/items/a.md":
         fm({
-          type: "investigation",
+          type: "report",
           title: "A",
-          description: "A brief.",
+          description: "A report where an item belongs.",
           status: "stable",
-          lifecycle: "active",
           generated: GENERATED,
         }) + "# A\n",
     });
@@ -187,7 +177,7 @@ describe("the thin tier — presence and vocabulary", () => {
 
   test("`status` accepts only OKF's three values", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md":
+      "docs/features/x/reports/2026-09-03-a.md":
         fm({
           type: "report",
           title: "A",
@@ -202,7 +192,7 @@ describe("the thin tier — presence and vocabulary", () => {
 
   test("a field nobody declared", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md":
+      "docs/features/x/reports/2026-09-03-a.md":
         fm({
           type: "report",
           title: "A",
@@ -224,7 +214,7 @@ describe("the thin tier — presence and vocabulary", () => {
   // carry two disagreeing dates.
   test("a legacy date field is rejected, not ignored", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md":
+      "docs/features/x/reports/2026-09-03-a.md":
         fm({
           type: "report",
           title: "A",
@@ -239,7 +229,7 @@ describe("the thin tier — presence and vocabulary", () => {
 
   test("`generated` must be the OKF 0.2 mapping, not a scalar", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md":
+      "docs/features/x/reports/2026-09-03-a.md":
         fm({
           type: "report",
           title: "A",
@@ -253,14 +243,14 @@ describe("the thin tier — presence and vocabulary", () => {
 
   test("a README carries no frontmatter and is not asked for any", () => {
     const ctx = fixture({
-      "docs/reports/README.md": "# Reports\n\nWhat goes here.\n",
+      "docs/features/x/reports/README.md": "# Reports\n\nWhat goes here.\n",
     });
     expect(thinTier(ctx)).toEqual([]);
   });
 
   test("a template is skipped entirely, placeholder links and all", () => {
     const ctx = fixture({
-      "docs/reports/TEMPLATE.md":
+      "docs/features/x/reports/TEMPLATE.md":
         "# [Title]\n\nSee [the plan](../projects/<name>/plan.md).\n",
     });
     expect(thinTier(ctx)).toEqual([]);
@@ -271,7 +261,7 @@ describe("the thin tier — presence and vocabulary", () => {
 
   test("links are checked on documents and on the folder READMEs alike", () => {
     const ctx = fixture({
-      "docs/reports/README.md": "# Reports\n\nSee [nothing](./nowhere.md).\n",
+      "docs/features/x/reports/README.md": "# Reports\n\nSee [nothing](./nowhere.md).\n",
     });
     expect(thinTier(ctx).some((p) => p.startsWith("MISSING FILE"))).toBe(true);
   });
@@ -343,11 +333,11 @@ describe("what counts as a template — exact shapes, never a substring", () => 
 
   test("and on the workbench", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-14-templates.md":
+      "docs/features/x/reports/2026-09-14-templates.md":
         "# Templates\n\nNo frontmatter.\n",
     });
     expect(thinTier(ctx)).toContain(
-      "NO FRONTMATTER docs/reports/2026-09-14-templates.md  (see docs/SCHEMA.md)"
+      "NO FRONTMATTER docs/features/x/reports/2026-09-14-templates.md  (see docs/SCHEMA.md)"
     );
   });
 
@@ -409,15 +399,15 @@ describe("lint.exclude — files that are not documentation", () => {
 
   test("an excluded file is invisible to the thin tier", () => {
     const ctx = fixture(
-      { "docs/projects/x/artifacts/marp-prototype.md": deck },
-      { exclude: ["docs/projects/*/artifacts/*-prototype.md"] }
+      { "docs/features/x/artifacts/marp-prototype.md": deck },
+      { exclude: ["docs/features/*/artifacts/*-prototype.md"] }
     );
     expect(thinTier(ctx)).toEqual([]);
   });
 
   test("without the exclusion the same file is a wall of unknown fields", () => {
     const ctx = fixture({
-      "docs/projects/x/artifacts/marp-prototype.md": deck,
+      "docs/features/x/artifacts/marp-prototype.md": deck,
     });
     const problems = thinTier(ctx);
     expect(problems.some((p) => p.startsWith("UNKNOWN FIELD"))).toBe(true);
@@ -446,7 +436,7 @@ describe("lint.exclude — files that are not documentation", () => {
 
   test("and to --report, which must agree with the tiers about what exists", () => {
     const ctx = fixture(
-      { "docs/memories/deck.md": deck, "docs/briefs/2026-09-03-a.md": "# A\n" },
+      { "docs/memories/deck.md": deck, "docs/items/a.md": "# A\n" },
       { exclude: ["docs/memories/**"] }
     );
     expect(libraryFieldChecks(ctx)).toEqual([]);
@@ -455,8 +445,8 @@ describe("lint.exclude — files that are not documentation", () => {
 
   test("`**` crosses segments, `*` does not", () => {
     const files = {
-      "docs/briefs/2026-09-03-a.md": "# A\n",
-      "docs/projects/x/sessions/2026-09-03-b.md": "# B\n",
+      "docs/items/a.md": "# A\n",
+      "docs/features/x/sessions/2026-09-03-b.md": "# B\n",
     };
     expect(thinTier(fixture(files, { exclude: ["docs/**"] }))).toEqual([]);
     // One segment deep only: the session two levels down is still walked.
@@ -466,7 +456,7 @@ describe("lint.exclude — files that are not documentation", () => {
   });
 
   test("no exclusions is the default, and costs nothing", () => {
-    const ctx = fixture({ "docs/briefs/2026-09-03-a.md": "# A\n" });
+    const ctx = fixture({ "docs/items/a.md": "# A\n" });
     expect(ctx.config.lint.exclude).toEqual([]);
     expect(thinTier(ctx)).toHaveLength(1);
   });
@@ -493,7 +483,7 @@ describe("frontmatter a real YAML parser would reject", () => {
   // as a string, so the document passes the gate and breaks in the next tool.
   test("an unquoted value containing a colon-space", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md": doc(
+      "docs/features/x/reports/2026-09-03-a.md": doc(
         "finalize-branch stopped assuming: it verifies capability."
       ),
     });
@@ -505,7 +495,7 @@ describe("frontmatter a real YAML parser would reject", () => {
 
   test("the same value, quoted, is fine", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md": doc(
+      "docs/features/x/reports/2026-09-03-a.md": doc(
         '"finalize-branch stopped assuming: it verifies capability."'
       ),
     });
@@ -514,20 +504,20 @@ describe("frontmatter a real YAML parser would reject", () => {
 
   test("a colon with no space after it is not a mapping", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md": doc("Ratios of 3:1 and up."),
+      "docs/features/x/reports/2026-09-03-a.md": doc("Ratios of 3:1 and up."),
     });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 
   test("`generated: { by, at }` is a flow mapping, not a loose scalar", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md": doc("A plain sentence."),
+      "docs/features/x/reports/2026-09-03-a.md": doc("A plain sentence."),
     });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 
   test("templates and READMEs are not read here either", () => {
-    const ctx = fixture({ "docs/reports/TEMPLATE.md": doc("Broken: yes.") });
+    const ctx = fixture({ "docs/features/x/reports/TEMPLATE.md": doc("Broken: yes.") });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
 
@@ -537,7 +527,7 @@ describe("frontmatter a real YAML parser would reject", () => {
   // rule about a hazard that was in the comment, not in the value.
   test("an inline comment containing a colon is not part of the scalar", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-04-a.md":
+      "docs/features/x/reports/2026-09-04-a.md":
         "---\ntype: report\ntitle: A\ndescription: A report.\n" +
         "status: draft # OKF \u00a75.4: draft | stable | deprecated\n" +
         "generated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
@@ -548,7 +538,7 @@ describe("frontmatter a real YAML parser would reject", () => {
 
   test("a `#` inside a quoted value is still part of the value, not a comment", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-04-b.md":
+      "docs/features/x/reports/2026-09-04-b.md":
         '---\ntype: report\ntitle: B\ndescription: "Tagged #urgent: act now"\n' +
         "status: stable\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# B\n",
     });
@@ -565,7 +555,6 @@ describe("at most one cycle is active", () => {
       status: "stable",
       lifecycle,
       generated: GENERATED,
-      scope: "[project/x]",
     }) + `# ${title}\n`;
 
   test("one is fine", () => {
@@ -754,15 +743,18 @@ describe("the contract and the code agree", () => {
 
   test("every type the lint knows is documented, and vice versa", () => {
     const stated = schemaLifecycles(SCHEMA);
-    expect(stated.get("proposal")).toContain("implemented");
+    expect(stated.get("feature")).toContain("done");
     expect(stated.get("session")).toBeNull();
-    expect(stated.get("memory")).toBeNull();
+    expect(stated.get("playbook")).toBeNull();
+    // The types retired in 9.0.0 are in neither.
+    expect(stated.has("proposal")).toBe(false);
+    expect(stated.has("memory")).toBe(false);
   });
 
   test("a table that disagrees is caught", () => {
     const broken = SCHEMA.replace(
-      "| `active` · `spent`",
-      "| `active` · `finished`"
+      "| `planned` · `active` · `closed` · `abandoned`",
+      "| `planned` · `active` · `finished` · `abandoned`"
     );
     expect(
       schemaTableChecks(broken).some((p) => p.startsWith("SCHEMA DISAGREES"))
@@ -771,7 +763,7 @@ describe("the contract and the code agree", () => {
 
   test("a table that omits a type the lint enforces is caught", () => {
     const broken = SCHEMA.split("\n")
-      .filter((l) => !l.startsWith("| `brief`"))
+      .filter((l) => !l.startsWith("| `cycle`"))
       .join("\n");
     expect(
       schemaTableChecks(broken).some((p) => p.startsWith("SCHEMA MISSING TYPE"))
@@ -846,9 +838,9 @@ describe("the state groups: SCHEMA.md and STATE_GROUP agree", () => {
 describe("--report", () => {
   test("groups by field, then by folder, and counts documents not problems", () => {
     const ctx = fixture({
-      "docs/briefs/2026-09-03-a.md": "# A\n\nNo frontmatter.\n",
-      "docs/briefs/2026-09-03-b.md": "# B\n\nNo frontmatter either.\n",
-      "docs/reports/2026-09-03-c.md":
+      "docs/items/2026-09-03-a.md": "# A\n\nNo frontmatter.\n",
+      "docs/items/2026-09-03-b.md": "# B\n\nNo frontmatter either.\n",
+      "docs/features/x/reports/2026-09-03-c.md":
         fm({
           type: "report",
           title: "C",
@@ -859,10 +851,10 @@ describe("--report", () => {
     const out = reportLines(ctx).join("\n");
     expect(out).toContain("3 missing field(s) across 3 of 3 document(s)");
     expect(out).toContain("frontmatter  (2)");
-    expect(out).toContain("docs/briefs/");
+    expect(out).toContain("docs/items/");
     expect(out).toContain("description  (1)");
     // Named, not just counted. A worklist that says "two files somewhere under
-    // docs/briefs/ are missing frontmatter" is not a worklist — you had to
+    // docs/items/ are missing frontmatter" is not a worklist — you had to
     // re-implement the check to find them.
     expect(out).toContain("2026-09-03-a.md");
     expect(out).toContain("2026-09-03-b.md");
@@ -872,7 +864,7 @@ describe("--report", () => {
   // one report that never fails is how it stops being fixed.
   test("a broken link is not a missing field", () => {
     const ctx = fixture({
-      "docs/reports/2026-09-03-a.md":
+      "docs/features/x/reports/2026-09-03-a.md":
         fm({
           type: "report",
           title: "A",
@@ -905,16 +897,16 @@ describe("--report", () => {
 
     test("is set apart, pointing at lint.exclude and the SCHEMA section", () => {
       const ctx = fixture({
-        "docs/projects/x/artifacts/slides.md": slidev,
-        "docs/projects/x/artifacts/deck.md": marp,
-        "docs/projects/x/artifacts/notes.md": typeless,
+        "docs/features/x/artifacts/slides.md": slidev,
+        "docs/features/x/artifacts/deck.md": marp,
+        "docs/features/x/artifacts/notes.md": typeless,
       });
       const out = reportLines(ctx).join("\n");
       expect(out).toContain(
         "2 file(s) look like slide decks rather than documents — consider `lint.exclude`:"
       );
-      expect(out).toContain("docs/projects/x/artifacts/slides.md");
-      expect(out).toContain("docs/projects/x/artifacts/deck.md");
+      expect(out).toContain("docs/features/x/artifacts/slides.md");
+      expect(out).toContain("docs/features/x/artifacts/deck.md");
       expect(out).toContain(
         'See docs/SCHEMA.md § "Files that are not documentation".'
       );
@@ -928,7 +920,7 @@ describe("--report", () => {
 
     test("a deck that carries a type is a document that says so, and is not second-guessed", () => {
       const ctx = fixture({
-        "docs/projects/x/artifacts/slides.md": slidev.replace(
+        "docs/features/x/artifacts/slides.md": slidev.replace(
           "---\n",
           "---\ntype: artifact\n"
         ),
@@ -938,11 +930,11 @@ describe("--report", () => {
 
     test("an excluded deck is not mentioned at all", () => {
       const ctx = fixture(
-        { "docs/projects/x/artifacts/slides.md": slidev },
+        { "docs/features/x/artifacts/slides.md": slidev },
         {
           exclude: [
-            "docs/projects/*/artifacts/*-slides.md",
-            "docs/projects/x/artifacts/slides.md",
+            "docs/features/*/artifacts/*-slides.md",
+            "docs/features/x/artifacts/slides.md",
           ],
         }
       );
@@ -994,15 +986,16 @@ function pathFor(type: string): string {
     if (t === type) return `docs/${folder}/page.md`;
   for (const [folder, spec] of Object.entries(SPEC))
     if (spec.type === type) return `docs/${folder}/2026-09-03-page.md`;
-  for (const [file, t] of Object.entries(PROJECT_FILE_TYPE))
-    if (t === type) return `docs/projects/x/${file}`;
+  for (const [file, t] of Object.entries(OWNED_FILE_TYPE))
+    if (t === type) return `docs/features/x/${file}`;
   // The work taxonomy's owners. A feature template renders into a feature
   // folder, and an owned document into one too — the owner its links assume.
   if (type === "feature") return "docs/features/x/feature.md";
   if (type === "item") return "docs/items/2026-09-03-page.md";
   if (type === "write-up") return "docs/items/x/write-up.md";
-  if (type === "session") return "docs/projects/x/sessions/2026-09-03-a.md";
-  if (type === "artifact") return "docs/projects/x/artifacts/a.md";
+  if (type === "session") return "docs/features/x/sessions/2026-09-03-a.md";
+  if (type === "artifact") return "docs/features/x/artifacts/a.md";
+  if (type === "report") return "docs/features/x/reports/2026-09-03-a-report.md";
   throw new Error(`no home for type "${type}"`);
 }
 
@@ -1141,7 +1134,7 @@ describe("the library gets the same field rules as the workbench", () => {
       "MISSING tags"
     );
     const session = fixture({
-      "docs/projects/x/sessions/2026-09-03-a.md":
+      "docs/features/x/sessions/2026-09-03-a.md":
         "---\ntype: session\ntitle: A\ndescription: A session.\n" +
         "status: stable\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
     });
@@ -1154,9 +1147,10 @@ describe("what the modes tell you", () => {
   // nothing at all.
   test("--report says how many documents it looked at", () => {
     const ctx = fixture({
-      "docs/briefs/2026-09-03-a.md":
-        "---\ntype: brief\ntitle: A\ndescription: A brief.\nstatus: stable\n" +
-        "lifecycle: active\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
+      "docs/items/a.md":
+        "---\ntype: item\ntitle: A\ndescription: An item.\nstatus: stable\n" +
+        "lifecycle: backlog\nid: 0190f4b2-7c3a-7d4e-8f00-000000000001\nkind: task\n" +
+        "generated: { by: t, at: 2026-09-03 }\n---\n\n# A\n",
     });
     expect(reportLines(ctx)[0]).toMatch(/across 0 of \d+ document\(s\)/);
   });
@@ -1235,9 +1229,9 @@ describe("--root", () => {
 
   test("reports problems found in that tree", () => {
     const root = minimal({
-      "docs/projects/x/proposal.md":
+      "docs/features/x/feature.md":
         fm({
-          type: "proposal",
+          type: "feature",
           title: "X",
           description: "A thing.",
           status: "stable",
@@ -1250,7 +1244,7 @@ describe("--root", () => {
     // `Outcome.Dirty` in `scripts/pdocs/envelope.ts`.
     expect(code).toBe(9);
     expect(stdout).toContain("BAD LIFECYCLE");
-    expect(stdout).toContain("docs/projects/x/proposal.md");
+    expect(stdout).toContain("docs/features/x/feature.md");
     expect(stdout).toContain("docs-lint: 1 problem(s)");
   });
 
@@ -1317,18 +1311,18 @@ describe("--root", () => {
 describe("the gate — a link may leave docs/, not the repository", () => {
   const page = (body: string) =>
     fm({
-      type: "investigation",
+      type: "cycle",
       title: "Co-presence",
-      description: "An investigation that cites other checkouts.",
+      description: "A cycle that cites other checkouts.",
       status: "stable",
-      lifecycle: "concluded",
+      lifecycle: "closed",
       generated: GENERATED,
     }) + `# Co-presence\n\n${body}\n`;
 
   test("a sibling checkout that EXISTS fails locally, in both tiers; a file elsewhere in the repository passes", () => {
     const root = minimal({
       "src/checker.ts": "export {};\n",
-      "docs/investigations/2026-07-14-co-presence.md": page(
+      "docs/cycles/2026-07-14-co-presence.md": page(
         "[inside](../../src/checker.ts)"
       ),
     });
@@ -1341,7 +1335,7 @@ describe("the gate — a link may leave docs/, not the repository", () => {
     const rel = `../../../${basename(sibling)}/proposal.md`;
     const abs = join(sibling, "proposal.md");
     writeFileSync(
-      join(root, "docs/investigations/2026-07-14-co-presence.md"),
+      join(root, "docs/cycles/2026-07-14-co-presence.md"),
       page(`[inside](../../src/checker.ts) [rel](${rel}) [abs](${abs})`)
     );
     // The library tier goes through `collectDocsLint`, a different call site.
@@ -1355,10 +1349,10 @@ describe("the gate — a link may leave docs/, not the repository", () => {
     const hint =
       "(not portable: absolute, or leaves the repository — it resolves on this machine and in no other checkout)";
     expect(stdout).toContain(
-      `MISSING FILE   docs/investigations/2026-07-14-co-presence.md: ${rel}  ${hint}`
+      `MISSING FILE   docs/cycles/2026-07-14-co-presence.md: ${rel}  ${hint}`
     );
     expect(stdout).toContain(
-      `MISSING FILE   docs/investigations/2026-07-14-co-presence.md: ${abs}  ${hint}`
+      `MISSING FILE   docs/cycles/2026-07-14-co-presence.md: ${abs}  ${hint}`
     );
     expect(stdout).toContain(`MISSING FILE   index.md: ${abs}  ${hint}`);
     expect(stdout).not.toContain("src/checker.ts");
@@ -1375,13 +1369,13 @@ describe("the gate — the repository is git's, not the config's", () => {
     roots.push(mono);
     const app = join(mono, "packages/app");
     const files = minimalFiles({
-      "docs/investigations/2026-07-14-mono.md":
+      "docs/cycles/2026-07-14-mono.md":
         fm({
-          type: "investigation",
+          type: "cycle",
           title: "Mono",
-          description: "An investigation that cites the monorepo root.",
+          description: "A cycle that cites the monorepo root.",
           status: "stable",
-          lifecycle: "concluded",
+          lifecycle: "closed",
           generated: GENERATED,
         }) +
         "# Mono\n\n[c](../../../../CONTRIBUTING.md) [o](../../../../../outside.md)\n",
@@ -1420,13 +1414,13 @@ describe("the gate — the repository is git's, not the config's", () => {
     const real = join(base, "real");
     const app = join(real, "packages/app");
     const files = minimalFiles({
-      "docs/investigations/2026-07-14-mono.md":
+      "docs/cycles/2026-07-14-mono.md":
         fm({
-          type: "investigation",
+          type: "cycle",
           title: "Mono",
-          description: "An investigation that climbs out and back in.",
+          description: "A cycle that climbs out and back in.",
           status: "stable",
-          lifecycle: "concluded",
+          lifecycle: "closed",
           generated: GENERATED,
         }) + "# Mono\n\n[c](../../../../../real/CONTRIBUTING.md)\n",
     });
@@ -1468,13 +1462,13 @@ describe("the gate — the repository is git's, not the config's", () => {
     const main = join(base, "main");
     const app = join(main, "packages/app");
     const files = minimalFiles({
-      "docs/investigations/2026-07-14-mono.md":
+      "docs/cycles/2026-07-14-mono.md":
         fm({
-          type: "investigation",
+          type: "cycle",
           title: "Mono",
-          description: "An investigation that cites the monorepo root.",
+          description: "A cycle that cites the monorepo root.",
           status: "stable",
-          lifecycle: "concluded",
+          lifecycle: "closed",
           generated: GENERATED,
         }) + "# Mono\n\n[c](../../../../CONTRIBUTING.md)\n",
     });
@@ -1713,40 +1707,40 @@ describe("UNKNOWN FIELD points at lint.exclude only for a file that is not ours"
 
   test("another tool's file — no `type`, its own key — gets the pointer", () => {
     const ctx = fixture({
-      "docs/projects/scriptorium/SKILL.draft.md":
+      "docs/features/scriptorium/SKILL.draft.md":
         "---\nname: scriptorium\ndescription: A skill draft.\n---\n\n# Draft\n",
     });
     const row = thinTier(ctx).find((p) => p.startsWith("UNKNOWN FIELD"));
     expect(row).toBe(
-      'UNKNOWN FIELD  docs/projects/scriptorium/SKILL.draft.md: "name"  ' +
+      'UNKNOWN FIELD  docs/features/scriptorium/SKILL.draft.md: "name"  ' +
         `(not a project-docs document? ${hint})`
     );
     // …and excluding it, as the row says, is what clears it.
     const excluded = fixture(
       {
-        "docs/projects/scriptorium/SKILL.draft.md":
+        "docs/features/scriptorium/SKILL.draft.md":
           "---\nname: scriptorium\ndescription: A skill draft.\n---\n\n# Draft\n",
       },
-      { exclude: ["docs/projects/scriptorium/SKILL.draft.md"] }
+      { exclude: ["docs/features/scriptorium/SKILL.draft.md"] }
     );
     expect(thinTier(excluded)).toEqual([]);
   });
 
   test("a document of ours with a stray key is told to fix the key, not to leave the gate", () => {
     const ctx = fixture({
-      "docs/backlog/2026-09-03-a.md":
+      "docs/cycles/2026-09-a.md":
         fm({
-          type: "backlog",
+          type: "cycle",
           title: "A",
           description: "A thing.",
           status: "draft",
-          lifecycle: "open",
+          lifecycle: "planned",
           owner: "someone",
           generated: GENERATED,
         }) + "# A\n",
     });
     expect(thinTier(ctx)).toEqual([
-      'UNKNOWN FIELD  docs/backlog/2026-09-03-a.md: "owner"',
+      'UNKNOWN FIELD  docs/cycles/2026-09-a.md: "owner"',
     ]);
   });
 
@@ -1754,12 +1748,12 @@ describe("UNKNOWN FIELD points at lint.exclude only for a file that is not ours"
   // still read the file's MISSING rows and must not read the hint as a field.
   test("the report still parses the rows beside it", () => {
     const ctx = fixture({
-      "docs/projects/scriptorium/SKILL.draft.md":
+      "docs/features/scriptorium/SKILL.draft.md":
         "---\nname: scriptorium\ndescription: A skill draft.\n---\n\n# Draft\n",
     });
     expect(reportDocuments(ctx)).toEqual([
       {
-        path: "docs/projects/scriptorium/SKILL.draft.md",
+        path: "docs/features/scriptorium/SKILL.draft.md",
         tier: "workbench",
         missing: ["type", "title", "status", "generated"],
       },
@@ -1776,8 +1770,8 @@ describe("reportDocuments — the worklist as records", () => {
     };
     // Twelve in one folder: the text names ten and says "… and 2 more".
     for (let i = 1; i <= 12; i++)
-      files[`docs/briefs/2026-09-${String(i).padStart(2, "0")}-b.md`] =
-        bare("brief");
+      files[`docs/cycles/2026-09-${String(i).padStart(2, "0")}-b.md`] =
+        bare("cycle");
     const ctx = fixture(files);
 
     const docs = reportDocuments(ctx);
@@ -1788,11 +1782,11 @@ describe("reportDocuments — the worklist as records", () => {
     expect(docs.find((d) => d.path === "docs/memories/a-memory.md")).toEqual({
       path: "docs/memories/a-memory.md",
       tier: "library",
-      // A library page owes `tags`; a brief does not, and owes `lifecycle`.
+      // A library page owes `tags`; a cycle does not, and owes `lifecycle`.
       missing: ["description", "status", "generated", "tags"],
     });
-    expect(docs.find((d) => d.path === "docs/briefs/2026-09-01-b.md")).toEqual({
-      path: "docs/briefs/2026-09-01-b.md",
+    expect(docs.find((d) => d.path === "docs/cycles/2026-09-01-b.md")).toEqual({
+      path: "docs/cycles/2026-09-01-b.md",
       tier: "workbench",
       missing: ["description", "status", "generated", "lifecycle"],
     });
@@ -1801,16 +1795,16 @@ describe("reportDocuments — the worklist as records", () => {
   test("a path with a space in it arrives whole, in both tiers, hint or no hint", () => {
     const ctx = fixture({
       "docs/memories/has space.md": bare("memory"),
-      "docs/briefs/2026-09-01 has space.md": bare("brief"),
-      "docs/briefs/no frontmatter.md": "# Nothing\n",
+      "docs/cycles/2026-09-01 has space.md": bare("cycle"),
+      "docs/cycles/no frontmatter.md": "# Nothing\n",
     });
     expect(
       reportDocuments(ctx)
         .map((d) => d.path)
         .sort()
     ).toEqual([
-      "docs/briefs/2026-09-01 has space.md",
-      "docs/briefs/no frontmatter.md",
+      "docs/cycles/2026-09-01 has space.md",
+      "docs/cycles/no frontmatter.md",
       "docs/memories/has space.md",
     ]);
   });
@@ -1830,7 +1824,7 @@ describe("reportDocuments — the worklist as records", () => {
 
   test("a slide deck is in neither rendering's worklist", () => {
     const ctx = fixture({
-      "docs/projects/x/artifacts/deck.md":
+      "docs/features/x/artifacts/deck.md":
         "---\nmarp: true\ntheme: default\n---\n\n# Deck\n",
     });
     expect(reportDocuments(ctx)).toEqual([]);
@@ -1947,7 +1941,6 @@ describe("position typing — features/ and items/", () => {
     ["items/b/item.md", "item"],
     ["items/b/write-up.md", "write-up"],
     ["items/b/sessions/2026-01-01-y.md", "session"],
-    ["projects/c/proposal.md", "proposal"],
   ];
 
   const typed = (paths: string[]) => {
@@ -2194,10 +2187,9 @@ describe("a loose file directly in an owner folder (review F)", () => {
     expect(problems[0]).toContain("features/<slug>/feature.md");
   });
 
-  test("a legacy projects/x.md is still an artifact, as on develop", () => {
-    const ctx = fixture({ "docs/projects/x.md": page({ type: "artifact" }) }, { skip: [] });
-    expect(workbenchFiles(ctx).find((f) => f.rel === "docs/projects/x.md")?.type).toBe("artifact");
-    expect(thinTier(ctx)).toEqual([]);
+  test("a retired projects/ folder is walked by nothing: the lint knows no such owner", () => {
+    const ctx = fixture({ "docs/projects/x/proposal.md": page({ type: "proposal" }) }, { skip: [] });
+    expect(workbenchFiles(ctx).find((f) => f.rel.startsWith("docs/projects/"))).toBeUndefined();
   });
 
   test("items/feature.md is a MISPLACED ENTITY, not an item missing its fields", () => {

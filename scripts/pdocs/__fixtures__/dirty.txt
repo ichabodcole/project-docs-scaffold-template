@@ -35,7 +35,7 @@ MISSING id   docs/items/missing-fields.md
 MISSING kind   docs/items/missing-fields.md
 MISSING lifecycle   docs/items/missing-fields.md
 WRONG TYPE     docs/items/wrong-type.md: "feature" (its position says "item")
-BAD TAG        docs/backlog/bad-tag.md: "Not Kebab"  (kebab-case)
+BAD TAG        docs/cycles/2026-01-bad-tag.md: "Not Kebab"  (kebab-case)
 TWO ACTIVE CYCLES  docs/cycles/one.md, docs/cycles/two.md  (at most one cycle is `lifecycle: active`)
 ARCHIVED NOT TERMINAL  docs/items/_archive/unfinished.md: "active"  (only done or dropped may sit in _archive/; `lifecycle` is the source of truth)
 MISSING ENTITY FILE  docs/items/misplaced/  (expected item.md)

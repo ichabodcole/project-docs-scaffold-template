@@ -50,9 +50,6 @@ import {
   OWNED_FILE_TYPE,
   PRIORITIES,
   OWNER_SUBFOLDER,
-  PROJECTS_FOLDER,
-  PROJECT_FILE_TYPE,
-  PROJECT_SPEC,
   type RegistryRow,
   ROOT_PAGE_TYPE,
   SPEC,
@@ -265,15 +262,10 @@ export function excluder(ctx: Ctx): (repoRelative: string) => boolean {
 
 /**
  * The type system's source tables, and the registry that unifies them, live in
- * `registry.ts`.
- *
- * They are re-exported here because this is the path that imports them: the
- * v2.6-to-v2.7 codemod's test reads all five from `rules.ts` to prove its own
- * copies are equal, and a moved export would have broken a test whose whole
- * purpose is to notice drift. See `registry.ts` for why the dependency runs the
- * way it does rather than the other way.
+ * `registry.ts`; re-exported here for the readers that reach them through the
+ * lint. See `registry.ts` for why the dependency runs that way.
  */
-export { DURABLE_TYPE, PROJECT_FILE_TYPE, PROJECT_SPEC, ROOT_PAGE_TYPE, SPEC };
+export { DURABLE_TYPE, ROOT_PAGE_TYPE, SPEC };
 
 /** Library types carry no lifecycle: a living page is current or it is not, and `status` says which. */
 export const DURABLE_TYPES = [
@@ -319,7 +311,7 @@ export interface WorkbenchFile {
 }
 
 /** The folders whose documents are typed by `ownedType` rather than by folder. */
-const OWNER_FOLDERS = new Set([FEATURES_FOLDER, ITEMS_FOLDER, PROJECTS_FOLDER]);
+const OWNER_FOLDERS = new Set([FEATURES_FOLDER, ITEMS_FOLDER]);
 
 /** Every workbench file, paired with the `type` its position says it must carry. */
 export function workbenchFiles(ctx: Ctx): WorkbenchFile[] {
@@ -331,8 +323,7 @@ export function workbenchFiles(ctx: Ctx): WorkbenchFile[] {
   // says: the work rules are ABOUT the archive (only finished work may sit
   // there, and an archived item still holds its id against the deletion
   // check), so skipping it would switch those rules off rather than quiet
-  // them. A tree mid-migration keeps `_archive` in `skip` for its legacy
-  // folders; this is the exception for the two new owners.
+  // them.
   const ownerSkip = new Set([...skip].filter((name) => name !== "_archive"));
 
   for (const folder of ctx.config.lint.workbench) {
@@ -370,8 +361,7 @@ const SUBFOLDER_TYPE: Record<string, string> = Object.fromEntries(
   Object.entries(OWNER_SUBFOLDER).map(([type, folder]) => [folder, type])
 );
 
-/** `feature.md` → `feature`, `item.md` → `item`: the entity files of the new
- *  owners. `proposal.md` is only an entry file under the legacy `projects/`. */
+/** `feature.md` → `feature`, `item.md` → `item`: the owners' entity files. */
 const ENTITY_FILE_TYPE: Record<string, string> = {
   [ENTITY_FILE[FEATURES_FOLDER]!.name]: ENTITY_FILE[FEATURES_FOLDER]!.type,
   [ENTITY_FILE[ITEMS_FOLDER]!.name]: ENTITY_FILE[ITEMS_FOLDER]!.type,
@@ -380,9 +370,8 @@ const ENTITY_FILE_TYPE: Record<string, string> = {
 /**
  * The type a document's position inside an owner folder gives it.
  *
- * `owner` is the owner folder's name (`features`, `items`, or the legacy
- * `projects`); `within` is the path relative to it, `/`-separated. A leading
- * `_archive/` is stripped first under `features/` and `items/` only, so an
+ * `owner` is the owner folder's name (`features` or `items`); `within` is the
+ * path relative to it, `/`-separated. A leading `_archive/` is stripped first, so an
  * archived entity is typed exactly like a live one; an `_archive/` anywhere
  * deeper is just a folder of artifacts.
  */
@@ -395,7 +384,7 @@ function ownedPosition(
   within: string
 ): { type: string; misplaced: string | null; notEntity?: string } {
   let segs = within.split("/");
-  if (owner !== PROJECTS_FOLDER && segs[0] === "_archive" && segs.length > 1)
+  if (segs[0] === "_archive" && segs.length > 1)
     segs = segs.slice(1);
 
   const expected = ENTITY_FILE[owner];
@@ -408,10 +397,6 @@ function ownedPosition(
   // Loose in the owner folder itself.
   if (segs.length === 1) {
     const name = segs[0] as string;
-    // The legacy project tree, exactly as it was typed before the work
-    // taxonomy: a loose file is its fixed-name type, or an artifact.
-    if (owner === PROJECTS_FOLDER)
-      return { type: PROJECT_FILE_TYPE[name] ?? "artifact", misplaced: null };
     // Under `items/` a loose file IS an item — `items/<slug>.md` — unless it
     // is a feature's entry file, which is in the wrong owner.
     if (owner === ITEMS_FOLDER)
@@ -440,17 +425,12 @@ function ownedPosition(
         type: entity,
         misplaced: expected?.type === entity ? null : misplace(entity),
       };
-    if (owner === PROJECTS_FOLDER && name === PROJECT_FILE_TYPE_ENTRY)
-      return { type: "proposal", misplaced: null };
     return { type: OWNED_FILE_TYPE[name] ?? "artifact", misplaced: null };
   }
 
   if (entity) return { type: entity, misplaced: misplace(entity) };
   return { type: SUBFOLDER_TYPE[rest[0] as string] ?? "artifact", misplaced: null };
 }
-
-/** The legacy project folder's entry file. */
-const PROJECT_FILE_TYPE_ENTRY = ENTITY_FILE[PROJECTS_FOLDER]!.name;
 
 /**
  * Every library file, paired with the `type` its position says it must carry —

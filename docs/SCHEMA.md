@@ -87,8 +87,9 @@ this project has not declared — naming the resolved set, which includes yours.
 A declaration that collides with a folder or type the scaffold already ships is
 ignored; the built-in row wins.
 
-The same mechanism keeps a type this release retires. A project that still has
-`docs/memories/` lists `memories` in `durable`, and its pages stay lintable; see
+The same mechanism keeps a retired type. A project that still has
+`docs/memories/` lists `memories` in `durable` and declares
+`"types": { "memories": "memory" }`, and its pages stay lintable; see
 [Retired types](#retired-types).
 
 ## Layout
@@ -255,34 +256,27 @@ gate — which is the way round that drift always goes.
 "A feature or item" in the Where column means the owner folder,
 `features/<slug>/` or `items/<slug>/`.
 
-| `type`              | `lifecycle` values                                                             | Tier  | Where                                                                 |
-| ------------------- | ------------------------------------------------------------------------------ | ----- | --------------------------------------------------------------------- |
-| `architecture`      | —                                                                              | graph | `architecture/`                                                       |
-| `specification`     | —                                                                              | graph | `specifications/`                                                     |
-| `interaction`       | —                                                                              | graph | `interaction-design/`                                                 |
-| `playbook`          | —                                                                              | graph | `playbooks/`                                                          |
-| `manifesto`         | —                                                                              | graph | `PROJECT_MANIFESTO.md`                                                |
-| `summary`           | —                                                                              | graph | `PROJECT-SUMMARY.md`                                                  |
-| `index`             | —                                                                              | graph | `index.md`                                                            |
-| `feature`           | `backlog` · `ready` · `active` · `review` · `done` · `dropped`                 | thin  | `features/<slug>/feature.md`                                          |
-| `item`              | `triage` · `backlog` · `ready` · `active` · `review` · `done` · `dropped`      | thin  | `items/<slug>.md`, or `items/<slug>/item.md`                          |
-| `cycle`             | `planned` · `active` · `closed` · `abandoned`                                  | thin  | `cycles/`                                                             |
-| `plan`              | `draft` · `active` · `completed` · `abandoned`                                 | thin  | `plan.md` in a feature or item                                        |
-| `design-resolution` | `draft` · `resolved` · `superseded`                                            | thin  | `design-resolution.md` in a feature or item                           |
-| `test-plan`         | `draft` · `ready` · `active` · `completed`                                     | thin  | `test-plan.md` in a feature or item                                   |
-| `kickoff`           | —                                                                              | thin  | `DEV_KICKOFF.md` in a feature or item                                 |
-| `handoff`           | —                                                                              | thin  | `handoff.md` in a feature or item                                     |
-| `write-up`          | —                                                                              | thin  | `write-up.md` in a feature or item                                    |
-| `session`           | —                                                                              | thin  | `sessions/` in a feature or item                                      |
-| `report`            | —                                                                              | thin  | `reports/` in a feature or item                                       |
-| `artifact`          | —                                                                              | thin  | anything else in a feature or item                                    |
-| `proposal`          | `draft` · `approved` · `deferred` · `implemented` · `withdrawn` · `superseded` | thin  | retired: `projects/*/proposal.md`; removed at the end of this release |
-| `backlog`           | `open` · `done` · `promoted` · `dropped`                                       | thin  | retired: `backlog/`; removed at the end of this release               |
-| `fragment`          | `open` · `promoted` · `dropped`                                                | thin  | retired: `fragments/`; removed at the end of this release             |
-| `brief`             | `active` · `spent`                                                             | thin  | retired: `briefs/`; removed at the end of this release                |
-| `investigation`     | `active` · `concluded`                                                         | thin  | retired: `investigations/`; removed at the end of this release        |
-| `lesson`            | —                                                                              | graph | retired: `lessons-learned/`; removed at the end of this release       |
-| `memory`            | —                                                                              | graph | retired: `memories/`; removed at the end of this release              |
+| `type`              | `lifecycle` values                                                        | Tier  | Where                                        |
+| ------------------- | ------------------------------------------------------------------------- | ----- | -------------------------------------------- |
+| `architecture`      | —                                                                         | graph | `architecture/`                              |
+| `specification`     | —                                                                         | graph | `specifications/`                            |
+| `interaction`       | —                                                                         | graph | `interaction-design/`                        |
+| `playbook`          | —                                                                         | graph | `playbooks/`                                 |
+| `manifesto`         | —                                                                         | graph | `PROJECT_MANIFESTO.md`                       |
+| `summary`           | —                                                                         | graph | `PROJECT-SUMMARY.md`                         |
+| `index`             | —                                                                         | graph | `index.md`                                   |
+| `feature`           | `backlog` · `ready` · `active` · `review` · `done` · `dropped`            | thin  | `features/<slug>/feature.md`                 |
+| `item`              | `triage` · `backlog` · `ready` · `active` · `review` · `done` · `dropped` | thin  | `items/<slug>.md`, or `items/<slug>/item.md` |
+| `cycle`             | `planned` · `active` · `closed` · `abandoned`                             | thin  | `cycles/`                                    |
+| `plan`              | `draft` · `active` · `completed` · `abandoned`                            | thin  | `plan.md` in a feature or item               |
+| `design-resolution` | `draft` · `resolved` · `superseded`                                       | thin  | `design-resolution.md` in a feature or item  |
+| `test-plan`         | `draft` · `ready` · `active` · `completed`                                | thin  | `test-plan.md` in a feature or item          |
+| `kickoff`           | —                                                                         | thin  | `DEV_KICKOFF.md` in a feature or item        |
+| `handoff`           | —                                                                         | thin  | `handoff.md` in a feature or item            |
+| `write-up`          | —                                                                         | thin  | `write-up.md` in a feature or item           |
+| `session`           | —                                                                         | thin  | `sessions/` in a feature or item             |
+| `report`            | —                                                                         | thin  | `reports/` in a feature or item              |
+| `artifact`          | —                                                                         | thin  | anything else in a feature or item           |
 
 **Why the library types carry none.** A living page is never "done"; it is
 current or it is not, and `status` already says which. Adding a lifecycle to a
@@ -305,9 +299,10 @@ the scenarios exist and nothing has been executed against them yet.
 ## Retired types
 
 `proposal`, `backlog`, `fragment`, `brief`, `investigation`, `lesson` and
-`memory` are retired. A tree that still has them keeps passing the lint while
-their folders are listed in `.project-docs.json`, and `pdocs new` refuses to
-create one, naming its replacement:
+`memory` were retired in 9.0.0. The lint no longer knows them — a tree that
+still has them runs the `v2.10-to-v3.0` migration, which converts every one (and
+keeps `memories/` and `lessons-learned/` declared in `lint.types`, as above) —
+and `pdocs new` refuses each, naming its replacement:
 
 | Retired            | Write instead                                                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
@@ -531,8 +526,8 @@ play.
 - **Membership lives on the items.** An item joins a cycle by naming it in
   `cycle:`. The cycle file lists nothing; `pdocs view cycle <slug>` derives its
   scope. The `scope:` key on a cycle is retired: `scope` now names the part of
-  the project a feature or item touches. A cycle still carrying `scope:` passes
-  the lint, and nothing reads it.
+  the project a feature or item touches. A cycle carrying `scope:` is reported
+  `UNKNOWN FIELD`; the `v2.10-to-v3.0` migration moves it onto the items.
 - **An index, never a container.** Plans, sessions and artifacts stay with the
   feature or item that owns them, which outlives every cycle that touched it.
 - **Closable** when it has at least one item and every item is `done` or

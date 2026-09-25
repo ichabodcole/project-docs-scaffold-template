@@ -67,16 +67,10 @@ function tree(files: Record<string, string>): string {
             "lessons-learned",
             "memories",
           ],
-          workbench: [
-            "backlog",
-            "briefs",
-            "investigations",
-            "projects",
-            "reports",
-            "fragments",
-            "cycles",
-          ],
-          skip: ["_archive", "superpowers"],
+          workbench: ["features", "items", "cycles"],
+          // Kept, the way an adopter keeps a retired library folder (D11).
+          types: { memories: "memory", "lessons-learned": "lesson" },
+          skip: ["superpowers"],
         },
       },
       null,
@@ -143,13 +137,13 @@ const FIXTURE = {
     generated: "{ by: read-test, at: 2026-03-01 }",
   }),
 
-  "docs/projects/alpha/proposal.md": page(
+  "docs/features/alpha/feature.md": page(
     {
-      type: "proposal",
+      type: "feature",
       title: "Alpha",
-      description: "A proposal that shipped.",
+      description: "A feature that shipped.",
       status: "stable",
-      lifecycle: "implemented",
+      lifecycle: "done",
       tags: "[alpha]",
       related: "[playbook/a-playbook]",
       generated: "{ by: read-test, at: 2026-04-01 }",
@@ -160,12 +154,12 @@ Built on [the playbook](../../playbooks/a-playbook.md).
 `
   ),
 
-  "docs/projects/beta/proposal.md": page({
-    type: "proposal",
+  "docs/features/beta/feature.md": page({
+    type: "feature",
     title: "Beta",
-    description: "A proposal still being written.",
+    description: "A feature still being written.",
     status: "draft",
-    lifecycle: "draft",
+    lifecycle: "backlog",
     tags: "[beta]",
     generated: "{ by: read-test, at: 2026-05-01 }",
   }),
@@ -181,12 +175,14 @@ Built on [the playbook](../../playbooks/a-playbook.md).
   }),
 
   // No `generated`, so no date: it can never match `--since`.
-  "docs/backlog/undated.md": page({
-    type: "backlog",
+  "docs/items/undated.md": page({
+    type: "item",
     title: "Undated",
-    description: "A backlog item with no generated block.",
+    description: "An item with no generated block.",
     status: "draft",
-    lifecycle: "open",
+    lifecycle: "backlog",
+    id: "0190f4b2-7c3a-7d4e-8f00-00000000000a",
+    kind: "task",
   }),
 };
 
@@ -199,7 +195,7 @@ describe("pdocs find", () => {
     const json = run([
       "find",
       "--type",
-      "proposal",
+      "feature",
       "--format",
       "json",
       "--root",
@@ -211,21 +207,21 @@ describe("pdocs find", () => {
     expect(out.meta.command).toBe("find");
     expect(out.data.count).toBe(2);
     expect(out.data.matches.map((m: { path: string }) => m.path)).toEqual([
-      "docs/projects/alpha/proposal.md",
-      "docs/projects/beta/proposal.md",
+      "docs/features/alpha/feature.md",
+      "docs/features/beta/feature.md",
     ]);
 
     const text = run([
       "find",
       "--type",
-      "proposal",
+      "feature",
       "--format",
       "text",
       "--root",
       ROOT,
     ]);
     expect(text.code).toBe(ExitCode.Success);
-    expect(text.stdout).toContain("docs/projects/alpha/proposal.md");
+    expect(text.stdout).toContain("docs/features/alpha/feature.md");
     expect(text.stdout).toContain("2 document(s)");
   });
 
@@ -254,9 +250,9 @@ describe("pdocs find", () => {
       run([
         "find",
         "--type",
-        "proposal",
+        "feature",
         "--lifecycle",
-        "implemented",
+        "done",
         "--format",
         "json",
         "--root",
@@ -287,12 +283,12 @@ describe("pdocs find", () => {
     );
     const paths = out.data.matches.map((m: { path: string }) => m.path);
     // On the boundary date, inclusive.
-    expect(paths).toContain("docs/projects/alpha/proposal.md");
+    expect(paths).toContain("docs/features/alpha/feature.md");
     expect(paths).toContain("docs/cycles/2026-01-a-cycle.md");
     expect(paths).not.toContain("docs/playbooks/a-playbook.md");
     // No `generated` block at all: absence of a date is not evidence of
     // recency, so it is excluded rather than passed through.
-    expect(paths).not.toContain("docs/backlog/undated.md");
+    expect(paths).not.toContain("docs/items/undated.md");
   });
 
   test("a filter that matches nothing exits 0 — no matches is an answer", () => {
@@ -389,12 +385,12 @@ describe("pdocs backlinks", () => {
     expect(out.data.target.key).toBe("playbook/a-playbook");
     // `related:` on alpha's proposal — a frontmatter claim, addressed by key.
     expect(out.data.related.map((r: { path: string }) => r.path)).toEqual([
-      "docs/projects/alpha/proposal.md",
+      "docs/features/alpha/feature.md",
     ]);
     // Body links — addressed by path, and the catalog is one of them.
     expect(out.data.links.map((r: { path: string }) => r.path)).toEqual([
+      "docs/features/alpha/feature.md",
       "docs/index.md",
-      "docs/projects/alpha/proposal.md",
     ]);
     expect(out.data.count).toBe(3);
   });
@@ -468,11 +464,11 @@ describe("pdocs backlinks", () => {
   });
 
   test("an ambiguous key is a usage error naming the candidates", () => {
-    // `proposal/proposal` is every project's proposal. Answerable — the caller
+    // `feature/feature` is every feature's entry file. Answerable — the caller
     // just has to say which — so it is 2, not 5.
     const { code, stderr } = run([
       "backlinks",
-      "proposal/proposal",
+      "feature/feature",
       "--format",
       "json",
       "--root",
@@ -480,23 +476,22 @@ describe("pdocs backlinks", () => {
     ]);
     expect(code).toBe(ExitCode.Usage);
     expect(JSON.parse(stderr).error.message).toContain(
-      "docs/projects/alpha/proposal.md"
+      "docs/features/alpha/feature.md"
     );
   });
 
-  test("`project/<name>` resolves where `proposal/<name>` cannot", () => {
-    // The form a caller reaches for when `proposal/proposal` turns out to name
-    // every project in the tree. Same document, same answer as by path — and
-    // the same grammar `pdocs new cycle --scope` takes, so an agent never has
-    // to convert between two spellings this CLI already understands.
+  test("`feature/<slug>` resolves where `feature/feature` cannot", () => {
+    // The form a caller reaches for when `feature/feature` turns out to name
+    // every feature in the tree. Same document, same answer as by path — and
+    // the same grammar `--owner` and `pdocs set` take.
     const byAlias = JSON.parse(
-      run(["backlinks", "project/alpha", "--format", "json", "--root", ROOT])
+      run(["backlinks", "feature/alpha", "--format", "json", "--root", ROOT])
         .stdout
     );
     const byPath = JSON.parse(
       run([
         "backlinks",
-        "docs/projects/alpha/proposal.md",
+        "docs/features/alpha/feature.md",
         "--format",
         "json",
         "--root",
@@ -504,23 +499,20 @@ describe("pdocs backlinks", () => {
       ]).stdout
     );
     expect(byAlias).toEqual(byPath);
-    expect(byAlias.data.target.path).toBe("docs/projects/alpha/proposal.md");
+    expect(byAlias.data.target.path).toBe("docs/features/alpha/feature.md");
   });
 
-  test("`proposal/<name>` is not invented as a second spelling", () => {
-    // `project/<name>` is the ONE addition. `proposal/alpha` is a key nothing
-    // emits and nothing writes; accepting it would mean two ways to say the
-    // same thing and a `pageKey` that answers with neither.
+  test("the retired `project/<name>` form is gone, and the refusal names the one that replaced it", () => {
     const { code, stderr } = run([
       "backlinks",
-      "proposal/alpha",
+      "project/alpha",
       "--format",
       "json",
       "--root",
       ROOT,
     ]);
     expect(code).toBe(ExitCode.NotFound);
-    expect(JSON.parse(stderr).error.message).toContain("project/<name>");
+    expect(JSON.parse(stderr).error.message).toContain("feature/<slug>");
   });
 
   test("a contract page is answerable by path, with no key and no related", () => {
@@ -614,7 +606,7 @@ describe("pdocs orphans", () => {
       run(["orphans", "--format", "json", "--root", ROOT]).stdout
     );
     for (const o of out.data.orphans as Array<{ path: string }>)
-      expect(o.path).not.toContain("/projects/");
+      expect(o.path).not.toContain("/features/");
   });
 });
 
@@ -644,7 +636,7 @@ describe("pdocs graph", () => {
     expect(out.data.pages).toBe(Object.keys(FIXTURE).length - 1);
     expect(out.data.byTier.library).toBe(3);
     expect(out.data.byTier.workbench).toBe(4);
-    expect(out.data.byType.proposal).toBe(2);
+    expect(out.data.byType.feature).toBe(2);
     expect(out.data.tags.fixture).toEqual([
       "docs/cycles/2026-01-a-cycle.md",
       "docs/index.md",
@@ -661,8 +653,8 @@ describe("pdocs graph", () => {
       out.data.nodes as Array<{ path: string; linksIn: string[] }>
     ).find((n) => n.path === "docs/playbooks/a-playbook.md");
     expect(node?.linksIn).toEqual([
+      "docs/features/alpha/feature.md",
       "docs/index.md",
-      "docs/projects/alpha/proposal.md",
     ]);
     expect(out.data.hubs[0].path).toBe("docs/playbooks/a-playbook.md");
     expect(out.data.hubs[0].linksIn).toBe(2);
@@ -708,7 +700,7 @@ describe("pageKeys — features and items", () => {
       JSON.stringify({
         docsRoot: "docs",
         version: "1.0.0",
-        lint: { workbench: ["features", "items", "cycles", "projects"], skip: [] },
+        lint: { workbench: ["features", "items", "cycles"], skip: [] },
       })
     );
     const files: Record<string, string> = {
@@ -717,7 +709,6 @@ describe("pageKeys — features and items", () => {
       "docs/items/fix-hook.md": entity("item", { id: ID_FILE, kind: "bug" }),
       "docs/items/big/item.md": entity("item", { id: ID_FOLDER, kind: "task" }),
       "docs/items/_archive/gone.md": entity("item", { id: ID_ARCHIVED, kind: "chore" }),
-      "docs/projects/legacy/proposal.md": entity("proposal", { lifecycle: "draft" }),
       // An item folder that happens to be called `items`.
       "docs/items/items/item.md": entity("item", {
         id: "0190f4b2-7c3a-7d4e-8f00-00000000000d",
@@ -772,10 +763,9 @@ describe("pageKeys — features and items", () => {
       expect(new Set(keys).size).toBe(keys.length);
   });
 
-  test("a legacy project still answers to project/<folder> until retirement", () => {
-    expect(keysByPath().get("docs/projects/legacy/proposal.md")).toContain(
-      "project/legacy"
-    );
+  test("no page answers to the retired project/<folder> form", () => {
+    for (const keys of keysByPath().values())
+      expect(keys.some((k) => k.startsWith("project/"))).toBe(false);
   });
 });
 

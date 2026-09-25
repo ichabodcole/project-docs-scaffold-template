@@ -1,13 +1,10 @@
 // The type registry: one row per document type, and the three source tables it
 // unifies.
 //
-// Until this file existed the type system was spread across three tables that
-// disagreed about what they carried. `SPEC` had `lifecycle` and `extra`;
-// `PROJECT_SPEC` had `lifecycle` and no `extra` field at all; `DURABLE_TYPE` and
-// `ROOT_PAGE_TYPE` were folder-to-type string maps carrying neither. Every
-// reader had to know which table its type came from, and `documentProblems`
-// read `extra` from `SPEC` alone — so the eight project-scoped types could not
-// declare an extra field even in principle, and nothing said so.
+// Until this file existed the type system was spread across tables that
+// disagreed about what they carried: some had `lifecycle` and `extra`, some
+// only `lifecycle`, and the folder-to-type maps neither. Every reader had to
+// know which table its type came from.
 //
 // `buildRegistry` is the one place that assembles them, and it is a FUNCTION
 // rather than a module-level const on purpose. User-declared folders and types
@@ -17,8 +14,7 @@
 //
 // The tables themselves live here rather than in `rules.ts` so the dependency
 // runs one way: `rules.ts` consumes the registry, the registry consumes
-// nothing. `rules.ts` re-exports all five names, because the v2.6-to-v2.7
-// codemod's test imports them from there to prove its own copies are equal.
+// nothing.
 
 import type { ProjectDocsConfig } from "../docs-lint/config.ts";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
@@ -85,8 +81,6 @@ export const DURABLE_TYPE: Record<string, string> = {
   specifications: "specification",
   "interaction-design": "interaction",
   playbooks: "playbook",
-  "lessons-learned": "lesson",
-  memories: "memory",
 };
 
 /** Library pages that live at the docs root rather than in a folder. */
@@ -94,24 +88,6 @@ export const ROOT_PAGE_TYPE: Record<string, string> = {
   "PROJECT_MANIFESTO.md": "manifesto",
   "PROJECT-SUMMARY.md": "summary",
   "index.md": "index",
-};
-
-/**
- * A project folder's type is decided by FILENAME, because a project is one
- * feature's whole record and its documents are of different kinds.
- * Anything unrecognised is an `artifact` — a findings note, a review, a
- * prototype writeup — which is what those files are.
- */
-export const PROJECT_FILE_TYPE: Record<string, string> = {
-  "proposal.md": "proposal",
-  "plan.md": "plan",
-  "design-resolution.md": "design-resolution",
-  "test-plan.md": "test-plan",
-  // A kickoff briefs the START of implementation; a handoff lists what
-  // shipping needs AFTER it. Two documents, two types — they were one type
-  // until 2026-09-04, when neither file existed to prove otherwise.
-  "DEV_KICKOFF.md": "kickoff",
-  "handoff.md": "handoff",
 };
 
 /**
@@ -125,51 +101,11 @@ export const SPEC: Record<
   string,
   { type: string; lifecycle: string[] | null; extra?: string[] }
 > = {
-  // `done` is not in the proposal's vocabulary and should have been. The
-  // backlog README describes the real path as open → work it → archive, and
-  // "promoted" is the rarer outcome where an item turns out to need a project.
-  // Without `done` the common case had no word, which is the same failure that
-  // produced `Approved (in flight)` on the proposals.
-  backlog: {
-    type: "backlog",
-    lifecycle: ["open", "done", "promoted", "dropped"],
-  },
-  fragments: { type: "fragment", lifecycle: ["open", "promoted", "dropped"] },
-  briefs: { type: "brief", lifecycle: ["active", "spent"] },
-  investigations: { type: "investigation", lifecycle: ["active", "concluded"] },
   cycles: {
     type: "cycle",
     lifecycle: ["planned", "active", "closed", "abandoned"],
-    extra: ["scope", "after", "appetite", "started", "closed"],
+    extra: ["after", "appetite", "started", "closed"],
   },
-  reports: { type: "report", lifecycle: null },
-};
-
-/** Types a project folder can hold, and their vocabularies. */
-export const PROJECT_SPEC: Record<string, { lifecycle: string[] | null }> = {
-  proposal: {
-    lifecycle: [
-      "draft",
-      "approved",
-      "deferred",
-      "implemented",
-      "withdrawn",
-      "superseded",
-    ],
-  },
-  plan: { lifecycle: ["draft", "active", "completed", "abandoned"] },
-  // Both of these were stateless in the first draft of SCHEMA.md, on the
-  // reasoning that they follow their proposal or plan. The templates they
-  // replace disagreed: each carried its own `**Status:**` line, because a
-  // design question is open until it is answered and a scenario list is
-  // written before it is run. Dropping those axes would have deleted
-  // information the tree already tracked.
-  "design-resolution": { lifecycle: ["draft", "resolved", "superseded"] },
-  "test-plan": { lifecycle: ["draft", "ready", "active", "completed"] },
-  kickoff: { lifecycle: null },
-  handoff: { lifecycle: null },
-  session: { lifecycle: null },
-  artifact: { lifecycle: null },
 };
 
 // ---------------------------------------------------------------------------------------
@@ -214,8 +150,8 @@ export interface RegistryRow {
   tier: "library" | "workbench";
   /**
    * `docs` — `folder` is docs-root-relative.
-   * `owner` — the document lives inside an owner folder (a feature, an item,
-   *   or a legacy project), and `folder` is relative to THAT: `""` for the
+   * `owner` — the document lives inside an owner folder (a feature or an
+   *   item), and `folder` is relative to THAT: `""` for the
    *   fixed-name owned documents, `sessions`, `reports` or `artifacts` for the
    *   rest.
    * `root` — a singleton at the docs root; `folder` is `""`.
@@ -245,11 +181,6 @@ export interface RegistryRow {
   /** Keys this type requires beyond the universal REQUIRED set. `item` is the
    *  one that has any: `id` and `kind`. */
   required: string[];
-  /**
-   * Retired in 9.0.0: still lintable, so a tree that has not migrated keeps
-   * passing, and never created. Deleted once this repository has migrated.
-   */
-  retired?: boolean;
   /**
    * True when `pdocs new <type> <name>` names the OWNER FOLDER it opens rather
    * than the document's slug: `pdocs new feature oauth-upgrade` writes
@@ -287,10 +218,9 @@ export interface ExistingDocument {
    * EVERY address this document answers to, and empty where it answers to none.
    *
    * A list rather than one `key`, because a document can be addressed in more
-   * than one vocabulary and the project folder proves it: `pages.ts` keys a
-   * proposal as `proposal/proposal` — true, useless, identical for every
-   * project — and as `project/<folder>`, which is the form the cycle template,
-   * the migration guide and `pdocs new project` all use. A validator matching
+   * than one vocabulary: `pages.ts` keys a feature's entry file as
+   * `feature/feature` — true, useless, identical for every feature — and as
+   * `feature/<slug>`, the form every reference uses. A validator matching
    * against a single key could only ever accept the useless one.
    */
   keys: string[];
@@ -391,21 +321,14 @@ export const ITEMS_FOLDER = "items";
 
 /**
  * An owner folder's entry file, named after the entity (D2). A tool finds the
- * entry file by the folder's kind alone. The legacy `projects/` owner's entry
- * file is `proposal.md`.
+ * entry file by the folder's kind alone.
  */
 export const ENTITY_FILE: Record<string, { name: string; type: string }> = {
   features: { name: "feature.md", type: "feature" },
   items: { name: "item.md", type: "item" },
-  projects: { name: "proposal.md", type: "proposal" },
 };
 
-/**
- * The owned documents with a fixed name, wherever the owner is — a feature, an
- * item, or (until this repository migrates) a legacy project. The legacy
- * `PROJECT_FILE_TYPE` above is the same map plus `proposal.md`, minus
- * `write-up.md`, which arrived with work items.
- */
+/** The owned documents with a fixed name, whichever the owner — a feature or an item. */
 export const OWNED_FILE_TYPE: Record<string, string> = {
   "plan.md": "plan",
   "design-resolution.md": "design-resolution",
@@ -424,15 +347,6 @@ export const OWNER_SUBFOLDER: Record<string, string> = {
   report: "reports",
 };
 
-/**
- * The folder that holds project folders.
- *
- * Not derived from `lint.workbench` — that array says which folders are linted
- * as workbench, not which one is the project tree, and reading a position out
- * of it would break the moment somebody reorders their config.
- */
-export const PROJECTS_FOLDER = "projects";
-
 // ---------------------------------------------------------------------------------------
 // Building it
 // ---------------------------------------------------------------------------------------
@@ -442,8 +356,8 @@ export const PROJECTS_FOLDER = "projects";
  * it is called, and which template seeds it.
  *
  * Everything else — tier, lifecycle, extra, and every fixed filename — is
- * derived below from `SPEC`, `PROJECT_SPEC`, `DURABLE_TYPE`, `ROOT_PAGE_TYPE`
- * and `PROJECT_FILE_TYPE`, so a change to one of those cannot leave the
+ * derived below from `SPEC`, `OWNED_SPEC`, `DURABLE_TYPE`, `ROOT_PAGE_TYPE`
+ * and `OWNED_FILE_TYPE`, so a change to one of those cannot leave the
  * registry stating something else.
  */
 type Creation = {
@@ -469,12 +383,24 @@ type Creation = {
  */
 /**
  * Words a caller may still type that are no longer types, and what replaced
- * them. `pdocs new project` resolved to the proposal row until 9.0.0; skills
- * written against that grammar still run it, so the refusal says what to do
- * rather than "unknown type".
+ * them. The types retired in 9.0.0 are gone from the registry; skills and
+ * habits written against them still reach for them, so the refusal says what
+ * to write instead rather than "unknown type".
  */
+const PLAYBOOK_INSTEAD =
+  "append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`), or start one with `pdocs new playbook <slug>`";
 const RETIRED_WORD: Record<string, string> = {
   project: "`project` was replaced by `feature` in 9.0.0 — `pdocs new feature <slug>`",
+  proposal: "`proposal` was retired in 9.0.0; a proposal is now a feature — `pdocs new feature <slug>`",
+  backlog: "`backlog` was retired in 9.0.0; the replacement is a work item — `pdocs new item <slug> --kind task`",
+  fragment:
+    "`fragment` was retired in 9.0.0; the replacement is a `triage` work item — `pdocs new item <slug> --kind task` (a new item starts in `triage`)",
+  brief:
+    "`brief` was retired in 9.0.0; write the idea as a `triage` work item (`pdocs new item <slug> --kind task`) or as a feature (`pdocs new feature <slug>`)",
+  investigation:
+    "`investigation` was retired in 9.0.0; the replacement is a research work item and its write-up — `pdocs new item <slug> --kind research`, then `pdocs new write-up --owner item/<slug>`",
+  memory: `\`memory\` was retired in 9.0.0; ${PLAYBOOK_INSTEAD}`,
+  lesson: `\`lesson\` was retired in 9.0.0; ${PLAYBOOK_INSTEAD}`,
 };
 
 /** Why `word` is no longer a type, with the docs root filled in; `null` when it
@@ -491,53 +417,6 @@ function fillDocs(text: string, config: ProjectDocsConfig): string {
 }
 
 const CREATION: Record<string, Creation> = {
-  // Retired in 9.0.0. Lintable until this repository has migrated; never
-  // created, so they declare no template. Each reason names the replacement,
-  // and — until `pdocs new item` and `--owner` land — the template to copy,
-  // which is the one way to write the replacement today. `{docs}` is the
-  // configured docs root, filled in by `buildRegistry`.
-  backlog: {
-    filename: { kind: "slug", date: "day" },
-    template: null,
-    uncreatableReason: "retired in 9.0.0; the replacement is a work item — `pdocs new item <slug> --kind task`",
-  },
-  fragment: {
-    filename: { kind: "slug", date: "day" },
-    template: null,
-    uncreatableReason:
-      "retired in 9.0.0; the replacement is a `triage` work item — `pdocs new item <slug> --kind task` (a new item starts in `triage`)",
-  },
-  brief: {
-    filename: { kind: "slug", date: "day" },
-    template: null,
-    uncreatableReason:
-      "retired in 9.0.0; write the idea as a `triage` work item (`pdocs new item <slug> --kind task`) or as a feature (`pdocs new feature <slug>`)",
-  },
-  investigation: {
-    filename: { kind: "slug", date: "day", suffix: "investigation" },
-    template: null,
-    uncreatableReason:
-      "retired in 9.0.0; the replacement is a research work item and its write-up — " +
-      "`pdocs new item <slug> --kind research`, then `pdocs new write-up --owner item/<slug>`",
-  },
-  proposal: {
-    filename: { kind: "fixed", name: "proposal.md" },
-    template: null,
-    uncreatableReason: "retired in 9.0.0; a proposal is now a feature — `pdocs new feature <slug>`",
-  },
-  memory: {
-    filename: { kind: "slug", date: "day" },
-    template: null,
-    uncreatableReason:
-      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`), or start one with `pdocs new playbook <slug>`",
-  },
-  lesson: {
-    filename: { kind: "slug", date: "none" },
-    template: null,
-    uncreatableReason:
-      "retired in 9.0.0; append a step and its verification to the playbook for that kind of work (`pdocs find --type playbook`), or start one with `pdocs new playbook <slug>`",
-  },
-
   // The work taxonomy's entities. `pdocs new feature <slug>` opens the
   // feature's folder; `pdocs new item` mints the item's `id`.
   feature: {
@@ -683,9 +562,7 @@ const VALIDATION: Record<string, Validator> = {
     scopeProblems((fields.get("scope") ?? "").trim().replace(/^(["'])(.*)\1$/, "$2"), scopes),
 
   // "`pdocs new cycle` refuses to open a second active cycle." A cycle's
-  // scope used to be resolved here too; it is derived from the items that
-  // name the cycle now, so `scope:` is only kept in `extra` for the legacy
-  // cycles until they are migrated, and nothing resolves it.
+  // scope is derived from the items that name it; the cycle lists nothing.
   cycle: ({ type, fields, documents }) => {
     const problems: ValidationProblem[] = [];
 
@@ -729,31 +606,21 @@ function fixedOwnedFile(type: string): FilenameShape {
   return { kind: "fixed", name: entry[0] };
 }
 
-/** The types retired in 9.0.0 (see `RegistryRow.retired`). */
-export const RETIRED_TYPES = new Set([
-  "proposal",
-  "backlog",
-  "fragment",
-  "brief",
-  "investigation",
-  "memory",
-  "lesson",
-]);
-
 /**
- * The owned types and their vocabularies. The legacy `PROJECT_SPEC` holds the
- * same entries for the types a project folder carried, plus `proposal`; the
- * registry declares each owned type once, from here.
+ * The owned types and their vocabularies: the documents a feature or an item
+ * holds. `plan`, `design-resolution` and `test-plan` hold state, because a plan
+ * is followed and then finished, a design question is open until it is
+ * answered, and a list of scenarios is written before it is run.
  */
 export const OWNED_SPEC: Record<string, { lifecycle: string[] | null }> = {
-  plan: PROJECT_SPEC.plan!,
-  "design-resolution": PROJECT_SPEC["design-resolution"]!,
-  "test-plan": PROJECT_SPEC["test-plan"]!,
-  kickoff: PROJECT_SPEC.kickoff!,
-  handoff: PROJECT_SPEC.handoff!,
-  session: PROJECT_SPEC.session!,
-  artifact: PROJECT_SPEC.artifact!,
-  report: { lifecycle: SPEC.reports!.lifecycle },
+  plan: { lifecycle: ["draft", "active", "completed", "abandoned"] },
+  "design-resolution": { lifecycle: ["draft", "resolved", "superseded"] },
+  "test-plan": { lifecycle: ["draft", "ready", "active", "completed"] },
+  kickoff: { lifecycle: null },
+  handoff: { lifecycle: null },
+  session: { lifecycle: null },
+  artifact: { lifecycle: null },
+  report: { lifecycle: null },
   "write-up": { lifecycle: null },
 };
 
@@ -822,7 +689,6 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
       extra,
       required,
       ...(c.namesScope ? { namesScope: true } : {}),
-      ...(RETIRED_TYPES.has(type) ? { retired: true } : {}),
       creatable: c.uncreatableReason === undefined,
       ...(c.uncreatableReason === undefined
         ? {}
@@ -842,12 +708,9 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
   for (const type of Object.values(ROOT_PAGE_TYPE))
     push(type, "library", "root", "", null, []);
 
-  // Workbench folders. A folder whose type is now OWNED (`reports/`) is still
-  // typed by position until this repository migrates, but its row is the
-  // owned one below — every type is declared once.
+  // Workbench folders.
   for (const [folder, spec] of Object.entries(SPEC))
-    if (!(spec.type in OWNED_SPEC))
-      push(spec.type, "workbench", "docs", folder, spec.lifecycle, spec.extra ?? []);
+    push(spec.type, "workbench", "docs", folder, spec.lifecycle, spec.extra ?? []);
 
   // The two entities. A feature is its owner folder's entry file; an item is a
   // file in `items/` until it owns documents, then `items/<slug>/item.md`.
@@ -857,10 +720,7 @@ export function buildRegistry(config: ProjectDocsConfig): RegistryRow[] {
     "kind",
   ]);
 
-  // The legacy project folder's entry file.
-  push("proposal", "workbench", "owner", "", PROJECT_SPEC.proposal!.lifecycle, []);
-
-  // Owned, in a feature, an item, or a legacy project.
+  // Owned, in a feature or an item.
   for (const [type, spec] of Object.entries(OWNED_SPEC))
     push(type, "workbench", "owner", OWNER_SUBFOLDER[type] ?? "", spec.lifecycle, []);
 

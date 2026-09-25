@@ -319,15 +319,14 @@ bun scripts/pdocs/cli.ts backlinks <target>
 ```
 
 `<target>` is a repo-relative path (`docs/playbooks/foo-playbook.md`), a
-`type/slug` key (`playbook/foo-playbook`), or — **legacy**, for a tree still on
-the pre-9.0.0 `projects/` layout, and removed when this repository's migration
-retires that layout — `project/<name>`. An unknown target exits **5**.
+`type/slug` key (`playbook/foo-playbook`), or a work entity's own reference —
+`feature/<slug>`, `item/<slug>`. An unknown target exits **5**.
 
-**Name a feature or an item by its entry file's path** —
-`docs/features/oauth-upgrade/feature.md`, `docs/items/fix-hook.md` or
-`docs/items/fix-hook/item.md`. `type/slug` is a library-tier scheme, and every
-feature folder holds a `feature.md`, so `feature/feature` names none of them in
-particular.
+**Name a feature or an item by its reference or its entry file's path** —
+`feature/oauth-upgrade`, or `docs/features/oauth-upgrade/feature.md`,
+`docs/items/fix-hook.md`, `docs/items/fix-hook/item.md`. Every feature folder
+holds a `feature.md`, so the `type/slug` key `feature/feature` names none of
+them in particular.
 
 `data`: `target` (`{ path, type, key, title }`), `related[]`, `links[]` — each
 `{ path, title }` — and `count`. **The two edge kinds are kept apart**:

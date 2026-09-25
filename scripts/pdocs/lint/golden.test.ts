@@ -23,6 +23,9 @@
 // earns, `UNKNOWN FIELD`'s pointer to `lint.exclude` among them. Every line
 // `docs/lint.ts` printed is still there, byte for byte.
 //
+// RE-RECORDED A THIRD TIME when the retired types were deleted (9.0.0,
+// Phase 5): the legacy `backlog/` row is gone, and BAD TAG moved to a cycle.
+//
 // RE-RECORDED AGAIN for the work taxonomy (9.0.0): the fixture trees moved
 // from `backlog/`, `projects/` and the memory and lesson folders to `items/`,
 // `features/` and the four library folders that remain, keeping `backlog/` as
@@ -137,9 +140,8 @@ function tree(
             "interaction-design",
             "playbooks",
           ],
-          // The work-taxonomy layout, plus ONE legacy folder (`backlog`), so
-          // the transition path — a retired type still linted — is covered.
-          workbench: ["features", "items", "cycles", "backlog"],
+          // The work-taxonomy layout.
+          workbench: ["features", "items", "cycles"],
           // `_archive` is linted: the terminal-state rule has to see it.
           skip: ["superpowers"],
           scopes: [],
@@ -291,18 +293,6 @@ generated: { by: golden-test, at: 2026-01-01 }
 # An Item
 `,
 
-  // The legacy row: a retired type, still linted until the tree migrates.
-  "docs/backlog/an-item.md": `---
-type: backlog
-title: A Legacy Item
-description: A backlog item with nothing wrong with it.
-status: draft
-lifecycle: open
-generated: { by: golden-test, at: 2026-01-01 }
----
-
-# A Legacy Item
-`,
 };
 
 // ---------------------------------------------------------------------------------------
@@ -434,13 +424,13 @@ generated: { by: golden-test, at: 2026-01-01 }
 # Orphan
 `,
 
-  // BAD TAG, on the legacy row: a retired type is still linted.
-  "docs/backlog/bad-tag.md": `---
-type: backlog
+  // BAD TAG, on the workbench.
+  "docs/cycles/2026-01-bad-tag.md": `---
+type: cycle
 title: Bad Tag
-description: A backlog item whose tag is not kebab-case.
+description: A cycle whose tag is not kebab-case.
 status: draft
-lifecycle: open
+lifecycle: planned
 tags: [Not Kebab]
 generated: { by: golden-test, at: 2026-01-01 }
 ---

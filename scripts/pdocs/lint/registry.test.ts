@@ -30,11 +30,11 @@ import {
   OWNED_FILE_TYPE,
   OWNER_SUBFOLDER,
   PRIORITIES,
-  PROJECT_FILE_TYPE,
   STATE_GROUP,
   type RegistryRow,
   TYPE_ALIAS,
   buildRegistry,
+  retiredWordReason,
   registryIndex,
 } from "./registry.ts";
 import { context, schemaLifecycles, templateProblems } from "./rules.ts";
@@ -64,22 +64,14 @@ const ALL_TYPES = [
   "specification",
   "interaction",
   "playbook",
-  "lesson",
-  "memory",
   // Root pages — the three the design resolution's tables never mentioned.
   "manifesto",
   "summary",
   "index",
   // Workbench folders.
-  "backlog",
-  "fragment",
-  "brief",
-  "investigation",
   "cycle",
+  // Owned by a feature or an item. `kickoff` and `handoff` split on 2026-09-04.
   "report",
-  // Project-scoped. `kickoff` and `handoff` split on 2026-09-04, which is what
-  // took this group from seven to eight.
-  "proposal",
   "plan",
   "design-resolution",
   "test-plan",
@@ -93,7 +85,7 @@ const ALL_TYPES = [
   "write-up",
 ];
 
-/** The types retired in 9.0.0: still lintable, never created. */
+/** The types retired in 9.0.0: gone from the registry, and refused by name. */
 const RETIRED = [
   "proposal",
   "backlog",
@@ -114,7 +106,6 @@ const UNCREATABLE = [
   "manifesto",
   "summary",
   "index",
-  ...RETIRED,
 ];
 
 const row = (type: string): RegistryRow => {
@@ -127,8 +118,8 @@ const templatesOf = (r: RegistryRow): string[] =>
   r.template === null ? [] : [r.template].flat();
 
 describe("the registry covers the type system", () => {
-  test("exactly 26 rows, one per type in SCHEMA.md", () => {
-    expect(ALL_TYPES).toHaveLength(26);
+  test("exactly 19 rows, one per type in SCHEMA.md", () => {
+    expect(ALL_TYPES).toHaveLength(19);
     expect(ROWS.map((r) => r.type).sort()).toEqual([...ALL_TYPES].sort());
   });
 
@@ -137,11 +128,11 @@ describe("the registry covers the type system", () => {
   });
 
   // The tier decides the graph obligations, and nine types carry them.
-  test("nine library rows, seventeen workbench", () => {
+  test("seven library rows, twelve workbench", () => {
     const byTier = (t: RegistryRow["tier"]) =>
       ROWS.filter((r) => r.tier === t).length;
-    expect(byTier("library")).toBe(9);
-    expect(byTier("workbench")).toBe(17);
+    expect(byTier("library")).toBe(7);
+    expect(byTier("workbench")).toBe(12);
   });
 
   test("a root page is a singleton with no folder and no template", () => {
@@ -155,10 +146,7 @@ describe("the registry covers the type system", () => {
   });
 
   test("an owner-scoped row says so, and its fixed name is the one that types the file", () => {
-    for (const [name, type] of Object.entries({
-      ...PROJECT_FILE_TYPE,
-      ...OWNED_FILE_TYPE,
-    })) {
+    for (const [name, type] of Object.entries(OWNED_FILE_TYPE)) {
       const r = row(type);
       expect(r.scope).toBe("owner");
       expect(r.filename).toEqual({ kind: "fixed", name });
@@ -235,17 +223,12 @@ describe("filename grammar", () => {
   const shape = (type: string) => row(type).filename;
 
   test("dated types, and the one that is dated by month", () => {
-    for (const type of ["backlog", "fragment", "brief", "memory", "session"])
+    for (const type of ["session"])
       expect(shape(type)).toEqual({ kind: "slug", date: "day" });
     expect(shape("cycle")).toEqual({ kind: "slug", date: "month" });
   });
 
   test("suffixes are declared, not remembered", () => {
-    expect(shape("investigation")).toEqual({
-      kind: "slug",
-      date: "day",
-      suffix: "investigation",
-    });
     expect(shape("report")).toEqual({
       kind: "slug",
       date: "day",
@@ -268,8 +251,8 @@ describe("filename grammar", () => {
     });
   });
 
-  test("a lesson is a bare slug, a specification is numbered, an artifact is freeform", () => {
-    expect(shape("lesson")).toEqual({ kind: "slug", date: "none" });
+  test("an item is a bare slug, a specification is numbered, an artifact is freeform", () => {
+    expect(shape("item")).toEqual({ kind: "slug", date: "none" });
     expect(shape("specification")).toEqual({ kind: "numbered" });
     expect(shape("artifact")).toEqual({ kind: "freeform" });
   });
@@ -300,7 +283,6 @@ describe("the unified frontmatter contract", () => {
 
   test("`cycle`, `feature` and `item` declare extra fields; nothing else does", () => {
     expect(row("cycle").extra).toEqual([
-      "scope",
       "after",
       "appetite",
       "started",
@@ -314,15 +296,8 @@ describe("the unified frontmatter contract", () => {
   // The gap this registry exists to close: `PROJECT_SPEC` has no `extra` field
   // at all, so before the unification these eight types could not declare one
   // even in principle. They can now; they just do not need to yet.
-  test("project-scoped rows can carry `extra`, and carry their lifecycle", () => {
-    expect(row("proposal").lifecycle).toEqual([
-      "draft",
-      "approved",
-      "deferred",
-      "implemented",
-      "withdrawn",
-      "superseded",
-    ]);
+  test("owned rows can carry `extra`, and carry their lifecycle", () => {
+    expect(row("plan").lifecycle).toEqual(["draft", "active", "completed", "abandoned"]);
     expect(row("kickoff").lifecycle).toBeNull();
     for (const r of ROWS.filter((x) => x.scope === "owner"))
       expect(Array.isArray(r.extra)).toBe(true);
@@ -490,11 +465,10 @@ describe("templateProblems", () => {
   });
 
   test("null templates report nothing", () => {
-    // The rows with no template: artifact, the three root pages, and every
-    // retired type — a type that cannot be created has nothing to seed.
+    // The rows with no template: artifact and the three root pages.
     const none = ROWS.filter((r) => r.template === null).map((r) => r.type);
     expect(none.sort()).toEqual(
-      ["artifact", "index", "manifesto", "summary", ...RETIRED].sort()
+      ["artifact", "index", "manifesto", "summary"].sort()
     );
   });
 });
@@ -717,56 +691,30 @@ describe("registry rows for feature, item, write-up, and owned documents", () =>
 });
 
 describe("the retired types", () => {
-  test("each is flagged retired, is not creatable, and names its replacement", () => {
-    for (const type of RETIRED) {
-      const r = row(type);
-      expect({ type, retired: r.retired }).toEqual({ type, retired: true });
-      expect(r.creatable).toBe(false);
-      expect(r.template).toBeNull();
-      expect(r.uncreatableReason).toStartWith("retired in 9.0.0; ");
-    }
-    expect(row("backlog").uncreatableReason).toContain(
-      "pdocs new item <slug> --kind task"
-    );
-    expect(row("investigation").uncreatableReason).toContain("research");
-    expect(row("proposal").uncreatableReason).toContain("feature");
+  test("none is in the registry any more", () => {
+    for (const type of RETIRED) expect(ROWS.find((r) => r.type === type)).toBeUndefined();
+    for (const folder of ["backlog", "briefs", "fragments", "investigations", "reports", "projects", "memories", "lessons-learned"])
+      expect(ROWS.find((r) => r.scope === "docs" && r.folder === folder)).toBeUndefined();
   });
 
-  test("no other row is retired", () => {
-    for (const r of ROWS)
-      if (!RETIRED.includes(r.type)) expect(r.retired).toBeUndefined();
+  test("each is refused by name, and the refusal names its replacement", () => {
+    for (const type of RETIRED)
+      expect(retiredWordReason(type, DEFAULT_CONFIG)).toContain("retired in 9.0.0");
+    for (const type of ["backlog", "fragment", "brief", "investigation"])
+      expect(retiredWordReason(type, DEFAULT_CONFIG)).toContain("pdocs new item <slug>");
+    expect(retiredWordReason("investigation", DEFAULT_CONFIG)).toContain("--kind research");
+    expect(retiredWordReason("investigation", DEFAULT_CONFIG)).toContain("pdocs new write-up --owner item/<slug>");
+    for (const type of ["proposal", "brief"]) expect(retiredWordReason(type, DEFAULT_CONFIG)).toContain("pdocs new feature <slug>");
+    for (const type of ["memory", "lesson"]) expect(retiredWordReason(type, DEFAULT_CONFIG)).toContain("playbook");
+    expect(retiredWordReason("project", DEFAULT_CONFIG)).toContain("pdocs new feature <slug>");
+    expect(retiredWordReason("plan", DEFAULT_CONFIG)).toBeNull();
   });
 });
 
-describe("an uncreatable work type names the fallback that works today (review J)", () => {
-  // Every refusal to create a work document names the `pdocs` command that
-  // writes its replacement.
-
-  test("the retired item-shaped types name `pdocs new item`", () => {
-    for (const type of ["backlog", "fragment", "brief", "investigation"])
-      expect({ type, reason: row(type).uncreatableReason }).toEqual({
-        type,
-        reason: expect.stringContaining("pdocs new item <slug>") as never,
-      });
-    expect(row("investigation").uncreatableReason).toContain("--kind research");
-    expect(row("investigation").uncreatableReason).toContain(
-      "pdocs new write-up --owner item/<slug>"
-    );
-  });
-
-  test("the proposal and the brief name `pdocs new feature`", () => {
-    for (const type of ["proposal", "brief"])
-      expect(row(type).uncreatableReason).toContain("pdocs new feature <slug>");
-  });
-
+describe("the entities are creatable", () => {
   test("feature is creatable, and names the folder it opens", () => {
     expect(row("feature").creatable).toBe(true);
     expect(row("feature").namesScope).toBe(true);
-  });
-
-  test("memory and lesson point at a playbook, which pdocs can create", () => {
-    for (const type of ["memory", "lesson"])
-      expect(row(type).uncreatableReason).toContain("playbook");
   });
 
   test("no refusal carries an unfilled `{docs}`", () => {
