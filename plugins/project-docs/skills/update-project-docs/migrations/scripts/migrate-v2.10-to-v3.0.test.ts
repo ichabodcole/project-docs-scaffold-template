@@ -907,6 +907,18 @@ describe("the whole migration on fixture O", () => {
     expect(fmGet(fmOf(root, "docs/items/zz-early.md"), "generated")).toContain("at: 2026-01-01 }");
   });
 
+  test("a born item with two sessions is dated by the latest and described by the latest that has a description", () => {
+    const root = fixtureO({
+      "docs/projects/beta/sessions/2026-01-09-more.md": doc(common("session", "More beta", "Beta's second session."), "# More beta\n\nMore.\n"),
+    });
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const fm = fmOf(root, "docs/items/beta/item.md");
+    expect(fmGet(fm, "generated")).toContain("at: 2026-01-09 }");
+    expect(fmGet(fm, "description")).toBe("Beta's second session.");
+  });
+
   test("memories and lessons are kept and declared; the config's other bytes are the adopter's", () => {
     const { root } = wholeRun();
     expect(existsSync(join(root, "docs/memories/2026-01-14-first-memory.md"))).toBe(true);

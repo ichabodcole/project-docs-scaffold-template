@@ -1991,7 +1991,7 @@ function computeChanges(ctx: Ctx): Changes {
     } else {
       const inside = files.filter((r) => r.startsWith(`${mv.from}/`) && r.endsWith(".md"));
       const sessions = inside.filter((r) => r.startsWith(`${mv.from}/sessions/`)).sort();
-      const source = [...sessions.reverse(), `${mv.from}/plan.md`].find((r) => splitFrontmatter(textOf(r) ?? "").fm !== null && fmGet(splitFrontmatter(textOf(r) ?? "").fm as string, "description"));
+      const source = [...[...sessions].reverse(), `${mv.from}/plan.md`].find((r) => splitFrontmatter(textOf(r) ?? "").fm !== null && fmGet(splitFrontmatter(textOf(r) ?? "").fm as string, "description"));
       title = titleize(basename(mv.from));
       description = source ? (fmGet(splitFrontmatter(textOf(source) ?? "").fm as string, "description") as string) : `Work recorded in ${basename(mv.from)} before it had an item.`;
       kind = "task";
