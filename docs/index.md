@@ -60,7 +60,22 @@ _No pages yet._
 Repeatable procedures for work that recurs. — see
 [playbooks/README.md](./playbooks/README.md).
 
-_No pages yet._
+- [Writing Migrations Playbook](./playbooks/writing-migrations-playbook.md) —
+  Writing or changing an update-project-docs migration — a script, its tests and
+  its guide — so every guard can fail and a consumer's agent can run it unaided.
+- [Changing pdocs Playbook](./playbooks/changing-pdocs-playbook.md) — Changing
+  the pdocs CLI or its lint under scripts/pdocs/ — a new rule, verb or flag — so
+  it fires everywhere it claims to and holds in a consumer's hook.
+- [Changing a Shipped Skill Playbook](./playbooks/changing-a-shipped-skill-playbook.md)
+  — Changing a plugin skill, command or agent that consumers run, so every check
+  it prescribes can fail and a fresh agent can follow it.
+- [Changing the Scaffold Payload Playbook](./playbooks/changing-the-scaffold-payload-playbook.md)
+  — Changing what the cookiecutter payload ships — a file, a template, a setup
+  instruction — so it lands in the right owner's file and is true in a project
+  that is not this one.
+- [Fixing Consumer Feedback Playbook](./playbooks/fixing-consumer-feedback-playbook.md)
+  — Working a batch of issues a consuming project filed, so each claim is
+  reproduced and each proposed fix judged before anything is scoped.
 
 ## Lessons learned
 
