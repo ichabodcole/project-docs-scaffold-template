@@ -64,9 +64,14 @@ needs; a file with a name not listed above is an `artifact`.
 | `done`    | Delivered                                      |
 | `dropped` | Decided against. The folder stays in the tree. |
 
-Change it with `bun scripts/pdocs/cli.ts set feature/<slug> --lifecycle ready`.
-Do not write a `**Status:**` line in the body; `lifecycle` is the one place
-state lives, and the lint checks it.
+The owner's word moves a feature to `ready`, and `create-project` or
+`generate-proposal` applies it; `dev-kickoff` moves it to `active` when
+implementation starts; `sweep-project` moves it to `done` or `dropped` once the
+work is reconciled against what shipped. `finalize-branch` moves the branch's
+item, not the feature. Otherwise, change it with
+`bun scripts/pdocs/cli.ts set feature/<slug> --lifecycle ready`. Do not write a
+`**Status:**` line in the body; `lifecycle` is the one place state lives, and
+the lint checks it.
 
 A feature's work is done through items whose `parent` names it
 (`pdocs new item <slug> --kind task --parent feature/<slug>`).

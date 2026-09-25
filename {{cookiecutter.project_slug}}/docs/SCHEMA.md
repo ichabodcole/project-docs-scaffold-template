@@ -386,8 +386,8 @@ is optional because in the common case — one person and the agent they work wi
 | `triage` → `backlog`, `ready` or `dropped` | the user, at a triage step they have seen: the `triage-items` skill proposes each item's disposition, `priority`, `assignee` and `parent`, and applies them once the user agrees | `pdocs set <ref> --lifecycle backlog …` |
 | `backlog` → `ready`                        | shaping: settling an accepted item's definition of done and `blocked_by`                                                                                                         | `pdocs set <ref> --lifecycle ready`     |
 | `backlog` / `ready` → `active`             | `init-branch`, when a branch starts on it                                                                                                                                        | `pdocs set <ref> --lifecycle active`    |
-| → `review`                                 | whoever hands the work to a human or a reviewer to wait on                                                                                                                       | `pdocs set <ref> --lifecycle review`    |
-| → `done`                                   | `finalize-branch`, when the branch lands                                                                                                                                         | `pdocs set <ref> --lifecycle done`      |
+| → `review`                                 | `finalize-branch`, when the branch's review starts; or whoever else hands the work to a human or a reviewer to wait on                                                           | `pdocs set <ref> --lifecycle review`    |
+| → `done`                                   | `finalize-branch`, when the branch lands; for research that concludes without a branch, `create-investigation` or the `investigator` agent                                       | `pdocs set <ref> --lifecycle done`      |
 | → `dropped`                                | whoever decides against it. Nothing is deleted                                                                                                                                   | `pdocs set <ref> --lifecycle dropped`   |
 
 `init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
@@ -401,7 +401,16 @@ its own judgement. Without the `triage-items` skill, show the user each item and
 the change you propose, and run `pdocs set` only after they agree.
 
 A feature arrives already accepted, so it has no `triage`: `backlog` while it is
-being shaped, `ready` once it is approved to build.
+being shaped, `ready` once it is approved to build. Its writers:
+
+| Move                  | Who                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| created → `backlog`   | `pdocs new feature` (the default), through `create-project`                              |
+| `backlog` → `ready`   | the owner's word that it is approved, applied by `create-project` or `generate-proposal` |
+| `ready` → `active`    | `dev-kickoff`, when implementation starts                                                |
+| → `done` or `dropped` | `sweep-project`, once the work is reconciled against what shipped                        |
+
+`finalize-branch` moves the branch's item, not its parent feature.
 
 ### References
 

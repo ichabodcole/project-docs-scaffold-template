@@ -34,8 +34,9 @@ value the lint would reject.
                              at triage (the triage-items skill proposes):
                              `backlog`, `ready`, or `dropped`. Shaping sets
                              `ready`; init-branch sets `active`;
-                             finalize-branch sets `done`. An agent never
-                             moves an item out of `triage` itself.
+                             finalize-branch sets `review` when its review
+                             starts and `done` when it lands. An agent
+                             never moves an item out of `triage` itself.
 
   Optional:
   parent: feature/<slug>     whoever files it, or triage

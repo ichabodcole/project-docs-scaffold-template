@@ -24,8 +24,10 @@ STATE. A feature never takes `triage`: it arrives already accepted.
   ready    approved to build
   active   being built;  review  built, waiting on a reviewer
   done     delivered;    dropped  decided against. Nothing is deleted.
-Change it with `pdocs set feature/<slug> --lifecycle <state>`. The work is
-tracked on items that name it: `parent: feature/<slug>`, and
+Who moves it: create-project or generate-proposal sets `ready` on the
+owner's word; dev-kickoff sets `active`; sweep-project sets `done` or
+`dropped`. Change it with `pdocs set feature/<slug> --lifecycle <state>`.
+The work is tracked on items that name it: `parent: feature/<slug>`, and
 `pdocs view feature <slug>` lists them.
 
 Optional fields: `scope` (one name from `lint.scopes`) and `released_in` (the

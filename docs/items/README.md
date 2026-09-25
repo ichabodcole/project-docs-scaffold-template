@@ -78,8 +78,8 @@ writes each field; [SCHEMA.md](../SCHEMA.md#fields) has the full table.
 | `backlog` | Accepted, and not yet shaped                                           | triage                                                |
 | `ready`   | Shaped and unblocked: an accepted definition of done, nothing blocking | triage, or shaping after acceptance                   |
 | `active`  | Being worked                                                           | `init-branch`, when a branch starts on it — see below |
-| `review`  | Waiting on a human or a reviewer                                       | whoever hands it over                                 |
-| `done`    | Landed                                                                 | `finalize-branch`                                     |
+| `review`  | Waiting on a human or a reviewer                                       | `finalize-branch`, when its review starts             |
+| `done`    | Landed                                                                 | `finalize-branch`; see also Research items            |
 | `dropped` | Decided against. It stays in the tree                                  | whoever decides                                       |
 
 `init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
@@ -153,7 +153,10 @@ A research item has three parts, kept in three files:
 - **`reports/`** holds the evidence gathered on the way.
 
 Write-ups and reports are not reserved for research items: any item, or a
-feature, may own them.
+feature, may own them. A report about the whole repository — a documentation
+review, a summary refresh — gets a `kind: chore` item of its own to own it (for
+example `docs-review-2026-09`), and that item is set `done` once the report has
+been acted on.
 
 ```bash
 bun scripts/pdocs/cli.ts new item auth-providers --kind research
@@ -161,8 +164,10 @@ bun scripts/pdocs/cli.ts new write-up --owner item/auth-providers
 bun scripts/pdocs/cli.ts new report provider-survey --owner item/auth-providers
 ```
 
-When the write-up is finished, set the item `done`. If it recommends building
-something, file the items with `--from item/<slug>`, or write the feature with
+When the write-up is finished, set the item `done` (the `create-investigation`
+skill and the `investigator` agent do this when research concludes outside a
+branch). If it recommends building something, file the items with
+`--from item/<slug>`, or write the feature with
 `--from docs/items/<slug>/write-up.md` (a feature takes a path, not a reference,
 and links it from its Related section).
 
