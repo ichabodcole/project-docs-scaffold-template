@@ -698,6 +698,14 @@ describe("fixtures — the generated trees", () => {
     for (const f of NEW_OWNED) expect(diff).toContain(f);
   });
 
+  test("the migrations table carries this row, and its Applies If is the one tested below", () => {
+    const skill = readFileSync(join(import.meta.dir, "../../SKILL.md"), "utf8");
+    const row = skill.split("\n").find((l) => l.startsWith("| [migrations/v2.10-to-v3.0.md]"));
+    expect(row).toBeDefined();
+    expect(row).toContain(`\`${APPLIES_IF.replaceAll("||", "\\|\\|")}\``);
+    expect(existsSync(join(import.meta.dir, "../v2.10-to-v3.0.md"))).toBe(true);
+  });
+
   test("the Applies If test is true on O and false on N, executed as the table's shell", () => {
     const on = (root: string) => Bun.spawnSync(["sh", "-c", APPLIES_IF], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode;
     expect(on(fixtureO())).toBe(0);
