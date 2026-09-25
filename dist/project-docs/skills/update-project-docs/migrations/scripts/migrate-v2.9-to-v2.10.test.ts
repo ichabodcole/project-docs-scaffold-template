@@ -512,6 +512,27 @@ function patchedScript(edits: Array<[string, string]>): string {
 }
 const neutered = (callSite: string) => patchedScript([[callSite, `/* neutered: ${callSite.trim()} */`]]);
 
+/**
+ * A `cookiecutter` on PATH that records the arguments it was called with, one
+ * per line, and fails — enough to see which scaffold the script asked for.
+ */
+function recordingCookiecutter(): { path: string; log: string } {
+  const dir = mkdtempSync(join(tmpdir(), "migrate-d16-stubcc-"));
+  roots.push(dir);
+  const log = join(dir, "args.log");
+  const bin = join(dir, "cookiecutter");
+  writeFileSync(bin, `#!/bin/sh\nprintf '%s\\n' "$@" > "${log}"\necho "stub cookiecutter: recorded" >&2\nexit 3\n`);
+  chmodSync(bin, 0o755);
+  return { path: `${dir}:${process.env.PATH}`, log };
+}
+
+/** The value following `flag` in a recorded argument list. */
+const argAfter = (log: string, flag: string): string | undefined => {
+  const args = readFileSync(log, "utf8").split("\n");
+  const i = args.indexOf(flag);
+  return i === -1 ? undefined : args[i + 1];
+};
+
 // ─── The copied seed logic is pinned to the original ─────────────────────────
 
 describe("the copied seed logic equals scripts/pdocs/seed.ts", () => {
@@ -1388,6 +1409,17 @@ describe("wiring witnesses — each phase's call site, neutered", () => {
     if (at) roots.push(resolve(at, ".."));
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("the generated scaffold is still on disk — the cleanup phase removes it");
+  });
+});
+
+describe("D16 — the scaffold this migration fetches is its own release", () => {
+  test("the cookiecutter call checks out project-docs-scaffold-template-v8.1.0, not the latest", () => {
+    const { path, log } = recordingCookiecutter();
+    const r = migrate(fixtureO(), ["--dry-run"], { scaffold: null, env: { PATH: path } });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("stub cookiecutter: recorded");
+    expect(readFileSync(log, "utf8")).toContain("gh:ichabodcole/project-docs-scaffold-template\n");
+    expect(argAfter(log, "--checkout")).toBe(OWN_TAG);
   });
 });
 

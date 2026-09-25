@@ -1383,6 +1383,27 @@ exit 0
   return `${dir}:${process.env.PATH}`;
 }
 
+/**
+ * A `cookiecutter` on PATH that records the arguments it was called with, one
+ * per line, and fails — enough to see which scaffold the script asked for.
+ */
+function recordingCookiecutter(): { path: string; log: string } {
+  const dir = mkdtempSync(join(tmpdir(), "migrate-d16-stubcc-"));
+  roots.push(dir);
+  const log = join(dir, "args.log");
+  const bin = join(dir, "cookiecutter");
+  writeFileSync(bin, `#!/bin/sh\nprintf '%s\\n' "$@" > "${log}"\necho "stub cookiecutter: recorded" >&2\nexit 3\n`);
+  chmodSync(bin, 0o755);
+  return { path: `${dir}:${process.env.PATH}`, log };
+}
+
+/** The value following `flag` in a recorded argument list. */
+const argAfter = (log: string, flag: string): string | undefined => {
+  const args = readFileSync(log, "utf8").split("\n");
+  const i = args.indexOf(flag);
+  return i === -1 ? undefined : args[i + 1];
+};
+
 /** Where a generated (not supplied) scaffold went, from the phase-2 line. */
 const generatedAt = (r: Run): string | null =>
   /✓ generated at (.+)$/m.exec(r.out)?.[1] ?? null;
@@ -2126,14 +2147,14 @@ describe("guards that must be able to fire", () => {
       expect(r.out).not.toContain("[3/9]");
       expect(treeDigest(root)).toEqual(before);
     }
-    // Fetched rather than supplied, the stop names the published template.
+    // Fetched rather than supplied, the stop names the template and the tag (D16).
     const fetched = migrate(fixtureA({ undeclaredFolder: false }), [], {
       scaffold: null,
       env: { PATH: stubCookiecutter("copy", old) },
     });
     expect(fetched.exitCode).toBe(1);
     expect(fetched.out).toContain(
-      "the scaffold at gh:ichabodcole/project-docs-scaffold-template (the published template) is older than this migration requires"
+      `the scaffold at gh:ichabodcole/project-docs-scaffold-template at ${OWN_TAG} is older than this migration requires`
     );
   });
 
@@ -2696,5 +2717,16 @@ describe("phase 5 prints the codemod's needsConversion and slideDecks buckets", 
     // Neither file was marked: both blocks are left exactly as they were.
     expect(readFileSync(join(root, "docs/playbooks/deploy.md"), "utf8")).toStartWith("---\nowner: ops\n---\n");
     expect(readFileSync(join(root, "docs/reports/2026-09-01-deck.md"), "utf8")).toStartWith("---\ntheme: seriph\n");
+  });
+});
+
+describe("D16 — the scaffold this migration fetches is its own release", () => {
+  test("the cookiecutter call checks out project-docs-scaffold-template-v8.1.0, not the latest", () => {
+    const { path, log } = recordingCookiecutter();
+    const r = migrate(fixtureA({ undeclaredFolder: false }), ["--dry-run"], { scaffold: null, env: { PATH: path } });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("stub cookiecutter: recorded");
+    expect(readFileSync(log, "utf8")).toContain("gh:ichabodcole/project-docs-scaffold-template\n");
+    expect(argAfter(log, "--checkout")).toBe(OWN_TAG);
   });
 });

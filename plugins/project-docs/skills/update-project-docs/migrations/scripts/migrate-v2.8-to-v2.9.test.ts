@@ -12,6 +12,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -527,5 +528,42 @@ describe("#167 — .project-docs.json keeps its bytes when only `version` moves"
     const after = readFileSync(cfgPath, "utf8");
     expect(JSON.parse(after).version).toBe("9.9.9");
     expect(after.startsWith('{\n    "docsRoot"')).toBe(true);
+  });
+});
+
+/**
+ * A `cookiecutter` on PATH that records the arguments it was called with, one
+ * per line, and fails — enough to see which scaffold the script asked for.
+ */
+function recordingCookiecutter(): { path: string; log: string } {
+  const dir = mkdtempSync(join(tmpdir(), "migrate-d16-stubcc-"));
+  roots.push(dir);
+  const log = join(dir, "args.log");
+  const bin = join(dir, "cookiecutter");
+  writeFileSync(bin, `#!/bin/sh\nprintf '%s\\n' "$@" > "${log}"\necho "stub cookiecutter: recorded" >&2\nexit 3\n`);
+  chmodSync(bin, 0o755);
+  return { path: `${dir}:${process.env.PATH}`, log };
+}
+
+/** The value following `flag` in a recorded argument list. */
+const argAfter = (log: string, flag: string): string | undefined => {
+  const args = readFileSync(log, "utf8").split("\n");
+  const i = args.indexOf(flag);
+  return i === -1 ? undefined : args[i + 1];
+};
+
+describe("D16 — the scaffold this migration fetches is its own release", () => {
+  test("the cookiecutter call checks out project-docs-scaffold-template-v8.1.0, not the latest", () => {
+    const { path, log } = recordingCookiecutter();
+    const p = project(TPL);
+    const r = Bun.spawnSync(["bun", SCRIPT, "--root", p, "--skip-format", "--dry-run"], {
+      stdout: "pipe",
+      stderr: "pipe",
+      env: childEnv({ PATH: path }),
+    });
+    expect(r.exitCode).toBe(1);
+    expect(out(r)).toContain("stub cookiecutter: recorded");
+    expect(readFileSync(log, "utf8")).toContain("gh:ichabodcole/project-docs-scaffold-template\n");
+    expect(argAfter(log, "--checkout")).toBe("project-docs-scaffold-template-v8.1.0");
   });
 });

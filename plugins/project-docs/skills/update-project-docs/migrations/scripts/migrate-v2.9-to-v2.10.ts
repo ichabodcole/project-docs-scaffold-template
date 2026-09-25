@@ -89,6 +89,14 @@ import {
 } from "node:path";
 
 const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
+/**
+ * The scaffold release this migration was written against (plan D16). It is
+ * fetched at this tag, never at the latest release: `update-project-docs` runs
+ * every applicable migration in order, and a later release's layout (9.0.0's
+ * `features/` and `items/`) is one this script has never seen. `--scaffold-dir`
+ * still overrides.
+ */
+const SCAFFOLD_TAG = "project-docs-scaffold-template-v8.1.0";
 const MANIFEST_NAME = ".pdocs-seed.json";
 /**
  * What proves the refreshed CLI is the one this migration delivers: the
@@ -688,6 +696,8 @@ function getScaffold(ctx: Ctx): string {
     [
       "cookiecutter",
       TEMPLATE_REPO,
+      "--checkout",
+      SCAFFOLD_TAG,
       "--no-input",
       "-o",
       out,
@@ -732,7 +742,7 @@ function verifyScaffold(ctx: Ctx): string {
   const s = ctx.scaffoldDir;
   const source = ctx.scaffold
     ? `--scaffold-dir ${s}`
-    : `${TEMPLATE_REPO} (the published template)`;
+    : `${TEMPLATE_REPO} at ${SCAFFOLD_TAG}`;
 
   const readmeSrc = join(s, "docs/README.md");
   if (!existsSync(readmeSrc))
@@ -751,9 +761,9 @@ function verifyScaffold(ctx: Ctx): string {
   if (missing.length > 0)
     fail(
       `the scaffold at ${source} is older than this migration requires (release ${version}, missing ${missing.join(" and ")}).\n` +
-        `   This migration ships with the plugin; the scaffold is fetched from the published template, and the two\n` +
-        `   are at different points whenever develop is ahead of the last release. Pass --scaffold-dir pointing at a\n` +
-        `   scaffold generated from a checkout that has it — the guide's "Run it" section says how — or wait for the release.`
+        `   This migration fetches the scaffold at ${SCAFFOLD_TAG}, the release it was written against, which carries\n` +
+        `   all of it; a scaffold supplied or fetched otherwise can be older. Pass --scaffold-dir pointing at a\n` +
+        `   scaffold generated from a checkout that has it — the guide's "Run it" section says how.`
     );
   ok(
     `release ${version}, carrying what the refresh installs (${RULES_FILE} with \`${RULES_MARKER}\`, SCHEMA.md's exact-shape Seeded row)`

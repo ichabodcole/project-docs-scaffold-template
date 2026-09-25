@@ -138,16 +138,19 @@ For each migration file:
    the plan it prints, run it without the flag, and read the output lines its
    `## Verification` section names — the exit code is the check. The `.ts`
    scripts run with `bun`, which must already be on PATH;
-   `migrate-v2.6-to-v2.7.ts` checks for it and stops if it is not. A script
-   fetches its scaffold from the published template, which can lag the plugin
-   that ships the migration; if its scaffold phase stops saying the scaffold is
-   older than the migration requires, the guide's `## Run it` section says how
-   to generate one from a checkout and pass `--scaffold-dir`. **A guide-shaped
-   migration** (the legacy rows) is followed step by step, in order — most have
-   a companion `.sh` script in `migrations/scripts/` that handles the mechanical
-   steps, run with `bash`, `--dry-run` first to preview, then without the flag.
-   Only content-editing steps (flowchart updates, README prose) remain for the
-   agent.
+   `migrate-v2.6-to-v2.7.ts` checks for it and stops if it is not. **Each script
+   runs against its own era's scaffold**: it fetches the scaffold release it was
+   written against, never the latest one (`v2.6-to-v2.7`, `v2.8-to-v2.9` and
+   `v2.9-to-v2.10` fetch the tag `project-docs-scaffold-template-v8.1.0`), so a
+   later release's layout never reaches a script that has not seen it, and the
+   chain runs in order from any starting version. `--scaffold-dir` still
+   overrides; if a scaffold phase stops saying the scaffold is older than the
+   migration requires, the guide's `## Run it` section says how to generate one
+   from a checkout and pass it. **A guide-shaped migration** (the legacy rows)
+   is followed step by step, in order — most have a companion `.sh` script in
+   `migrations/scripts/` that handles the mechanical steps, run with `bash`,
+   `--dry-run` first to preview, then without the flag. Only content-editing
+   steps (flowchart updates, README prose) remain for the agent.
 3. Verify: the checklist at the end of a guide, or the output lines and exit 0
    of a script
 4. Move to the next migration

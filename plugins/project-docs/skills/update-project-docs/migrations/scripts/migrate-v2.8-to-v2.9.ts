@@ -66,6 +66,14 @@ import { join, relative, resolve } from "node:path";
 
 const MANIFEST_NAME = ".pdocs-seed.json";
 const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
+/**
+ * The scaffold release this migration was written against (plan D16). It is
+ * fetched at this tag, never at the latest release: `update-project-docs` runs
+ * every applicable migration in order, and a later release's layout (9.0.0's
+ * `features/` and `items/`) is one this script has never seen. `--scaffold-dir`
+ * still overrides.
+ */
+const SCAFFOLD_TAG = "project-docs-scaffold-template-v8.1.0";
 const SKIP_DIRS = new Set(["_archive", "node_modules", ".git"]);
 
 /**
@@ -395,7 +403,7 @@ function getScaffold(ctx: Ctx): string {
   const out = mkdtempSync(join(tmpdir(), "pdocs-scaffold-"));
   const r = run(
     [
-      "cookiecutter", TEMPLATE_REPO, "--no-input", "-o", out,
+      "cookiecutter", TEMPLATE_REPO, "--checkout", SCAFFOLD_TAG, "--no-input", "-o", out,
       'install_target=New project folder',
     ],
     ctx.root
