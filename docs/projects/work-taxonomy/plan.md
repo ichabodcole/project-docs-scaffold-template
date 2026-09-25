@@ -801,6 +801,14 @@ carrying every change below:
 | `hivemind/skills/hivemind-consult/SKILL.md`, `hivemind-digest/SKILL.md`                                                                                                                                              | Destinations change from `docs/lessons-learned/` to the playbook of that kind of work. Minor bump                                                                                                                                                                                 |
 | `project-docs/README.md`, `.claude-plugin/plugin.json`                                                                                                                                                               | `4.0.0` (major: a skill removed, a skill renamed, `--project` removed). Update the Skills table and add the version history. Update the skill count in `docs/PROJECT_MANIFESTO.md`                                                                                                |
 
+**Corrected by the Task 4.0 audit** ([skill-audit](./artifacts/skill-audit.md)):
+`implementation-blueprint` has no retired reference to remove,
+`slide-deck-author` names no retired path, and `hivemind-digest` writes to
+HiveMind's own Lessons Learned folder, not a project's `docs/lessons-learned/` —
+all three are kept unchanged. `generate-dev-plan` also files the items a plan
+names, once the user approves the list, since shaping (D20) needs items to
+shape.
+
 **Checks before the phase closes:**
 
 ```bash
