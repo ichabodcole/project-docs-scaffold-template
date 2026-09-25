@@ -413,15 +413,20 @@ describe("patchLintArrays — keeps the adopter's entries and order", () => {
   };
 
   test("the retired workbench folders out, features and items in, the user's own kept in place", () => {
-    const { lint, changes } = patchLintArrays(V210, { moves: [["docs/projects/deck", "docs/features/deck"]], keptLibrary: ["memories"], docsRootName: "docs" });
+    const { lint, changes, notes } = patchLintArrays(V210, { moves: [["docs/projects/deck", "docs/features/deck"]], keptLibrary: ["memories"], docsRootName: "docs" });
     expect(lint.workbench).toEqual(["cycles", "runbooks", "features", "items"]);
     expect(lint.durable).toEqual(["architecture", "mine", "specifications", "memories"]);
     expect(lint.types).toEqual({ memories: "memory" });
     expect(lint.skip).toEqual(["superpowers"]);
-    expect(lint.exclude).toEqual(["docs/features/deck/artifacts/*-prototype.md", "dist/**", "docs/features/*/artifacts/*.md"]);
+    // A wildcard where the entity would be could mean features/ or items/: left as written, and named.
+    expect(lint.exclude).toEqual(["docs/features/deck/artifacts/*-prototype.md", "dist/**", "docs/projects/*/artifacts/*.md"]);
+    expect(changes.join("\n")).not.toContain("docs/projects/*/artifacts/*.md →");
     expect(lint.scopes).toEqual([]);
     expect(lint.adopting).toBe(false);
     expect(changes).toContain("lint.skip: -_archive (the archive is linted now)");
+    expect(notes).toEqual([
+      "lint.exclude: `docs/projects/*/artifacts/*.md` names a retired folder, and what it matched now sits under features/ or items/ — left as written; respell it by hand",
+    ]);
   });
 
   test("already migrated: nothing changes", () => {
@@ -435,7 +440,11 @@ describe("patchLintArrays — keeps the adopter's entries and order", () => {
     const moves: Array<[string, string]> = [["docs/projects/a", "docs/features/a"], ["docs/projects/a/x.md", "docs/features/a/feature.md"]];
     expect(rewriteExcludeGlob("docs/projects/a/x.md", moves, "docs")).toBe("docs/features/a/feature.md");
     expect(rewriteExcludeGlob("docs/projects/a/**", moves, "docs")).toBe("docs/features/a/**");
-    expect(rewriteExcludeGlob("docs/backlog/*.md", moves, "docs")).toBe("docs/items/*.md");
+    // Not unambiguous: items/ holds every kind of item now, and a guess would exclude all of them.
+    expect(rewriteExcludeGlob("docs/backlog/*.md", moves, "docs")).toBeNull();
+    expect(rewriteExcludeGlob("docs/backlog/**", moves, "docs")).toBeNull();
+    expect(rewriteExcludeGlob("docs/projects/*/artifacts/*.md", moves, "docs")).toBeNull();
+    expect(rewriteExcludeGlob("docs/projects/gone/**", moves, "docs")).toBeNull();
     expect(rewriteExcludeGlob("dist/**", moves, "docs")).toBe("dist/**");
   });
 });

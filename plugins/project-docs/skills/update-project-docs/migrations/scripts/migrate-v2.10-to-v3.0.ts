@@ -80,7 +80,7 @@ const MANIFEST_NAME = ".pdocs-seed.json";
 /**
  * The run's own record, at the project root, kept until a run completes: every
  * path this migration wrote (and the hash it left there), and — from the start of
- * phase 5 to the end of phase 6 — the plan itself. A re-run reads it to tell its
+ * phase 5 to the end of phase 7 — the plan itself. A re-run reads it to tell its
  * own uncommitted output from an edit of the adopter's, and to finish moves an
  * interrupted run had begun from the plan that began them.
  */
@@ -791,22 +791,22 @@ export interface LintKeys {
 }
 
 /**
- * A `lint.exclude` glob with every moved path respelled. `moves` are
- * repository-relative `[from, to]` pairs, a folder or a file. A glob that
- * names a retired folder with a wildcard where the entity would be
- * (`docs/projects/*` …) is pointed at its successor folder. Returns the glob
- * unchanged when it names nothing that moved.
+ * A `lint.exclude` glob with every moved path respelled — only where the new
+ * path is certain. `moves` are repository-relative `[from, to]` pairs, a folder
+ * or a file: a glob naming one of them, or something under one, follows it.
+ * Returns the glob unchanged when it names no retired folder, and `null` when
+ * it names a retired folder but no single move: a wildcard where the entity
+ * would be (`docs/projects/*` could now be `features/` or `items/`, and
+ * `docs/backlog/**` respelled to `docs/items/**` would exclude every item), or
+ * a path nothing moved. The caller leaves a `null` as written and names it.
  */
-export function rewriteExcludeGlob(glob: string, moves: Array<[string, string]>, docsRootName: string): string {
+export function rewriteExcludeGlob(glob: string, moves: Array<[string, string]>, docsRootName: string): string | null {
   const sorted = [...moves].sort((a, b) => b[0].length - a[0].length);
   for (const [from, to] of sorted) {
     if (glob === from) return to;
     if (glob.startsWith(`${from}/`)) return to + glob.slice(from.length);
   }
-  for (const [folder, successor] of Object.entries(FOLDER_SUCCESSOR)) {
-    const prefix = `${docsRootName}/${folder}/`;
-    if (glob.startsWith(prefix)) return `${docsRootName}/${successor}/${glob.slice(prefix.length)}`;
-  }
+  if (LEGACY_FOLDERS.some((f) => glob === `${docsRootName}/${f}` || glob.startsWith(`${docsRootName}/${f}/`))) return null;
   return glob;
 }
 
@@ -824,9 +824,11 @@ export function rewriteExcludeGlob(glob: string, moves: Array<[string, string]>,
 export function patchLintArrays(
   lint: LintKeys,
   f: { moves: Array<[string, string]>; keptLibrary: string[]; docsRootName: string }
-): { lint: LintKeys; changes: string[] } {
+): { lint: LintKeys; changes: string[]; notes: string[] } {
   const out: LintKeys = { ...lint };
   const changes: string[] = [];
+  /** What the adopter must look at: a glob this function would not guess at. */
+  const notes: string[] = [];
   const legacy = new Set(LEGACY_FOLDERS);
 
   const wb = [...(lint.workbench ?? [])];
@@ -869,7 +871,12 @@ export function patchLintArrays(
   }
 
   if (lint.exclude) {
-    const next = lint.exclude.map((g) => rewriteExcludeGlob(g, f.moves, f.docsRootName));
+    const next = lint.exclude.map((g) => {
+      const r = rewriteExcludeGlob(g, f.moves, f.docsRootName);
+      if (r === null)
+        notes.push(`lint.exclude: \`${g}\` names a retired folder, and what it matched now sits under features/ or items/ — left as written; respell it by hand`);
+      return r ?? g;
+    });
     const changed = next.filter((g, i) => g !== lint.exclude?.[i]);
     if (changed.length) {
       out.exclude = next;
@@ -883,7 +890,7 @@ export function patchLintArrays(
     out.scopes = [];
     changes.push("lint.scopes: [] added (declare the names `scope:` may take)");
   }
-  return { lint: out, changes };
+  return { lint: out, changes, notes };
 }
 
 /** The index just past the JSON string opening at `from`. */
@@ -2050,6 +2057,7 @@ function printPlan(ctx: Ctx): void {
   note(`links: ${links} respelled across ${c.writes.filter((w) => w.links > 0).length} file(s), ${inPlace} of them in place`);
   const cfg = patchLintArrays((ctx.config?.lint ?? {}) as LintKeys, { moves: c.repoMoves, keptLibrary: c.keptLibrary, docsRootName: ctx.docsRootName });
   for (const ch of cfg.changes) note(`config: ${ch}`);
+  for (const n of cfg.notes) note(`config — for you: ${n}`);
   for (const k of c.keptLibrary) note(`kept: ${d(k)}/ — a retired library folder, declared in lint.types so it stays lintable (D11)`);
   ok(
     `${c.plan.moves.length} move(s): ${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ") || "none — nothing left in a retired folder"}; ` +
@@ -2177,11 +2185,7 @@ function rewriteInPlace(ctx: Ctx): void {
   }
   const wrong = inPlace.filter((w) => readFileSync(w.to, "utf8") !== w.text);
   if (wrong.length) fail(`${wrong.length} file(s) do not hold the rewritten links: ${wrong.map((w) => relative(ctx.root, w.to)).join(", ")}`);
-  // Every move and every text of the plan is on disk: from here a re-run plans afresh.
-  if (ctx.state.journal) {
-    ctx.state.journal = null;
-    saveState(ctx);
-  }
+
   const total = c.writes.reduce((n, w) => n + w.links, 0);
   ok(
     total === 0
@@ -2191,15 +2195,24 @@ function rewriteInPlace(ctx: Ctx): void {
   for (const w of inPlace) note(`${relative(ctx.root, w.to)}: ${w.links} link(s)`);
 }
 
+/** Every move, text and exclude glob of the plan is on disk: from here a re-run plans afresh. */
+function closeJournal(ctx: Ctx): void {
+  if (!ctx.state.journal) return;
+  ctx.state.journal = null;
+  saveState(ctx);
+}
+
 function patchConfig(ctx: Ctx): void {
   step(7, "Patch .project-docs.json");
   const c = ctx.changes as Changes;
   const before = readFileSync(ctx.configPath, "utf8");
   const cfg = JSON.parse(before) as Record<string, unknown>;
   const lint = (cfg.lint ?? {}) as LintKeys;
-  const { lint: next, changes } = patchLintArrays(lint, { moves: c.repoMoves, keptLibrary: c.keptLibrary, docsRootName: ctx.docsRootName });
+  const { lint: next, changes, notes } = patchLintArrays(lint, { moves: c.repoMoves, keptLibrary: c.keptLibrary, docsRootName: ctx.docsRootName });
+  for (const n of notes) note(`for you: ${n}`);
   if (changes.length === 0) {
     ok(".project-docs.json already carries the 9.0.0 lint keys");
+    closeJournal(ctx);
     return;
   }
   const intended = { ...cfg, lint: next };
@@ -2213,6 +2226,9 @@ function patchConfig(ctx: Ctx): void {
   if (verified) writeFileSync(ctx.configPath, patched as string);
   else writeFileSync(ctx.configPath, reserialiseLike(intended, before));
   track(ctx, ctx.configPath);
+  // Kept until here, not phase 6: an exclude glob is respelled from the plan's moves,
+  // and a re-plan of a moved tree has none to respell it from.
+  closeJournal(ctx);
   for (const ch of changes) ok(ch);
   ok(verified ? "written in the file's own text; every other byte as it was" : "re-serialised, indent kept: the lint keys could not be patched in place");
 }
