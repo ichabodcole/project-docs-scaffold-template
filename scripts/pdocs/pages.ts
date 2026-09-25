@@ -4,15 +4,14 @@
 // `backlinks` — and it deliberately covers BOTH TIERS.
 //
 // The obvious alternative was to build them on `graphTier`, which already
-// returns a knowledge graph. It walks the library only: `.project-docs.json`
-// puts `projects`, `cycles`, `backlog`, `briefs`, `investigations`, `reports`
-// and `fragments` in `nonPageDirs`, because the graph obligations — catalog
-// reachability, `related` resolution — are library obligations. But the
-// questions this cycle exists to answer are "what is in the active cycle" and
-// "which proposals claim `implemented` and are lying", and both of those live
-// in the workbench. A `find` built on `graphTier` would answer
-// `--type proposal` with silence, which is a worse failure than not shipping
-// the command: an empty result reads as an answer.
+// returns a knowledge graph. It walks the library only: the workbench folders
+// (`features`, `items`, `cycles`) are `nonPageDirs`, because the graph
+// obligations — catalog reachability, `related` resolution — are library
+// obligations. But the questions these commands answer — "what is in the
+// active cycle", "which features claim `done`" — live in the workbench. A
+// `find` built on `graphTier` would answer `--type feature` with silence,
+// which is a worse failure than not shipping the command: an empty result
+// reads as an answer.
 //
 // So the tier is a FIELD here, not a filter. `orphans` is the one read command
 // that stays on `graphTier`, because orphan-ness is defined against a catalog
@@ -50,7 +49,7 @@ const unquoted = (v: string | undefined): string | null =>
 /** One document, flattened. Every field is either frontmatter as written or
  *  something derived from the file's position — nothing here is a judgement. */
 export interface Page {
-  /** Repo-relative, e.g. `docs/projects/foo/proposal.md`. The only path
+  /** Repo-relative, e.g. `docs/features/foo/feature.md`. The only path
    *  vocabulary any read command speaks, so a `find` result can be handed
    *  straight back to `backlinks`. */
   path: string;
@@ -229,7 +228,7 @@ function isEntityEntryFile(page: Page): boolean {
 /** Every address a page answers to: its `type/slug` key, plus any alias. */
 export function pageKeys(page: Page): string[] {
   // A folder entity's basename key names every folder entity and identifies
-  // none (the `proposal/proposal` trap); its slug key is in the aliases.
+  // none (the `feature/feature` trap); its slug key is in the aliases.
   const key = isEntityEntryFile(page) ? null : pageKey(page);
   return [...new Set([...(key === null ? [] : [key]), ...pageAliasKeys(page)])];
 }

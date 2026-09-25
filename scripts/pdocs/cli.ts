@@ -73,7 +73,7 @@ export interface Option {
 /** One positional a verb takes. `required` is here rather than inferred from a
  *  `<name>` / `[name]` spelling, because the spelling is prose and the fact is
  *  a fact: `pdocs new <type>` is always required and its `<name>` is not (a
- *  `proposal` takes its filename from the registry, not from the caller). */
+ *  `plan` takes its filename from the registry, not from the caller). */
 export interface Positional {
   name: string;
   required: boolean;

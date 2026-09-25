@@ -139,7 +139,7 @@ export function resolveTarget(
       };
     }
     if (byKey.length > 1) {
-      // Named, but bounded: `proposal/proposal` matches every project in the
+      // Named, but bounded: `feature/feature` matches every feature in the
       // tree, and a diagnostic that pastes forty paths into stderr is one
       // nobody reads.
       const shown = byKey.slice(0, 5).map((p) => p.path);

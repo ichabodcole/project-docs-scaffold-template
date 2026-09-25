@@ -32,7 +32,6 @@ import {
   PRIORITIES,
   STATE_GROUP,
   type RegistryRow,
-  TYPE_ALIAS,
   buildRegistry,
   retiredWordReason,
   registryIndex,
@@ -309,21 +308,10 @@ describe("the unified frontmatter contract", () => {
   });
 });
 
-describe("aliases and pre-write validation", () => {
-  // `project` resolved to the proposal row, and the proposal is retired: a
-  // feature is created as itself.
-  test("`project` is no longer an alias", () => {
-    expect(Object.keys(TYPE_ALIAS)).not.toContain("project");
-  });
-
-  test("an alias that names a scope resolves to a row that HAS one", () => {
-    // A `namesScope` alias supplies the owner slug; a row outside an owner
-    // scope would have nowhere to put it.
-    for (const alias of Object.values(TYPE_ALIAS))
-      if (alias.namesScope)
-        expect(
-          (registryIndex(DEFAULT_CONFIG).get(alias.type) as RegistryRow).scope
-        ).toBe("owner");
+describe("pre-write validation", () => {
+  test("only the feature row names the folder it opens", () => {
+    expect(ROWS.filter((r) => r.namesScope).map((r) => r.type)).toEqual(["feature"]);
+    expect(row("feature").scope).toBe("owner");
   });
 
   test("`cycle`, `feature` and `item` are the rows that declare a validate predicate", () => {
@@ -334,9 +322,8 @@ describe("aliases and pre-write validation", () => {
     ).toEqual(["cycle", "feature", "item"]);
   });
 
-  // A cycle's scope is derived from the items that name it, so the predicate no
-  // longer resolves `scope:` entries. The field stays in `extra` until the
-  // legacy cycles are migrated, and nothing checks what it says.
+  // A cycle's scope is derived from the items that name it, so the predicate
+  // does not resolve `scope:` entries.
   test("the predicate does not resolve scope: a cycle's scope is derived now", () => {
     const cycle = ROWS.find((r) => r.type === "cycle") as RegistryRow;
     const problems = (cycle.validate as NonNullable<RegistryRow["validate"]>)({

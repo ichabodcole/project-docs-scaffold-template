@@ -25,7 +25,7 @@
 // once, as inline code, in a diff a reader can see: it fixes the same defect
 // for someone copying a template BY HAND, which is still the majority path,
 // and it keeps this command out of the business of editing prose. The links
-// that a real workflow makes resolve — a plan's `./proposal.md` — are left as
+// that a real workflow makes resolve — the owner link `--owner` writes — are left as
 // live links, and `new` neither adds nor removes one.
 
 import {
@@ -61,7 +61,6 @@ import {
   ITEMS_FOLDER,
   KINDS,
   type RegistryRow,
-  TYPE_ALIAS,
   defaultRegistryIndex,
   registryIndex,
   retiredWordReason,
@@ -117,8 +116,8 @@ export function today(now = new Date()): string {
  *
  * `.` survives the character filter because real names carry it —
  * `OAuth 2.0 / upgrade` is `oauth-2.0-upgrade` — and that is exactly what made
- * `pdocs new project ".."` write `docs/proposal.md`, outside the project tree,
- * and report `ok: true`. A dot is legal INSIDE a slug and never at either end,
+ * the pre-9.0.0 `pdocs new project ".."` write `docs/proposal.md`, outside any
+ * owner folder, and report `ok: true`. A dot is legal INSIDE a slug and never at either end,
  * so `..` and `...` have nothing left once the ends are trimmed, and the
  * emptiness check that was already here refuses them.
  *
@@ -128,7 +127,7 @@ export function today(now = new Date()): string {
  * `"!!!"` and false of `"..."`. Now it is true of both.
  *
  * This is the first of two guards. Escaping a slug is not the only way to leave
- * the tree — `--project ../../etc` never goes through here — so `assertInside`
+ * the tree — an `--owner` reference is resolved, not slugged — so `assertInside`
  * checks the RESOLVED path as well. A sanitizer and a containment check are
  * different claims and the writer/checker contract needs both.
  */
@@ -150,9 +149,9 @@ export function slugify(name: string): string {
 /**
  * Refuse to write outside the tree, whatever produced the path.
  *
- * `existsSync(projectDir)` is not this check and never was: it asks whether a
- * directory is there, and `docs/..` is very much there. `pdocs new project ".."`
- * resolved to the repository root, wrote `docs/proposal.md` — the docs root's
+ * `existsSync(ownerDir)` is not this check and never was: it asks whether a
+ * directory is there, and `docs/..` is very much there. The pre-9.0.0
+ * `pdocs new project ".."` resolved to the repository root, wrote `docs/proposal.md` — the docs root's
  * own parent, where no type is declared — and reported success with exit 0.
  * The document it wrote was `BAD type` and `ORPHAN` on the very next
  * `pdocs check`: the writer and the checker, which read one registry precisely
@@ -224,7 +223,7 @@ export interface ResolvedType {
 }
 
 /**
- * The type argument, through the alias table and then to a row.
+ * The type argument, resolved to its registry row.
  *
  * A row that is not creatable is refused with the reason the REGISTRY gives,
  * quoted verbatim. That is deliberate rather than a null-template accident:
@@ -233,20 +232,15 @@ export interface ResolvedType {
  * instead of about the decision.
  */
 export function resolveType(ctx: Ctx, typeArg: string): ResolvedType {
-  const alias = TYPE_ALIAS[typeArg];
-  const wanted = alias?.type ?? typeArg;
   const registry = registryIndex(ctx.config);
-  const row = registry.get(wanted);
+  const row = registry.get(typeArg);
   // The closed set, read off the registry rather than written beside it — the
   // same list `check` enforces and `new` writes from. It is enumerated in prose
   // AND as `choices`, and both refusals below hand it over: a caller who named
   // a type pdocs will not create needs the set exactly as much as one who named
   // a type that does not exist.
   const creatable = (): string[] =>
-    [
-      ...[...registry.values()].filter((r) => r.creatable).map((r) => r.type),
-      ...Object.keys(TYPE_ALIAS),
-    ].sort();
+    [...registry.values()].filter((r) => r.creatable).map((r) => r.type).sort();
 
   if (!row) {
     const retired = retiredWordReason(typeArg, ctx.config);
@@ -273,7 +267,7 @@ export function resolveType(ctx: Ctx, typeArg: string): ResolvedType {
       }
     );
 
-  return { row, namesScope: alias?.namesScope === true || row.namesScope === true };
+  return { row, namesScope: row.namesScope === true };
 }
 
 // ---------------------------------------------------------------------------------------
@@ -810,7 +804,7 @@ export const newCommand: Command = {
     "--project": "`--project` was replaced by `--owner feature/<slug>` (or `item/<slug>`).",
   },
     // `name` is NOT required and the two are not the same kind of optional: a
-  // type whose filename the registry fixes — `proposal.md`, `plan.md` — takes
+  // type whose filename the registry fixes — `plan.md`, `write-up.md` — takes
   // none, and a type that names a scope demands one. The parser enforces the
   // maximum; which of the two applies is `resolveType`'s answer, so `required`
   // here is the honest floor rather than a guess at the common case.

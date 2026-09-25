@@ -6,13 +6,12 @@
 // by a command that owns its own output envelope.
 //
 // Two tiers, keyed to folders rather than to location — see docs/SCHEMA.md.
-// The LIBRARY (architecture, specifications, interaction-design, playbooks,
-// lessons-learned, memories, and the three root pages) is checked by the ported
-// core, which additionally enforces catalog reachability, `related` resolution
-// and the graph. The WORKBENCH (backlog, briefs, investigations, projects,
-// reports, fragments, cycles) is checked by `thinTier` below: presence and
-// vocabulary, and links, and nothing about reachability — those documents are
-// written once, they close, and nobody returns to them.
+// The LIBRARY (architecture, specifications, interaction-design, playbooks, any
+// folder a project declares there, and the three root pages) is checked by the
+// ported core, which additionally enforces catalog reachability, `related`
+// resolution and the graph. The WORKBENCH (features, items, cycles) is checked
+// by `thinTier` below: presence and vocabulary, and links, and nothing about
+// reachability — work is found by its state and its fields, not by a catalog.
 //
 // Everything project-specific lives in this file and in `registry.ts`, which
 // holds the type system as data and which every check below reads rather than
@@ -489,10 +488,9 @@ export function libraryFiles(ctx: Ctx): Array<{
  * about the corpus and cannot be decided one file at a time.
  *
  * `lifecycle` and `extra` come from the REGISTRY, one lookup for every type.
- * They used to come from two places that could not answer for the same set:
- * `vocabularyFor` read `PROJECT_SPEC` then `SPEC`, while `extra` was read from
- * `SPEC` alone — so an extra field was structurally unavailable to all eight
- * project-scoped types, and nothing in the code said so. The registry is passed
+ * They used to come from two tables that could not answer for the same set, so
+ * an extra field was structurally unavailable to the owned types, and nothing in
+ * the code said so. The registry is passed
  * in rather than rebuilt per document; the default is exact, because neither
  * field depends on configuration.
  */

@@ -92,7 +92,7 @@ export interface DocsLintConfig {
    * Files excluded from the walk entirely, by path relative to `root`.
    *
    * A TEMPLATE is the one page whose links are SUPPOSED not to resolve —
-   * `../projects/project-name/proposal.md` is what a template is for — so it
+   * `../features/feature-name/feature.md` is what a template is for — so it
    * cannot be exempted by the contract-page rule below, which still checks
    * links. Default: nothing is skipped.
    */

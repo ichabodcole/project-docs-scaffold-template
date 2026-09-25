@@ -1,7 +1,7 @@
 // `pdocs find` — query the tree.
 //
-// The command the proposal's motivating questions actually need: "what is in
-// the active cycle", "which proposals claim `implemented`". Both are workbench
+// The command the work questions actually need: "what is in the active
+// cycle", "which features claim `done`". Both are workbench
 // questions, which is why this stands on `collectPages` and not on the lint's
 // library-tier graph — see `pages.ts`.
 //

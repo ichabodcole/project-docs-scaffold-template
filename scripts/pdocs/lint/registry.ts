@@ -8,7 +8,7 @@
 //
 // `buildRegistry` is the one place that assembles them, and it is a FUNCTION
 // rather than a module-level const on purpose. User-declared folders and types
-// (docs/backlog/2026-09-04-user-defined-document-types.md) become a merge step
+// (`lint.types` in `.project-docs.json`) are a merge step
 // inside this function rather than a rewrite of everything that touches the
 // tables. It costs nothing now.
 //
@@ -279,38 +279,6 @@ export interface ValidationProblem {
 }
 
 export type Validator = (input: ValidationInput) => ValidationProblem[];
-
-// ---------------------------------------------------------------------------------------
-// Aliases
-// ---------------------------------------------------------------------------------------
-
-/**
- * A name a caller may type that is not itself a type.
- *
- * `pdocs new project oauth-upgrade` is the grammar the design resolution
- * approved, and a project is not a document — it is a FOLDER whose first
- * document is a `proposal`. That is data, not a branch: the alias says which
- * row the name resolves to and that the positional names the scope owner rather
- * than the document's slug, and `new` reads both without knowing the word
- * "project".
- */
-export interface TypeAlias {
-  /** The registry row this name resolves to. */
-  type: string;
-  /**
-   * True when the positional `<name>` names the SCOPE OWNER — the project
-   * folder — instead of the document's own slug, and `new` creates that folder
-   * rather than requiring it to exist. Only meaningful on a row whose `scope`
-   * is `project`, whose slug is fixed anyway.
-   */
-  namesScope: boolean;
-}
-
-/**
- * Empty since 9.0.0. `project` resolved to the `proposal` row, and the proposal
- * is retired: a feature is created as itself.
- */
-export const TYPE_ALIAS: Record<string, TypeAlias> = {};
 
 /** The folder that holds feature folders: `features/<slug>/feature.md`. */
 export const FEATURES_FOLDER = "features";
