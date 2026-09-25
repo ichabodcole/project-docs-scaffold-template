@@ -269,7 +269,7 @@ in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
 ```
-docs/projects/<name>/artifacts/
+docs/features/<slug>/artifacts/
   slides.md
   components/
     MultiChoice.vue
@@ -281,16 +281,18 @@ the entry file.
 
 ## File Location
 
-**Active project exists** — put slides in the project's artifacts folder and
-commit the `.md` source:
+**The work has a home** — a feature (`docs/features/<slug>/`) or a work item
+promoted to a folder (`docs/items/<slug>/`, e.g. a research item's write-up) —
+put slides in its `artifacts/` folder and commit the `.md` source:
 
 ```
-docs/projects/<name>/artifacts/<feature>-slides.md
-docs/projects/<name>/artifacts/components/   ← copy from skill if using MultiChoice/TellMeMore
+docs/features/<slug>/artifacts/<feature>-slides.md
+docs/features/<slug>/artifacts/components/   ← copy from skill if using MultiChoice/TellMeMore
 ```
 
-**No project yet** (investigation, brief, or early exploration) — slides are
-temporal. Create them in a root-level `artifacts/` folder named after the topic:
+**No home yet** (an idea still being workshopped, or early exploration) — slides
+are temporal. Create them in a root-level `artifacts/` folder named after the
+topic:
 
 ```
 artifacts/<topic-name>/slides.md

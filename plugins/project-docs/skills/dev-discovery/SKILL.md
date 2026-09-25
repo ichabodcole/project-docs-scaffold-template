@@ -30,8 +30,10 @@ Use this skill when:
 - You need to understand existing patterns before planning changes
 - Architecture documentation might be missing or stale
 
-**Key indicator**: Any feature that would benefit from the "Architecture
-Discovery Before Implementation" methodology in `docs/lessons-learned/`.
+**Key indicator**: Any feature where the cost of planning against a wrong
+picture of the codebase is higher than the cost of looking first. If the project
+has a playbook for this kind of work
+(`bun scripts/pdocs/cli.ts find --type playbook`), follow it.
 
 ## Workflow Overview
 
@@ -133,20 +135,23 @@ supporting areas.
 
 Once explorers return, synthesize their findings into a discovery document.
 
-**Write to project artifacts:**
+**Write to the feature's artifacts:**
 
 ```
-docs/projects/<project>/artifacts/<feature-name>-discovery.md
+docs/features/<slug>/artifacts/<feature-name>-discovery.md
 ```
 
-The `<project>` name comes from the proposal path (e.g.,
-`docs/projects/operator-hub-export-import/proposal.md` →
-`operator-hub-export-import`).
+The `<slug>` comes from the feature's path (e.g.,
+`docs/features/operator-hub-export-import/feature.md` →
+`operator-hub-export-import`). For discovery done for a work item, use
+`docs/items/<slug>/artifacts/` — promote a single-file item to a folder first
+with `bun scripts/pdocs/cli.ts promote item/<slug>`.
 
-Create the artifacts folder if needed:
+Create the artifacts folder if needed — an artifact has no template, so it is
+the one owned document you write by hand:
 
 ```bash
-mkdir -p docs/projects/<project>/artifacts
+mkdir -p docs/features/<slug>/artifacts
 ```
 
 This file captures:
@@ -171,7 +176,7 @@ than _understanding the codebase_.
 
 ## Discovery Document Template
 
-Save to `docs/projects/<project>/artifacts/<feature-name>-discovery.md`:
+Save to `docs/features/<slug>/artifacts/<feature-name>-discovery.md`:
 
 ````markdown
 # Technical Discovery: [Feature Name]
@@ -263,26 +268,27 @@ Save to `docs/projects/<project>/artifacts/<feature-name>-discovery.md`:
 
 ## Artifact Storage
 
-Discovery files are stored alongside the project they support:
+Discovery files are stored alongside the feature they support:
 
 ```
 
-docs/projects/<project>/artifacts/ <feature-name>-discovery.md
+docs/features/<slug>/artifacts/ <feature-name>-discovery.md
 context-menu-exploration.md dependency-analysis.md
 
 ```
 
 **Benefits:**
-- Co-located with the project — proposal, plan, and research live together
+- Co-located with the feature — proposal, plan, and research live together
 - Committed to the repo — survives branch merges and available for reference
 - Discoverable — anyone can find the research that informed the plan
-- Multiple artifacts per project if needed
+- Multiple artifacts per feature if needed
 
 **Lifecycle:**
 - Created during dev-discovery
 - Used during planning and early development
 - Referenced throughout the feature work
-- Archived with the project when complete
+- Archived with the feature when it is done (`pdocs archive`, driven by
+  `sweep-project`)
 
 ## Quality Checklist
 
@@ -315,7 +321,7 @@ Before handing off to the planner:
 
 4. Create architecture doc for context menu system
 
-5. Write discovery to `docs/projects/operator-hub-export-import/artifacts/discovery.md`
+5. Write discovery to `docs/features/operator-hub-export-import/artifacts/discovery.md`
 
 6. Call dev-plan-generator with proposal + discovery file
 

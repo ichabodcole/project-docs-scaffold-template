@@ -185,8 +185,9 @@ syndrome where design looks good in isolation but context is unclear.
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
-**File location** — `docs/projects/<project>/artifacts/<feature>-mockup.html`.
-Commit to the branch as part of the project record.
+**File location** — `docs/features/<slug>/artifacts/<feature>-mockup.html` (or
+`docs/items/<slug>/artifacts/` for a work item's mockup). Commit to the branch
+as part of the feature's record.
 
 **Resist real logic** — Buttons should just set `state = 'next'`, not implement
 actual behavior. The goal is to show what happens, not make it work.

@@ -50,8 +50,10 @@ the tradeoff visible through the tiered system.
    Test Environment section.
 
 5. **Write the test plan** — Use the template at
-   `docs/projects/TEMPLATES/TEST-PLAN.template.md`. Output to
-   `docs/projects/<project-name>/test-plan.md`.
+   `docs/TEMPLATES/TEST-PLAN.template.md`. Output to `test-plan.md` in the
+   folder of the feature (or item) it belongs to — create it with
+   `bun scripts/pdocs/cli.ts new test-plan --owner feature/<slug>`, which also
+   links the owner.
 
 ## Quality Standards
 

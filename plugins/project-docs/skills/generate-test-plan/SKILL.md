@@ -8,7 +8,7 @@ description: >
   user mentions "test plan", "verification plan", "what should we test", or
   wants to prepare for parallel worktree development with clear testing
   expectations.
-allowed_tools: ["Read", "Write", "Grep", "Glob"]
+allowed_tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ---
 
 # Generate Test Plan
@@ -48,13 +48,17 @@ The template defines point B. This skill is the methodology for getting there.
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
-1. Read the development plan at `docs/projects/$1/plan.md`
-2. Read the proposal at `docs/projects/$1/proposal.md`
-3. Check if a design resolution exists at
-   `docs/projects/$1/design-resolution.md` and read it if present
-4. Read the test plan template at
-   `docs/projects/TEMPLATES/TEST-PLAN.template.md`
-5. Read the projects README at `docs/projects/README.md` for conventions
+**Owner:** `$1` is what the document belongs to — `feature/<slug>` (usual) or
+`item/<slug>`; a bare slug means `feature/<slug>`. Its folder is
+`docs/features/<slug>/` or `docs/items/<slug>/`, and its entry file is
+`feature.md` or `item.md`. `pdocs` below means `bun scripts/pdocs/cli.ts`.
+
+1. Read the development plan, `plan.md` in the owner's folder
+2. Read the proposal — the owner's `feature.md` (or `item.md`)
+3. Check if a design resolution exists at `design-resolution.md` in the same
+   folder and read it if present
+4. Read the test plan template at `docs/TEMPLATES/TEST-PLAN.template.md`
+5. Read `docs/features/README.md` for conventions
 
 **Extract from the inputs:**
 
@@ -135,8 +139,15 @@ external dependencies" and move on.
 
 ### Phase 4: Write Test Plan
 
-1. Write to `docs/projects/$1/test-plan.md`
-2. Use the template at `docs/projects/TEMPLATES/TEST-PLAN.template.md`
+1. Create it in the owner's folder with the CLI, which seeds it from the
+   template and writes the link back to the owner:
+
+   ```bash
+   pdocs new test-plan --owner feature/<slug> \
+     --title "…" --description "…" --by "<your model or name>"
+   ```
+
+2. Fill every frontmatter placeholder the template leaves
 3. Populate all sections:
    - **Overview** — What's being verified, link to plan and proposal
    - **Test Environment** — How to run the app, prerequisites, external
@@ -146,8 +157,10 @@ external dependencies" and move on.
    - **Results Addendum** — Empty table with all scenario IDs, ready for the
      implementing agent to fill in
    - **Visual Artifacts** — Screenshot directory and naming convention
-4. Set Status to "Draft"
-5. Set the screenshot directory to `docs/projects/$1/artifacts/screenshots/`
+4. Leave its frontmatter `lifecycle: draft` (it becomes `ready` when the user
+   accepts it); don't add a `**Status:**` line
+5. Set the screenshot directory to `artifacts/screenshots/` in the owner's
+   folder
 
 ### Phase 5: Present & Refine
 
@@ -164,7 +177,7 @@ external dependencies" and move on.
 
 ## Output
 
-Create a test plan at `docs/projects/$1/test-plan.md`. Inform the user of:
+Create a test plan at `test-plan.md` in the owner's folder. Inform the user of:
 
 - The document location
 - Summary of scenarios by tier (e.g., "3 smoke, 5 critical path, 2 deferred")

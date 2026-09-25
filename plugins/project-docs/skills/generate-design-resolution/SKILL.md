@@ -8,7 +8,8 @@ description: >
   before planning", "work through design decisions", "create a design
   resolution", "collapse ambiguity", or mentions needing system-level clarity
   before creating a development plan.
-allowed_tools: ["Read", "Write", "Grep", "Glob", "AskUserQuestion", "Task"]
+allowed_tools:
+  ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "AskUserQuestion", "Agent"]
 ---
 
 # Proposal to Design Resolution
@@ -48,11 +49,16 @@ The template defines point B. This skill is the methodology for getting there.
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
-1. Read the proposal at `docs/projects/$1/proposal.md`
-2. Read the projects README at `docs/projects/README.md` for conventions
+**Owner:** `$1` is what the document belongs to — `feature/<slug>` (usual) or
+`item/<slug>`; a bare slug means `feature/<slug>`. Its folder is
+`docs/features/<slug>/` or `docs/items/<slug>/`, and its entry file is
+`feature.md` or `item.md`. `pdocs` below means `bun scripts/pdocs/cli.ts`.
+
+1. Read the proposal — the owner's `feature.md` (or `item.md`)
+2. Read `docs/features/README.md` for conventions
 3. Read the design resolution template at
-   `docs/projects/TEMPLATES/DESIGN-RESOLUTION.template.md` to understand the
-   target structure
+   `docs/TEMPLATES/DESIGN-RESOLUTION.template.md` to understand the target
+   structure
 
 4. Analyze the proposal against each template section, categorizing:
    - **Already resolved** — The proposal is clear and specific on this topic
@@ -172,13 +178,17 @@ This section is always worth visiting, even for simple projects. Good questions:
 ### Phase 3: Synthesize & Write
 
 1. Gather all Q&A answers and the already-resolved items from Phase 1
-2. Write the design resolution to `docs/projects/$1/design-resolution.md`
-3. Use the template at `docs/projects/TEMPLATES/DESIGN-RESOLUTION.template.md`
-   as scaffolding
+2. Create the design resolution in the owner's folder with the CLI, which seeds
+   it from the template and writes the link back to the owner:
+
+   ```bash
+   pdocs new design-resolution --owner feature/<slug> \
+     --title "…" --description "…" --by "<your model or name>"
+   ```
+
+3. Fill every frontmatter placeholder; the template ships `lifecycle: draft`,
+   which becomes `resolved` once the user accepts it
 4. Fill in sections based on Q&A responses:
-   - Set Status to "Draft"
-   - Set Created date to today
-   - Link to the proposal via `./proposal.md`
    - Populate each section with resolved decisions, using the user's words
    - Mark intentionally deferred items in Boundaries
    - Include rationale for irreversible decisions
@@ -196,13 +206,14 @@ This section is always worth visiting, even for simple projects. Good questions:
    need to address
 4. Ask if any sections need revision or expansion
 5. Apply feedback and update as needed
-6. Suggest next step: `/project-docs:generate-dev-plan $1` to create the
+6. When the user accepts it, set its frontmatter `lifecycle: resolved`
+7. Suggest next step: `/project-docs:generate-dev-plan $1` to create the
    development plan
 
 ## Output
 
-Create a design resolution at `docs/projects/$1/design-resolution.md`. Inform
-the user of:
+Create a design resolution at `design-resolution.md` in the owner's folder.
+Inform the user of:
 
 - The document location
 - Summary of key decisions resolved
