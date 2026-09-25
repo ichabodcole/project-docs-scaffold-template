@@ -962,6 +962,26 @@ describe("the whole migration on fixture O", () => {
 
 // ─── Idempotence, the dry run, and format-before-record ──────────────────────
 
+describe("the Delete option for memories and lessons", () => {
+  test("with both folders deleted before the run, their templates' seed records go too, and neither is declared", () => {
+    const root = fixtureO();
+    rmSync(join(root, "docs/memories"), { recursive: true });
+    rmSync(join(root, "docs/lessons-learned"), { recursive: true });
+    const index = read(root, "docs/index.md");
+    const a = index.indexOf("## Lessons learned");
+    write(root, { "docs/index.md": index.slice(0, a).replace(/\n+$/, "\n") });
+    commitAll(root, "the adopter deleted memories and lessons");
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const m = readJson(join(root, "docs/.pdocs-seed.json"));
+    expect(Object.keys(m.files).filter((k) => k.startsWith("memories/") || k.startsWith("lessons-learned/"))).toEqual([]);
+    const lint = readJson(join(root, ".project-docs.json")).lint;
+    expect(lint.durable).not.toContain("memories");
+    expect(lint.types ?? {}).toEqual({});
+  });
+});
+
 describe("idempotence and dry run", () => {
   test("a second run finds its work done and changes no byte", () => {
     const root = fixtureO();

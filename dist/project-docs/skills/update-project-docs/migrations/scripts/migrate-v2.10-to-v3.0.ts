@@ -2377,6 +2377,16 @@ function reconcileSeeds(ctx: Ctx, version: string): void {
     ok(`template removed: ${dn(rel)} — untouched since the scaffold recorded it; its type is retired`);
   }
   for (const rel of c.templates.dropped) delete m.files[rel];
+  // A retired library folder the adopter deleted before the run (the guide's
+  // "Delete" option) takes its template's record with it: the record describes
+  // a file that is gone on purpose, in a folder that is not coming back.
+  for (const folder of Object.keys(KEPT_LIBRARY))
+    if (!existsSync(join(d, folder)))
+      for (const rel of Object.keys(m.files))
+        if (rel.startsWith(`${folder}/`)) {
+          delete m.files[rel];
+          note(`record ${dn(rel)} dropped — ${dn(folder)}/ was deleted before the run`);
+        }
   for (const rel of c.plan.junk) {
     if (!existsSync(join(d, rel))) continue;
     rmSync(join(d, rel));
