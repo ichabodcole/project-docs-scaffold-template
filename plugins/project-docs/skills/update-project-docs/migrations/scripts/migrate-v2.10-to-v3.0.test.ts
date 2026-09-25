@@ -1528,6 +1528,17 @@ describe("recovering without a record never costs the adopter work", () => {
     expect(r.out).toContain('git stash push --include-untracked -m "before re-running the v3.0 migration"');
     expect(r.out).toContain("git reset --hard <the commit before the first run>");
     expect(r.out).toContain("git checkout stash@{0} -- <path>");
+    // Untracked files live in the stash's third parent: listed and restored from there.
+    expect(r.out).toContain("git stash show --include-untracked stash@{0}");
+    expect(r.out).toContain("git show --stat 'stash@{0}^3'");
+    expect(r.out).toContain("git checkout 'stash@{0}^3' -- <path>");
+    expect(r.out).toContain("Don't drop the stash until everything of yours is back");
+    // A document the migration also rewrites is re-edited by hand, not restored half-migrated.
+    expect(r.out).toContain("git diff stash@{0} -- <path>");
+    expect(r.out).toContain("do not restore the stashed copy");
+    // The reset drops the adopter's own commits after the base too.
+    expect(r.out).toContain("git reflog");
+    expect(r.out).toContain("git cherry-pick");
     expect(r.out).toContain("Without git");
     expect(r.out).not.toContain("git clean");
     expect(r.out).not.toContain("checkout -- .");

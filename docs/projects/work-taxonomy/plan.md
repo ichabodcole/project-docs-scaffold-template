@@ -1203,11 +1203,17 @@ production-only. The migration never deletes a document.
   `git stash push --include-untracked`; reset to the pre-run commit (the first
   run prints it as `starting from commit <sha>` and records it) only if the
   adopter committed mid-migration; re-run from the start after deleting the
-  run's record; then restore the adopter's own paths from the stash with
-  `git checkout stash@{0} -- <path>`. Never a whole-tree `git clean` or
-  `git checkout -- .`: it also takes uncommitted work that has nothing to do
-  with the migration. The guide's "If the record is corrupt, or you deleted it"
-  gives the same steps.
+  run's record; then restore the adopter's own work from the stash — tracked
+  files with `git checkout stash@{0} -- <path>`, untracked ones from the stash's
+  third parent with `git checkout 'stash@{0}^3' -- <path>` (listed by
+  `git stash show --include-untracked stash@{0}` or
+  `git show --stat 'stash@{0}^3'`), re-applying by hand any edit to a document
+  the migration rewrites rather than restoring its half-migrated copy, and
+  keeping the stash until all of it is back. The reset also drops the adopter's
+  commits after the base; `git reflog` and `git cherry-pick` bring them back.
+  Never a whole-tree `git clean` or `git checkout -- .`: it also takes
+  uncommitted work that has nothing to do with the migration. The guide's "If
+  the record is corrupt, or you deleted it" gives the same steps.
 - **After release:** there is no down-migration. A consumer that needs to go
   back pins the plugin at 3.13.x and reverts its migration commit. Say so in the
   guide.

@@ -1608,10 +1608,19 @@ function resolveContext(o: Options): Ctx {
           `     1. git stash push --include-untracked -m "before re-running the v3.0 migration"\n` +
           `        — sets aside everything uncommitted: the migration's partial output and any work of yours.\n` +
           `     2. Only if you committed during the migration: git reset --hard <the commit before the first run>\n` +
-          `        — the first run printed it as "starting from commit <sha>"; \`git log\` shows it otherwise.\n` +
+          `        — the first run printed it as "starting from commit <sha>"; \`git log\` shows it otherwise. This also\n` +
+          `        drops commits of your own made after it: find them with \`git reflog\` and re-apply them with\n` +
+          `        \`git cherry-pick <sha>\` after step 3.\n` +
           `     3. Delete this record, and run the migration again from the start.\n` +
-          `     4. Take back your own work from the stash, path by path: git checkout stash@{0} -- <path>\n` +
-          `        (\`git stash show -p stash@{0}\` lists it); the migration's partial output stays in the stash.\n` +
+          `     4. Take back your own work from the stash. List all of it with\n` +
+          `        \`git stash show --include-untracked stash@{0}\` (git 2.32+), or the untracked part with\n` +
+          `        \`git show --stat 'stash@{0}^3'\`. Restore a tracked file with git checkout stash@{0} -- <path>, and an\n` +
+          `        untracked one (a draft that predated the run, a file the migration created) with\n` +
+          `        git checkout 'stash@{0}^3' -- <path>. For a document the migration also rewrites — one it moves, or\n` +
+          `        whose links it respells — do not restore the stashed copy: it is the half-migrated version. See your\n` +
+          `        edit with \`git diff stash@{0} -- <path>\` (or against 'stash@{0}^3' for an untracked file) and re-apply\n` +
+          `        it by hand. Don't drop the stash until everything of yours is back; the migration's partial output\n` +
+          `        stays in it.\n` +
           `   Without git: restore the tree from a backup taken before the first run, or finish the conversion by hand.`
       );
     }
