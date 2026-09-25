@@ -14,7 +14,7 @@ scope: migrations
 
 # v2.10-to-v3.0 mints ids that share their 12-character prefix
 
-Found in the dogfood run: all 63 items the migration filed here start
+Found in the dogfood run: all 48 items the migration filed here start
 `01a0da55-e3a`, so `pdocs view` lists the same short id on every line and a
 12-character prefix resolves to nothing unique. D18 assumed ids filed about 16
 ms apart. Mint each migrated item's UUIDv7 from its own document's date
