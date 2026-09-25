@@ -1497,6 +1497,90 @@ describe("the run's record", () => {
     const again = migrate(root);
     expect(again.exitCode).toBe(1);
     expect(again.out).toContain("is not valid JSON");
-    expect(again.out).toContain("git checkout -- . && git clean -fd");
+    expect(again.out).toContain("git stash push --include-untracked");
+  });
+});
+
+// ─── The record's safety, and the resume's edges ─────────────────────────────
+
+describe("recovering without a record never costs the adopter work", () => {
+  const stopInPhase6 = () => {
+    const root = fixtureO();
+    chmodSync(join(root, "README.md"), 0o444);
+    const first = migrate(root);
+    expect(first.out).toContain("[6/12]");
+    chmodSync(join(root, "README.md"), 0o644);
+    return { root, first };
+  };
+
+  test("the first run names the commit it starts from, and the record keeps it", () => {
+    const { root, first } = stopInPhase6();
+    const head = git(root, "rev-parse", "HEAD").trim();
+    expect(first.out).toContain(`starting from commit ${head}`);
+    expect(readJson(RECORD(root)).base).toBe(head);
+  });
+
+  test("a corrupt record's stop gives a reversible, scoped procedure, and no destructive command", () => {
+    const { root } = stopInPhase6();
+    writeFileSync(RECORD(root), "{ not json");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain('git stash push --include-untracked -m "before re-running the v3.0 migration"');
+    expect(r.out).toContain("git reset --hard <the commit before the first run>");
+    expect(r.out).toContain("git checkout stash@{0} -- <path>");
+    expect(r.out).toContain("Without git");
+    expect(r.out).not.toContain("git clean");
+    expect(r.out).not.toContain("checkout -- .");
+  });
+
+  test("the record is written atomically: a save that fails leaves the previous record whole", () => {
+    const { root } = stopInPhase6();
+    const before = readFileSync(RECORD(root), "utf8");
+    mkdirSync(`${RECORD(root)}.tmp`); // the temp file cannot be written
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(readFileSync(RECORD(root), "utf8")).toBe(before);
+    expect(() => JSON.parse(readFileSync(RECORD(root), "utf8"))).not.toThrow();
+  });
+});
+
+describe("the resume's edges", () => {
+  const stopInPhase5 = () => {
+    const root = fixtureO();
+    chmodSync(join(root, "docs/backlog/2026-01-02-done-item.md"), 0o444);
+    expect(migrate(root).out).toContain("[5/12]");
+    chmodSync(join(root, "docs/items/done-item.md"), 0o644);
+    return root;
+  };
+
+  test("a new file of yours inside a moved folder does not block the resume, and is neither claimed nor touched", () => {
+    const root = stopInPhase5();
+    const mine = doc(common("artifact", "Mine", "A note of mine."), "# Mine\n");
+    write(root, { "docs/features/alpha/mine.md": mine });
+    const again = migrate(root, []);
+    if (again.exitCode !== 0) console.log(again.out);
+    expect(again.exitCode).toBe(0);
+    expect(again.out).not.toContain("mine.md");
+    expect(read(root, "docs/features/alpha/mine.md")).toBe(mine);
+  });
+
+  test("an edit that is byte-identical to the planned text is the run's own", () => {
+    const root = stopInPhase5();
+    const planned = (readJson(RECORD(root)).journal.writes as Array<{ to: string; text: string }>).find((w) => w.to.endsWith("docs/items/done-item.md"));
+    expect(planned).toBeDefined();
+    write(root, { "docs/items/done-item.md": planned!.text });
+    const again = migrate(root);
+    if (again.exitCode !== 0) console.log(again.out);
+    expect(again.exitCode).toBe(0);
+  });
+
+  test("the resume stop says how to keep the edit, and does not suggest committing it", () => {
+    const root = stopInPhase5();
+    write(root, { "docs/items/open-item.md": `${read(root, "docs/items/open-item.md")}\nMINE\n` });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("git show HEAD:docs/backlog/2026-01-01-open-item.md > docs/items/open-item.md");
+    expect(r.out).not.toContain("commit them");
+    expect(r.out).toContain("--force");
   });
 });

@@ -1529,6 +1529,8 @@ interface RunState {
   journal: Journal | null;
   /** What the whole migration has removed so far, across a stop and its re-run. */
   removed: { templates: number; readmes: number; junk: number; folders: number };
+  /** The commit HEAD pointed at when the first run began — where to go back to. */
+  base?: string;
 }
 
 const toJournal = (c: Changes): Journal => ({
@@ -1559,8 +1561,11 @@ function track(ctx: Ctx, abs: string): void {
   ctx.state.written[projectRel(ctx, abs)] = hashOf(abs);
 }
 
+/** Atomic: written beside the record, then renamed over it, so a save that fails leaves the last record whole. */
 function saveState(ctx: Ctx): void {
-  writeFileSync(ctx.statePath, `${JSON.stringify(ctx.state)}\n`);
+  const tmp = `${ctx.statePath}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify(ctx.state)}\n`);
+  renameSync(tmp, ctx.statePath);
 }
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -1594,15 +1599,20 @@ function resolveContext(o: Options): Ctx {
   if (existsSync(statePath)) {
     try {
       const parsed = JSON.parse(readFileSync(statePath, "utf8")) as Partial<RunState>;
-      state = { written: parsed.written ?? {}, journal: parsed.journal ?? null, removed: parsed.removed ?? zero() };
+      state = { written: parsed.written ?? {}, journal: parsed.journal ?? null, removed: parsed.removed ?? zero(), ...(parsed.base ? { base: parsed.base } : {}) };
     } catch (e) {
       fail(
         `${statePath} — the record an earlier run of this migration left — is not valid JSON: ${(e as Error).message}.\n` +
-          `   Without it a re-run cannot tell its own changes from yours, nor finish a run stopped in phases 5 to 7\n` +
-          `   (the earlier run's output shows where it stopped). Recover without it: return the tree to its last\n` +
-          `   commit — \`git checkout -- . && git clean -fd -- ${docsRootName}\` — delete the record, and run the migration\n` +
-          `   from the start. Only if the earlier run stopped before phase 5 or after phase 7 may you instead delete the\n` +
-          `   record and re-run as you are; after a phase 5–7 stop that leaves documents moved but not converted.`
+          `   Without it a re-run cannot tell its own changes from yours, nor finish a run stopped in phases 5 to 7.\n` +
+          `   Go back to where the migration began WITHOUT losing anything, then run it from the start:\n` +
+          `     1. git stash push --include-untracked -m "before re-running the v3.0 migration"\n` +
+          `        — sets aside everything uncommitted: the migration's partial output and any work of yours.\n` +
+          `     2. Only if you committed during the migration: git reset --hard <the commit before the first run>\n` +
+          `        — the first run printed it as "starting from commit <sha>"; \`git log\` shows it otherwise.\n` +
+          `     3. Delete this record, and run the migration again from the start.\n` +
+          `     4. Take back your own work from the stash, path by path: git checkout stash@{0} -- <path>\n` +
+          `        (\`git stash show -p stash@{0}\` lists it); the migration's partial output stays in the stash.\n` +
+          `   Without git: restore the tree from a backup taken before the first run, or finish the conversion by hand.`
       );
     }
   }
@@ -1673,7 +1683,9 @@ function writeCandidates(ctx: Ctx): string[] {
   const m = readManifest(ctx);
   for (const rel of Object.keys(m.files)) if (verdictFor(m, ctx.docsRoot, rel) === "update") out.add(dn(rel));
   for (const w of c.writes) for (const p of [w.from, w.to]) if (p) out.add(projectRel(ctx, p));
-  for (const [f, t] of c.physical) for (const p of [f, t]) out.add(projectRel(ctx, p));
+  // A first run moves whole folders, so dirt anywhere in one is in its way. A resumed run
+  // writes only the plan's files: a file of yours made inside a moved folder since is not.
+  if (!ctx.resumed) for (const [f, t] of c.physical) for (const p of [f, t]) out.add(projectRel(ctx, p));
   return [...out];
 }
 
@@ -1958,6 +1970,11 @@ function preflight(ctx: Ctx): void {
 
   // THE PLAN, read-only. Built here so a judgment blocker stops the run before
   // the network is touched, and so the dirt check knows every file it writes.
+  const head = run(["git", "rev-parse", "HEAD"], ctx.root);
+  if (!ctx.state.base && head.code === 0) {
+    ctx.state.base = head.stdout.trim();
+    ok(`starting from commit ${ctx.state.base} — the commit to go back to, should you ever need to`);
+  } else if (ctx.state.base) note(`this migration started from commit ${ctx.state.base}`);
   if (ctx.state.journal) {
     // An earlier run stopped between the first move and the last link: finish ITS
     // plan. A new plan made from a half-moved tree would find nothing to move.
@@ -1968,6 +1985,10 @@ function preflight(ctx: Ctx): void {
     // planned to replace, over its own text, or over what this migration left there —
     // never over an edit made since.
     const changed: string[] = [];
+    const restore: string[] = [];
+    const headSha = head.code === 0 ? head.stdout.trim() : null;
+    const ref = !ctx.state.base || ctx.state.base === headSha ? "HEAD" : ctx.state.base;
+    const prefix = run(["git", "rev-parse", "--show-prefix"], ctx.root).stdout.trim();
     for (const w of ctx.changes.writes) {
       const at = existsSync(w.to) ? w.to : w.from && existsSync(w.from) ? w.from : null;
       const now = at ? hashOf(at) : null;
@@ -1975,15 +1996,19 @@ function preflight(ctx: Ctx): void {
       for (const p of [w.to, w.from])
         if (p && Object.hasOwn(ctx.state.written, projectRel(ctx, p))) allowed.add(ctx.state.written[projectRel(ctx, p)] as string | null);
       if (w.created && now === null) continue;
-      if (!allowed.has(now)) changed.push(projectRel(ctx, at ?? w.to));
+      if (!allowed.has(now)) {
+        changed.push(projectRel(ctx, at ?? w.to));
+        if (w.from) restore.push(`git show ${ref}:${prefix}${projectRel(ctx, w.from)} > ${projectRel(ctx, at ?? w.to)}`);
+      }
     }
     if (changed.length > 0 && !ctx.force)
       fail(
         `${changed.length} path(s) the recorded plan would write have changed since the run stopped:\n` +
           changed.map((p) => `       ${p}`).join("\n") +
-          `\n\n   The plan was made before the stop, so finishing it would write over those edits. Move your edits\n` +
-          `   aside (or commit them and re-apply them after), put those paths back as the stop left them, and re-run —\n` +
-          `   or pass --force to write the recorded plan over them.`
+          `\n\n   The plan was made before the stop, so finishing it would write over those edits (committed or not).\n` +
+          `   To keep an edit: copy the file aside, put back the bytes the plan expects, re-run, then re-apply it:\n` +
+          restore.map((l) => `       ${l}`).join("\n") +
+          `\n   Or pass --force to write the recorded plan over them; the edits are lost.`
       );
     if (changed.length > 0) note(`--force: the recorded plan is written over ${changed.length} path(s) changed since the stop: ${changed.join(", ")}`);
   } else ctx.changes = computeChanges(ctx);
@@ -2004,7 +2029,12 @@ function preflight(ctx: Ctx): void {
     // Dirt counts only in a path this run will write, and only when it is not this
     // migration's own uncommitted output — so a re-run after a stop, uncommitted,
     // is not stopped by what the earlier run did, nor by fixes made elsewhere.
-    const dirty = dirtyUnder(ctx, writeCandidates(ctx)).filter((p) => p !== `.${STATE_NAME}` && !ours(ctx, p));
+    // A file already holding the planned text is the run's own, however it got there.
+    const planned = new Map<string, string>();
+    for (const w of changes.writes) planned.set(projectRel(ctx, w.to), sha256(w.text));
+    const dirty = dirtyUnder(ctx, writeCandidates(ctx)).filter(
+      (p) => p !== `.${STATE_NAME}` && !ours(ctx, p) && planned.get(p) !== hashOf(join(ctx.root, p))
+    );
     if (dirty.length > 0 && !ctx.force)
       fail(
         `${dirty.length} path(s) this run would write have uncommitted changes:\n` +
