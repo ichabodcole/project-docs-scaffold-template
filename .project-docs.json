@@ -4,7 +4,7 @@
   "lint": {
     "adopting": false,
     "exclude": [
-      "docs/projects/markdown-slide-decks/artifacts/*-prototype.md",
+      "docs/features/markdown-slide-decks/artifacts/*-prototype.md",
       "dist/**",
       "\\{\\{cookiecutter.project_slug\\}\\}/**"
     ],
@@ -12,23 +12,14 @@
       "architecture",
       "specifications",
       "interaction-design",
-      "playbooks",
-      "lessons-learned",
-      "memories"
+      "playbooks"
     ],
     "workbench": [
-      "backlog",
-      "briefs",
-      "investigations",
-      "projects",
-      "reports",
-      "fragments",
       "cycles",
       "features",
       "items"
     ],
     "skip": [
-      "_archive",
       "superpowers"
     ],
     "scopes": [

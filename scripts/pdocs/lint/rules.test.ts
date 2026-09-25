@@ -1011,8 +1011,12 @@ describe("every template renders into a document that passes", () => {
 
   // A template the lint skips is a template nothing checks. This is what keeps
   // one honest without gating on a file that cannot pass as it stands.
-  test("there are templates to check", () => {
-    expect(templates.length).toBeGreaterThanOrEqual(18);
+  test("there are templates to check — at least every one the scaffold ships", () => {
+    // Counted against the payload, not a number: this repository's own tree
+    // loses the retired templates when it migrates (Phase 5).
+    const shipped = templatePaths(join(REPO_ROOT, "{{cookiecutter.project_slug}}", "docs"));
+    expect(shipped.length).toBeGreaterThanOrEqual(15);
+    expect(templates.length).toBeGreaterThanOrEqual(shipped.length);
   });
 
   test.each(templates.map((p) => [p.slice(REPO_ROOT.length + 1), p] as const))(

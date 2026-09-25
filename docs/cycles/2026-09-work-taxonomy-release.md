@@ -11,7 +11,6 @@ started: 2026-09-22
 appetite:
   Until this repository runs on the new model with the old types retired, and
   story-loom has completed the v2.10-to-v3.0 migration.
-scope: [project/work-taxonomy, project/guidance-lifecycle]
 after: [] # cycles or projects this one waits on
 generated: { by: claude-opus-5-5, at: 2026-09-22 }
 ---
@@ -22,7 +21,7 @@ generated: { by: claude-opus-5-5, at: 2026-09-22 }
 
 The work vocabulary grew ad hoc and no longer composes: backlog is a state with
 a folder, the project folder does three jobs, and nothing closes. The
-[investigation](../investigations/2026-09-22-work-taxonomy-for-agent-first-development-investigation.md)
+[investigation](../items/work-taxonomy-for-agent-first-development/write-up.md)
 settled the model, and Guidance Lifecycle retires types from the same schema, so
 the two ship together as one breaking release rather than two.
 
@@ -33,11 +32,11 @@ v2.10. Branches are listed below by hand until this cycle becomes active.
 
 ## Scope
 
-- **[project/work-taxonomy](../projects/work-taxonomy/proposal.md)** — the six
-  phases of [the plan](../projects/work-taxonomy/plan.md) landed, this
+- **[project/work-taxonomy](../features/work-taxonomy/feature.md)** — the six
+  phases of [the plan](../features/work-taxonomy/plan.md) landed, this
   repository migrated and the old types retired, the
-  [test plan](../projects/work-taxonomy/test-plan.md)'s Tier 1 and Tier 2 green.
-- **[project/guidance-lifecycle](../projects/guidance-lifecycle/proposal.md)** —
+  [test plan](../features/work-taxonomy/test-plan.md)'s Tier 1 and Tier 2 green.
+- **[project/guidance-lifecycle](../features/guidance-lifecycle/feature.md)** —
   its success criteria hold (test plan T2-11), landed through the same phases.
 
 Out of scope, deliberately: a UI over the new files; deriving `released_in` from

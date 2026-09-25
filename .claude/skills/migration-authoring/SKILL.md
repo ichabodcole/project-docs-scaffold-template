@@ -452,7 +452,7 @@ and applies to a script wherever the script asks a person to write content.
   — the reference for a reconciling phase, a verify phase designed to go red,
   and a preflight that names the migration a missing file belongs to; its guards
   record is
-  [v2.10: guards watched failing](../../../docs/projects/story-loom-feedback/artifacts/v2.10-guards-watched-failing.md)
+  [v2.10: guards watched failing](../../../docs/items/story-loom-feedback/artifacts/v2.10-guards-watched-failing.md)
 - [Scaffold Update Checklist](../scaffold-update-checklist/SKILL.md) — the
   release workflow that triggers a migration, and how each shape is validated
 - [Playbooks](../../../docs/playbooks/README.md) — where what migration
