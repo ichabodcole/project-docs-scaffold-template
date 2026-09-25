@@ -110,8 +110,20 @@ Regardless of mode, follow this general process:
 
 ## Output: Investigation Document
 
-Produce a formal investigation document saved to `docs/investigations/` with
-naming convention: `YYYY-MM-DD-descriptive-slug.md`
+Produce a formal investigation as the **write-up of a research work item**, in
+`docs/items/<slug>/write-up.md`. When you were given the item, write its
+write-up. When you weren't, create both — the user asked for this research, so
+the item starts `active`, not in `triage`:
+
+```bash
+bun scripts/pdocs/cli.ts new item <slug> --kind research --lifecycle active \
+  --title "…" --description "<the question>" --by "<your model>"
+bun scripts/pdocs/cli.ts new write-up --owner item/<slug> \
+  --title "…" --description "<what it finds>" --by "<your model>"
+```
+
+Put gathered evidence (a benchmark, an audit) in the item's `reports/`
+(`bun scripts/pdocs/cli.ts new report <slug> --owner item/<slug>`).
 
 Use the output format specified by the methodology you're following
 (evaluative-research or investigation-methodology). Both produce documents with:
@@ -142,7 +154,11 @@ Use the output format specified by the methodology you're following
 - **Be opinionated** — after thorough analysis, make clear recommendations
 - **Document the journey** — your investigation path may be valuable for future
   researchers
-- **Save the investigation document** to `docs/investigations/` when complete
+- **Save the write-up** in the research item's folder, and when the
+  investigation concludes, **close the item**:
+  `bun scripts/pdocs/cli.ts set item/<slug> --lifecycle done` (or `dropped` if
+  the question was abandoned). Research done outside a branch never passes
+  through `finalize-branch`, so nothing else will set it
 
 Begin each investigation by confirming your understanding of the question,
 stating which mode you'll use, and outlining your research approach. Conclude by

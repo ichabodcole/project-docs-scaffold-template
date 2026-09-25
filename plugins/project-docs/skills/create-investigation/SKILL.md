@@ -1,20 +1,33 @@
 ---
 name: "create-investigation"
 description: >
-  Create a structured investigation document from a rough idea, voice note, or
-  freeform thoughts. Use when the user has an unstructured question or concern
-  they want to explore — transforms conversational input into a formal
-  investigation in docs/investigations/. Triggers when user says "investigate
-  this", "I've been thinking about", "should we look into", "start an
-  investigation", or provides rough voice-to-text or bullet-point input that
+  Turn a rough idea, voice note, or freeform thoughts into an investigation: a
+  research work item (the question, and what a good answer must settle) and the
+  write-up it owns, in docs/items/<slug>/. Use when the user has an unstructured
+  question or concern they want to explore. Also closes the research item — sets
+  it `done` — when the investigation concludes. Triggers when user says
+  "investigate this", "I've been thinking about", "should we look into", "start
+  an investigation", or provides rough voice-to-text or bullet-point input that
   needs structuring.
-allowed_tools: ["Read", "Write", "Grep", "Glob", "Task"]
+allowed_tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ---
 
 # Create Investigation Document
 
-Create a structured investigation document from a rough, conversational idea or
-question.
+Create a structured investigation from a rough, conversational idea or question.
+
+An investigation is **a research work item and its write-up**, two files in one
+folder:
+
+- **The item** (`docs/items/<slug>/item.md`, `kind: research`) is the asking:
+  the question, what a good answer must settle (its definition of done), and the
+  state of the work.
+- **`write-up.md`** beside it is the answer as it develops: current state,
+  findings, options, recommendation. It carries no `lifecycle`; the item does.
+
+Evidence gathered on the way — an audit, a benchmark — goes in the item's
+`reports/` (`pdocs new report <slug> --owner item/<slug>`). `pdocs` below means
+`bun scripts/pdocs/cli.ts`, the documentation CLI at the repo root.
 
 **Raw input to process:** The user's freeform thoughts following this command
 
@@ -43,7 +56,7 @@ question.
 3. **Search for relevant context**
    - Look for existing code, docs, or patterns related to the topic
    - Identify similar features or systems already implemented
-   - Find related proposals, architecture docs, or sessions
+   - Find related features, research items, architecture docs, or sessions
    - Gather baseline information to inform the investigation
 
 4. **Structure the investigation**
@@ -55,33 +68,44 @@ question.
    - Keep it flexible - use sections that help communicate, skip what doesn't
      add value
 
-5. **Create the investigation document**
-   - Choose an appropriate filename: `YYYY-MM-DD-topic-investigation.md`
-   - Write to `docs/investigations/[filename].md`. (The docs root is `docsRoot`
-     in `.project-docs.json` at the repo root, default `docs/` — read it if the
-     file exists.)
-   - Use investigation template as scaffolding, not a mandatory form
-   - **If the template opens with a frontmatter block, fill it — every field.**
-     The bracketed values are placeholders, not defaults, and the lint fails on
-     a placeholder left in place:
-     - `type: investigation` — already correct; the folder decides it
-     - `title` — matching the H1
-     - `description` — one sentence stating the question this sets out to
-       answer. This is the line a reader scanning the folder sees; make it the
-       question, not the topic.
-     - `tags` — 2–4 kebab-case keywords
-     - `status: draft` — the investigation is in progress and its findings
-       aren't trustworthy yet. It becomes `stable` when it concludes.
-     - `lifecycle: active` — its opening value
-     - `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`
-   - On the older scaffold, with no frontmatter block: set Status "Active" and
-     Outcome "In Progress" in the body instead
-   - Include relevant sections:
-     - **Question/Motivation** (from parsed input)
-     - **Current State Analysis** (from context search)
-     - **Investigation Findings** (what you've discovered so far)
+5. **Create the research item and its write-up**
+   - Choose a slug: kebab-case, 2–4 words naming the question, no date
+     (`ai-composable-duplication`). The CLI dates what needs dating.
+   - Create the item. **The user asked for this investigation**, so it is
+     accepted work, not an agent's filing: start it `ready`, or `active` when
+     you are about to work on it now. (Items an agent files on its own start in
+     `triage`; this is not that.)
+
+     ```bash
+     pdocs new item <slug> --kind research --lifecycle active \
+       --title "<the question, as a title>" \
+       --description "<one sentence: the question this sets out to answer>" \
+       --by "<your model or name>"
+     ```
+
+   - Fill the item's body: the question and why it matters, and its **Definition
+     of done** — the decision the answer must support.
+   - Create the write-up it owns. The CLI promotes the item to a folder and
+     links the write-up back to it:
+
+     ```bash
+     pdocs new write-up --owner item/<slug> \
+       --title "<Topic>" --description "<one sentence: what this finds>" \
+       --by "<your model or name>"
+     ```
+
+   - Write the investigation into `write-up.md`, using its template's sections
+     as scaffolding, not a mandatory form. Fill its frontmatter placeholders —
+     `description`, `tags` — the lint does not catch a placeholder left in
+     place. It keeps `status: draft` while findings are provisional, and becomes
+     `stable` when the investigation concludes.
+   - The template's sections, filled from what you have:
+     - **Question** (from parsed input)
+     - **Current State** (from context search)
+     - **Findings** (what you've discovered so far)
+     - **Next Steps** (immediate actions to continue the investigation)
      - **Open Questions** (specific things to explore)
-     - **Next Steps** (immediate actions to continue investigation)
+     - **Recommendation** stays open until the investigation concludes
    - Remember: lightweight to moderate complexity - avoid time estimates, use
      complexity indicators
 
@@ -161,23 +185,47 @@ value vs. current implementation.
 - What's the maintenance cost of current approach vs. refactored approach?
 ```
 
+**When the investigation concludes:**
+
+The research item's state is where "concluded" is recorded — this skill writes
+it, because research done in conversation never passes through
+`finalize-branch`. When the write-up reaches a recommendation (build it, don't,
+or monitor):
+
+1. Finish the write-up's recommendation and set its `status: stable`.
+2. Close the item:
+
+   ```bash
+   pdocs set item/<slug> --lifecycle done
+   ```
+
+   If the research was abandoned rather than answered, use `dropped` and say why
+   in the write-up.
+
+3. If it recommends building something, offer the next step: a feature
+   (`create-project`, or `generate-proposal` from this write-up) or work items
+   filed with `--from item/<slug>`.
+
+If the research runs on a branch that `finalize-branch` lands, that skill sets
+the item `done` instead; don't set it twice.
+
 **Output:**
 
 If the project has a documentation lint (`scripts/pdocs/cli.ts` at the repo
 root), run `bun scripts/pdocs/cli.ts check` before reporting, and fix anything
-it says about the file you just wrote.
+it says about the files you just wrote.
 
-Create an investigation document in `docs/investigations/` with:
+Create, in `docs/items/<slug>/`:
 
-- Appropriate filename based on topic and current date
-- Frontmatter filled, `lifecycle: active`
-- Structured format following investigations README template
-- Clear research plan for continuing the investigation
+- `item.md` — `kind: research`, `ready` or `active`, with the question and its
+  definition of done
+- `write-up.md` — the investigation, frontmatter filled
+- A clear research plan for continuing the investigation
 - Referenced context from codebase/docs
 
 Inform the user of:
 
-- The chosen filename and location
+- The item's reference (`item/<slug>`) and the two paths
 - The core question extracted from their input
 - Key areas identified for investigation
 - Suggested next steps for continuing the research

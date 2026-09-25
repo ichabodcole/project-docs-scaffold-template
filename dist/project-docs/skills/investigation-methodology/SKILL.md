@@ -116,8 +116,11 @@ Your investigation path may be valuable for future researchers.
 in `.project-docs.json` at the repo root, which defaults to `docs/`. Read it if
 the file exists.
 
-Structure investigation outputs using the templates in
-`docs/investigations/README.md`. Key sections:
+An investigation is a research work item and the write-up it owns
+(`docs/items/README.md`, "Research items"). Its output is the write-up —
+`bun scripts/pdocs/cli.ts new write-up --owner item/<slug>`, from
+`docs/TEMPLATES/WRITE-UP.template.md` — and evidence goes in the item's
+`reports/`. Key sections:
 
 ```markdown
 # Investigation: [Topic]
