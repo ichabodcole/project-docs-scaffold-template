@@ -6,10 +6,10 @@ call it instead of doing file surgery: the CLI owns folder, filename, template,
 frontmatter and catalog wiring, so a skill only has to decide **when** and
 **what to call it**.
 
-> Self-contained. Everything below was run against `pdocs` 6.3.0 and its output
-> transcribed. You need nothing outside this file to drive the tool. Anything
-> not verified by running it is marked _unverified_ — there is nothing so marked
-> today.
+> Self-contained. Everything below was run against the `pdocs` that ships with
+> scaffold 9.0.0 and its output transcribed. You need nothing outside this file
+> to drive the tool. Anything not verified by running it is marked _unverified_
+> — there is nothing so marked today.
 
 ## Invoking it
 
@@ -180,30 +180,38 @@ adding the file is one line the day you point acc at `pdocs`.
 - **124+ — reserved**, never allocated by `pdocs`, so a delegating CLI can pass
   a child's status through.
 
-| Code | Meaning                                                                                                      |
-| ---- | ------------------------------------------------------------------------------------------------------------ |
-| 0    | Clean — or dirty under `lint.adopting: true`                                                                 |
-| 1    | An unexpected fault inside `pdocs` itself                                                                    |
-| 2    | Bad invocation: unknown command, unknown flag, missing value, bad `--root`, uncreatable type                 |
-| 5    | Not found: no docs root, no `.project-docs.json`, no such document, no `--from` file, no such project folder |
-| 6    | Conflict: the document already exists, or the tree refuses it                                                |
-| 9    | Outcome: it ran fine, and the documents are dirty                                                            |
+| Code | Meaning                                                                                      |
+| ---- | -------------------------------------------------------------------------------------------- |
+| 0    | Clean — or dirty under `lint.adopting: true`                                                 |
+| 1    | An unexpected fault inside `pdocs` itself                                                    |
+| 2    | Bad invocation: unknown command, unknown flag, missing value, bad `--root`, uncreatable type |
+| 5    | Not found: no docs root, no `.project-docs.json`, no such document, no `--from` file         |
+| 6    | Conflict: the document already exists, or the tree refuses it                                |
+| 9    | Outcome: it ran fine, and the documents are dirty                                            |
 
 Codes 3, 4, 7 and 8 are deliberately unallocated — they belong to
 `agent-cli-conformance`'s bands (auth, permission, rate limit, confirmation) and
 are left there rather than reused.
 
-## The nine verbs
+## The thirteen verbs
 
-Seven are dispatched through the command table and need a documentation tree.
+Eleven are dispatched through the command table and need a documentation tree.
 Two — `schema` and `help` — are answered before that table is consulted, take no
-tree, and describe the tool rather than the tree. All nine reject a flag they do
-not take, with exit 2 and the valid set in `choices`.
+tree, and describe the tool rather than the tree. All thirteen reject a flag
+they do not take, with exit 2 and the valid set in `choices`.
+
+**References.** The work verbs (`view`, `set`, `promote`, `archive`, and
+`new --owner`) take a reference to a feature, an item or a cycle:
+`feature/<slug>`, `item/<slug>`, `cycle/<slug>`, a full item id, or a unique id
+prefix of 8 or more characters. An ambiguous prefix exits 2 and lists the
+candidates. Ids are **printed** 12 characters long in text output, because ids
+filed close together share their first characters; JSON always carries the full
+id, and frontmatter always stores it.
 
 ### `check` — the gate
 
 ```bash
-bun scripts/pdocs/cli.ts check [--root <path>] [--format text|json]
+bun scripts/pdocs/cli.ts check [--root <path>] [--format text|json] [--against <ref>]
 ```
 
 `data`: `clean` (bool), `adopting` (bool), `total` (int), `problems[]` — each
@@ -228,6 +236,12 @@ above `.project-docs.json` and inside the git repository passes.
 Exits **0** clean, **9** dirty. Under `lint.adopting: true` in
 `.project-docs.json` a dirty tree still exits 0 and `adopting` says why.
 
+**`--against <ref>`** names the git ref a work item may not silently leave
+(default `HEAD`): an item present there and gone from the tree reports
+`ITEM DELETED` unless it was `dropped`. A move, a promotion or an archive keeps
+the `id` and is not a deletion. In CI, where the working tree equals `HEAD`,
+pass the base branch.
+
 ### `report` — what is missing, by field
 
 ```bash
@@ -240,7 +254,7 @@ anything missing:
 
 ```json
 {
-  "path": "docs/briefs/2026-09-03-intake.md",
+  "path": "docs/items/fix-hook.md",
   "tier": "workbench",
   "missing": ["description", "lifecycle"]
 }
@@ -278,14 +292,21 @@ comparing the array itself against an integer fails silently.
 
 ```bash
 bun scripts/pdocs/cli.ts find [--type <t>] [--lifecycle <l>] [--status <s>] \
-                              [--tag <t>] [--since <YYYY-MM-DD>]
+                              [--tag <t>] [--since <YYYY-MM-DD>] \
+                              [--kind <k>] [--parent feature/<slug>] \
+                              [--cycle <slug>] [--scope <name>] [--id <prefix>]
 ```
 
-Filters are ANDed and all are optional, so a bare `find` lists everything.
+Filters are ANDed and all are optional, so a bare `find` lists everything. The
+last five filter work: `--kind` (`task`, `bug`, `chore`, `research`),
+`--parent`, `--cycle`, `--scope`, and `--id`, which matches an item whose id
+starts with the prefix.
 
 `data`: `matches[]` — each
-`{ path, tier, type, title, description, status, lifecycle, tags[], date }` —
-and `count`.
+`{ path, tier, type, title, description, status, lifecycle, tags[], date }`,
+plus `id`, `kind`, `parent`, `cycle` and `scope` on a feature or item — and
+`count`. `id` is the full id: this is where a skill reads one to write into a
+commit trailer.
 
 **An empty result exits 0.** "Nothing matches" is an answer. Read `count`, never
 the status, to tell an empty corpus from a failure. A `--since` that is not a
@@ -297,15 +318,14 @@ date is a usage error rather than a silent no-match.
 bun scripts/pdocs/cli.ts backlinks <target>
 ```
 
-`<target>` is a repo-relative path (`docs/playbooks/foo-playbook.md`), a
-`type/slug` key (`playbook/foo-playbook`), or `project/<name>`
-(`project/oauth-upgrade`). An unknown target exits **5**.
+`<target>` is a repo-relative path (`docs/playbooks/foo-playbook.md`) or a
+`type/slug` key (`playbook/foo-playbook`). An unknown target exits **5**.
 
-**Use `project/<name>` for a project, not `proposal/<name>`.** `type/slug` is a
-library-tier scheme, and every project folder holds a `proposal.md` — so
-`proposal/proposal` names every project at once (a usage error listing the
-candidates) and `proposal/oauth-upgrade` is a key nothing in the tree writes.
-`project/<name>` is the form the cycle template and `--scope` already use.
+**Name a feature or an item by its entry file's path** —
+`docs/features/oauth-upgrade/feature.md`, `docs/items/fix-hook.md` or
+`docs/items/fix-hook/item.md`. `type/slug` is a library-tier scheme, and every
+feature folder holds a `feature.md`, so `feature/feature` names none of them in
+particular.
 
 `data`: `target` (`{ path, type, key, title }`), `related[]`, `links[]` — each
 `{ path, title }` — and `count`. **The two edge kinds are kept apart**:
@@ -324,6 +344,78 @@ bun scripts/pdocs/cli.ts orphans
 ### `new` — create a document
 
 See below.
+
+### `view` — derived views of the work
+
+```bash
+bun scripts/pdocs/cli.ts view <backlog|board|ready|feature|cycle|scope|unreleased|released> [<arg>] \
+                              [--features] [--since <YYYY-MM-DD>]
+```
+
+Every view is computed from frontmatter; none is a file anyone writes.
+
+| View                 | What it lists                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `backlog`            | Items in the unstarted group (`triage`, `backlog`, `ready`), by priority (urgent first, none last), then age   |
+| `board`              | Items grouped by state group (unstarted, started, completed, cancelled); `--features` adds features. Live only |
+| `ready`              | `ready` items whose every `blocked_by` item is `done` — what can start now                                     |
+| `feature <slug>`     | The feature and the items whose `parent` names it                                                              |
+| `cycle <slug>`       | The items whose `cycle` names it, and `closable`: at least one item, and every one `done` or `dropped`         |
+| `scope <name>`       | Features and items in that scope                                                                               |
+| `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                         |
+| `released <version>` | Features and items with that `released_in`                                                                     |
+
+An unknown view exits 2 and lists the views. Output is deterministic.
+
+### `set` — change a feature's, an item's or a cycle's fields
+
+```bash
+bun scripts/pdocs/cli.ts set <ref> [--lifecycle <l>] [--cycle <slug>] [--<field> <value> …] \
+                             [--unset <key,key>]
+```
+
+Rewrites only the keys named, leaving comments and key order alone. **It refuses
+any change the lint would reject** — a state outside the type's vocabulary, a
+`parent` that is not a feature, a `blocked_by` that does not resolve, a second
+`active` cycle — with exit 2 and the valid set. `--blocked-by` and `--parent`
+take references and write full ids. `--unset` removes keys, but not one the lint
+requires. `--released-in` is accepted unchecked.
+
+`data`: `path`, and `changes[]` — each `{ key, before, after }`.
+
+**`set` does not check who is calling.** Moving an item out of `triage` is the
+user's decision, taken at a triage step they have seen (the `triage-items`
+skill); that rule lives in the skills, not in the CLI. It changes features,
+items and cycles only — edit a plan's `lifecycle` line directly.
+
+### `promote` — turn a single-file item into a folder
+
+```bash
+bun scripts/pdocs/cli.ts promote <item-ref>
+```
+
+Moves `items/<slug>.md` to `items/<slug>/item.md` and rewrites every link to and
+from it. `new <type> --owner item/<slug>` does this for you when an item gains
+its first owned document. An item that is already a folder is a no-op, exit 0.
+
+`data`: `from`, `to`, `moved`, `rewritten[]` (the files whose links changed),
+`links` (the count).
+
+### `archive` — move a finished entity into `_archive/`
+
+```bash
+bun scripts/pdocs/cli.ts archive <feature-or-item-ref>
+```
+
+Moves a feature to `features/_archive/<slug>/`, or an item (file or folder) to
+`items/_archive/`, and rewrites every link to and from the moved files in every
+document under the docs root and every tracked Markdown file outside it. **It
+refuses an entity that is not `done` or `dropped`** (exit 2, naming its state)
+and a cycle. Ids are untouched, so `blocked_by` and `from:` keep resolving.
+Archiving something already archived is a no-op, exit 0. It is the only way into
+`_archive/`; the lint reports anything there that is not terminal.
+
+`data`: `from`, `to`, `moved`, `rewritten[]`, `links`.
 
 ### `schema` — this CLI's own surface
 
@@ -363,34 +455,37 @@ docs/playbooks/rollback-a-release-playbook.md
 JSON `data`: `path` (the document), `type` (the resolved registry type), and
 `created[]` — every file written or modified, document first.
 
-### 18 of 23 types are creatable
+### 14 types are creatable
 
-| Type                | Lives at                       | Filename                             |
-| ------------------- | ------------------------------ | ------------------------------------ |
-| `architecture`      | `architecture/`                | `<slug>-architecture.md`             |
-| `specification`     | `specifications/`              | `NN-<slug>.md`                       |
-| `interaction`       | `interaction-design/`          | `<slug>-flow.md`                     |
-| `playbook`          | `playbooks/`                   | `<slug>-playbook.md`                 |
-| `lesson`            | `lessons-learned/`             | `<slug>.md`                          |
-| `memory`            | `memories/`                    | `YYYY-MM-DD-<slug>.md`               |
-| `backlog`           | `backlog/`                     | `YYYY-MM-DD-<slug>.md`               |
-| `fragment`          | `fragments/`                   | `YYYY-MM-DD-<slug>.md`               |
-| `brief`             | `briefs/`                      | `YYYY-MM-DD-<slug>.md`               |
-| `investigation`     | `investigations/`              | `YYYY-MM-DD-<slug>-investigation.md` |
-| `cycle`             | `cycles/`                      | `YYYY-MM-<slug>.md`                  |
-| `report`            | `reports/`                     | `YYYY-MM-DD-<slug>-report.md`        |
-| `proposal`          | `projects/<project>/`          | `proposal.md`                        |
-| `plan`              | `projects/<project>/`          | `plan.md`                            |
-| `design-resolution` | `projects/<project>/`          | `design-resolution.md`               |
-| `test-plan`         | `projects/<project>/`          | `test-plan.md`                       |
-| `handoff`           | `projects/<project>/`          | `handoff.md`                         |
-| `session`           | `projects/<project>/sessions/` | `YYYY-MM-DD-<slug>.md`               |
+| Type                | Lives at                | Filename                      |
+| ------------------- | ----------------------- | ----------------------------- |
+| `architecture`      | `architecture/`         | `<slug>-architecture.md`      |
+| `specification`     | `specifications/`       | `NN-<slug>.md`                |
+| `interaction`       | `interaction-design/`   | `<slug>-flow.md`              |
+| `playbook`          | `playbooks/`            | `<slug>-playbook.md`          |
+| `cycle`             | `cycles/`               | `YYYY-MM-<slug>.md`           |
+| `feature`           | `features/<slug>/`      | `feature.md`                  |
+| `item`              | `items/`                | `<slug>.md`                   |
+| `plan`              | the owner's folder      | `plan.md`                     |
+| `design-resolution` | the owner's folder      | `design-resolution.md`        |
+| `test-plan`         | the owner's folder      | `test-plan.md`                |
+| `handoff`           | the owner's folder      | `handoff.md`                  |
+| `write-up`          | the owner's folder      | `write-up.md`                 |
+| `session`           | the owner's `sessions/` | `YYYY-MM-DD-<slug>.md`        |
+| `report`            | the owner's `reports/`  | `YYYY-MM-DD-<slug>-report.md` |
 
-Plus one alias: **`project`**, which resolves to `proposal` and whose positional
-names the **project folder** rather than the document.
-`bun scripts/pdocs/cli.ts new project oauth-upgrade` creates
-`docs/projects/oauth-upgrade/` and its `proposal.md` in one atomic step.
-(`--project` is ignored for the alias — the positional wins.)
+**A feature's positional names its folder.**
+`bun scripts/pdocs/cli.ts new feature oauth-upgrade` creates
+`docs/features/oauth-upgrade/feature.md` in `backlog`.
+
+**An item** needs `--kind` (`task`, `bug`, `chore`, `research`). It gets a fresh
+UUIDv7 `id` and starts in `triage` unless `--lifecycle` says otherwise; the text
+output prints the id's first 12 characters under the path.
+
+**An owned document needs `--owner`**: `feature/<slug>` or `item/<slug>` (or an
+item id). It lands in that folder — a single-file item is promoted to a folder
+first — and the CLI writes a link back to the owner's entry file into its
+Related section. `--project` is refused and names `--owner`.
 
 **The five that are not creatable**, and the reason `pdocs` gives when you try
 (all exit **2**):
@@ -403,6 +498,12 @@ names the **project folder** rather than the document.
 | `kickoff`   | its template ships with the `dev-kickoff` plugin skill, outside the docs tree, where `pdocs` cannot reach it |
 | `artifact`  | an artifact is freeform by design — it has no filename grammar and no template                               |
 
+**The seven retired types** — `proposal`, `backlog`, `fragment`, `brief`,
+`investigation`, `lesson` and `memory` — are still linted where a tree has them,
+until the 9.0.0 migration moves it, and are refused by `new` with the
+replacement named: a feature, an item, a research item and its write-up, or a
+playbook. `new project` is refused the same way.
+
 The refusal is a declared reason from the registry, not a missing-template
 accident. Use the named skill instead.
 
@@ -412,8 +513,8 @@ accident. Use the named skill instead.
 convention stops being something anyone has to remember:
 
 ```bash
-bun scripts/pdocs/cli.ts new investigation "oauth token expiry"
-# → docs/investigations/2026-09-06-oauth-token-expiry-investigation.md
+bun scripts/pdocs/cli.ts new report "provider survey" --owner item/auth-providers
+# → docs/items/auth-providers/reports/2026-09-06-provider-survey-report.md
 
 bun scripts/pdocs/cli.ts new playbook "rollback a release"
 # → docs/playbooks/rollback-a-release-playbook.md
@@ -431,26 +532,25 @@ folder plus one, zero-padded to two.
 
 ### Flags
 
-| Flag                   | Notes                                                                                                                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--title <text>`       | Defaults to the slug, title-cased — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`). **Pass it.**                                                                                                             |
-| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                                                            |
-| `--tags <a,b>`         | Comma-separated kebab-case.                                                                                                                                                                                              |
-| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                                                                      |
-| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff` and `session` — exits 2.                                                              |
-| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                                                                       |
-| `--project <slug>`     | Required for a project-scoped type. Slugified exactly as `new project` slugifies its name, so the two accept the same string. A folder that does not exist exits 5, and the diagnostic names the command that opens one. |
-| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                                                               |
-| `--from <path>`        | See below.                                                                                                                                                                                                               |
+| Flag                   | Notes                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--title <text>`       | Defaults to the slug, title-cased — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`). **Pass it.**                                                                 |
+| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                |
+| `--tags <a,b>`         | Comma-separated kebab-case.                                                                                                                                                  |
+| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                          |
+| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff`, `session` and `write-up` — exits 2.      |
+| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                           |
+| `--owner <ref>`        | Required for an owned type: `feature/<slug>` or `item/<slug-or-id>`. A single-file item is promoted first. An owner that does not resolve exits 2, naming what was expected. |
+| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                   |
+| `--from <path>`        | See below.                                                                                                                                                                   |
 
-Plus the `cycle`-only extras `--scope`, `--after`, `--appetite`, `--started`,
-`--closed`. Passing an extra to a type that does not declare it exits 2.
-
-`--scope` entries are resolved before anything is written. Name a project as
-`project/<name>` and anything else by `type/slug`
-(`backlog/2026-09-04-an-item`). An entry that matches no document exits 2, and
-so does one that matches several — `proposal/proposal` names every project in
-the tree and identifies none.
+Plus the fields a type declares, as kebab-case flags: on an item `--kind`,
+`--parent`, `--scope`, `--cycle`, `--blocked-by`, `--source`, `--priority`,
+`--assignee`, `--released-in`; on a feature `--scope` and `--released-in`; on a
+cycle `--after`, `--appetite`, `--started`, `--closed`. Passing one to a type
+that does not declare it exits 2. Every reference is resolved before anything is
+written, exactly as the lint resolves it; `--scope` must be declared in
+`lint.scopes`.
 
 ### `--from` — wiring in the originating document
 
@@ -458,20 +558,24 @@ the tree and identifies none.
 Related section:
 
 ```bash
-bun scripts/pdocs/cli.ts new project oauth-upgrade \
-  --from docs/investigations/2026-09-06-oauth-token-expiry-investigation.md
+bun scripts/pdocs/cli.ts new feature oauth-upgrade \
+  --from docs/items/oauth-token-expiry/write-up.md
 ```
 
-writes into `proposal.md`'s `**Related Documents:**` block:
+writes into `feature.md`'s Related section:
 
 ```markdown
-- [Oauth Token Expiry](../../investigations/2026-09-06-oauth-token-expiry-investigation.md)
+- [Oauth Token Expiry](../../items/oauth-token-expiry/write-up.md)
 ```
+
+**On an item**, `--from` also takes a reference — an item id, `item/<slug>`,
+`feature/<slug>`, `cycle/<slug>` — and writes it to the item's `from:` field as
+well as linking it. A review writes the session's path here.
 
 The link text is the source's frontmatter `title`, falling back to its filename.
 The href is computed relative to the new document. The path is resolved against
 the **repository root first, then the docs root**, so both
-`docs/investigations/x.md` and `investigations/x.md` work; neither resolving
+`docs/items/x/write-up.md` and `items/x/write-up.md` work; neither resolving
 exits 5. Templates spell the section five different ways, so `new` matches a
 pattern and creates a `## Related Documents` section if the template has none.
 
@@ -480,11 +584,11 @@ not under `related`.
 
 ### Library pages also get a catalog line
 
-A library page (`architecture`, `specification`, `interaction`, `playbook`,
-`lesson`, `memory`) must be reachable from `docs/index.md` and its catalog hook
-must repeat its `description` verbatim, or the tree is immediately dirty. `new`
-writes both and reports both in `created[]`. If `index.md` has no section for
-the folder, `new` refuses with exit 5 rather than writing an orphan.
+A library page (`architecture`, `specification`, `interaction`, `playbook`) must
+be reachable from `docs/index.md` and its catalog hook must repeat its
+`description` verbatim, or the tree is immediately dirty. `new` writes both and
+reports both in `created[]`. If `index.md` has no section for the folder, `new`
+refuses with exit 5 rather than writing an orphan.
 
 Workbench documents are not catalogued and get no such line.
 
@@ -507,9 +611,9 @@ Workbench documents are not catalogued and get no such line.
   commands.
 - **A `--root` that is not a directory exits 2 rather than falling back**, so a
   `clean` is never reported for a tree nobody checked. That holds for every
-  command that reads the tree — `check`, `report`, `graph`, `find`, `orphans`.
-  `schema` is the exception: it reads no tree, so it accepts `--root`, ignores
-  it, and exits 0.
+  command that reads the tree — `check`, `report`, `graph`, `find`, `orphans`,
+  `view`, and the verbs that write. `schema` is the exception: it reads no tree,
+  so it accepts `--root`, ignores it, and exits 0.
 - **Flags follow the command, and a misplaced one says so.**
   `pdocs --format json check` exits 2 with
   `` `--format` must follow a command `` and `error.choices` holding the command
