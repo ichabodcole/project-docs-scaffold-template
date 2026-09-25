@@ -452,8 +452,10 @@ docs/playbooks/rollback-a-release-playbook.md
   + catalog line in docs/index.md
 ```
 
-JSON `data`: `path` (the document), `type` (the resolved registry type), and
-`created[]` — every file written or modified, document first.
+JSON `data`: `path` (the document), `type` (the resolved registry type),
+`created[]` — every file written or modified, document first — `promoted` (the
+item's new entry file when `--owner` promoted it, else `null`), and `id` (a new
+item's full id, else `null`).
 
 ### 14 types are creatable
 
