@@ -62,11 +62,33 @@ delta.
    - `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` (often
      `origin/main` or `origin/develop`)
    - `git log --oneline --decorate -20` to see what's recently merged
-3. If the user has project conventions documented (CLAUDE.md, AGENTS.md, or a
-   root README), check there for a stated default branch workflow.
-4. If after those checks you're still unsure, **ask the user explicitly**:
-   _"What branch was this work based on / should it merge back into?"_ Don't
-   guess.
+3. If the user has project conventions documented, check them for a stated
+   default branch workflow, in this order: root `AGENTS.md`, root `CLAUDE.md`,
+   then the docs root's `AGENTS.md` and `CLAUDE.md` (`docs/AGENTS.md` — a
+   generated project keeps them there, and may have no root copy), then a root
+   `README.md`.
+4. **No remote, or none of the above settles it:** test the usual bases in order
+   — `develop`, then `main`, then `master` — for one that exists locally and
+   that this branch grew from:
+
+   ```bash
+   for b in develop main master; do
+   git rev-parse --verify -q "$b" >/dev/null || continue
+   fork=$(git merge-base "$b" HEAD) || continue
+   echo "$b: forked at $(echo "$fork" | cut -c1-7), $(git rev-list --count "$fork"..HEAD) commit(s) since"
+   done
+   ```
+
+   The base is the candidate this branch forked from most recently — the one
+   with the **fewest** commits since its fork point. Don't stop at the first
+   candidate whose tip is an ancestor of `HEAD`: `main` usually is one too, even
+   for a branch cut from `develop`, and `develop` may have moved on since. On a
+   tie, the earlier name in the list wins. Say which candidate won, and with
+   what count.
+
+5. If after those checks you're still unsure — no candidate exists, or two tie —
+   **ask the user explicitly**: _"What branch was this work based on / should it
+   merge back into?"_ Don't guess.
 
 Once established, use this base branch in every subsequent command — the
 examples below use `<base>` as a placeholder. Replace it with the actual base
@@ -221,7 +243,8 @@ not to skip.
    - What the branch is supposed to accomplish (1–2 sentences).
    - Base branch and link to any approving proposal/plan if one exists.
    - Known constraints, conventions, or project guidelines (e.g., "follow
-     patterns in CLAUDE.md / AGENTS.md").
+     patterns in AGENTS.md / CLAUDE.md", naming the files that exist — at the
+     root or under the docs root).
    - Explicit asks: flag bugs, security issues, convention drift, missed edge
      cases.
    - **Tests-vs-mocks check:** "Do the tests actually test logic, or do they
@@ -448,8 +471,21 @@ action to perform, not a recommendation to offer. Do them without asking.
   discarded with it:
 
   ```bash
-  pdocs set item/<slug> --lifecycle done
+    pdocs set item/<slug> --lifecycle done
   ```
+
+  **Then unblock what waited on it.** A shaped item whose `blocked_by` names
+  this one sits in `backlog` until every item it waits on is `done`. Find them:
+
+  ```bash
+  pdocs view backlog --format json
+  ```
+
+  For each item there whose `blockedBy` contains this item's full id, check its
+  other blockers (`pdocs find --id <id>`). If all are now `done`, move it:
+  `pdocs set item/<slug> --lifecycle ready`, and name it in your output. An item
+  with no `blocked_by` is not this step's business — it is waiting on shaping or
+  triage, not on this branch.
 
   Leave its parent feature alone: a feature is moved to `done` by
   `sweep-project`, not by one branch.
@@ -665,14 +701,16 @@ precedence over the strategies below — and say that you did.
 
    # Contributors whose authorship a squash would collapse. Count these two
    # lists separately; AI co-author trailers are deliberately absent from both.
-   git log "$BASE"..HEAD --format='%(trailers:key=Anthill-Seat,valueonly)' \
-     | grep -v '^$' | sort -u                                    # anthill seats
+      git log "$BASE"..HEAD --format='%(trailers:key=Anthill-Seat,valueonly)' \
+     | sed '/^$/d' | sort -u                                     # anthill seats
    git log "$BASE"..HEAD --format='%an' | sort -u                 # human authors
    ```
 
-   If the sha loop finds any hit, or **either** identity list returns more than
-   one line, **squashing would destroy that information.** Surface this
-   explicitly no matter which strategy follows.
+   The block exits 0 whatever it finds — the findings are its output, not its
+   exit status. An empty seats list is the normal case (no Anthill seats), not a
+   failure. If the sha loop finds any hit, or **either** identity list returns
+   more than one line, **squashing would destroy that information.** Surface
+   this explicitly no matter which strategy follows.
 
    **Count seats and human authors — never AI co-author trailers.** A branch
    with one human author and one `Co-Authored-By: Claude …` trailer carries that
@@ -706,8 +744,11 @@ precedence over the strategies below — and say that you did.
      of this file). If it says how to land, that is the policy: follow it, and
      it waives this step's "announce and ask" and the squash checkpoint as far
      as it says. Still compute and surface step 1's branch facts.
-   - Root `AGENTS.md`, then root `CLAUDE.md`, for a `## Branch Landing Policy`
-     heading (exact match).
+     - For a `## Branch Landing Policy` heading (exact match), in this order:
+       root `AGENTS.md`, root `CLAUDE.md`, then the docs root's `AGENTS.md` and
+       `CLAUDE.md` (`docs/AGENTS.md`, `docs/CLAUDE.md`). The first file that has
+       the heading is the policy. A generated project may have only the `docs/`
+       copies.
    - If that section only points to another file (e.g. "see
      `docs/BRANCH_POLICY.md`"), follow the pointer one level and read the linked
      file.
@@ -892,12 +933,12 @@ Ask for user confirmation at these points:
 
 - **Default is local** — Only push to remote if user selects Option 2 (PR)
 - **Fast-forward only** — Never create merge commits when merging locally
-- **Landing policy is project-owned** — Check `AGENTS.md`/`CLAUDE.md` for a
-  `## Branch Landing Policy` section before choosing squash vs. consolidate vs.
-  neither (Step 8). Absent a policy, present the options and their costs rather
-  than silently defaulting — some projects have real reasons (SHA-cited docs,
-  commits from multiple Anthill seats or multiple human authors) to forbid
-  squashing entirely.
+- **Landing policy is project-owned** — Check `AGENTS.md`/`CLAUDE.md` (root,
+  then the docs root) for a `## Branch Landing Policy` section before choosing
+  squash vs. consolidate vs. neither (Step 8). Absent a policy, present the
+  options and their costs rather than silently defaulting — some projects have
+  real reasons (SHA-cited docs, commits from multiple Anthill seats or multiple
+  human authors) to forbid squashing entirely.
 - **Always create session doc** — Even for smooth work
 - **Never write a memory or a lesson** — both types are retired. Step 5's
   Reflect usually ends "nothing this time"; when it doesn't, it appends to a

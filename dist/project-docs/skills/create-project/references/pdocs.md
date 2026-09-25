@@ -318,8 +318,10 @@ date is a usage error rather than a silent no-match.
 bun scripts/pdocs/cli.ts backlinks <target>
 ```
 
-`<target>` is a repo-relative path (`docs/playbooks/foo-playbook.md`) or a
-`type/slug` key (`playbook/foo-playbook`). An unknown target exits **5**.
+`<target>` is a repo-relative path (`docs/playbooks/foo-playbook.md`), a
+`type/slug` key (`playbook/foo-playbook`), or — **legacy**, for a tree still on
+the pre-9.0.0 `projects/` layout, and removed when this repository's migration
+retires that layout — `project/<name>`. An unknown target exits **5**.
 
 **Name a feature or an item by its entry file's path** —
 `docs/features/oauth-upgrade/feature.md`, `docs/items/fix-hook.md` or

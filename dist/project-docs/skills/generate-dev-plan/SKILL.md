@@ -224,9 +224,11 @@ no `--lifecycle` so they wait in `triage`.
    pdocs set item/<slug> --blocked-by <id-or-item/slug>,…
    ```
 
-3. **Move the shaped ones to `ready`** — an item whose definition of done you
-   have now written. Blocked items can be `ready` too; `pdocs view ready` only
-   offers the unblocked ones:
+3. **Move the shaped, unblocked ones to `ready`** — an item whose definition of
+   done you have now written and whose `blocked_by` is empty or all `done`.
+   `ready` means nothing is blocking it. A shaped item that is still blocked
+   stays `backlog`: `finalize-branch` moves it to `ready` when the last item it
+   waits on lands.
 
    ```bash
    pdocs set item/<slug> --lifecycle ready

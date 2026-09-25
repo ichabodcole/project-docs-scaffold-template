@@ -112,11 +112,14 @@ Regardless of mode, follow this general process:
 
 Produce a formal investigation as the **write-up of a research work item**, in
 `docs/items/<slug>/write-up.md`. When you were given the item, write its
-write-up. When you weren't, create both — the user asked for this research, so
-the item starts `active`, not in `triage`:
+write-up. When you weren't, create both. Pass `--lifecycle active` **only when
+the user asked for this research** — they have approved it, and you are doing it
+now. When you are filing it on your own, or for another skill or agent (for
+example from `tech-integration-research`), leave `--lifecycle` off: the item
+starts in `triage`, and the user decides at triage whether to pursue it.
 
 ```bash
-bun scripts/pdocs/cli.ts new item <slug> --kind research --lifecycle active \
+bun scripts/pdocs/cli.ts new item <slug> --kind research [--lifecycle active] \
   --title "…" --description "<the question>" --by "<your model>"
 bun scripts/pdocs/cli.ts new write-up --owner item/<slug> \
   --title "…" --description "<what it finds>" --by "<your model>"

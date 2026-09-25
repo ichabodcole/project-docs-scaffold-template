@@ -72,15 +72,15 @@ writes each field; [SCHEMA.md](../SCHEMA.md#fields) has the full table.
 
 ## States, and who moves an item
 
-| State     | Means                                                                  | Set by                                                |
-| --------- | ---------------------------------------------------------------------- | ----------------------------------------------------- |
-| `triage`  | Filed, and nobody has decided to take it on                            | `pdocs new item`, by default                          |
-| `backlog` | Accepted, and not yet shaped                                           | triage                                                |
-| `ready`   | Shaped and unblocked: an accepted definition of done, nothing blocking | triage, or shaping after acceptance                   |
-| `active`  | Being worked                                                           | `init-branch`, when a branch starts on it — see below |
-| `review`  | Waiting on a human or a reviewer                                       | `finalize-branch`, when its review starts             |
-| `done`    | Landed                                                                 | `finalize-branch`; see also Research items            |
-| `dropped` | Decided against. It stays in the tree                                  | whoever decides                                       |
+| State     | Means                                                                  | Set by                                                                    |
+| --------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `triage`  | Filed, and nobody has decided to take it on                            | `pdocs new item`, by default                                              |
+| `backlog` | Accepted, and not yet shaped                                           | triage                                                                    |
+| `ready`   | Shaped and unblocked: an accepted definition of done, nothing blocking | triage or shaping; `finalize-branch` when the last item blocking it lands |
+| `active`  | Being worked                                                           | `init-branch`, when a branch starts on it — see below                     |
+| `review`  | Waiting on a human or a reviewer                                       | `finalize-branch`, when its review starts                                 |
+| `done`    | Landed                                                                 | `finalize-branch`; see also Research items                                |
+| `dropped` | Decided against. It stays in the tree                                  | whoever decides                                                           |
 
 `init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
 in the project-docs Claude Code plugin. `init-branch` offers the items
@@ -91,7 +91,9 @@ it; it never starts an item in `triage`.
 the user has seen.** If you are an agent that has just filed an item — a review
 finding, a bug you hit mid-task — leave it in `triage`: do not accept it, drop
 it, prioritise it, or start work on it on your own judgement. Writing its body
-and definition of done at filing is expected; that does not make it `ready`.
+and definition of done at filing is expected; that does not make it `ready`. The
+exception is an item the user has just approved in the same exchange — a plan's
+list of items, research they asked for: file it in the state they approved.
 
 At triage, the `triage-items` skill proposes for each item a state (`backlog`,
 `ready` or `dropped`), and optionally a `priority`, a `parent` feature to join
