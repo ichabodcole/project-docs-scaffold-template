@@ -58,13 +58,24 @@ The principles most worth checking against (reference them by slug):
 
 ### Materialize
 
-When an entry deserves a local home, copy it into the project. A playbook goes
-to `docs/playbooks/`; a scenario or lesson goes to `docs/lessons-learned/`. Add
-provenance frontmatter so the local copy points back at its source:
+When an entry deserves a local home, bring it into the project's playbooks — the
+one place project-docs keeps guidance (`memory` and `lesson` are retired types):
 
-```yaml
-hivemind_source_id: <doc id>
-hivemind_retrieved: <YYYY-MM-DD>
+- **A playbook** goes to `docs/playbooks/`, shaped Goal · Steps · Verification.
+  If the project already has a playbook for that kind of work
+  (`bun scripts/pdocs/cli.ts find --type playbook`), merge into it; otherwise
+  create one with `bun scripts/pdocs/cli.ts new playbook <slug>`, which also
+  writes its catalog line in `docs/index.md`.
+- **A scenario or lesson** becomes a **Step and a Verification appended to the
+  playbook for that kind of work** — an instruction the next agent follows, and
+  how it can tell the step was done — not a narrative page of its own.
+
+Record provenance so the local copy points back at its source — in the body,
+beside what you added, because the project's lint rejects frontmatter keys its
+schema does not declare (`UNKNOWN FIELD`):
+
+```markdown
+_From HiveMind `<doc id>`, retrieved YYYY-MM-DD._
 ```
 
 Materializing makes a snapshot — it does not sync. If the source changes later,
@@ -103,5 +114,6 @@ recreate the folder.
   guidance — "HiveMind has nothing on this" is a useful answer.
 - **Operator auth fails.** Degrade gracefully: report "couldn't reach HiveMind,"
   then continue the underlying work without it.
-- **Materialize target folder missing.** Create `docs/playbooks/` or
-  `docs/lessons-learned/` as needed, or ask the user where it should live.
+- **No `docs/playbooks/`.** Create it (`bun scripts/pdocs/cli.ts new playbook`
+  does), or ask the user where the guidance should live. Never create
+  `docs/lessons-learned/`.
