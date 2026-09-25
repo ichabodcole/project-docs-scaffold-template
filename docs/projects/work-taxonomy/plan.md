@@ -1197,9 +1197,17 @@ production-only. The migration never deletes a document.
   reverted with `git revert <sha>`. The gate is green before and after, because
   of add → migrate → retire. The retirement commit is reverted **before** the
   dogfood commit, never alone after it.
-- **A consumer's run:** the script commits nothing, so
-  `git checkout -- . && git clean -fd docs/` restores the tree. The guide says
-  to commit or stash first.
+- **A consumer's run:** the script commits nothing, and the guide says to commit
+  or stash first. To go back without losing work of the adopter's that the
+  preflight allowed to stay uncommitted: stash everything with
+  `git stash push --include-untracked`; reset to the pre-run commit (the first
+  run prints it as `starting from commit <sha>` and records it) only if the
+  adopter committed mid-migration; re-run from the start after deleting the
+  run's record; then restore the adopter's own paths from the stash with
+  `git checkout stash@{0} -- <path>`. Never a whole-tree `git clean` or
+  `git checkout -- .`: it also takes uncommitted work that has nothing to do
+  with the migration. The guide's "If the record is corrupt, or you deleted it"
+  gives the same steps.
 - **After release:** there is no down-migration. A consumer that needs to go
   back pins the plugin at 3.13.x and reverts its migration commit. Say so in the
   guide.
