@@ -2,13 +2,14 @@
 type: item
 title: "`Task` vs `Agent`: stale dispatch-tool name across skills and agents"
 description:
-  Four skills still declare the subagent tool as `Task`, a name that no longer
-  exists in any current environment.
+  "What is left after 4.0.0: the cosmetic `<uses Task tool>` narration in the
+  examples of the agents' descriptions."
 status: stable
 lifecycle: backlog
 id: 01a0da55-e3a2-7383-9534-68a0893d1cd7
 kind: task
 generated: { by: unknown, at: 2026-09-02 }
+scope: project-docs
 ---
 
 # `Task` vs `Agent`: stale dispatch-tool name across skills and agents
@@ -95,3 +96,10 @@ Two adjacent findings that belong in the same sweep:
   applied, for reference
 - Found by the cold reader validating
   [2026-08-10-code-review-subagent-needs-execution.md](./_archive/code-review-subagent-needs-execution.md)
+
+## Narrowed (2026-09-25)
+
+The four `allowed_tools` declarations now say `Agent` (project-docs 4.0.0), so
+the functional half of this item is done. What remains is cosmetic: the
+`<uses Task tool>` narration in the agents' description examples. Done when no
+agent example narrates the old tool name.

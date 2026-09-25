@@ -4,15 +4,15 @@ title:
   "Plugin skills hardcode the flat `docs/` folders, which a restructure would
   invalidate"
 description:
-  Skills that write documents name docs/memories/ and docs/architecture/
-  literally, so a project that moves those folders gets them recreated by the
-  tooling meant to maintain them.
+  "What is left after 4.0.0: the hand-written DEV_KICKOFF.md and artifacts,
+  which skills still place by literal path rather than through pdocs."
 tags: [skills, docs-layout, plugin]
 status: stable
 lifecycle: backlog
 id: 01a0da55-e3a2-7383-9534-68a0893d1cd8
 kind: task
 generated: { by: claude-opus-5, at: 2026-09-04 }
+scope: project-docs
 ---
 
 # Plugin skills hardcode the flat `docs/` folders, which a restructure would invalidate
@@ -72,3 +72,12 @@ Two cheaper halves worth doing before any restructure:
   `archive/knowledge-wiki-layer` tag, so this reference resolves.
 - [okf-frontmatter-layer proposal](../features/okf-frontmatter-layer/feature.md)
   — why no folder moved, and what phase two would change
+
+## Narrowed (2026-09-25)
+
+Phase 4 of the work-taxonomy release moved every skill that creates a document
+onto `pdocs new`, which resolves the folder from the registry, so the literal
+paths this item was filed for are gone from those skills. What remains is the
+two things a skill still writes by hand: the `DEV_KICKOFF.md` that `dev-kickoff`
+writes (since `pdocs new kickoff` refuses) and the artifacts skills drop into an
+owner's `artifacts/`. Done when both are placed through a resolved owner path.
