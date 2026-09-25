@@ -30,6 +30,18 @@
     "skip": [
       "_archive",
       "superpowers"
+    ],
+    "scopes": [
+      "pdocs",
+      "scaffold",
+      "migrations",
+      "project-docs",
+      "hivemind",
+      "operator",
+      "recipes",
+      "toolbox",
+      "agent-bridge",
+      "docs"
     ]
   }
 }

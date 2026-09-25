@@ -151,6 +151,10 @@ not bypassable. The normalization is now
 `scripts/normalize-skill-frontmatter.py`, stdlib-only and run unconditionally by
 `build:dist`. **A step that changes what ships does not get to be optional.**
 
+A second implementer working in parallel works in its own worktree: `dist/`
+mirrors every plugin, so one agent's uncommitted edits fail the other's
+`check:dist`.
+
 ## Development Commands
 
 ### Formatting
