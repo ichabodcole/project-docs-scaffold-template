@@ -403,7 +403,7 @@ type EraRules = {
   DURABLE_TYPE: Record<string, string>;
   PROJECT_FILE_TYPE: Record<string, string>;
   PROJECT_SPEC: Record<string, { lifecycle: string[] | null }>;
-  RENDERER_KEYS: readonly string[] | ReadonlySet<string>;
+  RENDERER_KEYS: string[];
   ROOT_PAGE_TYPE: Record<string, string>;
   SPEC: Record<string, { type: string; lifecycle: string[] | null }>;
 };
