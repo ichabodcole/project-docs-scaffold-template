@@ -502,3 +502,360 @@ describe("the copied logic equals the originals in scripts/pdocs/", () => {
     for (const [folder, type] of Object.entries(KEPT_LIBRARY)) expect(DURABLE_TYPE[folder] ?? type).toBe(type);
   });
 });
+
+// ─── Generated fixtures: real trees, not hand-built ones ─────────────────────
+
+function sh(cmd: string[], cwd?: string, env?: Record<string, string>): string {
+  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe", env: childEnv(env) });
+  if (r.exitCode !== 0) throw new Error(`${cmd.join(" ")} exited ${r.exitCode}\n${r.stderr.toString()}${r.stdout.toString()}`);
+  return r.stdout.toString();
+}
+
+interface Scaffolds {
+  /** A generated 8.1.0 project: the v2.10 tree as a consumer has it. */
+  old: string;
+  /** A generated project from the working tree: the 9.0.0 layout. */
+  current: string;
+}
+let scaffolds: Scaffolds | null = null;
+
+function generatedScaffolds(): Scaffolds {
+  if (scaffolds) return scaffolds;
+  if (!Bun.which("cookiecutter"))
+    throw new Error("cookiecutter is not on PATH, so the generated fixtures cannot be built. Install it — these tests do not skip without it.");
+  const base = tmp("migrate-v30-scaffolds-");
+  const config = join(base, "cookiecutter.yaml");
+  writeFileSync(config, `replay_dir: "${join(base, "replay")}"\ncookiecutters_dir: "${join(base, "cookiecutters")}"\n`);
+  if (Bun.spawnSync(["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `${V210_TAG}^{commit}`], { stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode !== 0)
+    throw new Error(`tag ${V210_TAG} is not in this clone. Run \`git fetch --tags\` and re-run.`);
+  const dir = join(base, "template-v210");
+  mkdirSync(dir);
+  sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", join(base, "t.tar"), V210_TAG]);
+  sh(["tar", "-xf", join(base, "t.tar"), "-C", dir]);
+  const generate = (template: string, into: string): string => {
+    mkdirSync(into);
+    sh(["cookiecutter", "--config-file", config, "--no-input", "-o", into, template, "install_target=New project folder"]);
+    return join(into, "my-project");
+  };
+  scaffolds = { old: generate(dir, join(base, "old")), current: generate(REPO_ROOT, join(base, "current")) };
+  return scaffolds;
+}
+
+function git(root: string, ...args: string[]): string {
+  return sh(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", ...args], root);
+}
+
+function commitAll(root: string, message: string): void {
+  if (!existsSync(join(root, ".git"))) git(root, "init", "-q");
+  git(root, "add", "-A");
+  git(root, "commit", "-q", "--allow-empty", "-m", message);
+}
+
+const doc = (fields: Record<string, string>, body: string) =>
+  `---\n${Object.entries(fields).map(([k, v]) => `${k}: ${v}`).join("\n")}\ngenerated: { by: fixture, at: 2026-01-01 }\n---\n\n${body}`;
+const common = (type: string, title: string, description: string, extra: Record<string, string> = {}) => ({ type, title, description, status: "stable", ...extra });
+
+/**
+ * Every shape the plan's conversion table names, and every one this
+ * repository has: projects with and without a proposal, a legacy archive with
+ * no frontmatter, backlog items in each lifecycle (one archived), a fragment,
+ * an investigation that owns a report and an archived one, a brief its owner
+ * has already moved into a project's artifacts/, a cycle with scope, a
+ * DEV_KICKOFF.md, artifacts/, two memories and a lesson, a root README linking
+ * into docs/backlog/, and a lint.exclude glob into projects/.
+ */
+const SHAPES: Record<string, string> = {
+  "docs/backlog/2026-01-01-open-item.md": doc(common("backlog", "Open item", "An open item.", { lifecycle: "open" }), "# Open item\n\nSee [alpha](../projects/alpha/proposal.md).\n"),
+  "docs/backlog/2026-01-02-done-item.md": doc(common("backlog", "Done item", "A done item.", { lifecycle: "done" }), "# Done item\n\nFinished.\n"),
+  "docs/backlog/2026-01-03-promoted-item.md": doc(common("backlog", "Promoted item", "A promoted item.", { lifecycle: "promoted" }), "# Promoted item\n\nBecame [alpha](../projects/alpha/proposal.md).\n"),
+  "docs/backlog/2026-01-04-dropped-item.md": doc(common("backlog", "Dropped item", "A dropped item.", { lifecycle: "dropped" }), "# Dropped item\n\nNot doing it.\n"),
+  "docs/backlog/_archive/2026-01-05-archived-item.md": doc(common("backlog", "Archived item", "An archived item.", { lifecycle: "done" }), "# Archived item\n\nOld.\n"),
+  "docs/fragments/2026-01-06-a-thought.md": doc(common("fragment", "A thought", "A thought.", { lifecycle: "open" }), "# A thought\n\nMaybe.\n"),
+  "docs/projects/alpha/proposal.md": doc(common("proposal", "Alpha", "The alpha feature.", { lifecycle: "approved" }), "# Alpha\n\nThe plan is [here](./plan.md); the kickoff [here](./DEV_KICKOFF.md).\n"),
+  "docs/projects/alpha/plan.md": doc(common("plan", "Alpha plan", "How alpha is built.", { lifecycle: "active" }), "# Alpha plan\n\n[Proposal](./proposal.md) · [question](../../investigations/2026-01-10-question-investigation.md)\n"),
+  "docs/projects/alpha/DEV_KICKOFF.md": doc(common("kickoff", '"Kickoff: alpha"', "Start alpha."), "# Kickoff\n\n[Proposal](./proposal.md)\n"),
+  "docs/projects/alpha/sessions/2026-01-07-first.md": doc(common("session", "First session", "What happened first."), "# First\n\n[Plan](../plan.md)\n"),
+  "docs/projects/alpha/artifacts/notes.md": doc(common("artifact", "Notes", "Notes on alpha."), "# Notes\n\n[Backlog item](../../../backlog/2026-01-01-open-item.md)\n"),
+  "docs/projects/alpha/artifacts/2026-01-13-idea.md": doc(common("brief", "Idea", "The brief alpha came from.", { lifecycle: "spent" }), "# Idea\n\nA brief, moved here by its owner.\n"),
+  "docs/projects/alpha/artifacts/deck-prototype.md": "---\nmarp: true\n---\n\n# A deck\n\n[proposal](../proposal.md)\n",
+  "docs/projects/beta/sessions/2026-01-08-work.md": doc(common("session", "Beta work", "Beta was built without a proposal."), "# Beta work\n\nDone.\n"),
+  "docs/projects/_archive/gamma/proposal.md": "# Proposal: Gamma\n\n**Date:** 2025-12-01 **Status:** Implemented\n\n## Problem\n\nGamma was needed. It shipped.\n",
+  "docs/projects/_archive/gamma/sessions/2025-12-02-old.md": "# Old session\n\nIt went fine. [Proposal](../proposal.md)\n",
+  "docs/projects/_archive/gamma/design.md": "Notes without a heading.\n",
+  "docs/investigations/2026-01-10-question-investigation.md": doc(common("investigation", '"Investigation: question"', "Is it possible?", { lifecycle: "concluded" }), "# Question\n\nEvidence: [report](../reports/2026-01-11-evidence-report.md).\n"),
+  "docs/investigations/_archive/2026-01-12-old-question.md": doc(common("investigation", "Old question", "An old question.", { lifecycle: "concluded" }), "# Old question\n\nAnswered.\n"),
+  "docs/reports/2026-01-11-evidence-report.md": doc(common("report", "Evidence", "What was found."), "# Evidence\n\nFor [the question](../investigations/2026-01-10-question-investigation.md).\n"),
+  "docs/cycles/2026-01-mixed.md": doc(
+    { ...common("cycle", "Mixed", "A cycle with mixed scope."), lifecycle: "closed", started: "2026-01-01", closed: "2026-01-31", appetite: "A month.", scope: "\n  [\n    backlog/2026-01-01-open-item,\n    backlog/2026-01-02-done-item,\n    project/alpha,\n  ]", after: "[]" },
+    "# Mixed\n\n## Scope\n\n- [Alpha](../projects/alpha/proposal.md)\n- [Open item](../backlog/2026-01-01-open-item.md)\n"
+  ),
+  "docs/memories/2026-01-14-first-memory.md": doc(common("memory", "First memory", "Something that happened.", { tags: "[history]" }), "# First memory\n\nIt happened.\n"),
+  "docs/memories/2026-01-15-second-memory.md": doc(common("memory", "Second memory", "Something else that happened.", { tags: "[history]" }), "# Second memory\n\nThen this.\n"),
+  "docs/lessons-learned/a-lesson.md": doc(common("lesson", "A lesson", "What was learned.", { tags: "[history]" }), "# A lesson\n\nLearned.\n"),
+  "README.md": "# My project\n\n- [An open item](docs/backlog/2026-01-01-open-item.md)\n- [Alpha](docs/projects/alpha/proposal.md#alpha)\n- [The backlog](docs/backlog/)\n",
+};
+
+/** Fixture O: the generated 8.1.0 tree with every shape, committed. */
+function fixtureO(extra: Record<string, string> = {}): string {
+  const root = tmp("migrate-v30-O-");
+  cpSync(generatedScaffolds().old, root, { recursive: true });
+  write(root, { ...SHAPES, ...extra });
+  const index = read(root, "docs/index.md")
+    .replace(/(## Lessons learned[\s\S]*?)_No pages yet\._/, "$1- [A lesson](./lessons-learned/a-lesson.md) — What was learned.")
+    .replace(
+      /(## Memories[\s\S]*?)_No pages yet\._/,
+      "$1- [First memory](./memories/2026-01-14-first-memory.md) — Something that happened.\n- [Second memory](./memories/2026-01-15-second-memory.md) — Something else that happened."
+    );
+  const cfg = readJson(join(root, ".project-docs.json"));
+  cfg.lint.exclude = ["docs/projects/alpha/artifacts/*-prototype.md"];
+  write(root, { "docs/index.md": index, ".project-docs.json": `${JSON.stringify(cfg, null, 2)}\n` });
+  commitAll(root, "the 8.1.0 tree, with every shape");
+  return root;
+}
+
+/** The 9.0.0 scaffold with its docs_version set, so the markers have somewhere to move. */
+function scaffoldAt(version: string): string {
+  const s = tmp("migrate-v30-N-");
+  cpSync(generatedScaffolds().current, s, { recursive: true });
+  write(s, { "docs/README.md": read(s, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${version}"`) });
+  return s;
+}
+let n999: string | null = null;
+const target = () => (n999 ??= scaffoldAt("9.9.9"));
+
+interface Run {
+  exitCode: number | null;
+  out: string;
+}
+
+function migrate(
+  root: string,
+  args: string[] = [],
+  o: { script?: string; env?: Record<string, string>; scaffold?: string | null; bun?: string; format?: boolean } = {}
+): Run {
+  const scaffold = o.scaffold === undefined ? target() : o.scaffold;
+  const r = Bun.spawnSync(
+    [o.bun ?? "bun", o.script ?? SCRIPT, "--root", root, ...(scaffold ? ["--scaffold-dir", scaffold] : []), ...(o.format ? [] : ["--skip-format"]), ...args],
+    { stdout: "pipe", stderr: "pipe", env: childEnv(o.env) }
+  );
+  return { exitCode: r.exitCode, out: r.stdout.toString() + r.stderr.toString() };
+}
+
+function treeDigest(root: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === ".git") continue;
+      const abs = join(dir, e.name);
+      if (e.isDirectory()) walk(abs);
+      else out[relative(root, abs)] = hashOf(abs) as string;
+    }
+  };
+  walk(root);
+  return out;
+}
+
+const pdocs = (root: string, ...args: string[]) =>
+  Bun.spawnSync(["bun", "scripts/pdocs/cli.ts", ...args], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
+
+/** A document's body with every link destination blanked — what "no prose changed" compares. */
+const prose = (text: string) => splitFrontmatter(text).body.replace(/\]\([^)]*\)/g, "]()");
+
+// ─── The owned diff between O and N is DERIVED, never pinned ─────────────────
+
+function ownedDiff(o: string, n: string, sub = "scripts/pdocs"): string[] {
+  const a = treeDigest(join(o, sub));
+  const b = treeDigest(join(n, sub));
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => a[k] !== b[k]).sort();
+}
+/** The files the 9.0.0 work added: the refresh must carry at least these. */
+const NEW_OWNED = ["lint/work.ts", "links-rewrite.ts", "move.ts", "uuid.ts", "work.ts", "commands/view.ts", "commands/set.ts", "commands/archive.ts", "commands/promote.ts"];
+
+describe("fixtures — the generated trees", () => {
+  test("O is a v2.10 tree with every shape; N is the 9.0.0 layout", () => {
+    const o = fixtureO();
+    expect(read(o, "scripts/pdocs/lint/rules.ts")).toContain("isSeeded");
+    expect(existsSync(join(o, "docs/items"))).toBe(false);
+    for (const rel of Object.keys(SHAPES)) expect(existsSync(join(o, rel))).toBe(true);
+    const n = generatedScaffolds().current;
+    expect(existsSync(join(n, "docs/items/README.md"))).toBe(true);
+    expect(existsSync(join(n, "docs/backlog"))).toBe(false);
+  });
+
+  test("the owned diff between O and N carries the 9.0.0 CLI — derived, not pinned", () => {
+    const diff = ownedDiff(generatedScaffolds().old, generatedScaffolds().current);
+    for (const f of NEW_OWNED) expect(diff).toContain(f);
+  });
+
+  test("the Applies If test is true on O and false on N, executed as the table's shell", () => {
+    const on = (root: string) => Bun.spawnSync(["sh", "-c", APPLIES_IF], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode;
+    expect(on(fixtureO())).toBe(0);
+    expect(on(generatedScaffolds().current)).toBe(1);
+  });
+});
+
+// ─── The whole run on O ──────────────────────────────────────────────────────
+
+let whole: { root: string; r: Run } | null = null;
+/** One run on O, shared by the assertions below: none of them writes. */
+const wholeRun = () => {
+  if (whole) return whole;
+  const root = fixtureO();
+  whole = { root, r: migrate(root) };
+  return whole;
+};
+const fmOf = (root: string, rel: string) => splitFrontmatter(read(root, rel)).fm as string;
+
+describe("the whole migration on fixture O", () => {
+  test("exit 0, pdocs check clean, no legacy folder, both markers moved", () => {
+    const { root, r } = wholeRun();
+    if (r.exitCode !== 0 || process.env.SHOW_RUN) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("Migration complete.");
+    expect(r.out).toContain("✓ no retired folder remains");
+    expect(r.out).toContain("✓ pdocs check: clean (exit 0)");
+    const check = pdocs(root, "check", "--format", "json");
+    expect(check.exitCode).toBe(0);
+    for (const f of ["backlog", "briefs", "fragments", "investigations", "reports", "projects"]) expect(existsSync(join(root, "docs", f))).toBe(false);
+    expect(read(root, "docs/README.md")).toContain('docs_version: "9.9.9"');
+    expect(readJson(join(root, ".project-docs.json")).version).toBe("9.9.9");
+  });
+
+  test("projects: a proposal becomes feature.md (approved + active plan → active); no proposal → a born item; a legacy archive → features/_archive with frontmatter", () => {
+    const { root } = wholeRun();
+    expect(fmGet(fmOf(root, "docs/features/alpha/feature.md"), "type")).toBe("feature");
+    expect(fmGet(fmOf(root, "docs/features/alpha/feature.md"), "lifecycle")).toBe("active");
+    for (const f of ["plan.md", "DEV_KICKOFF.md", "sessions/2026-01-07-first.md", "artifacts/notes.md"]) expect(existsSync(join(root, "docs/features/alpha", f))).toBe(true);
+    const beta = fmOf(root, "docs/items/beta/item.md");
+    expect([fmGet(beta, "type"), fmGet(beta, "kind"), fmGet(beta, "lifecycle"), fmGet(beta, "description")]).toEqual(["item", "task", "done", "Beta was built without a proposal."]);
+    const gamma = fmOf(root, "docs/features/_archive/gamma/feature.md");
+    expect([fmGet(gamma, "type"), fmGet(gamma, "lifecycle"), fmGet(gamma, "title")]).toEqual(["feature", "done", "Proposal: Gamma"]);
+    expect(fmGet(fmOf(root, "docs/features/_archive/gamma/sessions/2025-12-02-old.md"), "type")).toBe("session");
+    expect(fmGet(fmOf(root, "docs/features/_archive/gamma/design.md"), "type")).toBe("artifact");
+  });
+
+  test("the brief its owner moved into artifacts/ is an artifact now, with no lifecycle", () => {
+    const { root } = wholeRun();
+    const fm = fmOf(root, "docs/features/alpha/artifacts/2026-01-13-idea.md");
+    expect(fmGet(fm, "type")).toBe("artifact");
+    expect(fmGet(fm, "lifecycle")).toBeNull();
+  });
+
+  test("backlog and fragments: items, each lifecycle mapped, the archived one in items/_archive; the cycle moved onto them", () => {
+    const { root } = wholeRun();
+    const state = (rel: string) => fmGet(fmOf(root, rel), "lifecycle");
+    expect(state("docs/items/open-item.md")).toBe("backlog");
+    expect(state("docs/items/done-item.md")).toBe("done");
+    expect(state("docs/items/promoted-item.md")).toBe("dropped");
+    expect(state("docs/items/dropped-item.md")).toBe("dropped");
+    expect(state("docs/items/_archive/archived-item.md")).toBe("done");
+    expect(state("docs/items/a-thought.md")).toBe("triage");
+    expect(fmGet(fmOf(root, "docs/items/open-item.md"), "cycle")).toBe("2026-01-mixed");
+    expect(fmGet(fmOf(root, "docs/items/done-item.md"), "cycle")).toBe("2026-01-mixed");
+    expect(fmGet(fmOf(root, "docs/items/dropped-item.md"), "cycle")).toBeNull();
+    expect(fmOf(root, "docs/cycles/2026-01-mixed.md")).not.toContain("scope:");
+  });
+
+  test("investigations: a research item owning its write-up and its report; the archived one in items/_archive", () => {
+    const { root } = wholeRun();
+    const item = fmOf(root, "docs/items/question/item.md");
+    expect([fmGet(item, "kind"), fmGet(item, "lifecycle"), fmGet(item, "description")]).toEqual(["research", "done", "Is it possible?"]);
+    const wu = fmOf(root, "docs/items/question/write-up.md");
+    expect([fmGet(wu, "type"), fmGet(wu, "lifecycle")]).toEqual(["write-up", null]);
+    expect(existsSync(join(root, "docs/items/question/reports/2026-01-11-evidence-report.md"))).toBe(true);
+    expect(fmGet(fmOf(root, "docs/items/_archive/old-question/item.md"), "lifecycle")).toBe("done");
+  });
+
+  test("every item has a unique v7 id", () => {
+    const { root } = wholeRun();
+    const items = readdirSync(join(root, "docs/items"), { recursive: true })
+      .map(String)
+      .filter((p) => p.endsWith(".md") && p !== "README.md" && !p.includes("/reports/") && !p.endsWith("write-up.md") && !p.includes("sessions/"));
+    const ids = items.map((p) => fmGet(fmOf(root, `docs/items/${p}`), "id") as string);
+    expect(items.length).toBe(9);
+    for (const id of ids) expect(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)).toBe(true);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test("memories and lessons are kept and declared; the config's other bytes are the adopter's", () => {
+    const { root } = wholeRun();
+    expect(existsSync(join(root, "docs/memories/2026-01-14-first-memory.md"))).toBe(true);
+    expect(existsSync(join(root, "docs/lessons-learned/a-lesson.md"))).toBe(true);
+    const lint = readJson(join(root, ".project-docs.json")).lint;
+    expect(lint.types).toEqual({ memories: "memory", "lessons-learned": "lesson" });
+    expect(lint.durable).toContain("memories");
+    expect(lint.workbench).toEqual(["cycles", "features", "items"]);
+    expect(lint.skip).toEqual([]);
+    expect(lint.scopes).toEqual([]);
+    expect(lint.exclude).toEqual(["docs/features/alpha/artifacts/*-prototype.md"]);
+  });
+
+  test("no document's prose changed — only link targets and frontmatter", () => {
+    const { root } = wholeRun();
+    const moved: Record<string, string> = {
+      "docs/backlog/2026-01-01-open-item.md": "docs/items/open-item.md",
+      "docs/backlog/2026-01-03-promoted-item.md": "docs/items/promoted-item.md",
+      "docs/projects/alpha/proposal.md": "docs/features/alpha/feature.md",
+      "docs/projects/alpha/plan.md": "docs/features/alpha/plan.md",
+      "docs/projects/alpha/artifacts/notes.md": "docs/features/alpha/artifacts/notes.md",
+      "docs/projects/_archive/gamma/proposal.md": "docs/features/_archive/gamma/feature.md",
+      "docs/projects/_archive/gamma/sessions/2025-12-02-old.md": "docs/features/_archive/gamma/sessions/2025-12-02-old.md",
+      "docs/investigations/2026-01-10-question-investigation.md": "docs/items/question/write-up.md",
+      "docs/reports/2026-01-11-evidence-report.md": "docs/items/question/reports/2026-01-11-evidence-report.md",
+      "docs/cycles/2026-01-mixed.md": "docs/cycles/2026-01-mixed.md",
+      "README.md": "README.md",
+    };
+    for (const [from, to] of Object.entries(moved)) {
+      const original = SHAPES[from] as string;
+      const now = read(root, to);
+      expect([to, prose(from === "README.md" ? `---\n\n---\n${now}` : now)]).toEqual([to, prose(from === "README.md" ? `---\n\n---\n${original}` : original)]);
+    }
+  });
+
+  test("links: the root README resolves, and every proposal.md link now points at feature.md", () => {
+    const { root } = wholeRun();
+    expect(read(root, "README.md")).toContain("[An open item](docs/items/open-item.md)");
+    expect(read(root, "README.md")).toContain("[Alpha](docs/features/alpha/feature.md#alpha)");
+    expect(read(root, "README.md")).toContain("[The backlog](docs/items/)");
+    expect(read(root, "docs/items/open-item.md")).toContain("[alpha](../features/alpha/feature.md)");
+    expect(read(root, "docs/features/alpha/plan.md")).toContain("[Proposal](./feature.md)");
+    expect(read(root, "docs/features/alpha/plan.md")).toContain("[question](../../items/question/write-up.md)");
+    expect(read(root, "docs/features/alpha/artifacts/notes.md")).toContain("[Backlog item](../../../items/open-item.md)");
+    expect(read(root, "docs/cycles/2026-01-mixed.md")).toContain("[Alpha](../features/alpha/feature.md)");
+    const all = readdirSync(join(root, "docs"), { recursive: true }).map(String).filter((p) => p.endsWith(".md"));
+    for (const p of all) expect([p, read(root, `docs/${p}`).includes("proposal.md)")]).toEqual([p, false]);
+  });
+
+  test("archived entities sit in items/_archive or features/_archive, in a terminal state", () => {
+    const { root } = wholeRun();
+    for (const base of ["docs/items/_archive", "docs/features/_archive"])
+      for (const p of readdirSync(join(root, base), { recursive: true }).map(String).filter((x) => /(^|\/)(item|feature)\.md$|^[^/]+\.md$/.test(x)))
+        expect([p, ["done", "dropped"].includes(fmGet(fmOf(root, `${base}/${p}`), "lifecycle") as string)]).toEqual([p, true]);
+  });
+
+  test("templates: the moved ones at their new paths with their records carried; the retired ones gone; STYLE.md installed", () => {
+    const { root } = wholeRun();
+    const m = readJson(join(root, "docs/.pdocs-seed.json"));
+    expect(m.version).toBe("9.9.9");
+    for (const t of ["TEMPLATES/PLAN.template.md", "TEMPLATES/FEATURE.template.md", "TEMPLATES/REPORT.template.md", "TEMPLATES/ITEM.template.md", "STYLE.md"]) {
+      expect(existsSync(join(root, "docs", t))).toBe(true);
+      expect(m.files[t]).toBe(hashOf(join(root, "docs", t)));
+    }
+    for (const t of Object.keys(m.files)) expect([t, t.startsWith("projects/") || t.startsWith("backlog/")]).toEqual([t, false]);
+    expect(existsSync(join(root, "docs/memories/TEMPLATE.md"))).toBe(true);
+  });
+
+  test("every move is named in the output", () => {
+    const { r } = wholeRun();
+    for (const line of [
+      "✓ moved docs/projects/alpha/ → docs/features/alpha/",
+      "✓ moved docs/projects/_archive/gamma/ → docs/features/_archive/gamma/",
+      "✓ moved docs/backlog/2026-01-01-open-item.md → docs/items/open-item.md",
+      "✓ moved docs/investigations/2026-01-10-question-investigation.md → docs/items/question/write-up.md",
+      "✓ moved docs/reports/2026-01-11-evidence-report.md → docs/items/question/reports/2026-01-11-evidence-report.md",
+      "✓ template moved: docs/projects/TEMPLATES/PLAN.template.md → docs/TEMPLATES/PLAN.template.md",
+      "promoted → dropped: listed for review",
+    ])
+      expect(r.out).toContain(line);
+  });
+});

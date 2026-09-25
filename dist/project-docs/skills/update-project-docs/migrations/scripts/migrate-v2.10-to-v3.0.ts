@@ -122,6 +122,8 @@ export const FOLDER_SUCCESSOR: Record<string, string> = {
 };
 /** Owned files at the docs root the refresh replaces. README.md keeps its `docs_version`. */
 const OWNED_ROOT = ["SCHEMA.md", "README.md", "AGENTS.md", "CLAUDE.md"];
+/** The 9.0.0 category folders whose README.md the refresh replaces (owned). */
+const OWNED_CATEGORIES = ["architecture", "specifications", "interaction-design", "playbooks", "cycles", "features", "items"];
 /** What proves a scaffold is 9.0.0 or later: each is checked in phase 2. */
 const SCAFFOLD_MARKERS: Array<[string, string | null]> = [
   ["scripts/pdocs/lint/registry.ts", "FEATURES_FOLDER"],
@@ -1304,3 +1306,1049 @@ export function addToScope(body: string, line: string): string {
   lines.splice(last + 1, 0, ...(last === at ? ["", line] : [line]));
   return lines.join("\n");
 }
+
+// =======================================================================================
+// Reporting. Every phase says what it did; a failure throws and stops the run.
+// =======================================================================================
+
+class MigrationError extends Error {}
+
+const say = (s: string) => console.log(s);
+const step = (n: number, title: string) => say(`\n[${n}/${PHASES}] ${title}`);
+const ok = (s: string) => say(`   ✓ ${s}`);
+const note = (s: string) => say(`   · ${s}`);
+const fail = (s: string): never => {
+  throw new MigrationError(s);
+};
+const indented = (text: string) =>
+  text
+    .split("\n")
+    .map((l) => `       ${l}`)
+    .join("\n");
+
+/** Every child gets `gitEnv()`: a `git` — or a `pdocs check` that spawns one — run
+ *  from inside a commit hook must find the repository from its `cwd`. */
+function run(cmd: string[], cwd: string): { code: number; stdout: string; stderr: string } {
+  const p = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe", env: gitEnv() });
+  return { code: p.exitCode ?? 1, stdout: p.stdout.toString(), stderr: p.stderr.toString() };
+}
+
+const have = (bin: string) => run(["sh", "-c", `command -v ${bin}`], ".").code === 0;
+
+const fileHas = (abs: string, marker: string) => existsSync(abs) && readFileSync(abs, "utf8").includes(marker);
+
+const sameBytes = (a: string, b: string) => existsSync(a) && existsSync(b) && hashOf(a) === hashOf(b);
+
+/** Every file under `dir`, relative to it, sorted. `.git` and `node_modules` are not walked. */
+function filesIn(dir: string, out: string[] = [], base = dir): string[] {
+  if (!existsSync(dir)) return out;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === ".git" || entry.name === "node_modules") continue;
+    const abs = join(dir, entry.name);
+    if (entry.isDirectory()) filesIn(abs, out, base);
+    else if (entry.isFile()) out.push(relative(base, abs).split(sep).join("/"));
+  }
+  return out.sort();
+}
+
+export function docsVersionOf(readme: string): string | null {
+  if (!existsSync(readme)) return null;
+  return /^docs_version:\s*"([^"]+)"/m.exec(readFileSync(readme, "utf8"))?.[1] ?? null;
+}
+
+export function serialiseManifest(m: SeedManifest, before: string | null): string {
+  const indent = (before && /^([ \t]+)"/m.exec(before)?.[1]) || "  ";
+  const files: Record<string, string> = {};
+  for (const k of Object.keys(m.files).sort()) files[k] = m.files[k] as string;
+  return `${JSON.stringify({ version: m.version, files }, null, indent)}\n`;
+}
+
+// =======================================================================================
+// Invocation and context
+// =======================================================================================
+
+interface Options {
+  root: string;
+  dryRun: boolean;
+  scaffold: string | null;
+  skipFormat: boolean;
+  force: boolean;
+}
+
+export function parseArgs(argv: string[]): Options {
+  const opts: Options = { root: ".", dryRun: false, scaffold: null, skipFormat: false, force: false };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    const value = (): string => {
+      const v = argv[i + 1];
+      if (v === undefined || v.startsWith("--")) fail(`${a} needs a value. Usage is in the header of this script.`);
+      i++;
+      return v as string;
+    };
+    if (a === "--root") {
+      const v = value();
+      if (v.trim() === "") fail("--root was given an empty value.");
+      opts.root = v;
+    } else if (a === "--scaffold-dir" || a === "--scaffold") {
+      const v = value();
+      if (v.trim() === "") fail(`${a} was given an empty value.`);
+      opts.scaffold = v;
+    } else if (a === "--dry-run") opts.dryRun = true;
+    else if (a === "--skip-format") opts.skipFormat = true;
+    else if (a === "--force") opts.force = true;
+    else fail(`unknown argument \`${a}\`. Valid: --root, --dry-run, --scaffold-dir (--scaffold), --skip-format, --force.`);
+  }
+  return opts;
+}
+
+interface CheckResult {
+  code: number;
+  total: number;
+  adopting: boolean;
+  problems: string[];
+}
+
+/** One document this run writes: where it was (null when created), where it goes, its final text. */
+interface Write {
+  from: string | null;
+  to: string;
+  text: string;
+  /** Links respelled in it. */
+  links: number;
+  /** What happened to its frontmatter, for the phase line; null when untouched. */
+  fm: string | null;
+  /** Created by this run (a synthesized entity file): formatted before the record. */
+  created: boolean;
+}
+
+interface Changes {
+  plan: MovePlan;
+  templates: TemplatePlan;
+  cycles: CyclePlan;
+  /** Physical moves, in order: absolute `[from, to]`, a folder or a file. */
+  physical: Array<[string, string]>;
+  /** Every document write: moved, created, or edited in place. */
+  writes: Write[];
+  /** Repository-relative `[from, to]` for every path that moves — for `lint.exclude`. */
+  repoMoves: Array<[string, string]>;
+  keptLibrary: string[];
+}
+
+interface Ctx extends Options {
+  docsRootName: string;
+  docsRoot: string;
+  configPath: string;
+  config: Record<string, unknown> | null;
+  scaffoldDir: string;
+  generatedTmp: string;
+  wrote: boolean;
+  baseline: CheckResult | null;
+  changes: Changes | null;
+  /** Docs-relative seeded paths recorded this run — the ones the invariant re-reads. */
+  recorded: string[];
+  /** Docs-relative paths phase 8 wrote or phase 5 created, for phase 9 to format. */
+  toFormat: string[];
+  /** The record phase 8 builds and phase 9 writes; the manifest's text before. */
+  manifest: SeedManifest | null;
+  manifestBefore: string | null;
+}
+
+function resolveContext(o: Options): Ctx {
+  const root = resolve(o.root);
+  const configPath = join(root, ".project-docs.json");
+  let config: Record<string, unknown> | null = null;
+  if (existsSync(configPath)) {
+    const text = readFileSync(configPath, "utf8");
+    if (text.startsWith("﻿"))
+      fail(
+        ".project-docs.json starts with a UTF-8 byte-order mark (BOM), which JSON does not allow. Save the file without one and re-run."
+      );
+    try {
+      config = JSON.parse(text);
+    } catch (e) {
+      fail(`.project-docs.json is not valid JSON: ${(e as Error).message}`);
+    }
+  }
+  const docsRootName = typeof config?.docsRoot === "string" ? config.docsRoot : "docs";
+  return {
+    ...o,
+    root,
+    docsRootName,
+    docsRoot: join(root, docsRootName),
+    configPath,
+    config,
+    scaffoldDir: "",
+    generatedTmp: "",
+    wrote: false,
+    baseline: null,
+    changes: null,
+    recorded: [],
+    toFormat: [],
+    manifest: null,
+    manifestBefore: null,
+  };
+}
+
+function readManifest(ctx: Ctx): SeedManifest {
+  try {
+    return loadManifest(ctx.docsRoot);
+  } catch (e) {
+    return fail(`${ctx.docsRootName}/${(e as Error).message}`);
+  }
+}
+
+function pdocsCheck(root: string): { result: CheckResult | null; raw: string } {
+  const r = run(["bun", join(root, "scripts/pdocs/cli.ts"), "check", "--format", "json"], root);
+  try {
+    const env = JSON.parse(r.stdout) as { data?: { total?: unknown; adopting?: unknown; problems?: Array<{ message?: unknown }> } };
+    const d = env.data;
+    if (!d || typeof d.total !== "number" || !Array.isArray(d.problems)) return { result: null, raw: r.stderr || r.stdout };
+    return {
+      result: { code: r.code, total: d.total, adopting: d.adopting === true, problems: d.problems.map((p) => String(p.message ?? "")) },
+      raw: r.stdout,
+    };
+  } catch {
+    return { result: null, raw: r.stderr || r.stdout };
+  }
+}
+
+/** Repository-relative paths git reports dirty under `paths` (project-relative). */
+function dirtyUnder(ctx: Ctx, paths: string[]): string[] {
+  const present = paths.filter((c) => existsSync(join(ctx.root, c)));
+  if (present.length === 0) return [];
+  const st = run(["git", "status", "--porcelain", "--untracked-files=all", "--", ...present], ctx.root);
+  const top = run(["git", "rev-parse", "--show-toplevel"], ctx.root).stdout.trim();
+  if (st.code !== 0 || !top) return [];
+  const root = realpathSync(ctx.root);
+  return st.stdout
+    .split("\n")
+    .filter((l) => l.length > 3)
+    .map((l) => l.slice(3).split(" -> ").pop() as string)
+    .map((p) => p.replace(/^"(.*)"$/, "$1"))
+    .map((p) => relative(root, join(realpathSync(top), p)))
+    .sort();
+}
+
+/** The date a document was first committed; else the date in its name; else today. */
+function firstDate(ctx: Ctx, abs: string): string {
+  const r = run(["git", "log", "--diff-filter=A", "--format=%as", "--", abs], ctx.root);
+  const dates = r.code === 0 ? r.stdout.trim().split("\n").filter(Boolean) : [];
+  if (dates.length) return dates[dates.length - 1] as string;
+  const named = /(\d{4}-\d{2}-\d{2})/.exec(basename(abs))?.[1];
+  return named ?? new Date().toISOString().slice(0, 10);
+}
+
+// =======================================================================================
+// The whole plan: every move, every frontmatter rewrite, every link — computed
+// before anything is written, from the tree as it stands
+// =======================================================================================
+
+/** A document's type from its position inside an owner folder (SCHEMA.md § Layout). */
+export function positionalType(relInOwner: string): string {
+  const fixed: Record<string, string> = {
+    "feature.md": "feature",
+    "item.md": "item",
+    "plan.md": "plan",
+    "design-resolution.md": "design-resolution",
+    "test-plan.md": "test-plan",
+    "DEV_KICKOFF.md": "kickoff",
+    "handoff.md": "handoff",
+    "write-up.md": "write-up",
+  };
+  if (fixed[relInOwner]) return fixed[relInOwner] as string;
+  if (relInOwner.startsWith("sessions/")) return "session";
+  if (relInOwner.startsWith("reports/")) return "report";
+  return "artifact";
+}
+
+const RETIRED_TYPE_NAMES = new Set(["proposal", "backlog", "fragment", "brief", "investigation", "memory", "lesson"]);
+const HAS_LIFECYCLE = new Set(["feature", "item", "plan", "design-resolution", "test-plan"]);
+
+function computeChanges(ctx: Ctx): Changes {
+  const d = ctx.docsRoot;
+  const files = filesIn(d);
+  const cache = new Map<string, string | null>();
+  const textOf = (rel: string): string | null => {
+    if (!cache.has(rel)) {
+      const abs = join(d, rel);
+      cache.set(rel, rel.endsWith(".md") && existsSync(abs) ? readFileSync(abs, "utf8") : null);
+    }
+    return cache.get(rel) as string | null;
+  };
+  const plan = buildMoveMap(files, textOf);
+  const m = readManifest(ctx);
+  const templates = planTemplates(
+    (rel) => existsSync(join(d, rel)),
+    (rel) => verdictFor(m, d, rel),
+    (rel) => m.files[rel] !== undefined
+  );
+  const cycles = planCycles(files, textOf, plan.moves);
+  const keptLibrary = Object.keys(KEPT_LIBRARY).filter((f) => existsSync(join(d, f)));
+
+  // --- file-level map (docs-relative, old → new) and the link map (absolute)
+  const fileMap = new Map<string, string>();
+  const linkMap = new Map<string, string>();
+  const physical: Array<[string, string]> = [];
+  const created: Write[] = [];
+  const entityOf = new Map<string, { move: EntityMove; role: "entry" | "owned" }>();
+  const ids = new Map<string, string>();
+  for (const mv of plan.moves) {
+    if (mv.kind === "feature" || mv.kind === "born-item") {
+      physical.push([join(d, mv.from), join(d, mv.to)]);
+      linkMap.set(join(d, mv.from), join(d, mv.to));
+      for (const rel of files)
+        if (rel.startsWith(`${mv.from}/`)) {
+          const inner = rel.slice(mv.from.length + 1);
+          const to = mv.kind === "feature" && inner === "proposal.md" ? `${mv.to}/feature.md` : `${mv.to}/${inner}`;
+          fileMap.set(rel, to);
+          entityOf.set(rel, { move: mv, role: mv.kind === "feature" && inner === "proposal.md" ? "entry" : "owned" });
+        }
+      if (mv.kind === "feature") {
+        physical.push([join(d, mv.to, "proposal.md"), join(d, mv.to, "feature.md")]);
+        linkMap.set(join(d, mv.from, "proposal.md"), join(d, mv.to, "feature.md"));
+      }
+    } else {
+      const to = mv.kind === "research" ? `${mv.to}/write-up.md` : mv.to;
+      physical.push([join(d, mv.from), join(d, to)]);
+      linkMap.set(join(d, mv.from), join(d, to));
+      fileMap.set(mv.from, to);
+      entityOf.set(mv.from, { move: mv, role: mv.kind === "report" ? "owned" : "entry" });
+    }
+    if (mv.kind !== "feature" && mv.kind !== "report") ids.set(mv.from, uuidv7());
+  }
+  for (const [from, to] of Object.entries(TEMPLATE_RENAMES)) linkMap.set(join(d, from), join(d, to));
+  for (const [from, to] of Object.entries(RETIRED_TEMPLATES)) linkMap.set(join(d, from), join(d, to));
+  for (const [from, to] of Object.entries(RETIRED_READMES)) linkMap.set(join(d, from), join(d, to));
+  for (const [from, to] of Object.entries(FOLDER_SUCCESSOR)) if (!linkMap.has(join(d, from))) linkMap.set(join(d, from), join(d, to));
+
+  // --- the frontmatter each moved document ends with
+  const dateOf = (rel: string) => firstDate(ctx, join(d, rel));
+  const frontmatterFor = (rel: string, text: string): { text: string; what: string | null } => {
+    const e = entityOf.get(rel);
+    const cycle = cycles.texts.get(rel);
+    if (cycle !== undefined) return { text: cycle, what: "scope: removed (membership is on the items now)" };
+    if (!e) return { text, what: null };
+    const { fm, body } = splitFrontmatter(text);
+    const mv = e.move;
+    const newRel = fileMap.get(rel) as string;
+    if (e.role === "entry") {
+      const itemCycle = cycles.itemCycle.get(mv.from);
+      if (mv.kind === "feature") {
+        if (fm === null)
+          return { text: synthesizeFrontmatter("feature", rel, body, { date: dateOf(rel), extra: [["lifecycle", mv.lifecycle as string]] }), what: `synthesized (feature, ${mv.lifecycle})` };
+        let f = fmSet(fm, "type", "feature");
+        f = keyRange(f.split("\n"), "lifecycle") ? fmSet(f, "lifecycle", mv.lifecycle as string) : fmInsertAfter(f, "status", "lifecycle", mv.lifecycle as string);
+        return { text: joinFrontmatter(f, body), what: `type: proposal → feature, lifecycle: ${mv.was ?? "(none)"} → ${mv.lifecycle}` };
+      }
+      if (mv.kind === "research") {
+        if (fm === null) return { text: synthesizeFrontmatter("write-up", rel, body, { date: dateOf(rel) }), what: "synthesized (write-up)" };
+        return { text: joinFrontmatter(fmRemove(fmSet(fm, "type", "write-up"), "lifecycle"), body), what: "type: investigation → write-up, lifecycle moved to the item" };
+      }
+      // backlog, fragment → item
+      const id = ids.get(mv.from) as string;
+      const extra: Array<[string, string]> = [["lifecycle", mv.lifecycle as string], ["id", id], ["kind", "task"], ...(itemCycle ? ([["cycle", itemCycle]] as Array<[string, string]>) : [])];
+      if (fm === null) return { text: synthesizeFrontmatter("item", rel, body, { date: dateOf(rel), extra }), what: `synthesized (item, ${mv.lifecycle})` };
+      let f = fmSet(fm, "type", "item");
+      f = keyRange(f.split("\n"), "lifecycle") ? fmSet(f, "lifecycle", mv.lifecycle as string) : fmInsertAfter(f, "status", "lifecycle", mv.lifecycle as string);
+      f = fmInsertAfter(f, "lifecycle", "id", id);
+      f = fmInsertAfter(f, "id", "kind", "task");
+      if (itemCycle) f = fmInsertAfter(f, "kind", "cycle", itemCycle);
+      return { text: joinFrontmatter(f, body), what: `type: ${mv.kind} → item, lifecycle: ${mv.was ?? "(none)"} → ${mv.lifecycle}, id and kind added${itemCycle ? `, cycle: ${itemCycle}` : ""}` };
+    }
+    // An owned document: typed by position. Untouched unless it has no frontmatter or a retired type.
+    const ownerRoot = mv.kind === "report" ? newRel.slice(0, newRel.indexOf("/reports/")) : mv.to;
+    const type = positionalType(newRel.slice(ownerRoot.length + 1));
+    if (fm === null) {
+      const lc = ARCHIVED_OWNED_LIFECYCLE[type];
+      return {
+        text: synthesizeFrontmatter(type, rel, body, { date: dateOf(rel), extra: lc ? [["lifecycle", lc]] : [] }),
+        what: `synthesized (${type}${lc ? `, ${lc}` : ""})`,
+      };
+    }
+    const was = fmGet(fm, "type");
+    if (was !== null && RETIRED_TYPE_NAMES.has(was) && was !== type) {
+      let f = fmSet(fm, "type", type);
+      if (!HAS_LIFECYCLE.has(type)) f = fmRemove(f, "lifecycle");
+      return { text: joinFrontmatter(f, body), what: `type: ${was} → ${type} (its position)` };
+    }
+    return { text, what: null };
+  };
+
+  // --- every markdown file whose text changes, at its final path
+  // Owned files the refresh replaces are not rewritten: phase 4 installs the scaffold's, and a
+  // rewrite computed from the old text would put the old text back after it.
+  const removed = new Set([
+    ...Object.keys(RETIRED_READMES),
+    ...templates.removals,
+    ...templates.moves.map(([f]) => f),
+    ...OWNED_ROOT,
+    ...OWNED_CATEGORIES.map((c) => `${c}/README.md`),
+  ]);
+  const writes: Write[] = [];
+  const docsFiles = files.filter((r) => r.endsWith(".md") && !removed.has(r));
+  const excluded = (() => {
+    const globs = ((ctx.config?.lint as { exclude?: unknown } | undefined)?.exclude as string[] | undefined ?? []).filter((g) => typeof g === "string").map((g) => new Bun.Glob(g));
+    return (p: string) => globs.some((g) => g.match(p));
+  })();
+  const tracked = run(["git", "ls-files", "-z", "--", "*.md"], ctx.root);
+  const outside = tracked.code === 0
+    ? tracked.stdout.split("\0").filter((p) => p && !p.startsWith(`${ctx.docsRootName}/`) && !excluded(p) && existsSync(join(ctx.root, p)))
+    : [];
+  const candidates: Array<[string, string]> = [
+    ...docsFiles.map((r) => [join(d, r), join(d, fileMap.get(r) ?? r)] as [string, string]),
+    ...outside.map((p) => [join(ctx.root, p), join(ctx.root, p)] as [string, string]),
+  ];
+  for (const [fromAbs, toAbs] of candidates) {
+    const original = readFileSync(fromAbs, "utf8");
+    const rel = fromAbs.startsWith(`${d}${sep}`) ? relative(d, fromAbs).split(sep).join("/") : null;
+    const fmStep = rel ? frontmatterFor(rel, original) : { text: original, what: null };
+    const l = rewriteLinks(fmStep.text, fromAbs, toAbs, linkMap, existsSync);
+    const f = rewriteFromField(l.text, d, linkMap);
+    if (fromAbs === toAbs && f.text === original) continue;
+    writes.push({ from: fromAbs, to: toAbs, text: f.text, links: l.changed + f.changed, fm: fmStep.what, created: false });
+  }
+
+  // --- the entity files this run creates
+  for (const mv of plan.moves) {
+    if (mv.kind !== "born-item" && mv.kind !== "research") continue;
+    const id = ids.get(mv.from) as string;
+    const itemCycle = cycles.itemCycle.get(mv.from);
+    let title: string;
+    let description: string;
+    let line: string;
+    let kind: string;
+    let date: string;
+    if (mv.kind === "research") {
+      const fm = splitFrontmatter(textOf(mv.from) ?? "").fm ?? "";
+      title = fmGet(fm, "title") ?? titleize(slugOf(basename(mv.from), "investigation").slug);
+      description = fmGet(fm, "description") ?? title;
+      kind = "research";
+      date = /\bat:\s*(\d{4}-\d{2}-\d{2})/.exec(fmGet(fm, "generated") ?? "")?.[1] ?? dateOf(mv.from);
+      line = "The question this research asked, and where it got to. The answer is in [the write-up](./write-up.md).";
+    } else {
+      const inside = files.filter((r) => r.startsWith(`${mv.from}/`) && r.endsWith(".md"));
+      const sessions = inside.filter((r) => r.startsWith(`${mv.from}/sessions/`)).sort();
+      const source = [...sessions.reverse(), `${mv.from}/plan.md`].find((r) => splitFrontmatter(textOf(r) ?? "").fm !== null && fmGet(splitFrontmatter(textOf(r) ?? "").fm as string, "description"));
+      title = titleize(basename(mv.from));
+      description = source ? (fmGet(splitFrontmatter(textOf(source) ?? "").fm as string, "description") as string) : `Work recorded in ${basename(mv.from)} before it had an item.`;
+      kind = "task";
+      date = sessions.length ? (/(\d{4}-\d{2}-\d{2})/.exec(basename(sessions[sessions.length - 1] as string))?.[1] ?? dateOf(mv.from)) : dateOf(inside[0] ?? mv.from);
+      line = "Work that ran before it had an item. Its record is the documents in this folder; the migration to 9.0.0 filed this item for it.";
+    }
+    const fm = [
+      "type: item",
+      `title: ${yamlScalar(title)}`,
+      `description: ${yamlScalar(description)}`,
+      "status: stable",
+      `lifecycle: ${mv.lifecycle}`,
+      `id: ${id}`,
+      `kind: ${kind}`,
+      ...(itemCycle ? [`cycle: ${itemCycle}`] : []),
+      `generated: { by: ${ACTOR}, at: ${date} }`,
+    ].join("\n");
+    created.push({ from: null, to: join(d, mv.to, "item.md"), text: joinFrontmatter(fm, `\n# ${title}\n\n${line}\n`), links: 0, fm: `created (item, ${kind}, ${mv.lifecycle})`, created: true });
+  }
+
+  const repoMoves: Array<[string, string]> = [...fileMap.entries(), ...plan.moves.filter((m) => m.kind === "feature" || m.kind === "born-item").map((m) => [m.from, m.to] as [string, string])]
+    .map(([f, t]) => [`${ctx.docsRootName}/${f}`, `${ctx.docsRootName}/${t}`]);
+  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, keptLibrary };
+}
+
+// =======================================================================================
+// The phases
+// =======================================================================================
+
+function preflight(ctx: Ctx): void {
+  step(1, "Preflight");
+  const missing: string[] = [];
+  if (!ctx.config) missing.push(".project-docs.json (v2.6-to-v2.7 writes it)");
+  if (!existsSync(join(ctx.docsRoot, "SCHEMA.md"))) missing.push(`${ctx.docsRootName}/SCHEMA.md (v2.6-to-v2.7 installs it)`);
+  if (!existsSync(join(ctx.root, "scripts/pdocs/cli.ts"))) missing.push("scripts/pdocs/cli.ts (v2.6-to-v2.7 installs it)");
+  if (!existsSync(join(ctx.docsRoot, MANIFEST_NAME))) missing.push(`${ctx.docsRootName}/${MANIFEST_NAME} (v2.8-to-v2.9 records it)`);
+  else if (!fileHas(join(ctx.root, "scripts/pdocs/lint/rules.ts"), "isSeeded"))
+    missing.push("scripts/pdocs/lint/rules.ts carrying `isSeeded` (v2.9-to-v2.10 refreshes it)");
+  if (missing.length > 0)
+    fail(
+      `this is not a v2.10 tree at ${ctx.root} — ${missing.length} of the things a v2.10 tree has ${missing.length === 1 ? "is" : "are"} missing:\n` +
+        missing.map((m) => `       ${m}`).join("\n") +
+        `\n\n   Migrations run in sequence: run the one named first, then this one. If ${ctx.root}\n` +
+        `   is not the project root, pass --root <project root>.`
+    );
+  ok(
+    `v2.10 tree at ${ctx.root}, docsRoot ${ctx.docsRootName}/, docs_version ${docsVersionOf(join(ctx.docsRoot, "README.md")) ?? "(no line)"}, ` +
+      `.project-docs.json version ${JSON.stringify(ctx.config?.version ?? null)}`
+  );
+
+  if (!have("bun"))
+    fail("bun is not on PATH. This script is running under it, but the verify phase and the gate run `bun scripts/pdocs/cli.ts` — put bun on PATH first.");
+  if (!ctx.scaffold && !have("cookiecutter"))
+    fail("cookiecutter is not installed, and no --scaffold-dir <path> was given. Install it, or generate the scaffold yourself and pass its path.");
+  if (!ctx.skipFormat && !have("npx"))
+    fail("npx not found, and --skip-format was not given. What this run creates is formatted with your Prettier before its hash is recorded; install Node/npx, or pass --skip-format if this project does not use Prettier.");
+
+  // THE PLAN, read-only. Built here so a judgment blocker stops the run before
+  // the network is touched, and so the dirt check knows every file it writes.
+  const changes = computeChanges(ctx);
+  ctx.changes = changes;
+  const blockers = [...changes.plan.blockers, ...changes.templates.blockers];
+  if (blockers.length > 0)
+    fail(
+      `${blockers.length} judgment step(s) this migration will not take for you. Resolve each before the run —\n` +
+        `   the guide's "Before you run it" says how — then run it again:\n\n` +
+        blockers.map((b) => `     · ${b.startsWith("slug ") ? b : `${ctx.docsRootName}/${b}`}`).join("\n")
+    );
+  ok("no judgment steps outstanding: every document in a retired folder has a place");
+
+  const git = run(["git", "status", "--porcelain"], ctx.root);
+  if (git.code !== 0) note("not a git repository — nothing to report");
+  else if (git.stdout.trim() === "") ok("git tree clean");
+  else {
+    const outside = changes.writes
+      .filter((w) => w.from !== null && !w.from.startsWith(`${ctx.docsRoot}${sep}`))
+      .map((w) => relative(ctx.root, w.from as string));
+    const dirty = dirtyUnder(ctx, [ctx.docsRootName, "scripts/pdocs", ".project-docs.json", ...outside]);
+    if (dirty.length > 0 && !ctx.force)
+      fail(
+        `${dirty.length} path(s) this run would write have uncommitted changes:\n` +
+          dirty.map((p) => `       ${p}`).join("\n") +
+          `\n\n   This run moves documents and rewrites their frontmatter and links; an uncommitted edit in any of\n` +
+          `   these cannot be told apart from what it did. Commit or stash them first — or pass --force.`
+      );
+    if (dirty.length > 0) note(`--force: writing over ${dirty.length} uncommitted path(s): ${dirty.join(", ")}`);
+    note(`working tree is dirty (${git.stdout.trim().split("\n").length} path(s)) — commit or stash first if you want this migration isolated`);
+  }
+
+  const { result } = pdocsCheck(ctx.root);
+  ctx.baseline = result;
+  if (!result) note("`pdocs check` under the installed CLI printed nothing this script can read — no baseline");
+  else if (result.code === 0 && result.total === 0) note("`pdocs check` under the installed CLI: clean — the baseline the verify phase compares against");
+  else note(`\`pdocs check\` under the installed CLI: exit ${result.code}, ${result.total} problem(s) — the baseline the verify phase compares against`);
+}
+
+function getScaffold(ctx: Ctx): string {
+  step(2, "Current scaffold");
+  if (ctx.scaffold) {
+    const s = resolve(ctx.scaffold);
+    if (!existsSync(join(s, "docs/SCHEMA.md")) || !existsSync(join(s, "scripts/pdocs")))
+      fail(`--scaffold-dir ${s} is not a generated project root (expected docs/SCHEMA.md and scripts/pdocs/ inside it).`);
+    ok(`using ${s}`);
+    return s;
+  }
+  const out = mkdtempSync(join(tmpdir(), "pdocs-scaffold-"));
+  ctx.generatedTmp = out;
+  const r = run(
+    ["cookiecutter", TEMPLATE_REPO, "--checkout", SCAFFOLD_TAG, "--no-input", "-o", out, "install_target=New project folder"],
+    ctx.root
+  );
+  if (r.code !== 0) fail(`cookiecutter failed (exit ${r.code}):\n${r.stderr || r.stdout}`);
+  const dirs = readdirSync(out, { withFileTypes: true }).filter((e) => e.isDirectory());
+  if (dirs.length !== 1) fail(`expected one generated project in ${out}, found ${dirs.length}`);
+  const s = join(out, dirs[0]!.name);
+  if (!existsSync(join(s, "docs/SCHEMA.md")) || !existsSync(join(s, "scripts/pdocs")))
+    fail(`generated scaffold at ${s} is missing docs/SCHEMA.md or scripts/pdocs/`);
+  ok(`generated at ${s}`);
+  return s;
+}
+
+/** Everything the later phases require of the scaffold, verified before anything is written. */
+function verifyScaffold(ctx: Ctx): string {
+  if (!ctx.scaffoldDir) fail("no scaffold to verify — the scaffold phase did not run.");
+  const s = ctx.scaffoldDir;
+  const source = ctx.scaffold ? `--scaffold-dir ${s}` : `${TEMPLATE_REPO} at ${SCAFFOLD_TAG}`;
+  const readme = join(s, "docs/README.md");
+  if (!existsSync(readme)) fail(`the scaffold has no docs/README.md at ${readme}`);
+  const version = docsVersionOf(readme);
+  if (!version || !/^\d+\.\d+\.\d+$/.test(version))
+    fail(`could not read a version from the scaffold's docs/README.md (got ${JSON.stringify(version ?? null)})`);
+  const missing = SCAFFOLD_MARKERS.filter(([f, m]) => (m === null ? !existsSync(join(s, f)) : !fileHas(join(s, f), m))).map(
+    ([f, m]) => (m === null ? f : `${f} carrying \`${m}\``)
+  );
+  if (missing.length > 0)
+    fail(
+      `the scaffold at ${source} is older than this migration requires (release ${version}, missing ${missing.join(", ")}).\n` +
+        `   Pass --scaffold-dir pointing at a scaffold generated from a checkout that has the 9.0.0 layout — the guide's\n` +
+        `   "Run it" section says how.`
+    );
+  ok(`release ${version}, carrying the 9.0.0 layout (features/, items/, TEMPLATES/, the state groups, lint/work.ts)`);
+  return version as string;
+}
+
+function printPlan(ctx: Ctx): void {
+  step(3, "Plan");
+  const c = ctx.changes as Changes;
+  const d = (p: string) => `${ctx.docsRootName}/${p}`;
+  const counts: Record<string, number> = {};
+  for (const mv of c.plan.moves) {
+    counts[mv.kind] = (counts[mv.kind] ?? 0) + 1;
+    const state = mv.lifecycle ? `, ${mv.was ?? "(none)"} → ${mv.lifecycle}` : "";
+    const folder = mv.kind === "feature" || mv.kind === "born-item";
+    const label = { feature: "feature", "born-item": "item, born from a project with no proposal", backlog: "item", fragment: "item", research: "research item + write-up", report: "report" }[mv.kind];
+    note(`${ctx.dryRun ? "would move" : "moves"} ${d(mv.from)}${folder ? "/" : ""} → ${d(mv.kind === "research" ? `${mv.to}/write-up.md` : mv.to)}${folder || mv.kind === "research" ? "/" : ""}`.replace(/write-up\.md\/$/, "write-up.md") + ` (${label}${state})`);
+    if (mv.note) note(`  ${d(mv.from)}: ${mv.note}`);
+  }
+  for (const w of c.writes.filter((x) => x.fm)) note(`frontmatter: ${relative(ctx.root, w.to)} — ${w.fm}`);
+  for (const [f, t] of c.templates.moves) note(`template: ${d(f)} → ${d(t)}, its seed record carried with it`);
+  for (const r of c.templates.removals) note(`template: ${d(r)} removed — the form for a retired type, untouched since the scaffold recorded it`);
+  for (const r of Object.keys(RETIRED_READMES).filter((x) => existsSync(join(ctx.docsRoot, x)))) note(`owned: ${d(r)} removed (retired with its folder)`);
+  for (const j of c.plan.junk) note(`not a document: ${d(j)} removed`);
+  for (const n of c.cycles.notes) note(n);
+  const links = c.writes.reduce((n, w) => n + w.links, 0);
+  const inPlace = c.writes.filter((w) => w.from === w.to && w.links > 0).length;
+  note(`links: ${links} respelled across ${c.writes.filter((w) => w.links > 0).length} file(s), ${inPlace} of them in place`);
+  const cfg = patchLintArrays((ctx.config?.lint ?? {}) as LintKeys, { moves: c.repoMoves, keptLibrary: c.keptLibrary, docsRootName: ctx.docsRootName });
+  for (const ch of cfg.changes) note(`config: ${ch}`);
+  for (const k of c.keptLibrary) note(`kept: ${d(k)}/ — a retired library folder, declared in lint.types so it stays lintable (D11)`);
+  ok(
+    `${c.plan.moves.length} move(s): ${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ") || "none — nothing left in a retired folder"}; ` +
+      `${c.writes.filter((w) => w.created).length} item file(s) to create`
+  );
+}
+
+function refreshOwned(ctx: Ctx): void {
+  step(4, "Refresh the owned files");
+  const s = ctx.scaffoldDir;
+  const cliSrc = join(s, "scripts/pdocs");
+  const cliDst = join(ctx.root, "scripts/pdocs");
+  const stale = filesIn(cliSrc).filter((rel) => !sameBytes(join(cliSrc, rel), join(cliDst, rel)));
+  if (stale.length === 0) ok("scripts/pdocs/ already identical to the scaffold's");
+  else {
+    ctx.wrote = true;
+    cpSync(cliSrc, cliDst, { recursive: true });
+    ok(`scripts/pdocs/ refreshed (${stale.length} file(s) written; the copy merges, so a file of your own there survives)`);
+  }
+
+  const sDocs = join(s, "docs");
+  const owned = [
+    ...OWNED_ROOT,
+    ...readdirSync(sDocs, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && OWNED_CATEGORIES.includes(e.name) && existsSync(join(sDocs, e.name, "README.md")))
+      .map((e) => `${e.name}/README.md`),
+  ];
+  const currentVersionLine = existsSync(join(ctx.docsRoot, "README.md"))
+    ? /^docs_version:.*$/m.exec(readFileSync(join(ctx.docsRoot, "README.md"), "utf8"))?.[0] ?? null
+    : null;
+  let same = 0;
+  for (const rel of owned) {
+    const src = join(sDocs, rel);
+    const dst = join(ctx.docsRoot, rel);
+    let text = readFileSync(src, "utf8");
+    // The version marker moves in phase 11, after the verify phase passes — not here.
+    if (rel === "README.md" && currentVersionLine) text = text.replace(/^docs_version:.*$/m, currentVersionLine);
+    if (existsSync(dst) && readFileSync(dst, "utf8") === text) {
+      same++;
+      continue;
+    }
+    const existed = existsSync(dst);
+    ctx.wrote = true;
+    mkdirSync(dirname(dst), { recursive: true });
+    writeFileSync(dst, text);
+    ok(`${ctx.docsRootName}/${rel} ${existed ? "replaced" : "installed"} (owned)`);
+  }
+  if (same) ok(`${same} owned file(s) already identical to the scaffold's`);
+  for (const rel of filesIn(sDocs).filter((r) => basename(r) === ".gitkeep")) {
+    if (existsSync(join(ctx.docsRoot, rel))) continue;
+    ctx.wrote = true;
+    mkdirSync(dirname(join(ctx.docsRoot, rel)), { recursive: true });
+    writeFileSync(join(ctx.docsRoot, rel), "");
+    ok(`${ctx.docsRootName}/${rel} installed (structural)`);
+  }
+  for (const rel of Object.keys(RETIRED_READMES)) {
+    if (!existsSync(join(ctx.docsRoot, rel))) continue;
+    ctx.wrote = true;
+    rmSync(join(ctx.docsRoot, rel));
+    ok(`${ctx.docsRootName}/${rel} removed — owned, and its folder is retired; links to it now point at ${ctx.docsRootName}/${RETIRED_READMES[rel]}`);
+  }
+}
+
+function moveDocuments(ctx: Ctx): void {
+  step(5, "Move the documents and rewrite their frontmatter");
+  const c = ctx.changes as Changes;
+  if (c.physical.length === 0 && !c.writes.some((w) => w.fm)) {
+    ok("nothing to move — no document is left in a retired folder");
+    return;
+  }
+  const r = (p: string) => relative(ctx.root, p);
+  for (const [from, to] of c.physical) {
+    if (!existsSync(from)) fail(`${r(from)} is not there to move — the tree changed after the plan was made. Re-run.`);
+    if (existsSync(to)) fail(`${r(to)} already exists — this run will not move ${r(from)} over it.`);
+    ctx.wrote = true;
+    mkdirSync(dirname(to), { recursive: true });
+    renameSync(from, to);
+    ok(`moved ${r(from)}${statSync(to).isDirectory() ? "/" : ""} → ${r(to)}${statSync(to).isDirectory() ? "/" : ""}`);
+  }
+  let fm = 0;
+  for (const w of c.writes.filter((x) => x.from !== x.to || x.fm)) {
+    ctx.wrote = true;
+    mkdirSync(dirname(w.to), { recursive: true });
+    writeFileSync(w.to, w.text);
+    if (w.fm) {
+      fm++;
+      ok(`${w.created ? "created" : "frontmatter"} ${r(w.to)} — ${w.fm}`);
+    }
+    if (w.created) ctx.toFormat.push(relative(ctx.docsRoot, w.to).split(sep).join("/"));
+  }
+  const lost = c.physical.filter(([f, t]) => existsSync(f) || !existsSync(t));
+  if (lost.length) fail(`${lost.length} move(s) did not land: ${lost.map(([f]) => r(f)).join(", ")}`);
+  const unwritten = c.writes.filter((w) => (w.from !== w.to || w.fm) && readFileSync(w.to, "utf8") !== w.text);
+  if (unwritten.length) fail(`${unwritten.length} document(s) do not hold the text written: ${unwritten.map((w) => r(w.to)).join(", ")}`);
+  ok(`${c.physical.length} move(s) made, ${fm} frontmatter block(s) rewritten or created — no document deleted`);
+}
+
+function rewriteInPlace(ctx: Ctx): void {
+  step(6, "Rewrite the links that pointed at moved documents");
+  const c = ctx.changes as Changes;
+  const inPlace = c.writes.filter((w) => w.from === w.to && !w.fm);
+  for (const w of inPlace) {
+    ctx.wrote = true;
+    writeFileSync(w.to, w.text);
+  }
+  const wrong = inPlace.filter((w) => readFileSync(w.to, "utf8") !== w.text);
+  if (wrong.length) fail(`${wrong.length} file(s) do not hold the rewritten links: ${wrong.map((w) => relative(ctx.root, w.to)).join(", ")}`);
+  const total = c.writes.reduce((n, w) => n + w.links, 0);
+  ok(
+    total === 0
+      ? "no link pointed at a moved document"
+      : `${total} link(s) respelled: ${c.writes.filter((w) => w.from !== w.to && w.links > 0).length} moved file(s) (written in phase 5), ${inPlace.length} in place`
+  );
+  for (const w of inPlace) note(`${relative(ctx.root, w.to)}: ${w.links} link(s)`);
+}
+
+function patchConfig(ctx: Ctx): void {
+  step(7, "Patch .project-docs.json");
+  const c = ctx.changes as Changes;
+  const before = readFileSync(ctx.configPath, "utf8");
+  const cfg = JSON.parse(before) as Record<string, unknown>;
+  const lint = (cfg.lint ?? {}) as LintKeys;
+  const { lint: next, changes } = patchLintArrays(lint, { moves: c.repoMoves, keptLibrary: c.keptLibrary, docsRootName: ctx.docsRootName });
+  if (changes.length === 0) {
+    ok(".project-docs.json already carries the 9.0.0 lint keys");
+    return;
+  }
+  const intended = { ...cfg, lint: next };
+  const patched = patchLintText(before, next);
+  let verified = false;
+  try {
+    verified = patched !== null && Bun.deepEquals(JSON.parse(patched), intended, true);
+  } catch {
+    verified = false;
+  }
+  ctx.wrote = true;
+  if (verified) writeFileSync(ctx.configPath, patched as string);
+  else writeFileSync(ctx.configPath, reserialiseLike(intended, before));
+  for (const ch of changes) ok(ch);
+  ok(verified ? "written in the file's own text; every other byte as it was" : "re-serialised, indent kept: the lint keys could not be patched in place");
+}
+
+const WHY_KEPT: Record<Exclude<Verdict, "update" | "install">, string> = {
+  "keep-modified": "you edited it since it was recorded; the scaffold's moved, yours stays",
+  "keep-unknown": "on disk but never recorded; unknown is not permission",
+  "keep-deleted": "recorded, and you deleted it; deleting is an edit",
+};
+
+function reconcileSeeds(ctx: Ctx, version: string): void {
+  step(8, "Seeds: moved templates, retired ones, and the rest by verdict");
+  const c = ctx.changes as Changes;
+  const d = ctx.docsRoot;
+  const dn = (p: string) => `${ctx.docsRootName}/${p}`;
+  const manifestPath = join(d, MANIFEST_NAME);
+  ctx.manifestBefore = existsSync(manifestPath) ? readFileSync(manifestPath, "utf8") : null;
+  let m = readManifest(ctx);
+  for (const [from, to] of c.templates.records) {
+    const had = m.files[from] !== undefined;
+    m = renameRecord(m, from, to);
+    if (had) note(`record ${dn(from)} → ${dn(to)} (renameRecord)`);
+  }
+  for (const [from, to] of c.templates.moves) {
+    if (!existsSync(join(d, from))) continue;
+    if (existsSync(join(d, to))) fail(`${dn(to)} already exists — this run will not move ${dn(from)} over it.`);
+    ctx.wrote = true;
+    mkdirSync(dirname(join(d, to)), { recursive: true });
+    renameSync(join(d, from), join(d, to));
+    ok(`template moved: ${dn(from)} → ${dn(to)}`);
+  }
+  for (const rel of c.templates.removals) {
+    if (!existsSync(join(d, rel))) continue;
+    ctx.wrote = true;
+    rmSync(join(d, rel));
+    ok(`template removed: ${dn(rel)} — untouched since the scaffold recorded it; its type is retired`);
+  }
+  for (const rel of c.templates.dropped) delete m.files[rel];
+  for (const rel of c.plan.junk) {
+    if (!existsSync(join(d, rel))) continue;
+    ctx.wrote = true;
+    rmSync(join(d, rel));
+    note(`removed ${dn(rel)} — not a document`);
+  }
+  // Emptied legacy folders go; one that still holds anything stays, for the verify phase to name.
+  const prune = (abs: string): boolean => {
+    if (!existsSync(abs) || !statSync(abs).isDirectory()) return false;
+    const empty = readdirSync(abs).map((e) => prune(join(abs, e))).every(Boolean) && readdirSync(abs).length === 0;
+    if (empty) rmdirSync(abs);
+    return empty;
+  };
+  for (const f of LEGACY_FOLDERS) if (existsSync(join(d, f)) && prune(join(d, f))) ok(`${dn(f)}/ removed — empty`);
+
+  const sDocs = join(ctx.scaffoldDir, "docs");
+  const shipped = [...filesIn(sDocs).filter((r) => isSeeded(r) && !r.split("/").includes("_archive")), ...[...SEEDED_PAGES].filter((p) => existsSync(join(sDocs, p)))].sort();
+  if (shipped.length === 0) fail("the scaffold ships no templates. Is --scaffold-dir a generated project root?");
+  const tally: Record<string, number> = { update: 0, identical: 0, install: 0, "keep-modified": 0, "keep-unknown": 0, "keep-deleted": 0 };
+  const recorded: string[] = [];
+  for (const rel of shipped) {
+    const v = verdictFor(m, d, rel);
+    if (sameBytes(join(sDocs, rel), join(d, rel))) {
+      tally.identical = (tally.identical ?? 0) + 1;
+      recorded.push(rel);
+      if (v !== "update") note(`${dn(rel)} already at the scaffold's bytes — recorded (${v})`);
+      continue;
+    }
+    tally[v] = (tally[v] ?? 0) + 1;
+    if (mayWrite(v)) {
+      const dst = within(d, rel) ?? join(d, rel);
+      ctx.wrote = true;
+      mkdirSync(dirname(dst), { recursive: true });
+      cpSync(join(sDocs, rel), dst);
+      recorded.push(rel);
+      ctx.toFormat.push(rel);
+      ok(`${v === "update" ? "updated" : "installed"} ${dn(rel)}`);
+    } else note(`kept ${dn(rel)} — ${v}: ${WHY_KEPT[v as Exclude<Verdict, "update" | "install">]}`);
+  }
+  ctx.recorded = recorded;
+  ctx.manifest = { version, files: m.files };
+  ok(
+    `${shipped.length} seeded file(s) in the scaffold: ${tally.update} updated, ${tally.identical} already at the scaffold's bytes, ` +
+      `${tally.install} installed, ${tally["keep-modified"]} kept (modified), ${tally["keep-unknown"]} kept (unknown), ${tally["keep-deleted"]} kept (deleted)`
+  );
+}
+
+function formatAndRecord(ctx: Ctx): void {
+  step(9, "Format what this run created, then record");
+  const rel = [...new Set(ctx.toFormat)].map((w) => relative(ctx.root, join(ctx.docsRoot, w)));
+  if (rel.length === 0) note("nothing created or installed, so nothing to format");
+  else if (ctx.skipFormat) note("formatting skipped (--skip-format)");
+  else {
+    const r = run(["npx", "prettier", "--write", ...rel], ctx.root);
+    if (r.code !== 0)
+      fail(
+        `prettier exited ${r.code} over the ${rel.length} file(s) this run created or installed. Recording their hashes now would\n` +
+          `   produce a record your own formatter invalidates. Fix the formatter, or pass --skip-format; re-running is safe.\n\n` +
+          indented(r.stderr || r.stdout)
+      );
+    ok(`formatted ${rel.length} file(s) this run created or installed — before recording, never after; no document of yours was formatted`);
+  }
+  const m = ctx.manifest as SeedManifest;
+  for (const r of ctx.recorded) m.files[r] = hashOf(join(ctx.docsRoot, r)) as string;
+  const after = serialiseManifest(m, ctx.manifestBefore);
+  if (after === ctx.manifestBefore) ok(`${ctx.docsRootName}/${MANIFEST_NAME} unchanged (${Object.keys(m.files).length} entries, version ${m.version})`);
+  else {
+    ctx.wrote = true;
+    writeFileSync(join(ctx.docsRoot, MANIFEST_NAME), after);
+    ok(`${ctx.docsRootName}/${MANIFEST_NAME} written: ${ctx.recorded.length} recorded at version ${m.version}, ${Object.keys(m.files).length} entries`);
+  }
+}
+
+/** Every file still under a retired workbench folder, docs-relative. */
+function legacyLeft(ctx: Ctx): string[] {
+  return LEGACY_FOLDERS.flatMap((f) => (existsSync(join(ctx.docsRoot, f)) ? filesIn(join(ctx.docsRoot, f)).map((r) => `${f}/${r}`).concat(filesIn(join(ctx.docsRoot, f)).length === 0 ? [`${f}/`] : []) : []));
+}
+
+function verify(ctx: Ctx): void {
+  step(10, "Verify: no retired folder remains, and the refreshed CLI passes the tree");
+  const left = legacyLeft(ctx);
+  if (left.length > 0)
+    fail(
+      `${left.length} path(s) remain in a retired folder, so the move is not complete (the refreshed CLI still lints the\n` +
+        `   retired types until they are removed, so a clean check alone cannot prove it):\n` +
+        indented(left.map((l) => `${ctx.docsRootName}/${l}`).join("\n")) +
+        `\n\n   Move or delete each, then re-run; the version markers were NOT moved.`
+    );
+  ok(`no retired folder remains (${LEGACY_FOLDERS.join(", ")})`);
+  const { result, raw } = pdocsCheck(ctx.root);
+  if (!result) fail(`\`pdocs check\` under the refreshed CLI printed nothing this script can read:\n\n${indented(raw.trimEnd())}`);
+  const r = result as CheckResult;
+  if (r.code === 0) {
+    ok(r.total === 0 ? "pdocs check: clean (exit 0)" : `pdocs check: exit 0 — ${r.total} problem(s), and lint.adopting is true so the gate does not fail on them`);
+    return;
+  }
+  const b = ctx.baseline;
+  let newer = "The CLI before the refresh gave no baseline, so this script cannot say which of them are new.";
+  if (b) {
+    const was = new Set(b.problems);
+    const now = new Set(r.problems);
+    newer = `Against the baseline the older lint reported (${b.total}): ${r.problems.filter((p) => !was.has(p)).length} new, ${b.problems.filter((p) => !now.has(p)).length} no longer reported, ${r.problems.filter((p) => was.has(p)).length} unchanged.`;
+  }
+  fail(
+    `\`pdocs check\` exits ${r.code} on the migrated tree: ${r.total} problem(s). ${newer}\n` +
+      `\n   The moves STAY — every one is named above — and the version markers were NOT moved: this tree is not at\n` +
+      `   9.0.0 until the check passes. The worklist is \`bun scripts/pdocs/cli.ts report --format text\`; the problems are:\n\n` +
+      indented(r.problems.join("\n")) +
+      `\n\n   Re-running this migration is safe: every phase finds its work done, and the run passes once these are worked.`
+  );
+}
+
+function bumpVersion(ctx: Ctx, version: string): void {
+  step(11, "Version markers");
+  const readme = join(ctx.docsRoot, "README.md");
+  const RE = /^docs_version:\s*"[^"]*"/m;
+  if (!existsSync(readme)) note(`${ctx.docsRootName}/README.md is not there — nothing to set`);
+  else {
+    const before = readFileSync(readme, "utf8");
+    if (!RE.test(before)) note(`${ctx.docsRootName}/README.md carries no docs_version line — nothing to set`);
+    else {
+      const after = before.replace(RE, `docs_version: "${version}"`);
+      if (after === before) ok(`${ctx.docsRootName}/README.md already at ${version}`);
+      else {
+        ctx.wrote = true;
+        writeFileSync(readme, after);
+        ok(`${ctx.docsRootName}/README.md set to ${version}`);
+      }
+    }
+  }
+  const before = readFileSync(ctx.configPath, "utf8");
+  if (JSON.parse(before).version === version) {
+    ok(`.project-docs.json already at ${version}`);
+    return;
+  }
+  ctx.wrote = true;
+  ok(`.project-docs.json set to ${version} — ${writeVersionInto(ctx.configPath, before, version)}`);
+}
+
+function cleanup(ctx: Ctx): void {
+  step(12, "Clean up");
+  if (ctx.scaffold) {
+    note("scaffold was supplied with --scaffold-dir — left in place");
+    return;
+  }
+  if (!ctx.scaffoldDir) {
+    note("nothing to remove");
+    return;
+  }
+  rmSync(resolve(ctx.scaffoldDir, ".."), { recursive: true, force: true });
+  ok("generated scaffold removed");
+}
+
+/**
+ * THE INVARIANTS, CHECKED BY THE PROGRAM ITSELF, after the last phase. Each
+ * line names the phase whose work or position it protects.
+ */
+export function migrationHolds(ctx: Ctx, version: string): string[] {
+  const v: string[] = [];
+  const c = ctx.changes as Changes;
+  for (const [f, m] of SCAFFOLD_MARKERS.filter(([f]) => f.startsWith("scripts/")))
+    if (m === null ? !existsSync(join(ctx.root, f)) : !fileHas(join(ctx.root, f), m))
+      v.push(`${f}${m ? ` carrying \`${m}\`` : ""} is not installed — the refresh phase installs the scaffold's 9.0.0 CLI`);
+  if (!fileHas(join(ctx.docsRoot, "SCHEMA.md"), "## State groups"))
+    v.push(`${ctx.docsRootName}/SCHEMA.md has no State groups section — the refresh phase installs the scaffold's`);
+
+  const unmoved = c.physical.filter(([f, t]) => existsSync(f) || !existsSync(t));
+  if (unmoved.length) v.push(`${unmoved.length} planned move(s) are not on disk, e.g. ${relative(ctx.root, unmoved[0]![0])} — the move phase makes them`);
+  const stale = c.writes.filter((w) => !existsSync(w.to) || readFileSync(w.to, "utf8") !== w.text);
+  if (stale.length) v.push(`${stale.length} document(s) do not hold their planned text, e.g. ${relative(ctx.root, stale[0]!.to)} — the move and link phases write them, and nothing after may`);
+  const left = legacyLeft(ctx);
+  if (left.length) v.push(`${left.length} path(s) remain in a retired folder — the verify phase stops the run on this`);
+
+  let cfg: { lint?: LintKeys; version?: unknown } = {};
+  try {
+    cfg = JSON.parse(readFileSync(ctx.configPath, "utf8"));
+  } catch (e) {
+    v.push(`.project-docs.json does not parse: ${(e as Error).message}`);
+  }
+  const lint = cfg.lint ?? {};
+  if ((lint.skip ?? []).includes("_archive") || !Array.isArray(lint.scopes) || !["features", "items"].every((f) => (lint.workbench ?? []).includes(f)) || (lint.workbench ?? []).some((f) => LEGACY_FOLDERS.includes(f)))
+    v.push(".project-docs.json's lint keys are not the 9.0.0 ones (workbench, skip, scopes) — the config phase patches them");
+
+  let m: SeedManifest | null = null;
+  try {
+    m = loadManifest(ctx.docsRoot);
+  } catch (e) {
+    v.push(`${ctx.docsRootName}/${(e as Error).message} — the record step writes it whole`);
+  }
+  if (m) {
+    if (m.version !== version) v.push(`${ctx.docsRootName}/${MANIFEST_NAME} version is ${JSON.stringify(m.version)}, not ${version} — the seeds phase records against the scaffold's release`);
+    const drift = ctx.recorded.filter((r) => hashOf(join(ctx.docsRoot, r)) !== m!.files[r]);
+    if (drift.length) v.push(`${drift.length} seeded file(s) this run recorded no longer match the record, e.g. ${ctx.docsRootName}/${drift[0]} — the format step must come before the record, and nothing after it may touch them`);
+    const missing = filesIn(join(ctx.scaffoldDir, "docs")).filter((r) => isSeeded(r) && verdictFor(m!, ctx.docsRoot, r) === "install");
+    if (missing.length) v.push(`${missing.length} template(s) the scaffold ships are neither on disk nor recorded, e.g. ${ctx.docsRootName}/${missing[0]} — the seeds phase installs them`);
+  }
+
+  if (docsVersionOf(join(ctx.docsRoot, "README.md")) !== version)
+    v.push(`${ctx.docsRootName}/README.md docs_version is ${docsVersionOf(join(ctx.docsRoot, "README.md")) ?? "(no line)"}, not ${version} — the version phase sets both markers together`);
+  if (cfg.version !== version) v.push(`.project-docs.json version is ${JSON.stringify(cfg.version ?? null)}, not ${version} — the version phase sets both markers together`);
+
+  const check = pdocsCheck(ctx.root);
+  if (!check.result || check.result.code !== 0)
+    v.push(`\`pdocs check\` exits ${check.result?.code ?? "unreadably"} on the migrated tree — the verify phase stops the run before the markers move, so something after it changed a document`);
+  if (!ctx.scaffold && ctx.scaffoldDir && existsSync(ctx.scaffoldDir)) v.push("the generated scaffold is still on disk — the cleanup phase removes it");
+  return v;
+}
+
+// =======================================================================================
+
+export function main(argv: string[]): number {
+  let opts: Options;
+  try {
+    opts = parseArgs(argv);
+  } catch (e) {
+    console.error(`${(e as Error).message}`);
+    return 2;
+  }
+  let ctx: Ctx | null = null;
+  try {
+    ctx = resolveContext(opts);
+    preflight(ctx);
+    ctx.scaffoldDir = getScaffold(ctx);
+    const version = verifyScaffold(ctx);
+    printPlan(ctx);
+    if (ctx.dryRun) {
+      say("\n   Dry run — phases 4 to 11 would apply the plan above.");
+      cleanup(ctx);
+      const c = ctx.changes as Changes;
+      say(`\nDry run complete — nothing was changed. ${c.plan.moves.length} move(s) planned, ${c.writes.length} document(s) to write.`);
+      return 0;
+    }
+    refreshOwned(ctx);
+    moveDocuments(ctx);
+    rewriteInPlace(ctx);
+    patchConfig(ctx);
+    reconcileSeeds(ctx, version);
+    formatAndRecord(ctx);
+
+    // TEST SEAM, and the only one: a docs-relative path overwritten after the
+    // record is written, so a test can show the end-of-run invariants are wired.
+    const mutate = process.env.PDOCS_MIGRATE_TEST_MUTATE;
+    if (mutate) {
+      const target = within(ctx.docsRoot, mutate);
+      if (target === null) fail("PDOCS_MIGRATE_TEST_MUTATE must name a path inside the docs root.");
+      ctx.wrote = true;
+      writeFileSync(target as string, `${readFileSync(target as string, "utf8")}\n<!-- mutated by the test seam -->\n`);
+    }
+
+    verify(ctx);
+    bumpVersion(ctx, version);
+    cleanup(ctx);
+
+    const broken = migrationHolds(ctx, version);
+    if (broken.length > 0)
+      fail(
+        `the migration's own invariants do not hold after this run:\n` +
+          broken.map((b) => `     · ${b}`).join("\n") +
+          `\n\n   Nothing was rolled back. Fix the phase the line names and re-run.`
+      );
+    const c = ctx.changes as Changes;
+    say(`\nMigration complete. ${c.plan.moves.length} move(s), ${c.writes.length} document(s) written, nothing deleted; the tree is at release ${version}.`);
+    return 0;
+  } catch (e) {
+    const state = ctx?.wrote
+      ? `\n   The tree may be partly migrated. Re-running is safe: every phase reports\n   rather than repeats work it finds already done.`
+      : `\n   Nothing was written.`;
+    if (e instanceof MigrationError) {
+      console.error(`\nSTOPPED: ${(e as Error).message}${state}`);
+      return 1;
+    }
+    console.error(`\nSTOPPED: unexpected failure — ${(e as Error).message}${state}`);
+    return 1;
+  } finally {
+    if (ctx?.generatedTmp && existsSync(ctx.generatedTmp)) rmSync(ctx.generatedTmp, { recursive: true, force: true });
+  }
+}
+
+if (import.meta.main) process.exit(main(process.argv.slice(2)));
