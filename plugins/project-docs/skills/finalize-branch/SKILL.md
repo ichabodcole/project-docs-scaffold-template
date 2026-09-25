@@ -531,7 +531,7 @@ action to perform, not a recommendation to offer. Do them without asking.
 
   With one active cycle, do two things:
   1. **Update this branch's line in the cycle's `## Sessions` section.**
-     `init-branch` Step 5 wrote it as `- <type>/<description> (open)`; rewrite
+     `init-branch` Step 6 wrote it as `- <type>/<description> (open)`; rewrite
      that line as `- <type>/<description> (landed YYYY-MM-DD)`, using today's
      date. Change the marker in place — the section reads chronologically, so
      don't relocate the line. If it isn't there at all (the branch predates the
