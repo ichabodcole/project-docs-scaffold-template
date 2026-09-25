@@ -18,6 +18,7 @@ import {
   loadManifest,
   mayWrite,
   recordSeeded,
+  renameRecord,
   verdictFor,
   writeManifest,
 } from "./seed.ts";
@@ -187,5 +188,48 @@ describe("containment is not lexical", () => {
     writeFileSync(join(outside, "x.md"), "not ours");
     const m = recordSeeded(root, ["../" + basename(outside) + "/x.md", "a.md"], "7.0.0");
     expect(Object.keys(m.files)).toEqual(["a.md"]);
+  });
+});
+
+describe("a template that moves keeps its record", () => {
+  // 9.0.0 moves `projects/TEMPLATES/*` to `TEMPLATES/`, renames the proposal
+  // template to the feature one, and moves the report template. Without the
+  // record moving with the file, an untouched template at its new path reads
+  // as `keep-unknown` for ever, and the scaffold never updates it again.
+  const H = "a".repeat(64);
+  const m = () => ({
+    version: "8.1.0",
+    files: { "projects/TEMPLATES/PLAN.template.md": H, "cycles/TEMPLATE.md": "b".repeat(64) },
+  });
+
+  test("the hash moves to the new key, and the old key is gone", () => {
+    const r = renameRecord(m(), "projects/TEMPLATES/PLAN.template.md", "TEMPLATES/PLAN.template.md");
+    expect(r.files).toEqual({ "TEMPLATES/PLAN.template.md": H, "cycles/TEMPLATE.md": "b".repeat(64) });
+    expect(r.version).toBe("8.1.0");
+  });
+
+  test("the input manifest is not mutated", () => {
+    const before = m();
+    renameRecord(before, "projects/TEMPLATES/PLAN.template.md", "TEMPLATES/PLAN.template.md");
+    expect(before).toEqual(m());
+  });
+
+  test("an unrecorded old key changes nothing — there is no record to carry", () => {
+    expect(renameRecord(m(), "nope/TEMPLATE.md", "TEMPLATES/X.template.md")).toEqual(m());
+  });
+
+  test("a new key already recorded keeps its own hash; the old record is dropped", () => {
+    const both = m();
+    both.files["TEMPLATES/PLAN.template.md" as keyof typeof both.files] = "c".repeat(64);
+    const r = renameRecord(both, "projects/TEMPLATES/PLAN.template.md", "TEMPLATES/PLAN.template.md");
+    expect(r.files).toEqual({ "TEMPLATES/PLAN.template.md": "c".repeat(64), "cycles/TEMPLATE.md": "b".repeat(64) });
+  });
+
+  test("a moved record gives the verdict the file at its new path deserves", () => {
+    const dir = docsRoot({ "TEMPLATES/PLAN.template.md": "ours\n" });
+    const recorded = { version: "8.1.0", files: { "projects/TEMPLATES/PLAN.template.md": hashOf(join(dir, "TEMPLATES/PLAN.template.md")) as string } };
+    expect(verdictFor(recorded, dir, "TEMPLATES/PLAN.template.md")).toBe("keep-unknown");
+    const moved = renameRecord(recorded, "projects/TEMPLATES/PLAN.template.md", "TEMPLATES/PLAN.template.md");
+    expect(verdictFor(moved, dir, "TEMPLATES/PLAN.template.md")).toBe("update");
   });
 });
