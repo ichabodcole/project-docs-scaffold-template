@@ -92,6 +92,9 @@ export interface NewData {
   /** The item's new entry file, when `--owner` promoted a single-file item
    *  to a folder to write into it; `null` otherwise. */
   promoted: string | null;
+  /** A new work item's full id; `null` for every other type (D18: JSON
+   *  always carries the full id, text prints its first 12 characters). */
+  id: string | null;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1140,12 +1143,12 @@ export const newCommand: Command = {
       for (const p of [promotion.to, ...promotion.rewritten])
         if (!created.includes(p)) created.push(p);
 
-    const data: NewData = { path: rel, type: row.type, created, promoted };
+    const id = fills.get("id") ?? null;
+    const data: NewData = { path: rel, type: row.type, created, promoted, id };
     if (format === "json") printEnvelope("new", data);
     else {
       console.log(rel);
-      const id = fills.get("id");
-      if (id !== undefined) console.log(`  id ${shortId(id)}`);
+      if (id !== null) console.log(`  id ${shortId(id)}`);
       if (catalog !== null) console.log(`  + catalog line in ${relative(ctx.repoRoot, indexPath)}`);
       if (promotion !== null) {
         console.log(`  promoted its owner to ${promotion.to}`);

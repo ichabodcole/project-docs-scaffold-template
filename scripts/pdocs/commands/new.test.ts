@@ -1154,6 +1154,17 @@ describe("pdocs new item", () => {
     expect(text).not.toContain(id);
   });
 
+  test("JSON output carries the new item's full id, and no id for other types (D18)", () => {
+    const root = workTree();
+    const data = JSON.parse(newItem(root, "fix-hook", "--kind", "bug").stdout).data;
+    expect(data.id).toBe(fields(root, "docs/items/fix-hook.md").get("id"));
+    expect(data.id).toMatch(V7);
+    const plan = JSON.parse(
+      run(["new", "playbook", "rollback", "--root", root, "--format", "json"]).stdout
+    ).data;
+    expect(plan.id).toBeNull();
+  });
+
   test("two items get two ids", () => {
     const root = workTree();
     newItem(root, "one", "--kind", "task");
