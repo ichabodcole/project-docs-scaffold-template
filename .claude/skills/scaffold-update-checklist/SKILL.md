@@ -140,13 +140,10 @@ decision, not a convenience:
 
 **Not mirrored (project-specific):**
 
-- This repository's pre-9.0.0 folders — `docs/backlog/`, `docs/briefs/`,
-  `docs/fragments/`, `docs/investigations/`, `docs/reports/`, `docs/projects/`,
-  `docs/memories/`, `docs/lessons-learned/`, their READMEs and templates. The
-  payload no longer ships them, and the mirror check walks the payload, so
-  nothing compares them. They stay until this repository runs the 9.0.0
-  migration
-- `docs/projects/<project-name>/*` — actual project work (proposals, sessions)
+- `docs/features/*`, `docs/items/*` (their READMEs and `_archive/.gitkeep`
+  excepted, which are mirrored), `docs/cycles/*` (its README and template
+  excepted) and `docs/playbooks/*` (its README and template excepted) — this
+  repository's own work and guidance
 - `AGENTS.md` and `CLAUDE.md` at project root (different from cookiecutter
   versions)
 
@@ -347,8 +344,8 @@ _live_ reference, while leaving the historical record intact.
       (`grep -rn 'skills/<skill-name>'`) — recipes or other skills may point at
       its files as canonical examples. Rewrite those to not reference dead
       paths; bump the dependent plugin's version too (usually minor).
-- [ ] **Leave history alone.** `docs/projects/*`, `docs/memories/*`,
-      investigations, reports, `CHANGELOG.md`, and dated manifesto reflections
+- [ ] **Leave history alone.** `docs/features/*`, `docs/items/*` (sessions,
+      write-ups, reports), `CHANGELOG.md`, and dated manifesto reflections
       document work that genuinely happened — removing the skill does not
       un-happen it. Don't rewrite them.
 - [ ] Verify no live pointers remain:

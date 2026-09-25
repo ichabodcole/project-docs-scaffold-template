@@ -139,12 +139,10 @@ cross-project knowledge into shared infrastructure.
 
 ## Development Patterns & Practices
 
-- **Playbooks:** none authored yet beyond the template.
-- **Lessons Learned:** one canonical lesson —
-  `lessons-learned/migration-steps-uniform-specificity.md`.
-- **Memories:** active practice — ~18 dated memory notes in `docs/memories/`
-  spanning 2026-02 through 2026-05; each captures a non-obvious decision or
-  recipe.
+- **Playbooks:** five, in `docs/playbooks/` — writing migrations, changing
+  pdocs, changing a shipped skill, changing the scaffold payload, fixing
+  consumer feedback. They absorbed the memories and lessons this repository kept
+  until 9.0.0, which retired both types.
 - **Documentation Approach:** dogfood the scaffold; mirror live `docs/` into the
   template payload; check `dist/` bundles into git for distribution.
 - **Versioning convention:** minor bump for any behavioral change, patch only

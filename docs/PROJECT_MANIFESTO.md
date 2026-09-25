@@ -234,7 +234,8 @@ boundaries. This maturity gradient is itself a signal about what matters most:
 structure first, automation second, intelligence third.
 
 **The documentation restructuring proposal is the project's best case study.**
-The `docs/projects/documentation-restructuring/` folder contains a proposal and
+The documentation-restructuring feature
+(`docs/features/_archive/documentation-restructuring/`) holds a proposal and a
 plan that followed the project's own conventions to evolve the project's own
 documentation structure. This self-hosting proof — using the system to improve
 the system — is more convincing than any README pitch.
@@ -265,11 +266,11 @@ decision to keep `dist/` in version control (rather than build on publish) is a
 deliberate trade-off favoring diffability and offline consumption over repo
 size.
 
-**Two-tier project tracking has emerged as a real pattern.** Some
-`docs/projects/<name>/` folders contain a full `proposal.md` + `plan.md` +
-`sessions/`. Others contain only `sessions/` — they're lightweight trails for
-shipped work that didn't need the full ceremony. This isn't documented as a
-formal convention yet, but it's consistent across the
+**Two-tier project tracking emerged as a real pattern.** Some project folders
+held a full proposal, plan and sessions; others held only sessions — lightweight
+trails for shipped work that didn't need the full ceremony. 9.0.0 made the
+pattern the model: the first kind is a feature (`docs/features/<name>/`), the
+second a work item that owns its sessions (`docs/items/<name>/`), as in the
 digestify-session-recovery, html-mockup-component-updates, toolbox-plugin, and
 agent-bridge-plugin folders. The system's "lightweight where possible, formal
 when valuable" principle is being lived, not just stated.
