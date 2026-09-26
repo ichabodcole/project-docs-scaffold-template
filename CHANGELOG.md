@@ -1,5 +1,22 @@
 # Changelog
 
+## [9.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v8.1.1...project-docs-scaffold-template-v9.0.0) (2026-09-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* the proposal, backlog, fragment, brief, investigation, memory and lesson document types are retired, and docs/projects/, docs/backlog/, docs/briefs/, docs/fragments/, docs/investigations/, docs/reports/, docs/memories/ and docs/lessons-learned/ are replaced by docs/features/ and docs/items/ (reports and write-ups live with the work that produced them). Existing projects upgrade with the update-project-docs skill, which runs the v2.10-to-v3.0 migration: it moves and converts every document, rewrites links, never deletes a document of yours, and can be re-run after any stop. Projects on an earlier layout run the whole chain in one session. pdocs new --project is replaced by --owner feature/<slug> or item/<slug>.
+
+### Features
+
+* the work taxonomy and guidance lifecycle ([365a707](https://github.com/ichabodcole/project-docs-scaffold-template/commit/365a707f40b7fd1b0eb74feccba924e5d24da26d))
+
+
+### Bug Fixes
+
+* **mirror:** compare the seeded docs/STYLE.md byte for byte too ([c8d2162](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c8d21623d8d1c7d8489b7514f436ff2e99df803c))
+* **mirror:** match seeded templates by their path inside the payload ([6f4010b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/6f4010b7d74a46f9b375b39f9d22bf94a92df4fc))
+
 ## [8.1.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v8.1.0...project-docs-scaffold-template-v8.1.1) (2026-09-17)
 
 
