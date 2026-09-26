@@ -145,6 +145,7 @@ overturn it in one place.
 | D23 (added 2026-09-25)                    | **Clarifies D8: items an agent creates start in `triage` unless the user has just approved them.** When the user approves a list of items in the same exchange — a plan's item list in `generate-dev-plan`, a research question they asked for in `create-investigation` — the agent files them in the state the user approved (`backlog`, `ready` or `active`). Anything an agent files on its own judgement, such as a review finding or an intake, still starts in `triage`.                                                                                                                                                                                                                                                                                                                  | The approval the user gives to a list they have just read is the triage step itself. Making them triage the same items a second time would add friction and no safeguard.                                                                                                                        |
 | D24 (added 2026-09-25; replaces D19)      | **Reports are evidence, owned by work that exists for its own sake** — a research item's surveys, a feature's audit. **Skills do not write process reports.** `project-summary` updates `PROJECT-SUMMARY.md` and writes no report: its notes on what it read are scratch, and only if the user asks to keep them does a report get an owner, then. `review-docs` files each finding as a `triage` item (its evidence in the item's body) and summarises in chat — no report file. What an agent did lives in a session record, when there is one.                                                                                                                                                                                                                                                | D19 filed a `kind: chore` item only so a process report had an owner: an item that exists to own a file is bookkeeping, and the report was read once, if at all. A finding filed as an item is where its work happens; the summary itself is the durable output.                                 |
 | D25 (added 2026-09-25; revises D18)       | **Short ids are the shortest prefix unique across the tree, never fewer than 12 characters** (git's rule). Wherever `pdocs` prints an id for a person or an agent to copy — view text, refusal and ambiguity messages, `new` and `set` text output — it prints that prefix. JSON always carries the full id, frontmatter always stores it, and `resolveRef` still accepts any unique prefix of 8 or more (D6). The v2.10-to-v3.0 migration mints each migrated item's id from the time of the commit that first added its document (through renames; a born item's latest session), falling back to `generated.at` only when git has no history for it, and keeps ids strictly increasing — so migrated ids sort in filing order and differ in what `pdocs` prints. `generated.at` stays a date. | D18's reasoning was wrong: 12 hex characters are exactly UUIDv7's 48-bit timestamp, so every id minted in one burst — all 48 the migration filed here — printed identically. A length that grows only where the tree needs it keeps short ids short and never ambiguous.                         |
+| D26 (added 2026-09-25)                    | **After the release, a greenfield project is the first consumer, before any migration.** Cole generates a new project from the released 9.0.0 scaffold with the released `project-docs` 4.0.0 plugin and uses the day-to-day flows (`pdocs new feature` and `new item`, `triage-items`, `init-branch`, `finalize-branch`, `sweep-project`, `pdocs view`). What it finds is fixed in a 4.0.x patch. **Then** the migration is tested on an existing project: story-loom first, in one `update-project-docs` session that runs v2.9→v2.10 then v2.10→v3.0 (D16), then Spellbook or MediaForge.                                                                                                                                                                                                     | The greenfield run tests the scaffold and the skills as a new adopter meets them, with nothing inherited to explain a rough edge away. It does not exercise the migration, which is why the story-loom run still follows.                                                                        |
 
 ### Versions
 
@@ -178,7 +179,7 @@ Three numbers move, and each is read by something different:
 ```
 P1 schema/registry/lint ──► P2 pdocs create/views ──► P4 skills ─────────┐
    │                            │                                          ▼
-   ├──► P3 templates & prose ───┼──────────────► P5 migration ─► dogfood ─► retire ─► P6 consumer ─► release
+   ├──► P3 templates & prose ───┼──────────────► P5 migration ─► dogfood ─► retire ─► P6 release ─► greenfield ─► consumers
    │   (STYLE.md, playbook      └──► P5 script (TDD) can start ──┘
    │    template: start day one)
 ```
@@ -1076,23 +1077,17 @@ new tree the day it moves. This is not strict.
 
 ---
 
-### Phase 6: The second consumer, revision, and release
+### Phase 6: Release, the greenfield consumer, then the migration consumers
 
-**Goal:** the migration survives a tree that this repository did not shape, and
-the release ships.
+**Goal:** the release ships. A new project then meets it as an adopter would.
+After that, the migration survives trees this repository did not shape.
+
+**Order (D26):** release first. Then the greenfield project, which tests the
+scaffold and the skills but not the migration. Then the migration runs.
 
 **Tasks:**
 
-1. **Story-loom first**, once it is on v2.10; run v2.9→v2.10 there first if it
-   is behind. **Then Spellbook or MediaForge**, as a further check on a tree
-   shaped differently.
-2. Run the guide's pre-run judgment steps with the consumer's owner, then
-   `--dry-run`, then the real run. File every friction point as a `triage` item
-   in this repo, `from:` the session that records the run.
-3. Revise the script and the guide from those items, adding a test per fix.
-   Re-run on a fresh clone of the consumer until a run needs no step the guide
-   does not state.
-4. Release:
+1. Release:
    - Land `develop` on `main` with a `feat!:` commit carrying
      `BREAKING CHANGE:`. release-please bumps `package.json`,
      `.release-please-manifest.json`, `docs_version` in both `README.md` copies,
@@ -1106,32 +1101,53 @@ the release ships.
      minor.
    - Set the `guidance-lifecycle` feature to its real state (it ships in this
      release) with `pdocs set feature/guidance-lifecycle --lifecycle done`, and
-     `work-taxonomy` likewise once the release has landed.
+     `work-taxonomy` likewise once the consumer runs below are done.
    - Rebuild `dist/` and run `npm run check`.
    - Review pruning migrations below the oldest version any known consumer is on
      (see the consumer population).
+2. **Greenfield first consumer (D26).** Cole generates a new project from the
+   released 9.0.0 scaffold, with the released `project-docs` 4.0.0 plugin. He
+   uses the day-to-day flows on real work: `pdocs new feature` and `new item`,
+   `triage-items`, `init-branch`, `finalize-branch`, `sweep-project`, and the
+   `pdocs view` views. File each friction point as a `triage` item in this repo,
+   and fix them in a 4.0.x patch (scaffold patch as needed). This run does not
+   exercise the migration.
+3. **Then the migration consumers.** Story-loom first: one `update-project-docs`
+   session runs v2.9→v2.10 and then v2.10→v3.0, each against its own era's
+   scaffold (D16), so story-loom does not need to reach v2.10 separately. Then
+   Spellbook or MediaForge, as a further check on a tree shaped differently. Run
+   the guide's pre-run judgment steps with the consumer's owner, then
+   `--dry-run`, then the real run. File every friction point as a `triage` item
+   in this repo, `from:` the session that records the run.
+4. Revise the script and the guide from those items, adding a test per fix, and
+   release the fix as a patch. Re-run on a fresh clone of the consumer until a
+   run needs no step the guide does not state.
 5. After the release, file a `triage` item to revisit `released_in` once the
    release touch point has been used (see the proposal's Open Questions).
 
 **Release-check status (2026-09-25):** the
 [test plan](./test-plan.md#results-addendum) passes every Tier 1 and Tier 2
-scenario on `develop`. `guidance-lifecycle` is set `done` (task 4), and the
+scenario on `develop`. `guidance-lifecycle` is set `done` (task 1), and the
 plugin bumps are already on `develop` (`project-docs` 4.0.0, `operator` 1.2.0,
 `hivemind` 0.2.0). Still to do:
 
-- Task 1, story-loom, which waits for the release. D16 lets it chain v2.9→v2.10
-  and v2.10→v3.0 in one session, so it does not need v2.10 first.
-- Tasks 2–3, which depend on that run.
-- The rest of task 4: land on `main`, the v9.0.0 tag, the no-`--scaffold-dir`
-  dry run, `work-taxonomy` → `done`, the dist rebuild, and the pruning review.
+- The rest of task 1: land on `main`, the v9.0.0 tag, the no-`--scaffold-dir`
+  dry run, the dist rebuild, and the pruning review.
+- Task 2, the greenfield project, after the release.
+- Task 3, story-loom and then a second migration consumer, after the greenfield
+  run.
+- Task 4, which depends on task 3.
 - Task 5, after the release.
+- `work-taxonomy` → `done` once tasks 2–4 are done.
 
 **Validation:**
 
-- [ ] The consumer's `pdocs check` is green on the migrated tree, and its owner
-      confirms that nothing was lost.
 - [ ] The release PR's `npm run check` is green, and the generated payload is
       verified.
+- [ ] The greenfield project has run the day-to-day flows on the released 9.0.0
+      / 4.0.0, and what it found is fixed or filed.
+- [ ] The migration consumer's `pdocs check` is green on the migrated tree, and
+      its owner confirms that nothing was lost.
 
 **Dependencies:** Phase 5.
 
@@ -1140,9 +1156,10 @@ plugin bumps are already on `develop` (`project-docs` 4.0.0, `operator` 1.2.0,
 - **Consumers are behind.** Story-loom was still on 8.0.0 when the proposal was
   written, and it is mid-feedback-cycle. A major release compounds the gap. →
   The migration requires v2.10 and says so in `Applies If`, so an adopter who is
-  behind runs v2.9→v2.10 first. The second-consumer run (Phase 6) gates the
-  release. The guide's first section says "run the previous migration if you are
-  behind".
+  behind runs v2.9→v2.10 first, in the same `update-project-docs` session (D16).
+  The migration consumers run after the release, and after the greenfield
+  project (D26); what they find ships as a patch. The guide's first section says
+  "run the previous migration if you are behind".
 - **The single release is very large.** It covers two proposals, about 25 skill
   files, the registry, the payload and a 12-phase script. → "Add → migrate →
   retire" lets each phase land on `develop` green and be reviewed alone. Nothing
@@ -1207,7 +1224,8 @@ plugin bumps are already on `develop` (`project-docs` 4.0.0, `operator` 1.2.0,
 
 ## Assumptions & Constraints
 
-**Assumptions:** story-loom reaches v2.10 before Phase 6. Tag
+**Assumptions:** story-loom reaches v3.0 through one `update-project-docs`
+session after the release (D16, D26). Tag
 `project-docs-scaffold-template-v8.1.0` is the v2.10 fixture baseline. No other
 release is cut from `develop` while this is in flight.
 

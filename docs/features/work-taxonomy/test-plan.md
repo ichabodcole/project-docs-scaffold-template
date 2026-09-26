@@ -82,10 +82,11 @@ bun --version && cookiecutter --version && git --version
     (plan Phase 5, dogfood step 1) — the script does not delete on an adopter's
     behalf (D11), so this is a manual step that must happen before T2-08 can run
     for real, not something the implementing agent can automate.
-  - **The story-loom migration to v2.10** is a prerequisite for the
-    second-consumer run (plan Phase 6) and is outside this project's control. If
-    story-loom has not reached v2.10 by the time T3-01 is attempted, mark it
-    **Blocked**, not Failed, and note what is missing.
+  - **The release, then the greenfield first consumer** come before the
+    migration-consumer run (plan Phase 6, D26). Until both have happened, T3-01
+    is **Blocked**, not Failed. Story-loom does not need to reach v2.10
+    separately: one `update-project-docs` session chains v2.9→v2.10 and
+    v2.10→v3.0 (D16).
 
 ---
 
@@ -456,14 +457,14 @@ _Deferred unless covering critical infrastructure. Each item includes why._
 #### T3-01: The second-consumer migration run (story-loom)
 
 **Type:** Integration\
-**Source:** Plan Phase 6, "Story-loom first, once it is on v2.10"\
-**Deferred rationale:** Blocked on an external prerequisite this project does
-not control — story-loom must reach v2.10 first (its `.project-docs.json` read
-`"version": "8.0.0"` on `develop` when checked on 2026-09-22, and it had not run
-the v2.10 migration). Mark this scenario **Blocked**, not Failed, until that
-prerequisite is met; do not substitute Spellbook or MediaForge without
-re-checking the plan, since the plan names story-loom as the required first run
-and the others as a secondary check on a differently-shaped tree.
+**Source:** Plan Phase 6, task 3 (D26)\
+**Deferred rationale:** Blocked until the release has shipped and the greenfield
+first consumer has run (D26). Story-loom was on `8.0.0` when checked on
+2026-09-22. That no longer matters: with D16, one `update-project-docs` session
+runs v2.9→v2.10 and then v2.10→v3.0. Mark this scenario **Blocked**, not Failed,
+until then; do not substitute Spellbook or MediaForge without re-checking the
+plan, since the plan names story-loom as the required first run and the others
+as a secondary check on a differently-shaped tree.
 
 ---
 
@@ -557,15 +558,17 @@ payload, and its evidence was spot-checked afterwards.
 | T2-09    | Pass     | `init-branch` picked the item from `view ready`, set it `active` and wrote the active cycle. `finalize-branch` moved it `review` → `done`, put the session in `items/<slug>/sessions/` and said "Reflect: nothing this time." On a history-untouched landing the `Work-Item:` trailer sits on the session commit (D21). The positive path created a playbook and later appended a Step and a Verification to it. A branch with no item produced an item born `done`. No memory was written. Deviation: a self-review stood in for the review subagent.                                                |
 | T2-10    | Pass     | Two `--kind bug` items land in `triage`. `triage-items` showed its proposal (disposition, priority, parent, grouping and parallelism per D22) with `git status` empty. Approving one and rejecting the other applied only the approved `pdocs set`; the rejected item was untouched. Check clean. Superseded step: step 1's "no CLI flag to bypass it" no longer holds as written. `pdocs new item --lifecycle <state>` exists by design (D23, `docs/items/README.md`), and D8's guard is the skill rule.                                                                                             |
 | T2-11    | Pass     | Step 1's grep returns only the command quoting itself (3 lines) and a fenced example in [a research write-up](../../items/wiki-structure-and-okf-schema/write-up.md). No document is typed `memory` or `lesson`. `generate-dev-plan` quoted the real `pdocs find --type playbook --format json` output (`count: 1`) and named the playbook. With none present it wrote "`pdocs find --type playbook`: 0 matches". With `branch-finalization-playbook.md` present, `finalize-branch` announced the override and followed its distinctive steps.                                                        |
-| T3-01    | Blocked  | Waits for the release. D16 pins each older migration to its own scaffold tag, so story-loom no longer has to reach v2.10 first. After the release, one `update-project-docs` session runs v2.9→v2.10 and then v2.10→v3.0.                                                                                                                                                                                                                                                                                                                                                                             |
+| T3-01    | Blocked  | Waits for the release, and then for the greenfield first consumer (D26), which tests the scaffold and skills but not the migration. D16 pins each older migration to its own scaffold tag, so story-loom does not have to reach v2.10 first: one `update-project-docs` session runs v2.9→v2.10 and then v2.10→v3.0.                                                                                                                                                                                                                                                                                   |
 | T3-02    | Deferred | Explicit non-goal: nothing reads the `Work-Item:` trailer to derive `released_in` in this release.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | T3-03    | Deferred | Explicit non-goal: no UI ships. The view sort is exercised in T2-04.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | T3-04    | Deferred | Out of scope per Guidance Lifecycle: no retroactive Reflect pass over other repositories' memories.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 **Blocked scenarios:** T3-01 needs `project-docs-scaffold-template-v9.0.0`
 tagged and published, since the v2.10-to-v3.0 script fetches it without
-`--scaffold-dir`. After that, story-loom runs the chain in one
-`update-project-docs` session. This test plan stays `active` until it runs.
+`--scaffold-dir`. Next, the greenfield project runs the day-to-day flows on the
+released 9.0.0 / 4.0.0, and its fixes ship in a 4.0.x patch (plan D26). Then
+story-loom runs the chain in one `update-project-docs` session. This test plan
+stays `active` until it runs.
 
 **Findings the skill walks raised (none failed a scenario; for triage):**
 `pdocs set` drops the inline comment on a `lifecycle:` line (already filed). An
