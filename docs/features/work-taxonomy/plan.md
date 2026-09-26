@@ -93,7 +93,7 @@ stays green on every commit, and no commit needs `--no-verify`.
 - [x] `npm run check` is green, and the payload has been checked by generating
       it (not by reading it). _(On `develop` 2026-09-25: T1-01, T1-02. Re-run on
       the release PR, per Phase 6.)_
-- [ ] One major release, with the three version numbers in
+- [x] One major release, with the three version numbers in
       [Versions](#versions): package and scaffold `9.0.0`, `project-docs` plugin
       `4.0.0`, and migration `v2.10-to-v3.0`.
 
@@ -1131,8 +1131,16 @@ scenario on `develop`. `guidance-lifecycle` is set `done` (task 1), and the
 plugin bumps are already on `develop` (`project-docs` 4.0.0, `operator` 1.2.0,
 `hivemind` 0.2.0). Still to do:
 
-- The rest of task 1: land on `main`, the v9.0.0 tag, the no-`--scaffold-dir`
-  dry run, the dist rebuild, and the pruning review.
+- ~~The rest of task 1~~ — **released 2026-09-26.** 8.1.1 was cut first (PR
+  #177), then `develop` fast-forwarded onto `main` and 9.0.0 released (PR #179,
+  tag `project-docs-scaffold-template-v9.0.0`). Two things surfaced on the way:
+  CI's checkout path contains "template", which the seeded-template mirror rule
+  matched against the absolute path (fixed in `6f4010b`, and `docs/STYLE.md`
+  added to the byte-for-byte rule in `c8d2162`); and release-please's history
+  walk stopped at the newer 8.1.1 release commit and proposed 8.1.2, so a
+  `Release-As: 9.0.0` commit (`365a707`) set the version. The migration fetches
+  the published v9.0.0 scaffold with no `--scaffold-dir`. Still open from task
+  1: the pruning review.
 - Task 2, the greenfield project, after the release.
 - Task 3, story-loom and then a second migration consumer, after the greenfield
   run.
@@ -1142,7 +1150,7 @@ plugin bumps are already on `develop` (`project-docs` 4.0.0, `operator` 1.2.0,
 
 **Validation:**
 
-- [ ] The release PR's `npm run check` is green, and the generated payload is
+- [x] The release PR's `npm run check` is green, and the generated payload is
       verified.
 - [ ] The greenfield project has run the day-to-day flows on the released 9.0.0
       / 4.0.0, and what it found is fixed or filed.

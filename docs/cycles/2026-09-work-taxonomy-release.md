@@ -55,3 +55,4 @@ _Written at close, not before._
 - feature/work-taxonomy-p4-skills (landed 2026-09-25)
 - feature/work-taxonomy-p5-migration (landed 2026-09-25)
 - chore/work-taxonomy-p6-release-checks (landed 2026-09-25)
+- release 9.0.0 (released 2026-09-26)
