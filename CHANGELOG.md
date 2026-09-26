@@ -1,5 +1,14 @@
 # Changelog
 
+## [8.1.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v8.1.0...project-docs-scaffold-template-v8.1.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **pdocs:** the owned layer is clean under Biome's recommended rules ([930c25b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/930c25b6a587361b8baf36d6c5969e291f46b95f)), closes [#176](https://github.com/ichabodcole/project-docs-scaffold-template/issues/176)
+* **pdocs:** the owned layer typechecks under noUncheckedIndexedAccess ([68f0291](https://github.com/ichabodcole/project-docs-scaffold-template/commit/68f0291c053298d49e5eac74219637bb7ab02183)), closes [#176](https://github.com/ichabodcole/project-docs-scaffold-template/issues/176)
+* **update-project-docs:** Step 7 says what to do when the include is your own ([c90dd6f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c90dd6f1610f44ddd9a6da0828a19fc18c42f83f)), closes [#176](https://github.com/ichabodcole/project-docs-scaffold-template/issues/176)
+
 ## [8.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v8.0.0...project-docs-scaffold-template-v8.1.0) (2026-09-14)
 
 
