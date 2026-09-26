@@ -132,7 +132,9 @@ while IFS= read -r rel; do
     echo "DRIFTED        $rel  (a seeded template, compared byte for byte: its hash is recorded)"
     fail=1
   fi
-done < <(cd "$PAYLOAD" && find docs -type f -ipath '*template*' | sort)
+done < <(cd "$PAYLOAD" && { find docs -type f -ipath '*template*'; echo docs/STYLE.md; } | sort)
+# `docs/STYLE.md` is the one seeded file that is not a template (`SEEDED_PAGES`
+# in scripts/pdocs/seed.ts); its hash is recorded all the same.
 
 # Cookiecutter renders EVERY payload file through Jinja, code included. A
 # mirrored source file that happens to contain `{{` or `{%` is therefore
