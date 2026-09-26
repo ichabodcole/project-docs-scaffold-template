@@ -5,11 +5,13 @@ description:
   dev-kickoff and slide-deck-author name plugins/project-docs/skills/..., a path
   a consuming project does not have.
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: triage # triage | backlog | ready | active | review | done | dropped
+lifecycle: backlog
 id: 01a0da5f-8813-726d-ba52-1bffbb752bbb
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-25 }
 scope: project-docs
+priority: high
+parent: feature/skill-surface-cleanup
 ---
 
 # Skills name plugin paths that exist only in this repository

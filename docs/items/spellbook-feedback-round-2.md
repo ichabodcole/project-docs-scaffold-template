@@ -5,13 +5,14 @@ description:
   Eight fixes from Spellbook's 8.1.0 to 9.0.0 migration, worked as one branch
   before story-loom runs the same migration.
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: triage # triage | backlog | ready | active | review | done | dropped
+lifecycle: ready
 id: 01a0dfd9-e990-71b9-83a6-53444cbca087
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-26 }
 tags: [feedback, migrations]
 cycle: 2026-09-v9-rollout-feedback
 scope: migrations
+priority: high
 ---
 
 # Spellbook feedback, round 2: the v2.10-to-v3.0 migration

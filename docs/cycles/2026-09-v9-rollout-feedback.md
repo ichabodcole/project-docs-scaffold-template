@@ -37,6 +37,14 @@ whatever it finds that is new opens the next round.
   — filed at release; wocky-talky's fresh cycle passing `pdocs check` with every
   placeholder in place makes it part of this patch.
 
+- Added at triage, 2026-09-26, because they touch the same files or help the
+  same migration:
+  [born items take their description from what they own](../items/born-items-take-description-from-owned-docs.md),
+  [`pdocs new --title` fills the H1](../items/pdocs-new-title-fills-h1.md),
+  [`pdocs new`'s catalog line is Prettier-stable](../items/pdocs-new-catalog-line-prettier.md),
+  [`pdocs find` JSON carries the slug](../items/pdocs-find-json-slug.md), and
+  [review this repository's born items marked done](../items/review-born-items-marked-done.md).
+
 Out of scope, deliberately: story-loom's migration itself, which follows this
 cycle's release and tests it, and the triage items filed at release that no
 consumer has hit.

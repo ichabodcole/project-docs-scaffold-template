@@ -6,13 +6,14 @@ description:
   squash scan and empty branch, formatter guidance, and pdocs new and set
   output."
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: triage # triage | backlog | ready | active | review | done | dropped
+lifecycle: ready
 id: 01a0dfd9-e9d7-77d3-9666-954c1028941b
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-26 }
 tags: [feedback, pdocs, finalize-branch]
 cycle: 2026-09-v9-rollout-feedback
 scope: project-docs
+priority: high
 ---
 
 <!--
@@ -34,7 +35,7 @@ indented two spaces, where Prettier's default `proseWrap: preserve` wants six.
 | 1   | Step 8's SHA scan reads `HEAD^` by design, so it never sees the session record Step 7 commits, the document most likely to cite a branch SHA. Step 4 says to cite branch work by description, not SHA, when the landing policy is squash; Step 8 also scans `HEAD`'s new documents and reports hits as "reword before squashing", never as a veto. | `plugins/project-docs/skills/finalize-branch/SKILL.md` Steps 4, 8 |
 | 2   | Step 0/1: if `<base>..HEAD` is empty and the tree is dirty, commit the code (not `docs/`) before the review, which is scoped to the net diff.                                                                                                                                                                  | `finalize-branch/SKILL.md`                                      |
 | 3   | Step 7, and the next-step line `pdocs new` prints: run the project's formatter on new and edited docs before committing. A `prettier --check` hook fails the first commit otherwise; a `--write` hook reflows silently.                                                                                       | `finalize-branch/SKILL.md`; `scripts/pdocs/commands/new.ts`     |
-| 4   | `pdocs new`: strip the template's guidance comments from frontmatter values (`status: draft # OKF §5.4…`, `tags: … # 2-4 kebab-case`), fill `started:` on a cycle instead of leaving `YYYY-MM-DD`, and write `--tags` as a list when the template has no `tags:` key. Filing this item wrote `tags: feedback,pdocs,finalize-branch`, a string the lint accepted. | `scripts/pdocs/commands/new.ts`; the lint's `tags` check        |
+| 4   | `pdocs new`: strip the template's guidance comments from frontmatter values (`status: draft # OKF §5.4…`, `lifecycle: triage # …`, `tags: … # 2-4 kebab-case`); decided at triage 2026-09-26 that they are retired everywhere, so `set` never writes one either (this replaces the dropped `pdocs-set-keeps-lifecycle-comment`); fill `started:` on a cycle instead of leaving `YYYY-MM-DD`, and write `--tags` as a list when the template has no `tags:` key. Filing this item wrote `tags: feedback,pdocs,finalize-branch`, a string the lint accepted. | `scripts/pdocs/commands/new.ts`; the lint's `tags` check        |
 | 5   | `pdocs set` on a value already set says "already" and skips the write, instead of printing `X -> X`.                                                                                                                                                                                                         | `scripts/pdocs/commands/set.ts`                                 |
 
 The lint passing a fresh cycle with every placeholder in place (`[One
