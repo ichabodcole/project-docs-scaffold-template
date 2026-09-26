@@ -8,7 +8,7 @@ description:
   dogfood run, and the skill touch points.
 tags: [taxonomy, migration, cli, lint]
 status: draft
-lifecycle: draft # where the work has got to; see docs/SCHEMA.md
+lifecycle: active # where the work has got to; see docs/SCHEMA.md
 generated: { by: claude-opus-5-5, at: 2026-09-22 }
 ---
 
@@ -529,34 +529,58 @@ step 1), which is a "keep or delete" decision, not a Reflect pass.
 
 ## Results Addendum
 
-_Filled in during and after test execution by the implementing agent._
+Run 2026-09-25 on `chore/work-taxonomy-p6-release-checks` (develop at
+`9ce6824`), before the release. Generated payloads came from
+`cookiecutter . --no-input -o <scratch> install_target="New project folder"`,
+then `git init` and a commit; nothing was written to this tree except these
+documents. The payload still reports `8.1.0` (`pdocs --version`,
+`.project-docs.json`), because release-please has not bumped it yet. The
+installed `project-docs` plugin is 3.x, so the skill scenarios (T2-09 to T2-11)
+followed this tree's `SKILL.md` and `commands/init-branch.md` literally rather
+than going through the Skill tool. A sub-agent ran each one in its own scratch
+payload, and its evidence was spot-checked afterwards.
 
-| Scenario | Status            | Notes                                                   |
-| -------- | ----------------- | ------------------------------------------------------- |
-| T1-01    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T1-02    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T1-03    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T1-04    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-01    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-02    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-03    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-04    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-05    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-06    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-07    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-08    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-09    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-10    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T2-11    | Pass/Fail/Blocked | [Details on failures or blocks]                         |
-| T3-01    | Skipped           | [Tier 3 — deferred; likely Blocked on story-loom v2.10] |
-| T3-02    | Skipped           | [Tier 3 — deferred, explicit non-goal]                  |
-| T3-03    | Skipped           | [Tier 3 — deferred, explicit non-goal]                  |
-| T3-04    | Skipped           | [Tier 3 — deferred, explicit out of scope]              |
+| Scenario | Status   | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1-01    | Pass     | `npm run check` exit 0: format, docs-lint clean, 7 version markers, mirror 53 files, dist 152 files, `bun test` 1736 pass / 0 fail. `npx tsc --noEmit` exit 0.                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| T1-02    | Pass     | In the generated payload `pdocs check` is clean (exit 0). `docs/` has `features/ items/ cycles/ TEMPLATES/ STYLE.md` and none of the eight retired folders. No `*.test.ts`, `test-env.ts` or `__fixtures__` shipped.                                                                                                                                                                                                                                                                                                                                                                                  |
+| T1-03    | Pass     | `new item smoke-check --kind task` wrote a v7 `id` with `lifecycle: triage`, and `view board` lists it under `unstarted`. Both exit 0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| T1-04    | Pass     | `diff -rq` finds 21 differences, all test files, `test-env.ts` or `__fixtures__`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| T2-01    | Pass     | Ran new feature, new item (`triage`), set `ready`, then `new plan --owner item/b`, which promoted the item to `items/b/item.md`. Then set `active` (board shows it under `started`), set `done`, and `archive`, which moved it to `items/_archive/b/` and rewrote 1 inbound link from `features/a/feature.md`. The id was unchanged and `find --id <prefix>` resolves it post-archive. Check clean.                                                                                                                                                                                                   |
+| T2-02    | Pass     | A hand-built fixture gives exactly 5 findings: BAD PARENT, BAD BLOCKED_BY, BAD SCOPE, ARCHIVED NOT TERMINAL, DUPLICATE SLUG. Each appears once and names its path, and the check exits non-zero.                                                                                                                                                                                                                                                                                                                                                                                                      |
+| T2-03    | Pass     | An outright delete reports `ITEM DELETED` with the path and id. Deleting a `dropped` item is clean, and so is a promotion to `x/item.md` (same id). After `archive`, `--against HEAD` and `--against HEAD~1` are clean. Replayed against the parent of the delete commit, `--against` still reports the deletion, so it is not a no-op.                                                                                                                                                                                                                                                               |
+| T2-04    | Pass     | Tested 12 items across all states. `view backlog` orders by priority, then `generated.at`, then path, matching a hand count. `ready` excludes the item blocked by an `active` one and includes its twin. `board` puts every item once in its group. Two runs are byte-identical (text and JSON). There is no authored index file.                                                                                                                                                                                                                                                                     |
+| T2-05    | Pass     | A `done` item with no `released_in` key passes the check and appears in `view unreleased`. `--since 2026-09-02` excludes it (its `generated.at` is 2026-09-01).                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| T2-06    | Pass     | Built a fixture from tag `v8.1.0` with 2 backlog items, a fragment, a project with an active plan, an archived project with no frontmatter, an investigation with its report, an active cycle with mixed scope, a memory and a lesson. `--dry-run` exit 0 printed the move map and left `git status` empty. The real run exit 0 and `pdocs check` was clean. A second run exit 0 reported "nothing left in a retired folder" with 0 moves and 0 writes.                                                                                                                                               |
+| T2-07    | Pass     | `projects/widgets/proposal.md` became `features/widgets/feature.md` (`type: feature`, `active` because its plan is active), and every link to `proposal.md` now points at `feature.md`. The archived project landed in `features/_archive/old-gizmo/` with synthesized frontmatter (title from H1, `status: stable`, `generated.by: unknown`, `lifecycle: done`). The investigation split into `items/can-we-widget/item.md` (`kind: research`, `done`), `write-up.md` (no `lifecycle`) and `reports/…`. `memories/` and `lessons-learned/` are unmodified and declared in `lint.types`. Check clean. |
+| T2-08    | Pass     | Ran on this tree's state; the migration itself was not re-run in place. `npm run check` at the pre-retirement commit `96dd103`, in a scratch clone, is green (1741 pass). At HEAD, after retirement, it is green (T1-01). No legacy folder remains, and `_archive/` exists only under `features/` and `items/`. Memories were deleted by hand before the run (`fc71f85`). The [dogfood session](./sessions/2026-09-25-dogfood-migration.md) records counts, time, stops, manual steps and script fixes.                                                                                               |
+| T2-09    | Pass     | `init-branch` picked the item from `view ready`, set it `active` and wrote the active cycle. `finalize-branch` moved it `review` → `done`, put the session in `items/<slug>/sessions/` and said "Reflect: nothing this time." On a history-untouched landing the `Work-Item:` trailer sits on the session commit (D21). The positive path created a playbook and later appended a Step and a Verification to it. A branch with no item produced an item born `done`. No memory was written. Deviation: a self-review stood in for the review subagent.                                                |
+| T2-10    | Pass     | Two `--kind bug` items land in `triage`. `triage-items` showed its proposal (disposition, priority, parent, grouping and parallelism per D22) with `git status` empty. Approving one and rejecting the other applied only the approved `pdocs set`; the rejected item was untouched. Check clean. Superseded step: step 1's "no CLI flag to bypass it" no longer holds as written. `pdocs new item --lifecycle <state>` exists by design (D23, `docs/items/README.md`), and D8's guard is the skill rule.                                                                                             |
+| T2-11    | Pass     | Step 1's grep returns only the command quoting itself (3 lines) and a fenced example in [a research write-up](../../items/wiki-structure-and-okf-schema/write-up.md). No document is typed `memory` or `lesson`. `generate-dev-plan` quoted the real `pdocs find --type playbook --format json` output (`count: 1`) and named the playbook. With none present it wrote "`pdocs find --type playbook`: 0 matches". With `branch-finalization-playbook.md` present, `finalize-branch` announced the override and followed its distinctive steps.                                                        |
+| T3-01    | Blocked  | Waits for the release. D16 pins each older migration to its own scaffold tag, so story-loom no longer has to reach v2.10 first. After the release, one `update-project-docs` session runs v2.9→v2.10 and then v2.10→v3.0.                                                                                                                                                                                                                                                                                                                                                                             |
+| T3-02    | Deferred | Explicit non-goal: nothing reads the `Work-Item:` trailer to derive `released_in` in this release.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| T3-03    | Deferred | Explicit non-goal: no UI ships. The view sort is exercised in T2-04.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| T3-04    | Deferred | Out of scope per Guidance Lifecycle: no retroactive Reflect pass over other repositories' memories.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
-**Blocked scenarios:** [If any scenarios are blocked due to unmet prerequisites,
-describe what's needed for them to become executable. T3-01 is expected to be
-Blocked until story-loom reaches v2.10 — record that explicitly rather than
-marking it Failed.]
+**Blocked scenarios:** T3-01 needs `project-docs-scaffold-template-v9.0.0`
+tagged and published, since the v2.10-to-v3.0 script fetches it without
+`--scaffold-dir`. After that, story-loom runs the chain in one
+`update-project-docs` session. This test plan stays `active` until it runs.
+
+**Findings the skill walks raised (none failed a scenario; for triage):**
+`pdocs set` drops the inline comment on a `lifecycle:` line (already filed). An
+item born in `finalize-branch` Step 4 keeps its template placeholders, and the
+lint passes them (related to the filed placeholder gap). A born item's `--cycle`
+is only mentioned in a parenthetical. The misnested `## Branch Landing Policy`
+bullet in `finalize-branch` Step 8.2. `generate-dev-plan` asks for
+`related: [playbook/…]` on a workbench plan, where the lint does not check it
+and `finalize-branch` says not to write `related:`. Step 3 of `finalize-branch`
+gives no fallback when there is no `package.json`. The cycle template writes
+`feat/` while `init-branch` names `feature/`. A new cycle's placeholder dates
+pass the lint. `triage-items` has six unclear lines: no fallback without
+AskUserQuestion; "settled definition of done" versus `docs/items/README.md`; who
+sets `blocked_by`; Step 1 notes with no column in the table; the empty
+plan-overlap check; and no mention of `new item --lifecycle`.
 
 ## Visual Artifacts
 

@@ -86,11 +86,13 @@ stays green on every commit, and no commit needs `--no-verify`.
 - [x] `pdocs archive <ref>` refuses an entity that is not in a terminal state,
       and otherwise moves it into its owner folder's `_archive/`, rewriting its
       inbound and outbound links. `sweep-project` drives it.
-- [x] The migration script and its guide ship together. The script has been run
+- [ ] The migration script and its guide ship together. The script has been run
       to completion here, and on one other consumer, and was revised from that
-      run.
-- [ ] `npm run check` is green, and the payload has been checked by generating
-      it (not by reading it).
+      run. _(2026-09-25 release checks: met here (T2-08). Not yet run on a
+      second consumer; that run waits for the release (test plan T3-01).)_
+- [x] `npm run check` is green, and the payload has been checked by generating
+      it (not by reading it). _(On `develop` 2026-09-25: T1-01, T1-02. Re-run on
+      the release PR, per Phase 6.)_
 - [ ] One major release, with the three version numbers in
       [Versions](#versions): package and scaffold `9.0.0`, `project-docs` plugin
       `4.0.0`, and migration `v2.10-to-v3.0`.
@@ -1110,6 +1112,19 @@ the release ships.
      (see the consumer population).
 5. After the release, file a `triage` item to revisit `released_in` once the
    release touch point has been used (see the proposal's Open Questions).
+
+**Release-check status (2026-09-25):** the
+[test plan](./test-plan.md#results-addendum) passes every Tier 1 and Tier 2
+scenario on `develop`. `guidance-lifecycle` is set `done` (task 4), and the
+plugin bumps are already on `develop` (`project-docs` 4.0.0, `operator` 1.2.0,
+`hivemind` 0.2.0). Still to do:
+
+- Task 1, story-loom, which waits for the release. D16 lets it chain v2.9→v2.10
+  and v2.10→v3.0 in one session, so it does not need v2.10 first.
+- Tasks 2–3, which depend on that run.
+- The rest of task 4: land on `main`, the v9.0.0 tag, the no-`--scaffold-dir`
+  dry run, `work-taxonomy` → `done`, the dist rebuild, and the pruning review.
+- Task 5, after the release.
 
 **Validation:**
 
