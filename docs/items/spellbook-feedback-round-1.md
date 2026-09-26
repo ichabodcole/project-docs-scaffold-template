@@ -7,7 +7,7 @@ description:
   and eight guide and script wordings."
 tags: [feedback, lint, migrations, guides]
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: backlog
+lifecycle: done
 id: 01a0da55-e3a2-7383-9534-68a0893d1cdc
 kind: task
 cycle: 2026-09-story-loom-feedback

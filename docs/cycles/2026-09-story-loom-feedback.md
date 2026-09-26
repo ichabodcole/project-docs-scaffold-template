@@ -6,13 +6,14 @@ description:
   delivers them to a project already on 8.0.0.
 tags: [feedback, lint, migrations]
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: active
+lifecycle: closed
 started: 2026-09-14
 appetite:
   Until story-loom has run v2.10 and the lint, not a person, holds templates.md
   correct.
 after: [] # cycles or projects this one waits on
 generated: { by: claude-fable-5-1, at: 2026-09-14 }
+closed: 2026-09-26
 ---
 
 # Story-loom feedback, round 1
@@ -44,7 +45,18 @@ that is the second branch this cycle exists to hold.
 
 ## Outcome
 
-_Written at close._
+All four items landed: story-loom's nine fixes, the v2.9 → v2.10 migration,
+Spellbook's twelve, and the hook-variable crash. Spellbook's round and the hook
+fix shipped in 9.0.0. The appetite named story-loom running v2.10. Closed on
+2026-09-26 without that: Spellbook's 8.1.0 → 9.0.0 migration exercised the same
+path and more, story-loom has live work in flight, and its migration now tests
+the next release instead. Two of the landed items still read `backlog` after the
+v3.0 migration, which carried their pre-release state forward; they were set
+`done` at close.
+
+Carried over: nothing unfinished. The feedback from the first 9.0.0 consumers
+opens [v9 rollout feedback](./2026-09-v9-rollout-feedback.md), and story-loom's
+migration becomes its check.
 
 ## Sessions
 
