@@ -6,7 +6,7 @@ description:
   wire consult, reflect and override into the lifecycle skills.
 tags: [touch-points, guidance, taxonomy]
 status: draft
-lifecycle: ready
+lifecycle: done
 generated: { by: claude-opus-5, at: 2026-09-11 }
 ---
 
