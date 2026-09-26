@@ -320,6 +320,19 @@ skill writes the retired folders.
   and summarises in the conversation. A report is evidence owned by the work
   that needed it — a research item's survey, a feature's audit.
 - `create-project`'s CLI reference documents the thirteen verbs.
+- **Release-check fixes** (2026-09-25):
+  - `finalize-branch` fills a born item's body from the work, and its definition
+    of done is what landed. It attaches the item to the active cycle as a step
+    of its own.
+  - With no `package.json`, `finalize-branch` runs the gate the project names,
+    or says which quality checks it could not find.
+  - `generate-dev-plan` links applied playbooks in the plan's body instead of
+    writing `related:`.
+  - `triage-items`:
+    - it defines when a filer's definition of done may be proposed `ready`;
+    - it says who writes `blocked_by`;
+    - it gives a fallback when `AskUserQuestion` is not available;
+    - it forbids `pdocs new item --lifecycle` as a way past triage.
 
 ### 3.13.0 (2026-09-17)
 

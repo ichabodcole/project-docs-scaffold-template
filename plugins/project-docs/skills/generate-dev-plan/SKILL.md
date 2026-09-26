@@ -97,16 +97,19 @@ documentation CLI at the repo root; the docs root is `docsRoot` in
      and delete the template's guidance comments once you have used them.
 
    - **Fill the template's frontmatter block, every field** — the bracketed
-     values are placeholders, not defaults, and the lint fails on a placeholder
-     left in place: `title` matching the H1; `description` as one sentence
-     naming the route from here to the proposed state; 2–4 kebab-case `tags`;
-     `status: draft`; `lifecycle: draft` (it becomes `active` when
+     values are placeholders, not defaults, and the lint does not catch one left
+     in place, so this is on you: `title` matching the H1; `description` as one
+     sentence naming the route from here to the proposed state; 2–4 kebab-case
+     `tags`; `status: draft`; `lifecycle: draft` (it becomes `active` when
      implementation starts, which is not now);
-     `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`. Leave
-     `related` out unless the plan leans on a library page — a playbook you
-     applied in step 0 is one (`playbook/<basename-without-.md>`); the feature
-     and any design resolution sit in the same folder, which is the edge
-     already.
+     `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`. **Don't
+     write `related:`.** A plan is a workbench document, and the lint checks
+     `related` edges only on library pages, so a mistyped one on a plan passes
+     silently. Link in the body instead, where the lint checks the path: the
+     feature (`./feature.md`, which `pdocs new --owner` already wrote under
+     Related Documents) and each playbook you applied in step 0, linked from the
+     Playbooks consulted section
+     (`[<title>](../../playbooks/<name>-playbook.md)`).
    - Think "gas stations on a road trip" — highlight important stops, not
      turn-by-turn directions
    - Include relevant sections:

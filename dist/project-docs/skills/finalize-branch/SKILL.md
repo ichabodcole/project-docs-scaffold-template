@@ -330,6 +330,14 @@ pnpm run check-types
 pnpm run test
 ```
 
+**If the project has no `package.json`**, or its scripts don't match the ones
+above, don't guess. Run the gate the project names — a check command in root
+`AGENTS.md`, `CLAUDE.md` or `README.md` (for example `make check`, `cargo test`)
+— and hold it to the same hard gate. If it names none, say plainly which quality
+tools you looked for and did not find ("No `package.json` and no gate named in
+AGENTS.md or README — format, lint, type and test checks not run.") and continue
+with the documentation lint below. An announced absence, not a silent skip.
+
 **If the project has a documentation lint** — `scripts/pdocs/cli.ts` exists at
 the repo root (the docs root is `docsRoot` in `.project-docs.json`, default
 `docs/`) — run it too, and treat it as part of the same gate:
@@ -362,18 +370,44 @@ this genuinely reviewed, or only reviewed-looking?" has this file and nothing
 else to go on.
 
 **Its owner is the work item from Step 0.** If Step 0 found none, create the
-item now — the work ran first, and this is its record:
+item now — the work ran first, and this is its record. Find the active cycle
+first, so the item is born in it:
 
 ```bash
+pdocs find --type cycle --lifecycle active   # at most one; note its slug
 pdocs new item <slug> --kind <task|bug|chore|research> \
-  --title "…" --description "<one sentence: what this branch did>" \
+  --title "<what this branch did, as a short imperative>" \
+  --description "<one sentence: the problem, and what landed>" \
   --by "<your model or name>" --lifecycle review \
-  [--parent feature/<slug>]
+  [--parent feature/<slug>] [--cycle <active-cycle-slug>]
 ```
 
 It skips `triage` because the work is already built and the user asked for it to
 land; it moves to `done` in Step 6, so it lands born done. Give it `--parent`
-when the branch built part of a feature.
+when the branch built part of a feature, and `--cycle` whenever a cycle is
+active and the branch belongs to it (init-branch recorded the branch in that
+cycle's Sessions list).
+
+**Then fill the item's body from the work** — `pdocs new` fills only the
+frontmatter, and the lint does not catch a placeholder. Replace the template's
+three placeholders:
+
+- the H1 `# [Title]` → the item's title;
+- the paragraph in brackets → what was wrong or missing, and where, as the
+  branch found it;
+- `- [ ] [An observable result …]` under `## Definition of done` → one ticked
+  line per observable result that landed (`- [x] …`), each checkable by a
+  reviewer without asking you.
+
+No `[` … `]` placeholder may remain in an item this step created.
+
+**Attach the item to the active cycle.** Whether the item came from Step 0 or
+was created above, if a cycle is active and the branch belongs to it and the
+item's `cycle:` does not name it yet, set it now:
+
+```bash
+pdocs set item/<slug> --cycle <active-cycle-slug>
+```
 
 Then create the session in the owner's `sessions/` folder:
 
@@ -411,9 +445,7 @@ satisfies that perfectly well. So this is on you, not on the gate:
 **Don't write `related:`.** `docs/SCHEMA.md` resolves those edges against
 library pages only, and a session, an item, a feature and a cycle are all
 workbench. Link the cycle in the body instead — when the item is in the cycle
-(its `cycle:` names it; if the branch belongs to the active cycle and the item
-doesn't name it yet, run `pdocs set item/<slug> --cycle <cycle-slug>` first) — a
-line under the session's own heading,
+(its `cycle:` names it, as set above) — a line under the session's own heading,
 `Part of [<cycle title>](<relative path>/cycles/<slug>.md)`, which is a real
 link the lint checks. From `items/<slug>/sessions/` and from
 `features/<slug>/sessions/` that path is `../../../cycles/<slug>.md`.
@@ -471,7 +503,7 @@ action to perform, not a recommendation to offer. Do them without asking.
   discarded with it:
 
   ```bash
-    pdocs set item/<slug> --lifecycle done
+  pdocs set item/<slug> --lifecycle done
   ```
 
   **Then unblock what waited on it.** A shaped item whose `blocked_by` names
@@ -701,7 +733,7 @@ precedence over the strategies below — and say that you did.
 
    # Contributors whose authorship a squash would collapse. Count these two
    # lists separately; AI co-author trailers are deliberately absent from both.
-      git log "$BASE"..HEAD --format='%(trailers:key=Anthill-Seat,valueonly)' \
+   git log "$BASE"..HEAD --format='%(trailers:key=Anthill-Seat,valueonly)' \
      | sed '/^$/d' | sort -u                                     # anthill seats
    git log "$BASE"..HEAD --format='%an' | sort -u                 # human authors
    ```
@@ -744,11 +776,11 @@ precedence over the strategies below — and say that you did.
      of this file). If it says how to land, that is the policy: follow it, and
      it waives this step's "announce and ask" and the squash checkpoint as far
      as it says. Still compute and surface step 1's branch facts.
-     - For a `## Branch Landing Policy` heading (exact match), in this order:
-       root `AGENTS.md`, root `CLAUDE.md`, then the docs root's `AGENTS.md` and
-       `CLAUDE.md` (`docs/AGENTS.md`, `docs/CLAUDE.md`). The first file that has
-       the heading is the policy. A generated project may have only the `docs/`
-       copies.
+   - Otherwise, a `## Branch Landing Policy` heading (exact match), in this
+     order: root `AGENTS.md`, root `CLAUDE.md`, then the docs root's `AGENTS.md`
+     and `CLAUDE.md` (`docs/AGENTS.md`, `docs/CLAUDE.md`). The first file that
+     has the heading is the policy. A generated project may have only the
+     `docs/` copies.
    - If that section only points to another file (e.g. "see
      `docs/BRANCH_POLICY.md`"), follow the pointer one level and read the linked
      file.

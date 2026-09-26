@@ -58,15 +58,17 @@ pdocs view board --format text            # the items, by state group
 pdocs view backlog --format text          # everything unstarted, triage included
 ```
 
-An item that duplicates one already on the board — or a phase already in a
-feature's `plan.md` — is a drop candidate; one that fits an existing feature is
-a `parent` candidate.
+An item that duplicates one already on the board is a drop candidate. So is one
+that duplicates a phase in a feature's `plan.md`, when the feature has one
+(`pdocs new feature` creates only `feature.md`, so a feature not yet shaped has
+no phases to compare against — skip the check for it). An item that fits an
+existing feature is a `parent` candidate.
 
 Present the inventory as a table:
 
 ```
-| # | Item | Kind | Area | Size | From |
-|---|------|------|------|------|------|
+| # | Item | Kind | Area | Key files | Dependencies | Size | From |
+|---|------|------|------|-----------|--------------|------|------|
 ```
 
 ## Step 2: Group and Assess Parallelism
@@ -115,20 +117,29 @@ For every item in `triage`, propose:
 | `priority`   | `urgent` · `high` · `medium` · `low` | Optional. Leave it off rather than guess                                                                                                                                                                                                                                                                                                     |
 | `assignee`   | an agent, a seat, or a name          | Only when the item is routed to a particular agent or seat. Usually left off                                                                                                                                                                                                                                                                 |
 | `parent`     | `feature/<slug>`                     | From Step 2                                                                                                                                                                                                                                                                                                                                  |
-| `blocked_by` | item ids                             | From Step 2's dependencies                                                                                                                                                                                                                                                                                                                   |
+| `blocked_by` | item ids                             | From Step 2's dependencies, when one is already visible at triage. Shaping adds any found later (the item template lists shaping as its writer; triage writes it too)                                                                                                                                                                        |
 
-Give a one-line reason for each — especially for a drop. **An item with no
-settled definition of done** (its body still the template's prompt) is not
-`ready`: propose `backlog`, or propose the definition of done itself for the
-user to approve with the rest. **Dropping is not deleting**: the item stays in
-the tree at `dropped`, which is how it shows that someone decided.
+Give a one-line reason for each — especially for a drop. **Dropping is not
+deleting**: the item stays in the tree at `dropped`, which is how it shows that
+someone decided.
+
+**When to propose `ready`.** A definition of done is _settled_ once the user
+accepts it. The one the filer wrote is a proposal: writing it at filing does not
+make the item `ready` (`docs/items/README.md`). So propose `ready` only for an
+item whose body carries a concrete, checkable definition of done, and quote that
+definition in the proposal row; the user's approval of the row is what accepts
+it. An item whose definition of done is still the template's prompt, or too
+vague to check, is not `ready`: propose `backlog`, or write a definition of done
+into the proposal for the user to approve with the rest.
 
 Present the whole proposal at once — the groupings, the parallelism matrix, and
 one row per item — and ask the user, via `AskUserQuestion`, to approve it,
-change it, or reject parts of it. **Apply nothing before they answer.** An item
-the user skips stays in `triage`. Apply exactly what the answer approves: when
-it names a state for an item but is silent on a field you proposed (a `parent`,
-a `blocked_by`), ask, or leave that field off and list it in the summary as not
+change it, or reject parts of it. If `AskUserQuestion` is not available, put the
+same proposal and question in your reply and **end your turn there**; the user's
+next message is the answer. **Apply nothing before they answer.** An item the
+user skips stays in `triage`. Apply exactly what the answer approves: when it
+names a state for an item but is silent on a field you proposed (a `parent`, a
+`blocked_by`), ask, or leave that field off and list it in the summary as not
 applied.
 
 ## Step 4: Apply What the User Approved
@@ -180,8 +191,13 @@ Offer to commit the changes (only `docs/`). Then summarize:
 ## Constraints
 
 - **Never apply before the user has seen the proposal.** `pdocs set` does not
-  check who is calling; this rule is what makes triage a step the user sees. It
-  is the whole point of the skill.
+  check who is calling, and neither does `pdocs new item --lifecycle <state>`,
+  which files an item straight into any state. This rule is what makes triage a
+  step the user sees. It is the whole point of the skill.
+- **Never use `pdocs new item --lifecycle` to skip triage.** That flag is for an
+  item the user has just approved in the same exchange, or asked you to file
+  (`docs/items/README.md`). An item you file on your own judgement starts in
+  `triage`, and leaves it only through this skill.
 - **Never move an item out of `triage` except here**, or by the user's direct
   instruction.
 - **Don't start work.** Triage ends at `backlog` or `ready`; `init-branch` moves
