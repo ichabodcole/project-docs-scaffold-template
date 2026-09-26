@@ -121,14 +121,18 @@ fi
 # updates a template only while the project's copy still has that hash — so a
 # wrapping difference between this repository's copy and the payload's is a
 # real difference to the migration, even though Prettier calls it nothing.
-while IFS= read -r payload_file; do
-  rel="${payload_file#"$PAYLOAD"/}"
+#
+# The match runs on the path INSIDE the payload (`docs/…`), never the absolute
+# one: CI checks this repository out under `…/project-docs-scaffold-template/`,
+# where an absolute `-ipath '*template*'` matched every payload file and called
+# the two deliberately-different pages above drifted templates.
+while IFS= read -r rel; do
   [ -f "$ROOT/$rel" ] || continue
-  if ! cmp -s "$ROOT/$rel" "$payload_file"; then
+  if ! cmp -s "$ROOT/$rel" "$PAYLOAD/$rel"; then
     echo "DRIFTED        $rel  (a seeded template, compared byte for byte: its hash is recorded)"
     fail=1
   fi
-done < <(find "$PAYLOAD/docs" -type f -ipath '*template*' | sort)
+done < <(cd "$PAYLOAD" && find docs -type f -ipath '*template*' | sort)
 
 # Cookiecutter renders EVERY payload file through Jinja, code included. A
 # mirrored source file that happens to contain `{{` or `{%` is therefore
