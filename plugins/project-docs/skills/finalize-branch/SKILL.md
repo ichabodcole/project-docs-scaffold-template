@@ -333,12 +333,15 @@ pnpm run test
 ```
 
 **If the project has no `package.json`**, or its scripts don't match the ones
-above, don't guess. Run the gate the project names — a check command in root
-`AGENTS.md`, `CLAUDE.md` or `README.md` (for example `make check`, `cargo test`)
-— and hold it to the same hard gate. If it names none, say plainly which quality
-tools you looked for and did not find ("No `package.json` and no gate named in
-AGENTS.md or README — format, lint, type and test checks not run.") and continue
-with the documentation lint below. An announced absence, not a silent skip.
+above, don't guess. Run the code gate the project names — a check command in
+root `AGENTS.md`, `CLAUDE.md` or `README.md`, or the docs root's `AGENTS.md` and
+`CLAUDE.md` (for example `make check`, `cargo test`) — and hold it to the same
+hard gate. The documentation lint below is not that gate, even where a generated
+`docs/AGENTS.md` calls `check` "the gate". If the project names no code gate,
+say plainly which quality tools you looked for and did not find ("No
+`package.json` and no gate named in AGENTS.md or README — format, lint, type and
+test checks not run.") and continue with the documentation lint below. An
+announced absence, not a silent skip.
 
 **If the project has a documentation lint** — `scripts/pdocs/cli.ts` exists at
 the repo root (the docs root is `docsRoot` in `.project-docs.json`, default
@@ -372,8 +375,10 @@ this genuinely reviewed, or only reviewed-looking?" has this file and nothing
 else to go on.
 
 **Its owner is the work item from Step 0.** If Step 0 found none, create the
-item now — the work ran first, and this is its record. Find the active cycle
-first, so the item is born in it:
+item now — the work ran first, and this is its record. Take its slug from the
+branch's description (`fix/empty-name` → `empty-name`), and its kind from the
+branch type: `fix` → `bug`; `chore` and `docs` → `chore`; `feature` and
+`refactor` → `task`. Find the active cycle first, so the item is born in it:
 
 ```bash
 pdocs find --type cycle --lifecycle active   # at most one; note its slug
@@ -401,11 +406,14 @@ three placeholders:
   line per observable result that landed (`- [x] …`), each checkable by a
   reviewer without asking you.
 
-No `[` … `]` placeholder may remain in an item this step created.
+None of those three bracketed prompts may remain in an item this step created.
+The `- [x]` ticks you write are not prompts, and the template's leading HTML
+comment, which the CLI copies in, stays as it is.
 
-**Attach the item to the active cycle.** Whether the item came from Step 0 or
-was created above, if a cycle is active and the branch belongs to it and the
-item's `cycle:` does not name it yet, set it now:
+**Attach an item from Step 0 to the active cycle.** An item created above
+already has it, from `--cycle`. For an item Step 0 found: if a cycle is active,
+the branch belongs to it, and the item's `cycle:` does not name it yet, set it
+now:
 
 ```bash
 pdocs set item/<slug> --cycle <active-cycle-slug>
@@ -425,13 +433,15 @@ building a feature whose folder already holds their sessions — the work tracke
 at the feature, not at one item. Either way, never create the file by hand: the
 CLI picks the dated filename, the template and the frontmatter.
 
-Fill every placeholder the command leaves — the frontmatter below, and in the
-body the H1 (`# [Topic] — YYYY-MM-DD`: the CLI does not fill it from `--title`),
-and the template's example bullets under Related Documents (delete them; keep
-the owner link the CLI wrote). Add a `## Review` section for the census. For the
-frontmatter: **The lint will not catch a placeholder** — it checks that each
-required key is present and non-empty, and `description: "[One sentence …]"`
-satisfies that perfectly well. So this is on you, not on the gate:
+Fill every placeholder the command leaves. That means the frontmatter below, and
+in the body: the H1 (`# [Topic] — YYYY-MM-DD`: the CLI does not fill it from
+`--title`), every bracketed prompt in the template's sections, answered from the
+work or deleted when a section does not apply, and the template's example
+bullets under Related Documents (delete them; keep the owner link the CLI
+wrote). Add a `## Review` section for the census. For the frontmatter: **The
+lint will not catch a placeholder** — it checks that each required key is
+present and non-empty, and `description: "[One sentence …]"` satisfies that
+perfectly well. So this is on you, not on the gate:
 
 - `type: session` — written by the CLI; the folder decides it. Don't change it.
 - `title` — the session's topic and its date, matching the H1

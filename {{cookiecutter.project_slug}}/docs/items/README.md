@@ -55,7 +55,10 @@ written:
 | `--lifecycle backlog`      | only when the user wants the work — see below                                                                                                                |
 
 Leave `--cycle` and `--released-in` alone when filing: `init-branch` and
-`sweep-project` write them.
+`sweep-project` write them. The one exception is the item `finalize-branch`
+files for work that ran on a branch with no item. It is born with
+`--lifecycle review`, and with `--cycle` when the branch belongs to the active
+cycle, because the work is already built and is landing.
 
 Do not copy the template by hand: the `id` must be a fresh UUID, and the CLI
 checks every reference. Change any field later with

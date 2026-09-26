@@ -104,8 +104,11 @@ time:
 - **Partial overlap** — only read-only references or configuration are shared;
   note the constraint
 
-Present this as a small matrix. It is advice for whoever starts the work; the
-fields that record it are `parent` and `blocked_by`.
+Present this as a small matrix. Do the same inside a cluster: two items that
+share a file but do not depend on each other need sequencing too, so name the
+order you suggest. It is advice for whoever starts the work. The fields that
+record it are `parent`, and `blocked_by` only for a real dependency. Don't use
+`blocked_by` to express "these touch the same file".
 
 ## Step 3: Propose a Disposition for Each Item
 
@@ -159,10 +162,12 @@ pdocs set item/<slug> --lifecycle ready --priority high \
 pdocs set item/<slug> --lifecycle dropped
 ```
 
-For a drop, and for an accepted item whose definition of done the user approved,
-edit the item's body too: append the drop reason
-(`Dropped at triage, YYYY-MM-DD: <reason>.`), or write the definition of done.
-`pdocs set` changes frontmatter only, and a reason left in chat is lost.
+For a drop, and for an accepted item whose definition of done came from your
+proposal rather than its body, edit the item's body too: append the drop reason
+(`Dropped at triage, YYYY-MM-DD: <reason>.`), or write the approved definition
+of done. An item whose body already held the definition of done the user
+approved needs no body edit. `pdocs set` changes frontmatter only, and a reason
+left in chat is lost.
 
 `pdocs set` refuses a value the lint would reject — an unknown priority, a
 `parent` that isn't a feature, a `blocked_by` that doesn't resolve — and names
