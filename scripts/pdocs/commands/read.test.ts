@@ -876,6 +876,18 @@ describe("pdocs find — work filters", () => {
     expect(f).toMatchObject({ id: null, kind: null, parent: null, cycle: null, scope: "cli" });
   });
 
+  test("a match carries the slug its `type/<slug>` reference is built from", () => {
+    const slugs = Object.fromEntries(
+      find().out.matches.map((m: { path: string; slug: string }) => [m.path, m.slug])
+    );
+    expect(slugs).toMatchObject({
+      "docs/features/a/feature.md": "a",
+      "docs/cycles/2026-09-x.md": "2026-09-x",
+      "docs/items/the-bug.md": "the-bug",
+      "docs/items/the-task/item.md": "the-task",
+    });
+  });
+
   test("a filter that cannot be applied is refused, not answered with nothing", () => {
     expect(find("--kind", "story").code).toBe(ExitCode.Usage);
     expect(find("--parent", "a").code).toBe(ExitCode.Usage);

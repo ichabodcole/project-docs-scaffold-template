@@ -34,6 +34,7 @@ import { FIELD_VALUES, type RegistryRow, buildRegistry } from "../lint/registry.
 import {
   catalogEntry,
   frontmatterShapes,
+  stripFrontmatterComments,
   insertCatalogEntry,
   resolveFilename,
   slugify,
@@ -67,7 +68,38 @@ afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });
 });
 
+/**
+ * The CLI, with every `new` filling what a template leaves for the writer. The
+ * lint reports a document still holding its template's `description`, `tags`,
+ * H1 or a cycle's `appetite` (PLACEHOLDER), so a fixture that skipped them
+ * would fail every `check` below for a reason no test here is about. A test
+ * that passes its own flag keeps it; `runBare` passes none.
+ */
 function run(args: string[]) {
+  if (args[0] === "new") {
+    const fill = (flag: string, value: string) => {
+      if (!args.includes(flag)) args = [...args, flag, value];
+    };
+    // The title `new` would default to, passed explicitly so it also fills
+    // the H1 — tests below still read the default in `title:` and links.
+    const row = ROWS.find((r) => r.type === args[1]);
+    const name = args[2] !== undefined && !args[2].startsWith("--") ? args[2] : undefined;
+    let title = "Fixture Document";
+    try {
+      if (row && name) title = titleFromSlug(row, slugify(name));
+    } catch {
+      // A name `slugify` refuses: the test is about that refusal.
+    }
+    fill("--title", title);
+    fill("--description", "A document the pdocs new tests wrote.");
+    fill("--tags", "fixture");
+    if (args[1] === "cycle") fill("--appetite", "When the fixture is done.");
+  }
+  return runBare(args);
+}
+
+/** The CLI exactly as called. */
+function runBare(args: string[]) {
   const p = Bun.spawnSync(["bun", CLI, ...args], {
     cwd: REPO_ROOT,
     env: childEnv(),
@@ -213,6 +245,9 @@ function invocation(row: RegistryRow, root: string): string[] {
     if (FIELD_VALUES[key]) args.push(`--${key}`, FIELD_VALUES[key]![0] as string);
   if (Array.isArray(row.template))
     args.push("--variant", variantName(row.template[0] as string));
+  // Without --title the template's H1 is left for the writer, and the gate
+  // reports it (PLACEHOLDER).
+  args.push("--title", `${row.type} demo`);
   return args;
 }
 
@@ -614,10 +649,9 @@ describe("pdocs new — the filename grammar", () => {
     ).data.path;
     expect(second).toBe("docs/specifications/02-billing.md");
 
-    // The variant really chose the template.
-    expect(readFileSync(join(root, second), "utf8")).toContain(
-      "# [Domain Name] Specification"
-    );
+    // The variant really chose the template: a section only `domain` has.
+    // (`run` passes --title, so the H1 is the title, not the template's.)
+    expect(readFileSync(join(root, second), "utf8")).toContain("\n## Data Model\n");
     expect(run(["check", "--root", root]).code).toBe(ExitCode.Success);
   });
 
@@ -811,6 +845,101 @@ describe("pdocs new — frontmatter", () => {
     expect(r.stderr).toContain("frozen record");
   });
 
+  test("the template's inline guidance comments are not written (wocky-talky row 4)", () => {
+    const root = tree();
+    run(["new", "cycle", "tooling", "--root", root]);
+    run(["new", "item", "fix-it", "--kind", "bug", "--root", root]);
+    for (const rel of [`docs/cycles/${today().slice(0, 7)}-tooling.md`, "docs/items/fix-it.md"]) {
+      const block = /^---\n([\s\S]*?)\n---/.exec(readFileSync(join(root, rel), "utf8"))![1]!;
+      expect(block).not.toMatch(/\s#\s/);
+    }
+    const cycle = readFileSync(join(root, `docs/cycles/${today().slice(0, 7)}-tooling.md`), "utf8");
+    expect(cycle).toContain("status: draft\n");
+    expect(cycle).toContain("lifecycle: planned\n");
+    expect(cycle).toContain("after: []\n");
+  });
+
+  test("a cycle's `started` is today, unless --started says otherwise", () => {
+    const root = tree();
+    run(["new", "cycle", "tooling", "--root", root]);
+    run(["new", "cycle", "2026-12-later", "--started", "2026-12-01", "--root", root]);
+    const month = today().slice(0, 7);
+    expect(readFileSync(join(root, `docs/cycles/${month}-tooling.md`), "utf8")).toContain(
+      `started: ${today()}\n`
+    );
+    expect(readFileSync(join(root, "docs/cycles/2026-12-later.md"), "utf8")).toContain(
+      "started: 2026-12-01\n"
+    );
+  });
+
+  test("--tags is a list even where the template has no `tags:` key", () => {
+    const root = tree();
+    run(["new", "item", "fix-it", "--kind", "bug", "--tags", "a,b", "--root", root]);
+    expect(readFileSync(join(root, "docs/items/fix-it.md"), "utf8")).toContain(
+      "tags: [a, b]\n"
+    );
+  });
+
+  test("--title fills the template's H1 as well as `title`", () => {
+    const root = tree();
+    run(["new", "cycle", "tooling", "--title", "Tooling Cleanup", "--root", root]);
+    run(["new", "item", "fix-it", "--kind", "bug", "--title", "Fix the hook", "--root", root]);
+    const cycle = readFileSync(join(root, `docs/cycles/${today().slice(0, 7)}-tooling.md`), "utf8");
+    expect(cycle).toContain("\n# Tooling Cleanup\n");
+    expect(cycle).not.toContain("# [What is in play");
+    const item = readFileSync(join(root, "docs/items/fix-it.md"), "utf8");
+    expect(item).toContain("\n# Fix the hook\n");
+    expect(item).not.toContain("# [Title]");
+  });
+
+  test("a fresh cycle with nothing filled in fails the gate; filled in by flags, it passes", () => {
+    const root = tree();
+    expect(runBare(["new", "cycle", "2026-10-x", "--root", root]).code).toBe(ExitCode.Success);
+    const bare = runBare(["check", "--root", root, "--format", "text"]);
+    expect(bare.code).not.toBe(ExitCode.Success);
+    expect(bare.stdout).toContain("PLACEHOLDER");
+    expect(bare.stdout).toContain("`description`");
+    expect(bare.stdout).toContain("`tags`");
+
+    // Title, description and tags are not enough: `appetite` is a prompt too.
+    const noAppetite = tree();
+    runBare([
+      "new", "cycle", "2026-10-x", "--root", noAppetite,
+      "--title", "Tooling", "--description", "Tidy the tooling.", "--tags", "tooling,cleanup",
+    ]);
+    const unfilled = runBare(["check", "--root", noAppetite, "--format", "text"]);
+    expect(unfilled.code).not.toBe(ExitCode.Success);
+    expect(unfilled.stdout).toContain("`appetite`");
+
+    const filled = tree();
+    runBare([
+      "new", "cycle", "2026-10-x", "--root", filled,
+      "--title", "Tooling", "--description", "Tidy the tooling.", "--tags", "tooling,cleanup",
+      "--appetite", "When the gate is quiet for a week.",
+    ]);
+    runBare([
+      "new", "item", "fix-it", "--kind", "bug", "--root", filled,
+      "--title", "Fix it", "--description", "It is broken.", "--tags", "a,b",
+    ]);
+    const checked = runBare(["check", "--root", filled, "--format", "text"]);
+    expect(checked.stdout).toContain("docs-lint: clean");
+  });
+
+  test("without --title the template's H1 is left for the writer, and the gate reports it", () => {
+    const root = tree();
+    makeFeature(root, "auth-refactor");
+    const made = runBare([
+      "new", "plan", "--owner", "feature/auth-refactor", "--root", root,
+      "--description", "The route to the refactor.", "--tags", "auth",
+    ]);
+    expect(made.code).toBe(ExitCode.Success);
+    const plan = readFileSync(join(root, "docs/features/auth-refactor/plan.md"), "utf8");
+    expect(plan).toContain("\n# [Feature Name] Implementation Plan\n");
+    const checked = runBare(["check", "--root", root, "--format", "text"]);
+    expect(checked.code).not.toBe(ExitCode.Success);
+    expect(checked.stdout).toContain("the H1 is still the template's");
+  });
+
   test("tags are written back in the shape the template used", () => {
     const root = tree();
     run(["new", "playbook", "rollback", "--root", root, "--tags", "deploy, ops"]);
@@ -865,6 +994,41 @@ describe("the naming helpers", () => {
   test("wrap never breaks a token", () => {
     expect(wrap("a bb ccc dddd", 6)).toEqual(["a bb", "ccc", "dddd"]);
     expect(wrap("supercalifragilistic", 6)).toEqual(["supercalifragilistic"]);
+  });
+});
+
+describe("stripFrontmatterComments", () => {
+  test("inline comments go, on keys and on block-list items", () => {
+    expect(
+      stripFrontmatterComments(
+        "status: draft # OKF\n# a whole-line note\nscope:\n  - cli # the hint\n  - 'a # b' # hint"
+      )
+    ).toBe("status: draft\nscope:\n  - cli\n  - 'a # b'");
+  });
+
+  test("a line inside a multi-line quoted scalar is content, even when it starts with #", () => {
+    const double = 'description:\n  "Fixes the parser\n  #42 in lexer"\nstatus: draft # c';
+    expect(stripFrontmatterComments(double)).toBe(
+      'description:\n  "Fixes the parser\n  #42 in lexer"\nstatus: draft'
+    );
+    const opened = 'description: "Fixes the parser\n  #42 in lexer" # c\nstatus: draft';
+    expect(stripFrontmatterComments(opened)).toBe(
+      'description: "Fixes the parser\n  #42 in lexer"\nstatus: draft'
+    );
+    const single = "description: 'It''s the parser\n  # 42'\nstatus: draft";
+    expect(stripFrontmatterComments(single)).toBe(single);
+  });
+
+  test("a block scalar's lines are content", () => {
+    for (const indicator of [">", "|", "|-", ">+"]) {
+      const block = `description: ${indicator}\n  Fixes the parser\n  # 42 in lexer\n  and more\nstatus: draft`;
+      expect(stripFrontmatterComments(block)).toBe(block);
+    }
+  });
+
+  test("a # that is not a comment is left alone", () => {
+    const safe = 'title: "Exit #2"\nsource: https://x#frag\ndescription: C# notes';
+    expect(stripFrontmatterComments(safe)).toBe(safe);
   });
 });
 
@@ -937,6 +1101,23 @@ describe("insertCatalogEntry", () => {
     ).toThrow("no section for `architecture/`");
   });
 
+  test("the dash wraps with the description when it does not fit after the link, as Prettier does", () => {
+    // Prettier (proseWrap: always, printWidth 80) on the line `new` used to write.
+    expect(
+      catalogEntry(
+        "Roll Back A Deploy Safely",
+        "./playbooks/roll-back-a-deploy-safely-playbook.md",
+        "How to roll a deploy back without losing the audit trail or the logs."
+      )
+    ).toEqual([
+      "- [Roll Back A Deploy Safely](./playbooks/roll-back-a-deploy-safely-playbook.md)",
+      "  — How to roll a deploy back without losing the audit trail or the logs.",
+    ]);
+    expect(catalogEntry("A", "./playbooks/a-playbook.md", "Short.")).toEqual([
+      "- [A](./playbooks/a-playbook.md) — Short.",
+    ]);
+  });
+
   test("a long entry wraps without breaking the link", () => {
     const lines = catalogEntry(
       "A Fairly Long Playbook Title",
@@ -944,9 +1125,10 @@ describe("insertCatalogEntry", () => {
       "A description long enough that Prettier would certainly wrap it onto a second line."
     );
     expect(lines.length).toBeGreaterThan(1);
-    expect(lines[0]).toContain(
-      "](./playbooks/a-fairly-long-playbook-title-playbook.md) —"
+    expect(lines[0]).toBe(
+      "- [A Fairly Long Playbook Title](./playbooks/a-fairly-long-playbook-title-playbook.md)"
     );
+    expect(lines[1]).toStartWith("  — A description");
     for (const line of lines.slice(1)) expect(line.startsWith("  ")).toBe(true);
   });
 });

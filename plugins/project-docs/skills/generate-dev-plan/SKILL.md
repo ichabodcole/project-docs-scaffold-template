@@ -92,13 +92,13 @@ documentation CLI at the repo root; the docs root is `docsRoot` in
      ```
 
      A single-file item given as owner is promoted to a folder first. The CLI
-     fills the frontmatter, not the body: replace the template's H1
-     (`# [Feature Name] Implementation Plan`) and every other bracketed prompt,
-     and delete the template's guidance comments once you have used them.
+     fills the frontmatter and, from `--title`, the H1; replace every bracketed
+     prompt in the body, and delete the template's guidance comments once you
+     have used them.
 
    - **Fill the template's frontmatter block, every field** — the bracketed
-     values are placeholders, not defaults, and the lint does not catch one left
-     in place, so this is on you: `title` matching the H1; `description` as one
+     values are placeholders, not defaults; `pdocs check` reports one left in
+     place (`PLACEHOLDER`): `title` matching the H1; `description` as one
      sentence naming the route from here to the proposed state; 2–4 kebab-case
      `tags`; `status: draft`; `lifecycle: draft` (it becomes `active` when
      implementation starts, which is not now);

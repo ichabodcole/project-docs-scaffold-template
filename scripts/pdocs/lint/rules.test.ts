@@ -2202,3 +2202,199 @@ describe("a loose file directly in an owner folder (review F)", () => {
     expect(problems.filter((p) => p.startsWith("MISSING"))).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// A document still holding its template's placeholders (item
+// lint-rejects-placeholder-bodies). The rule compares against the template the
+// registry names — the project's own copy — so the fixtures carry the real ones.
+// ---------------------------------------------------------------------------------------
+
+describe("PLACEHOLDER — a document still holding its template's placeholders", () => {
+  const templates = (): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const row of buildRegistry(DEFAULT_CONFIG)) {
+      if (row.template === null || row.externalTemplate) continue;
+      for (const rel of [row.template].flat())
+        out[rel] = readFileSync(join(REPO_ROOT, rel), "utf8");
+    }
+    return out;
+  };
+  const catalog = (entry = "") =>
+    fm({
+      type: "index",
+      title: "C",
+      description: "The catalog.",
+      tags: "[c]",
+      status: "stable",
+      generated: GENERATED,
+    }) +
+    `# C\n\n## Playbooks\n\nSee [playbooks/README.md](./playbooks/README.md).\n\n${entry}\n`;
+
+  // What `pdocs new cycle 2026-10-x` wrote with nothing filled in — the
+  // failing case wocky-talky hit.
+  const FRESH_CYCLE =
+    fm({
+      type: "cycle",
+      title: "X",
+      description: '"[One sentence: what this cycle is for.]"',
+      tags: "[area, area]",
+      status: "draft",
+      lifecycle: "planned",
+      started: "YYYY-MM-DD",
+      generated: GENERATED,
+    }) + "\n# [What is in play, in three or four words]\n\n## Why now\n";
+
+  test("a workbench document: description, tags, date and H1 are each reported", () => {
+    const problems = thinTier(
+      fixture({ ...templates(), "docs/cycles/2026-10-x.md": FRESH_CYCLE })
+    ).filter((p) => p.startsWith("PLACEHOLDER"));
+    expect(problems).toHaveLength(4);
+    for (const needle of ["`description`", "`tags`", "`started`", "the H1"])
+      expect(problems.some((p) => p.includes(needle))).toBe(true);
+    for (const p of problems) expect(p).toContain("docs/cycles/2026-10-x.md");
+  });
+
+  test("an item under `_archive/` is reported too", () => {
+    const item =
+      fm({
+        type: "item",
+        title: "Old",
+        description: '"[One sentence: the problem, and what done looks like.]"',
+        status: "draft",
+        lifecycle: "done",
+        id: "0190f4b2-7c3a-7d4e-8f00-000000000001",
+        kind: "task",
+        generated: GENERATED,
+      }) + "\n# [Title]\n";
+    const problems = thinTier(
+      fixture({ ...templates(), "docs/items/_archive/old.md": item })
+    ).filter((p) => p.startsWith("PLACEHOLDER"));
+    expect(problems).toHaveLength(2);
+    expect(problems.join("\n")).toContain("docs/items/_archive/old.md");
+  });
+
+  test("a library page: the template's description, placeholder tags and H1", () => {
+    const description = "[The kind of work this covers, and what it gets done.]";
+    const page =
+      fm({
+        type: "playbook",
+        title: "Rollback Playbook",
+        description: `"${description}"`,
+        tags: "[area, feature]",
+        status: "draft",
+        generated: GENERATED,
+      }) + "\n# [Kind of Work] Playbook\n";
+    const problems = libraryFieldChecks(
+      fixture({
+        ...templates(),
+        "docs/index.md": catalog(
+          `- [Rollback Playbook](./playbooks/rollback-playbook.md) — ${description}`
+        ),
+        "docs/playbooks/README.md": "# Playbooks\n",
+        "docs/playbooks/rollback-playbook.md": page,
+      })
+    ).filter((p) => p.startsWith("PLACEHOLDER"));
+    expect(problems).toHaveLength(3);
+  });
+
+  test("bracketed text that is not the template's own placeholder is not reported", () => {
+    const cycle =
+      fm({
+        type: "cycle",
+        title: "Tooling",
+        description: '"[Draft] Tidy the tooling before the release."',
+        tags: "[area, tooling]",
+        status: "draft",
+        lifecycle: "planned",
+        started: "2026-10-01",
+        generated: GENERATED,
+      }) +
+      "\n# [WIP] Tooling\n\n[What is in play, in three or four words]\n\n- [x] done\n";
+    const problems = thinTier(
+      fixture({ ...templates(), "docs/cycles/2026-10-tooling.md": cycle })
+    );
+    expect(problems.filter((p) => p.startsWith("PLACEHOLDER"))).toEqual([]);
+  });
+
+  // A template's example tags are real words a document may choose; only the
+  // two the templates use as prompts, `area` and `feature`, are placeholders.
+  test.each([
+    ["specification", "docs/specifications/01-overview.md", "[overview, product]", 0],
+    ["interaction", "docs/interaction-design/checkout.md", "[surface, flow]", 0],
+    ["specification", "docs/specifications/01-overview.md", "[area, area]", 1],
+    ["interaction", "docs/interaction-design/checkout.md", "[area, feature]", 1],
+  ] as const)("%s at %s, tags %s: %i PLACEHOLDER row(s)", (type, path, tags, expected) => {
+    const page =
+      fm({
+        type,
+        title: "Real",
+        description: "A real page.",
+        tags,
+        status: "draft",
+        generated: GENERATED,
+      }) + "\n# Real\n";
+    const problems = libraryFieldChecks(
+      fixture({ ...templates(), "docs/index.md": catalog(), [path]: page })
+    ).filter((p) => p.startsWith("PLACEHOLDER"));
+    expect(problems).toHaveLength(expected);
+  });
+
+  test("a cycle's `appetite` still the template's prompt is reported", () => {
+    const cycle = FRESH_CYCLE.replace(
+      "started: YYYY-MM-DD",
+      'started: 2026-10-01\nappetite: "[When it would be right to stop, in a sentence. Not a date.]"'
+    );
+    const problems = thinTier(
+      fixture({ ...templates(), "docs/cycles/2026-10-x.md": cycle })
+    ).filter((p) => p.startsWith("PLACEHOLDER"));
+    expect(problems.some((p) => p.includes("`appetite`"))).toBe(true);
+  });
+
+  test("with no template on disk there is nothing to compare, and nothing is reported", () => {
+    expect(
+      thinTier(fixture({ "docs/cycles/2026-10-x.md": FRESH_CYCLE })).filter((p) =>
+        p.startsWith("PLACEHOLDER")
+      )
+    ).toEqual([]);
+  });
+});
+
+describe("BAD TAGS — `tags` is a list", () => {
+  const item = (tags: string) =>
+    fm({
+      type: "item",
+      title: "A",
+      description: "An item.",
+      status: "draft",
+      lifecycle: "triage",
+      id: "0190f4b2-7c3a-7d4e-8f00-000000000001",
+      kind: "task",
+      tags,
+      generated: GENERATED,
+    }) + "\n# A\n";
+
+  test("a comma-separated string is reported", () => {
+    const problems = thinTier(fixture({ "docs/items/a.md": item("feedback,pdocs") }));
+    expect(problems.some((p) => p.startsWith("BAD TAGS") && p.includes("feedback,pdocs"))).toBe(
+      true
+    );
+  });
+
+  test("a quoted string that looks like a list is reported", () => {
+    for (const tags of ['"[feedback, pdocs]"', "'[feedback, pdocs]'"])
+      expect(
+        thinTier(fixture({ "docs/items/a.md": item(tags) })).some((p) =>
+          p.startsWith("BAD TAGS")
+        )
+      ).toBe(true);
+  });
+
+  test("a flow list and a block list are not", () => {
+    for (const tags of ["[feedback, pdocs]", "\n  - feedback\n  - pdocs"])
+      expect(
+        thinTier(fixture({ "docs/items/a.md": item(tags) })).filter((p) =>
+          p.startsWith("BAD TAGS")
+        )
+      ).toEqual([]);
+  });
+});

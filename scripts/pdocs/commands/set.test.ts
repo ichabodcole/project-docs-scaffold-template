@@ -200,6 +200,28 @@ describe("pdocs set", () => {
     expect(r.stderr).toContain("--kind");
   });
 
+  test("a value already set is reported as already set, and the file is not rewritten", () => {
+    const root = tree();
+    const text = run([
+      "set", "item/fix-hook", "--lifecycle", "triage", "--priority", "high",
+      "--root", root, "--format", "text",
+    ]);
+    expect(text.code).toBe(ExitCode.Success);
+    expect(text.stdout).toContain("lifecycle: triage (already set)");
+    expect(text.stdout).toContain("priority: high (already set)");
+    expect(text.stdout).not.toContain("->");
+    // Untouched, inline comment and all.
+    expect(read(root)).toBe(ITEM_A);
+
+    // Mixed: the changed key is written, the unchanged one keeps its line.
+    const r = set(root, "item/fix-hook", "--lifecycle", "triage", "--priority", "low");
+    expect(JSON.parse(r.stdout).data.changes).toEqual([
+      { key: "lifecycle", before: "triage", after: "triage", changed: false },
+      { key: "priority", before: "high", after: "low", changed: true },
+    ]);
+    expect(read(root)).toBe(ITEM_A.replace("priority: high", "priority: low"));
+  });
+
   test("nothing to set is a usage error", () => {
     const root = tree();
     expect(set(root, "item/fix-hook").code).toBe(ExitCode.Usage);
@@ -211,8 +233,8 @@ describe("pdocs set", () => {
     const data = JSON.parse(r.stdout).data;
     expect(data.path).toBe("docs/items/fix-hook.md");
     expect(data.changes).toEqual([
-      { key: "lifecycle", before: "triage", after: "ready" },
-      { key: "cycle", before: "2026-09-x", after: null },
+      { key: "lifecycle", before: "triage", after: "ready", changed: true },
+      { key: "cycle", before: "2026-09-x", after: null, changed: true },
     ]);
   });
 

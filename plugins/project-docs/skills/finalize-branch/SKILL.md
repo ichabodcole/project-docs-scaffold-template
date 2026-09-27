@@ -395,11 +395,11 @@ when the branch built part of a feature, and `--cycle` whenever a cycle is
 active and the branch belongs to it (init-branch recorded the branch in that
 cycle's Sessions list).
 
-**Then fill the item's body from the work** — `pdocs new` fills only the
-frontmatter, and the lint does not catch a placeholder. Replace the template's
-three placeholders:
+**Then fill the item's body from the work** — `pdocs new` fills the frontmatter
+and, from `--title`, the H1; the body's prompts are yours. Replace the
+template's three placeholders:
 
-- the H1 `# [Title]` → the item's title;
+- the H1 `# [Title]` → the item's title, if you did not pass `--title`;
 - the paragraph in brackets → what was wrong or missing, and where, as the
   branch found it;
 - `- [ ] [An observable result …]` under `## Definition of done` → one ticked
@@ -434,14 +434,14 @@ at the feature, not at one item. Either way, never create the file by hand: the
 CLI picks the dated filename, the template and the frontmatter.
 
 Fill every placeholder the command leaves. That means the frontmatter below, and
-in the body: the H1 (`# [Topic] — YYYY-MM-DD`: the CLI does not fill it from
+in the body: the H1 (`# [Topic] — YYYY-MM-DD`, filled only when you pass
 `--title`), every bracketed prompt in the template's sections, answered from the
 work or deleted when a section does not apply, and the template's example
 bullets under Related Documents (delete them; keep the owner link the CLI
-wrote). Add a `## Review` section for the census. For the frontmatter: **The
-lint will not catch a placeholder** — it checks that each required key is
-present and non-empty, and `description: "[One sentence …]"` satisfies that
-perfectly well. So this is on you, not on the gate:
+wrote). Add a `## Review` section for the census. `pdocs check` reports a
+frontmatter value, date, `tags` or H1 still the template's own placeholder
+(`PLACEHOLDER`); it does not judge the body's prompts. Those are on you. For the
+frontmatter:
 
 - `type: session` — written by the CLI; the folder decides it. Don't change it.
 - `title` — the session's topic and its date, matching the H1

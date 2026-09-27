@@ -73,8 +73,9 @@ repo root.
      frontmatter, starts it in `backlog`, and writes the link to the write-up
      into its Related section. Read `docs/features/README.md` for conventions.
 
-   - Fill every placeholder the template leaves; the lint does not catch one
-     left in place. Leave `related` out unless the proposal genuinely leans on a
+   - Fill every placeholder the template leaves. `pdocs check` reports one left
+     in the frontmatter or the H1 (`PLACEHOLDER`); the body's prompts are yours
+     to catch. Leave `related` out unless the proposal genuinely leans on a
      library page (a playbook, an architecture doc) — those keys are
      `type/<basename-without-.md>` and are the only ones that resolve.
    - Focus on high to mid-level ("capitals not gas stations")

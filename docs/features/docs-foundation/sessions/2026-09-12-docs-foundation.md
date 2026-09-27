@@ -5,7 +5,7 @@ title:
 description:
   The four planned phases shipped; the migration was redesigned twice after
   review found the same defect class surviving its own repair.
-tags: [area, feature] # 2-4 kebab-case keywords
+tags: [seed-manifest, migrations, review] # 2-4 kebab-case keywords
 status: stable # A session is frozen the moment it is written; it is never a draft.
 generated: { by: claude-opus-5, at: 2026-09-12 }
 ---

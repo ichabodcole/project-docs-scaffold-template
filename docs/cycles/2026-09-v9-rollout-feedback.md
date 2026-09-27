@@ -31,8 +31,8 @@ whatever it finds that is new opens the next round.
 
 - [Spellbook feedback, round 2](../items/spellbook-feedback-round-2.md) — the
   eight migration fixes land, so story-loom's run gets them.
-- [wocky-talky feedback, round 1](../items/wocky-talky-feedback-round-1.md) —
-  finalize-branch, formatter guidance and `pdocs new`/`set` output fixed.
+- [wocky-talky feedback, round 1](../items/wocky-talky-feedback-round-1/item.md)
+  — finalize-branch, formatter guidance and `pdocs new`/`set` output fixed.
 - [The lint passes a template's placeholder body and H1](../items/lint-rejects-placeholder-bodies.md)
   — filed at release; wocky-talky's fresh cycle passing `pdocs check` with every
   placeholder in place makes it part of this patch.
@@ -54,3 +54,5 @@ consumer has hit.
 _Written at close, not before._
 
 ## Sessions
+
+- fix/pdocs-output-and-placeholder-lint (landed 2026-09-26)

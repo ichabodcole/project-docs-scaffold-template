@@ -304,10 +304,11 @@ last five filter work: `--kind` (`task`, `bug`, `chore`, `research`),
 starts with the prefix.
 
 `data`: `matches[]` — each
-`{ path, tier, type, title, description, status, lifecycle, tags[], date }`,
+`{ path, slug, tier, type, title, description, status, lifecycle, tags[], date }`,
 plus `id`, `kind`, `parent`, `cycle` and `scope` on a feature or item — and
-`count`. `id` is the full id: this is where a skill reads one to write into a
-commit trailer.
+`count`. `slug` is what a reference is built from: `item/<slug>`,
+`feature/<slug>`, `cycle/<slug>`. `id` is the full id: this is where a skill
+reads one to write into a commit trailer.
 
 **An empty result exits 0.** "Nothing matches" is an answer. Read `count`, never
 the status, to tell an empty corpus from a failure. A `--since` that is not a
@@ -383,7 +384,10 @@ any change the lint would reject** — a state outside the type's vocabulary, a
 take references and write full ids. `--unset` removes keys, but not one the lint
 requires. `--released-in` is accepted unchecked.
 
-`data`: `path`, and `changes[]` — each `{ key, before, after }`.
+A key that already holds the value is reported as already set (`changed: false`)
+and its line is not rewritten; when nothing changes, the file is not written.
+
+`data`: `path`, and `changes[]` — each `{ key, before, after, changed }`.
 
 **`set` does not check who is calling.** Moving an item out of `triage` is the
 user's decision, taken at a triage step they have seen (the `triage-items`
@@ -453,6 +457,12 @@ extra file touched:
 docs/playbooks/rollback-a-release-playbook.md
   + catalog line in docs/index.md
 ```
+
+What it writes: the template, with `type`, `title`, `generated`, and the flags
+filled in; a date the template leaves as `YYYY-MM-DD` (a cycle's `started`) set
+to today unless its flag is passed; and none of the template's inline `# …`
+guidance comments in the frontmatter. `--title` also fills the template's H1;
+without it the H1 is left as the template's, for you to write.
 
 JSON `data`: `path` (the document), `type` (the resolved registry type),
 `created[]` — every file written or modified, document first — `promoted` (the
@@ -536,17 +546,17 @@ folder plus one, zero-padded to two.
 
 ### Flags
 
-| Flag                   | Notes                                                                                                                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--title <text>`       | Defaults to the slug, title-cased — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`). **Pass it.**                                                                 |
-| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                |
-| `--tags <a,b>`         | Comma-separated kebab-case.                                                                                                                                                  |
-| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                          |
-| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff`, `session` and `write-up` — exits 2.      |
-| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                           |
-| `--owner <ref>`        | Required for an owned type: `feature/<slug>` or `item/<slug-or-id>`. A single-file item is promoted first. An owner that does not resolve exits 2, naming what was expected. |
-| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                   |
-| `--from <path>`        | See below.                                                                                                                                                                   |
+| Flag                   | Notes                                                                                                                                                                                                       |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--title <text>`       | Fills `title` and the template's H1. Without it, `title` defaults to the slug, title-cased, and the H1 is left as the template's — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`). **Pass it.** |
+| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                                               |
+| `--tags <a,b>`         | Comma-separated kebab-case. Written as a list, `[a, b]`, whatever the template has.                                                                                                                         |
+| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                                                         |
+| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff`, `session` and `write-up` — exits 2.                                     |
+| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                                                          |
+| `--owner <ref>`        | Required for an owned type: `feature/<slug>` or `item/<slug-or-id>`. A single-file item is promoted first. An owner that does not resolve exits 2, naming what was expected.                                |
+| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                                                  |
+| `--from <path>`        | See below.                                                                                                                                                                                                  |
 
 Plus the fields a type declares, as kebab-case flags: on an item `--kind`,
 `--parent`, `--scope`, `--cycle`, `--blocked-by`, `--source`, `--priority`,
@@ -598,12 +608,14 @@ Workbench documents are not catalogued and get no such line.
 
 ## Gotchas
 
-- **`pdocs check` does not catch template placeholders.** A document created
-  without `--description` keeps the template's
-  `description: "[One sentence: …]"`, and without `--tags` keeps its example
-  `tags: [area, feature]` — both pass the gate clean, because they are
-  syntactically valid. Verified on both tiers. Pass the flags; the lint will not
-  save you.
+- **`pdocs check` reports a template's placeholders left in place**
+  (`PLACEHOLDER`): a frontmatter string still the template's bracketed prompt
+  (`description: "[One sentence: …]"`, `title`, a cycle's `appetite`), a date
+  still `YYYY-MM-DD`, `tags` made only of the prompt words `area` and `feature`,
+  or an H1 still the template's. Only the template's own strings count, read
+  from the project's copy — other bracketed text, and the body's prompts, are
+  not judged: filling those is yours. Pass `--title`, `--description` and
+  `--tags` (and `--appetite` on a cycle) to `new`.
 - **Exit 9 is not a failure.** See the bands above.
 - **`ok: true` does not mean the answer was yes.** See the envelope.
 - **An unknown flag is an error, and `pdocs` names the token.** `--formt json`

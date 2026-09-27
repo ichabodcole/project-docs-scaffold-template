@@ -20,4 +20,4 @@ Dropped at triage, 2026-09-26: the template's inline frontmatter comments are
 retired rather than preserved. `pdocs new` strips them and `set` never writes
 them; the vocabulary lives in `SCHEMA.md` and in the refusal `set` prints for an
 invalid value. Worked as row 4 of
-[wocky-talky feedback, round 1](./wocky-talky-feedback-round-1.md).
+[wocky-talky feedback, round 1](./wocky-talky-feedback-round-1/item.md).

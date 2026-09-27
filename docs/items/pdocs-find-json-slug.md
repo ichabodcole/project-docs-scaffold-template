@@ -5,7 +5,7 @@ description:
   find --format json gives paths and ids but no slug to build an item/<slug>
   reference from.
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: ready
+lifecycle: done
 id: 01a0da5f-89e8-70e0-981a-c9792a191145
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-25 }

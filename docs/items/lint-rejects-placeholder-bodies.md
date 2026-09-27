@@ -5,7 +5,7 @@ description:
   A document still carrying the template's bracketed placeholders passes pdocs
   check.
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: ready
+lifecycle: done
 id: 01a0da5f-8ab1-7167-abbb-34f661263587
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-25 }

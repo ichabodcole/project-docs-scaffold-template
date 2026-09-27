@@ -96,9 +96,9 @@ Evidence gathered on the way — an audit, a benchmark — goes in the item's
 
    - Write the investigation into `write-up.md`, using its template's sections
      as scaffolding, not a mandatory form. Fill its frontmatter placeholders —
-     `description`, `tags` — the lint does not catch a placeholder left in
-     place. It keeps `status: draft` while findings are provisional, and becomes
-     `stable` when the investigation concludes.
+     `description`, `tags` — `pdocs check` reports one left in place
+     (`PLACEHOLDER`). It keeps `status: draft` while findings are provisional,
+     and becomes `stable` when the investigation concludes.
    - The template's sections, filled from what you have:
      - **Question** (from parsed input)
      - **Current State** (from context search)

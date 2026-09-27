@@ -75,12 +75,12 @@ the template, fills the frontmatter, starts it in `backlog` (accepted, and still
 being shaped), and — with `--from` — links the originating document into its
 Related section.
 
-Pass `--title`, `--description` and `--tags`. **The lint does not catch a
-template placeholder left in place**, so an omitted `--description` ships
-`"[One sentence: what this proposes and why.]"` and passes clean. Write the
-description from what the user actually told you; if they gave you a one-line
-idea, that line _is_ the description. And the default title is the slug
-title-cased, which mangles acronyms — `oauth-upgrade` becomes `Oauth Upgrade`.
+Pass `--title`, `--description` and `--tags`. `--title` also fills the H1. An
+omitted `--description` ships `"[One sentence: what this proposes and why.]"`,
+which `pdocs check` reports (`PLACEHOLDER`). Write the description from what the
+user actually told you; if they gave you a one-line idea, that line _is_ the
+description. And the default title is the slug title-cased, which mangles
+acronyms — `oauth-upgrade` becomes `Oauth Upgrade`.
 
 **Exit 6 means the feature already exists.** Stop and ask the user how to
 proceed — use the existing folder, or pick a different name.
