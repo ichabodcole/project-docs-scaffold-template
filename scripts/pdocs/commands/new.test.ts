@@ -1229,6 +1229,26 @@ describe("pdocs new item", () => {
     expect(text).not.toContain(id);
   });
 
+  test("text output ends with a next step that names the formatter and every file written", () => {
+    const root = workTree();
+    const text = run(["new", "item", "fix-hook", "--kind", "bug", "--root", root, "--format", "text"]).stdout;
+    const last = text.trimEnd().split("\n").at(-1) as string;
+    expect(last).toContain("fill its placeholders");
+    expect(last).toContain("npx prettier --write docs/items/fix-hook.md");
+
+    // A promotion rewrites links in other files; those need formatting too.
+    writeFileSync(
+      join(root, "docs/features/a/notes.md"),
+      "---\ntype: artifact\ntitle: Notes\ndescription: Notes.\nstatus: draft\ngenerated: { by: t, at: 2026-01-01 }\n---\n\nSee [fix](../../items/fix-hook.md).\n"
+    );
+    const promoted = run(["new", "plan", "--owner", "item/fix-hook", "--root", root, "--format", "text"]).stdout;
+    expect(promoted.trimEnd().split("\n").at(-1)).toContain(
+      "npx prettier --write docs/items/fix-hook/plan.md docs/items/fix-hook/item.md docs/features/a/notes.md"
+    );
+    // JSON output is unchanged: the hint is for a person reading text.
+    expect(run(["new", "playbook", "p", "--root", root, "--format", "json"]).stdout).not.toContain("prettier");
+  });
+
   test("JSON output carries the new item's full id, and no id for other types (D25)", () => {
     const root = workTree();
     const data = JSON.parse(newItem(root, "fix-hook", "--kind", "bug").stdout).data;

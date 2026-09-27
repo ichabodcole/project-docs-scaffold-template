@@ -1235,6 +1235,11 @@ export const newCommand: Command = {
         for (const p of promotion.rewritten)
           if (p !== promotion.to) console.log(`  rewrote links in ${p}`);
       }
+      // A consumer's `prettier --check` hook fails the commit on what this
+      // wrote, a rewritten link line included; name every file it touched.
+      console.log(
+        `  next: fill its placeholders, then run the project's formatter before committing, e.g. npx prettier --write ${created.join(" ")}`
+      );
     }
     return ExitCode.Success;
   },

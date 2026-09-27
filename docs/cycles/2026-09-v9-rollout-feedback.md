@@ -57,3 +57,4 @@ _Written at close, not before._
 
 - fix/pdocs-output-and-placeholder-lint (landed 2026-09-26)
 - fix/v3-migration-spellbook-round-2 (landed 2026-09-27)
+- fix/finalize-branch-wocky-rows (landed 2026-09-27)

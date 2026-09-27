@@ -5,8 +5,8 @@ description:
   A skill for reporting a bug in a shipped plugin from the project that hit it,
   without leaving that project.
 status: stable
-# "Approved for implementation" was the bold status. Approved is not built,
-# and nothing was: the brief is still live work.
+# "Approved for implementation" was the bold status. It shipped as
+# report-issue, and was renamed provide-feedback on 2026-06-30.
 generated: { by: unknown, at: 2026-04-13 }
 ---
 

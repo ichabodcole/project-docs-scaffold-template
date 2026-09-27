@@ -127,6 +127,9 @@ git log <base>..HEAD --oneline
 git diff --stat <base>
 ```
 
+**No commits, but a dirty tree?** Commit the work — the code, not `docs/` —
+before Step 2. The review reads the net diff, and an empty one reviews nothing.
+
 ### Step 2: Independent Code Review (Mandatory)
 
 **This step is not optional and cannot be self-performed.** Dispatch a subagent
@@ -446,8 +449,8 @@ frontmatter:
 - `description` — one sentence saying what this session did. Not a paraphrase of
   the title; this is the line that has to earn a reader's click.
 - `tags` — 2–4 kebab-case keywords, replacing the template's `[area, feature]`
-  (or pass `--tags` to `pdocs new`). The lint doesn't require them on workbench
-  documents, but a session someone will search for later is worth tagging.
+  (or pass `--tags` to `pdocs new`). Left as `[area, feature]`, `pdocs check`
+  reports it as `PLACEHOLDER`: replace them, or remove the key.
 - `status` — `stable`, as the template ships it. A session is a frozen record,
   complete the moment it is written; it is never a draft.
 - `generated: { by: <your model or name>, at: <today, YYYY-MM-DD> }`
@@ -462,6 +465,11 @@ link the lint checks. From `items/<slug>/sessions/` and from
 
 A session carries **no `lifecycle`** — writing one is a lint error. See
 `docs/SCHEMA.md` for why frozen records don't have a pipeline state.
+
+**Cite this branch's commits by what they did, not by SHA**, whenever Step 8
+squashes or may. A squash rewrites every commit in `<base>..HEAD` and leaves the
+citation pointing at nothing. This applies to every document Steps 4–6 write,
+not only the session. A SHA already on `<base>` is safe to cite.
 
 **Now file the review's deferred findings** (Step 2), each with
 `--from <this session's path>`, and list them in the session under a short
@@ -535,10 +543,12 @@ action to perform, not a recommendation to offer. Do them without asking.
 - **Handoff** — Does this work require specific deployment steps beyond merging
   code? (DB migrations, service redeployments, environment config changes,
   manual coordination.) If so, create one beside the session's owner:
-  `pdocs new handoff --owner item/<slug>` (or `feature/<slug>`). **If the
-  project has `docs/playbooks/handoff-playbook.md`, follow it** for what the
-  handoff must contain — it takes precedence over the template — and say that
-  you did.
+  `pdocs new handoff --owner item/<slug> --title "…" --description "…" --tags …`
+  (or `--owner feature/<slug>`). Pass all three: until they are filled,
+  `pdocs check` reports the template's H1, description and tags as
+  `PLACEHOLDER`. **If the project has `docs/playbooks/handoff-playbook.md`,
+  follow it** for what the handoff must contain — it takes precedence over the
+  template — and say that you did.
 - **Architecture** — Did this change the system's structure in a way a future
   reader would need explained? If so, propose creating or updating a doc in
   `docs/architecture/` (see `docs/architecture/README.md` for conventions).
@@ -611,9 +621,10 @@ action to perform, not a recommendation to offer. Do them without asking.
     second pass is idempotent, not duplicated work.
   - When invoked from here, it leaves its changes uncommitted for Step 7. If it
     archives, the squash in Step 8 operates on the post-move tree — which is
-    correct. Step 8's sha scan deliberately does not: it reads the branch as it
+    correct. Step 8's veto scan deliberately does not: it reads the branch as it
     stood _before_ Step 7's documentation commit, so neither the archival nor
-    the reconciliation can veto the squash that carries them.
+    the reconciliation can veto the squash that carries them. Its second scan
+    reads that commit only to report citations to reword.
 
 - **The active cycle** — if the project keeps `docs/cycles/`, find the cycle
   whose `lifecycle` is `active`:
@@ -669,9 +680,9 @@ and moves (the item's state, plan reconciliation, a promotion, any
 files). Scope the staging to `docs/` rather than staging everything, so
 unrelated uncommitted code doesn't ride along.
 
-**Re-run the documentation lint first** (below), then commit. **This commit
-carries the work item's trailer.** End its message with the item's full `id`, as
-a git trailer, in one final paragraph with any other trailers:
+**Format, then re-run the documentation lint** (both below), then commit. **This
+commit carries the work item's trailer.** End its message with the item's full
+`id`, as a git trailer, in one final paragraph with any other trailers:
 
 ```bash
 git commit -m "docs: session record for <branch>" -m "Work-Item: <full item id>
@@ -691,6 +702,27 @@ record (Strategy B) — and check it survived in Step 8.5.
 If Step 8 lands on a single-commit squash, this commit folds into it — that's
 expected. Committing here still matters: it keeps the documentation work
 recoverable and reviewable as its own step before any history rewriting.
+
+**Format every changed file under the docs root before that commit** — after the
+last `pdocs` write of Steps 4–6. `pdocs new session --owner` can promote an item
+and rewrite links in other files, the cycle file among them, and a rewritten
+line is not always formatted. A `prettier --check` hook fails the commit on it;
+a `--write` hook reflows it silently, so the commit differs from what you
+linted. Use the project's format script if it has one (Step 3's
+`pnpm run format`); otherwise, for the project's own Prettier:
+
+```bash
+# Paths are root-relative; substitute the docs root if it is not `docs/`.
+(cd "$(git rev-parse --show-toplevel)" &&
+  { git diff -z --name-only --diff-filter=d HEAD -- 'docs/*.md'
+    git ls-files -z --others --exclude-standard -- 'docs/*.md'; } |
+  xargs -0 -r npx --no-install prettier --write)
+```
+
+`--no-install` stops `npx` downloading a Prettier the project never chose and
+reformatting `docs/` with its defaults. If it fails with "missing packages", the
+project has no Prettier: say so, and carry on. So does a project with no
+formatter at all.
 
 **The lint run before that commit**, if the project has one (Step 3):
 
@@ -736,10 +768,27 @@ precedence over the strategies below — and say that you did.
    SCAN=HEAD^
 
    git log "$BASE"..HEAD --oneline | wc -l                       # commit count
-   for sha in $(git log "$BASE"..HEAD --format=%h); do
-     hits=$(git -C "$ROOT" grep -l "$sha" "$SCAN" -- '*.md')
-     if [ -n "$hits" ]; then printf '%s is cited by:\n%s\n' "$sha" "$hits"; fi
-   done                                                          # shas cited in docs
+   # Match the 7-character prefix of each full sha: git's shortest
+   # abbreviation, and the start of every longer one a document can cite.
+   for sha in $(git log "$BASE"..HEAD --format=%H); do
+     short=${sha:0:7}
+     hits=$(git -C "$ROOT" grep -l "$short" "$SCAN" -- '*.md')
+     if [ -n "$hits" ]; then printf '%s is cited by:\n%s\n' "$short" "$hits"; fi
+   done                                                          # veto: shas cited in docs
+
+   # Step 7's own commit, which the scan above steps past: the session record
+   # is the document most likely to cite a branch sha. Lines it ADDED only.
+   # Not a veto.
+   if [ "$SCAN" = "HEAD^" ]; then
+     for sha in $(git log "$BASE"..HEAD --format=%H); do
+       short=${sha:0:7}
+       hits=$(git -C "$ROOT" diff --no-color --no-prefix -U0 HEAD^ HEAD -- '*.md' |
+         awk -v s="$short" '/^diff --git /{h=1}
+           h && /^\+\+\+ /{f=substr($0,5); sub(/\t$/,"",f); h=0; next}
+           !h && /^\+/ && index($0,s){print f}' | sort -u)
+       if [ -n "$hits" ]; then printf '%s: reword before squashing, in:\n%s\n' "$short" "$hits"; fi
+     done                                                        # shas Step 7 cites
+   fi
 
    # Contributors whose authorship a squash would collapse. Count these two
    # lists separately; AI co-author trailers are deliberately absent from both.
@@ -750,9 +799,14 @@ precedence over the strategies below — and say that you did.
 
    The block exits 0 whatever it finds — the findings are its output, not its
    exit status. An empty seats list is the normal case (no Anthill seats), not a
-   failure. If the sha loop finds any hit, or **either** identity list returns
+   failure. If the veto loop finds any hit, or **either** identity list returns
    more than one line, **squashing would destroy that information.** Surface
    this explicitly no matter which strategy follows.
+
+   **A "reword before squashing" hit is not a veto.** It is this run's own
+   writing citing a commit the squash will rewrite. If the landing squashes,
+   reword each citation to describe the work (Step 4), format, amend Step 7's
+   commit, and rerun the block. If history stays untouched, leave it.
 
    **Count seats and human authors — never AI co-author trailers.** A branch
    with one human author and one `Co-Authored-By: Claude …` trailer carries that
@@ -768,18 +822,21 @@ precedence over the strategies below — and say that you did.
    **About the sha scan.** It reads a committed ref rather than the working
    tree: by this point the tree holds the session doc, the item's new state and
    the reconciled plan written in Steps 4–6, and scanning it lets this skill's
-   own output veto its own squash. It scans the branch rather than `<base>`,
-   because a commit in `<base>..HEAD` did not exist at `<base>` and nothing
-   there could cite it — the citations that matter were written on this branch,
-   by the work itself. A short sha is seven hex characters and can appear
-   incidentally, so read each hit before treating it as a veto.
+   own output veto its own squash. That output is still read — by the second
+   loop, which reads only the lines Step 7's commit added and only ever asks for
+   a reword; a citation Step 7 reworded away no longer appears. The veto scan
+   reads the branch rather than `<base>`, because a commit in `<base>..HEAD` did
+   not exist at `<base>` and nothing there could cite it — the citations that
+   matter were written on this branch, by the work itself. A seven-character
+   prefix can appear incidentally, so read each hit before treating it as a
+   veto.
 
-   **The `-C "$ROOT"` anchor is load-bearing.** `git grep`'s `'*.md'` pathspec
-   resolves against the current directory, so running this from a package
-   subdirectory in a monorepo searches only that subtree and reports zero
-   citations — a silent and _permissive_ failure in the one guard standing
-   between a SHA-cited ruling and the squash that would destroy it. This check
-   fails open, so the anchor is not optional.
+   **The `-C "$ROOT"` anchor is load-bearing.** The `'*.md'` pathspec of
+   `git grep` and `git diff` resolves against the current directory, so running
+   this from a package subdirectory in a monorepo searches only that subtree and
+   reports zero citations — a silent and _permissive_ failure in the one guard
+   standing between a SHA-cited ruling and the squash that would destroy it.
+   This check fails open, so the anchor is not optional.
 
 2. **Look for a project-owned landing policy.** Check, in order:
    - `docs/playbooks/branch-finalization-playbook.md` (the override at the top
@@ -803,9 +860,9 @@ precedence over the strategies below — and say that you did.
 3. **If a policy was found:** print the section's content inline — not "see your
    project's policy"; a pointer that needs a second lookup is a pointer that
    gets skipped — and follow it. If it conflicts with what step 1 found (e.g.
-   the policy says "always squash" but this branch has cited shas or multiple
-   identities), surface the conflict to the user before proceeding. Don't
-   silently pick one.
+   the policy says "always squash" but the veto loop found cited shas, or there
+   are multiple identities), surface the conflict to the user before proceeding.
+   Don't silently pick one.
 
 4. **If no policy was found**, say so explicitly — an announced absence, not a
    silent guess — then present three options and ask the user to choose, or to
@@ -813,8 +870,9 @@ precedence over the strategies below — and say that you did.
    - **Strategy A or Strategy B** (below), with their tradeoffs, informed by the
      branch facts from step 1.
    - **Leave history untouched** — merge or PR as-is, no squash/consolidation.
-     Lead with this option whenever step 1 found cited shas or multiple
-     identities, since squashing would destroy real information in that case.
+     Lead with this option whenever step 1's veto loop found cited shas, or step
+     1 found multiple identities, since squashing would destroy real information
+     in that case.
 
 **Strategy A — Single-commit squash:**
 
@@ -1004,6 +1062,9 @@ Ask for user confirmation at these points:
   `AGENTS.md`/`CLAUDE.md` may explicitly forbid squashing (SHA-cited docs,
   multiple Anthill seats). Check for `## Branch Landing Policy` before executing
   Step 8, and announce it explicitly if none exists.
+- **Citing a branch SHA in the session record** — a squash leaves it pointing at
+  nothing, and the veto scan never reads Step 7's commit. Describe the work
+  instead (Step 4); Step 8's second loop reports what slipped through.
 - **Rolling your own multi-commit squash** — If Strategy B is chosen, use the
   `consolidate-long-branch` skill. Ad-hoc interactive rebase without the
   tree-equivalence gate is how silent content drift enters the merged history.

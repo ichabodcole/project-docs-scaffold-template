@@ -6,7 +6,7 @@ description:
   squash scan and empty branch, formatter guidance, and pdocs new and set
   output."
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: active
+lifecycle: done
 id: 01a0dfd9-e9d7-77d3-9666-954c1028941b
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-26 }
@@ -43,9 +43,9 @@ The lint passing a fresh cycle with every placeholder in place
 
 ## Definition of done
 
-- [ ] Each of the five rows is fixed, with a test for the `pdocs` changes (4,
+- [x] Each of the five rows is fixed, with a test for the `pdocs` changes (4,
       5).
-- [ ] A fresh `pdocs new item --tags a,b` and `pdocs new cycle` in a generated
+- [x] A fresh `pdocs new item --tags a,b` and `pdocs new cycle` in a generated
       payload pass `pdocs check` and `prettier --check` with no hand edits to
       their frontmatter.
 - [ ] Plugin 4.0.1 is released carrying them.
