@@ -1,5 +1,14 @@
 # Changelog
 
+## [9.0.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.0.0...project-docs-scaffold-template-v9.0.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **migrations:** the v3.0 migration handles what Spellbook hit ([e687e72](https://github.com/ichabodcole/project-docs-scaffold-template/commit/e687e72eb9137bfcf06a1b528f4301fe45f3ac84))
+* **pdocs:** new, set and find write what consumers expect; the lint reports placeholders ([3d07e26](https://github.com/ichabodcole/project-docs-scaffold-template/commit/3d07e2642f97f1c55be2671302edd9cd8de743d5))
+* **project-docs:** finalize-branch catches SHAs cited in the session, commits a dirty tree, and formats docs ([fe4bff5](https://github.com/ichabodcole/project-docs-scaffold-template/commit/fe4bff5cfa000de88a2ed58314d97207808ff36e))
+
 ## [9.0.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v8.1.1...project-docs-scaffold-template-v9.0.0) (2026-09-26)
 
 
