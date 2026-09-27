@@ -1,6 +1,6 @@
 {
   "docsRoot": "docs",
-  "version": "9.0.1",
+  "version": "9.1.0",
   "lint": {
     "adopting": false,
     "exclude": [],

@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.0.1...project-docs-scaffold-template-v9.1.0) (2026-09-27)
+
+
+### Features
+
+* **project-docs:** plugin 4.1.0; the v3.0 migration installs scaffold 9.0.1 ([8212319](https://github.com/ichabodcole/project-docs-scaffold-template/commit/821231996fc929bc358cd87773da5ff6a39b96aa))
+
 ## [9.0.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.0.0...project-docs-scaffold-template-v9.0.1) (2026-09-27)
 
 
