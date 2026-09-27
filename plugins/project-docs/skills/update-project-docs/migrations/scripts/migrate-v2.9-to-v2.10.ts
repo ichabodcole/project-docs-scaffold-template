@@ -832,9 +832,12 @@ const WHY_KEPT: Record<Exclude<Verdict, "update" | "install">, string> = {
  * Seeded: negotiated by hash. For every template the scaffold ships, the
  * verdict against the manifest decides; only `update` and `install` write.
  * Then Prettier over what was written, THEN the record — the ordering the
- * end-of-run check enforces. A recorded path the scaffold no longer ships is
- * reported and its record kept: a recorded path stays seeded whatever it is
- * called, and the lint reads the manifest alongside the shapes.
+ * end-of-run check enforces. A recorded path the scaffold does not ship is
+ * named as the adopter's own and its record kept: a recorded path stays seeded
+ * whatever it is called, and the lint reads the manifest alongside the shapes.
+ * "Its own" is exact, not a guess: the scaffold shipped one set of templates
+ * from 7.0.0, before any record existed, to 8.1.1, so such a record is one
+ * v2.8-to-v2.9 once took by name pattern alone.
  */
 function reconcileSeeded(ctx: Ctx, templates: string[], version: string): void {
   step(4, "Reconcile the seeded templates");
@@ -892,7 +895,7 @@ function reconcileSeeded(ctx: Ctx, templates: string[], version: string): void {
     for (const v of ["keep-modified", "keep-unknown", "keep-deleted"] as const)
       for (const rel of plan[v]) note(`would keep ${d(rel)} — ${v}: ${WHY_KEPT[v]}`);
     for (const rel of unshipped)
-      note(`${d(rel)} is recorded but the scaffold no longer ships it — left as it is, record kept`);
+      note(`${d(rel)} is recorded, but the scaffold has never shipped it — it is yours; left as it is, record kept`);
     const wouldRecord = [...plan.update, ...identical, ...plan.install];
     const wouldWrite = plan.update.length + plan.install.length;
     note(
@@ -923,7 +926,7 @@ function reconcileSeeded(ctx: Ctx, templates: string[], version: string): void {
   for (const v of ["keep-modified", "keep-unknown", "keep-deleted"] as const)
     for (const rel of plan[v]) note(`kept ${d(rel)} — ${v}: ${WHY_KEPT[v]}`);
   for (const rel of unshipped)
-    note(`${d(rel)} is recorded but the scaffold no longer ships it — left as it is, record kept`);
+    note(`${d(rel)} is recorded, but the scaffold has never shipped it — it is yours; left as it is, record kept`);
 
   // Format BEFORE recording, and only what this run wrote: reformatting a
   // template the adopter kept, or any document, is collateral the mechanism

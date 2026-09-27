@@ -45,6 +45,14 @@
  *                          touches — on a re-run after a stop, over edits made
  *                          since the stop. Without it the preflight stops on them.
  *
+ *   bun migrate-v2.10-to-v3.0.ts [--root <path>] --respell <path>... [--write]
+ *
+ *   --respell <path>...    after the run: list every retired docs path (docs/projects/…)
+ *                          spelled in the files named — a folder means every file
+ *                          under it — and what the move record respells it to.
+ *                          Writes nothing.
+ *   --write                with --respell: write those files, and only those.
+ *
  * Exit codes: 0 success · 1 the migration could not complete · 2 bad invocation.
  */
 import { createHash } from "node:crypto";
@@ -76,7 +84,7 @@ import {
 
 const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
 /** The scaffold release this migration was written against (plan D16). */
-const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.0.0";
+export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.0.0";
 const MANIFEST_NAME = ".pdocs-seed.json";
 /**
  * The run's own record, kept until a run completes, inside the repository's git
@@ -88,6 +96,14 @@ const MANIFEST_NAME = ".pdocs-seed.json";
  * interrupted run had begun from the plan that began them.
  */
 export const STATE_NAME = "pdocs-migrate-v2.10-to-v3.0.json";
+/**
+ * The run's MOVE RECORD, beside the record above and KEPT after the run
+ * completes: every docs-relative `[from, to]` the run's links follow. Phase 10
+ * reads it to suggest the fix for a broken link — on a re-run too, when the plan
+ * has nothing left to move — and `--respell` reads it to respell retired paths
+ * outside the docs root. Written when a run first moves anything.
+ */
+export const MOVES_NAME = "pdocs-migrate-v2.10-to-v3.0.moves.json";
 const PHASES = 12;
 /** `generated.by` on the documents this run creates. */
 export const ACTOR = "migrate-v2.10-to-v3.0";
@@ -122,6 +138,8 @@ export const RETIRED_READMES: Record<string, string> = {
   "reports/README.md": "items/README.md",
   "projects/README.md": "features/README.md",
 };
+/** Every template the 9.0.0 scaffold keeps in `TEMPLATES/`: a name an adopter's own template may not take. */
+const SCAFFOLD_TEMPLATES = new Set([...Object.values(TEMPLATE_RENAMES), ...Object.values(RETIRED_TEMPLATES)]);
 /** Where a link to a retired FOLDER itself now points. */
 export const FOLDER_SUCCESSOR: Record<string, string> = {
   backlog: "items",
@@ -135,6 +153,48 @@ export const FOLDER_SUCCESSOR: Record<string, string> = {
 const OWNED_ROOT = ["SCHEMA.md", "README.md", "AGENTS.md", "CLAUDE.md"];
 /** The 9.0.0 category folders whose README.md the refresh replaces (owned). */
 const OWNED_CATEGORIES = ["architecture", "specifications", "interaction-design", "playbooks", "cycles", "features", "items"];
+/**
+ * A Markdown text reduced to what a formatter cannot change: the `docs_version`
+ * value, emphasis and escape marks, table padding and all wrapping are dropped,
+ * and what is left is hashed (16 hex digits). Two texts with the same key say
+ * the same thing; an added sentence changes it.
+ */
+export function proseKey(text: string): string {
+  const plain = text
+    .replace(/^docs_version:.*$/m, "docs_version")
+    .replace(/[*_\\]/g, "")
+    .replace(/:?-{3,}:?/g, "---")
+    .replace(/\s+/g, " ")
+    .trim();
+  return createHash("sha256").update(plain).digest("hex").slice(0, 16);
+}
+
+/**
+ * Every owned Markdown file the refresh replaces or removes, as each release
+ * before 9.0.0 shipped it, by `proseKey`. A file whose key is in none of its
+ * releases holds edits of the adopter's — Spellbook kept its multi-sprint
+ * convention in its owned `projects/README.md` — and the run names it with the
+ * command that recovers it. Derived from the release tags, and pinned to them
+ * by the test beside this file.
+ */
+export const OWNED_BEFORE_9: Record<string, string[]> = {
+  "SCHEMA.md": ["901d5b55b7d48422", "bcf64b0b7e5f20ea", "ed4c7ff0666db6f1"],
+  "README.md": ["1be5adeeeb3eda24", "2dfa4eca342cb5c5", "3fd655241d87344f", "7b9204982f2451be", "8b94b8d4f8c3e2de", "fe573ebb6c6ea6b7", "feac07aacbdf0615"],
+  "AGENTS.md": ["28870996acb9be93", "3510f2c1d02a4463", "4e85093fe9f42c12", "dbf3ee4501c58069", "fc5ac2d9fdf95b05"],
+  "CLAUDE.md": ["2292934d5083c5d4"],
+  "architecture/README.md": ["d84ef4267ad8ac4f"],
+  "specifications/README.md": ["06db0a77fae2f7b8"],
+  "interaction-design/README.md": ["4efdc4a3ca453eb7"],
+  "playbooks/README.md": ["21d3c4d5ed2e0f53", "e89e2ebd733d3e25"],
+  "cycles/README.md": ["c3c1cbf60ce2e388"],
+  "backlog/README.md": ["90ca6ce56a72d3df", "aca2f560332d6c77"],
+  "briefs/README.md": ["20bc4cbaf98abaf7"],
+  "fragments/README.md": ["47be902ce910b87d"],
+  "investigations/README.md": ["5ae5c3cff8b7e2f7", "8fd3268fdc29d8bc"],
+  "reports/README.md": ["259a826dd9bd1f50", "667ded81fb9d1cca", "bcd888e65d4e9bd8", "c4feb2ad7c9e6058"],
+  "projects/README.md": ["01169453c766d4f8", "074a5920ef3e666e", "09c1f9b0e352ca32", "13069018bd4d0dc2", "453831a93deb7620", "d23f606ea522b749"],
+};
+
 /** What proves a scaffold is 9.0.0 or later: each is checked in phase 2. */
 const SCAFFOLD_MARKERS: Array<[string, string | null]> = [
   ["scripts/pdocs/lint/registry.ts", "FEATURES_FOLDER"],
@@ -775,6 +835,57 @@ export function rewriteFolderLinks(text: string, file: string, folderMap: Readon
   return { text: out, changed: edits.length };
 }
 
+/** The path `abs` was at before the moves in `moveMap` (old → new): the inverse of `movedTo`. */
+export function movedFrom(abs: string, moveMap: ReadonlyMap<string, string>): string {
+  let best: [string, string] | null = null;
+  for (const [from, to] of moveMap) {
+    if (abs === to) return from;
+    if (abs.startsWith(to + sep) && (best === null || to.length > best[1].length)) best = [from, to];
+  }
+  return best === null ? abs : best[0] + abs.slice(best[1].length);
+}
+
+/**
+ * The link `target`, broken in the file at `fileAbs`, respelled to a document
+ * this run's moves account for — or null. Two readings, in order:
+ *
+ *   1. the target itself moved (a link the rewrite could not see);
+ *   2. the link was written ONE FOLDER LEVEL SHORT where the file stood before
+ *      the run: resolved from the folder above, it names a document that moved
+ *      or exists. A legacy `_archive/` was moved into by hand without its links
+ *      being respelled, so every relative link in it lost a level — 62 of
+ *      Spellbook's 82 phase-10 problems.
+ *
+ * A suggestion, never a rewrite: the second reading is a reading, and a link
+ * broken for another reason can land on a real file by chance. PURE over
+ * `exists`.
+ */
+export function suggestLinkFix(
+  fileAbs: string,
+  target: string,
+  moveMap: ReadonlyMap<string, string>,
+  exists: (abs: string) => boolean
+): string | null {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return null;
+  const hash = target.indexOf("#");
+  const pathPart = hash === -1 ? target : target.slice(0, hash);
+  const anchor = hash === -1 ? "" : target.slice(hash);
+  if (pathPart === "" || isAbsolute(pathPart)) return null;
+  const dir = dirname(fileAbs);
+  const now = resolve(dir, pathPart);
+  const before = movedFrom(fileAbs, moveMap);
+  // The link as it was written where the file stood: the rewrite kept what it resolved to.
+  const written = relative(dirname(before), now);
+  const shortBy1 = resolve(dirname(dirname(before)), written);
+  for (const candidate of [movedTo(now, moveMap), movedTo(shortBy1, moveMap)]) {
+    if (candidate === now || !exists(candidate)) continue;
+    let rel = relative(dir, candidate).split(sep).join("/");
+    if (pathPart.startsWith("./") && !rel.startsWith(".")) rel = `./${rel}`;
+    return `${rel}${anchor}`;
+  }
+  return null;
+}
+
 /** Docs-relative path a link in `fromRel` resolves to. */
 export const resolveRel = (fromRel: string, link: string) => posix.normalize(posix.join(posix.dirname(fromRel), link));
 
@@ -1032,6 +1143,11 @@ export interface MovePlan {
   handled: Set<string>;
   /** Legacy files that are not documents, removed: `.gitkeep`, `.DS_Store`. */
   junk: string[];
+  /**
+   * `[from, to]`: a template of the adopter's own — one the scaffold never
+   * shipped — moved as it is into `TEMPLATES/`, where 9.0.0 keeps every template.
+   */
+  ownTemplates: Array<[string, string]>;
 }
 
 const isJunk = (rel: string) => basename(rel) === ".gitkeep" || basename(rel) === ".DS_Store";
@@ -1206,7 +1322,7 @@ export function buildMoveMap(files: string[], textOf: (rel: string) => string | 
     }
     blockers.push(
       owners.length === 0
-        ? `${rel} — a report with no owner: no investigation links to it, and it links to none. Link it from the investigation it belongs to, or move it into the owning project's reports/ folder (docs/projects/<slug>/reports/).`
+        ? `${rel} — a report with no owner: no investigation is linked with it — none links to it, and it links to none; links from other documents do not decide. Add a link from the report to the investigation it belongs to, or move it into the owning project's reports/ folder (docs/projects/<slug>/reports/) with its type set to \`artifact\` — the v2.10 lint types everything there as an artifact — and the run makes it a report again.`
         : `${rel} — a report with ${owners.length} possible owners (${owners.map((o) => o.from).join(", ")}). Add a link from the report to the investigation it belongs to — the report's own link decides — or move it into the owning project's reports/ folder.`
     );
   }
@@ -1226,6 +1342,56 @@ export function buildMoveMap(files: string[], textOf: (rel: string) => string | 
     );
   }
 
+  // --- a template the scaffold never shipped is the adopter's own. Every template lives in
+  // TEMPLATES/ from 9.0.0, so that is where it goes, as it is — no judgment in that. Only a
+  // name already taken there, or a copy in an archive, is left to the adopter. The scaffold's
+  // own templates are the seeds phase's (`planTemplates`); an earlier migration may have
+  // recorded one of these by its name, which is why the record is not what decides.
+  const ownTemplates: Array<[string, string]> = [];
+  // Compared without case: on a case-insensitive filesystem (macOS, Windows) `plan.template.md`
+  // and `PLAN.template.md` are one file, and a clash found only mid-phase 8 stops a half-done run.
+  const fold = (x: string) => x.toLowerCase();
+  const scaffoldNamed = new Map([...SCAFFOLD_TEMPLATES].map((t) => [fold(t), t]));
+  const presentNamed = new Map(files.map((f) => [fold(f), f]));
+  const goesTo = new Map<string, { rel: string; to: string }>();
+  for (const rel of files) {
+    const top = rel.split("/")[0] as string;
+    if (!LEGACY_FOLDERS.includes(top) || handled.has(rel) || !isSeeded(rel)) continue;
+    if (rel in RETIRED_TEMPLATES || rel in TEMPLATE_RENAMES || isJunk(rel)) continue;
+    handled.add(rel);
+    const p = rel.split("/");
+    if (p.includes("_archive")) {
+      blockers.push(`${rel} — a template of yours, in an archive: the scaffold never shipped it. Keep it outside ${top}/, or delete it, before the run.`);
+      continue;
+    }
+    const at = p.lastIndexOf("TEMPLATES");
+    const to = `TEMPLATES/${at === -1 ? basename(rel) : p.slice(at + 1).join("/")}`;
+    const other = goesTo.get(fold(to));
+    const [clash, named] = scaffoldNamed.has(fold(to))
+      ? ["is the scaffold's own", scaffoldNamed.get(fold(to)) as string]
+      : presentNamed.has(fold(to))
+        ? ["is already there", presentNamed.get(fold(to)) as string]
+        : other
+          ? [`is where ${other.rel} goes`, other.to]
+          : [null, to];
+    if (clash) {
+      const caseOnly = named !== to;
+      const what =
+        clash === "is the scaffold's own" && caseOnly ? `is the scaffold's own ${named}`
+        : clash === "is already there" && caseOnly ? `is already there as ${named}`
+        : clash;
+      blockers.push(
+        `${rel} — a template of yours: the scaffold never shipped it. It would move to ${to}, which ${what}` +
+          (caseOnly ? " — the names differ only in case, and on a case-insensitive filesystem (macOS, Windows) they are one file" : "") +
+          `. Rename it, or keep it outside ${top}/ (or delete it), before the run.`
+      );
+      continue;
+    }
+    goesTo.set(fold(to), { rel, to });
+    ownTemplates.push([rel, to]);
+  }
+  ownTemplates.sort((a, b) => (a[0] < b[0] ? -1 : 1));
+
   // --- anything else in a retired folder is a file this migration cannot place
   for (const rel of files) {
     const top = rel.split("/")[0] as string;
@@ -1234,7 +1400,7 @@ export function buildMoveMap(files: string[], textOf: (rel: string) => string | 
     blockers.push(`${rel} — not a document this migration knows where to put. Move it out of ${top}/ (or delete it) before the run.`);
   }
 
-  return { moves, blockers, handled, junk };
+  return { moves, blockers, handled, junk, ownTemplates };
 }
 
 /** What the seeds phase does with the templates that moved or retired. PURE over its inputs. */
@@ -1390,11 +1556,14 @@ const fileHas = (abs: string, marker: string) => existsSync(abs) && readFileSync
 
 const sameBytes = (a: string, b: string) => existsSync(a) && existsSync(b) && hashOf(a) === hashOf(b);
 
-/** Every file under `dir`, relative to it, sorted. `.git` and `node_modules` are not walked. */
+/** Folders no walk descends into: version control's own, and installed dependencies. */
+const NOT_WALKED = new Set([".git", ".hg", ".svn", "node_modules"]);
+
+/** Every file under `dir`, relative to it, sorted. A NOT_WALKED folder is not walked. */
 function filesIn(dir: string, out: string[] = [], base = dir): string[] {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === ".git" || entry.name === "node_modules") continue;
+    if (NOT_WALKED.has(entry.name)) continue;
     const abs = join(dir, entry.name);
     if (entry.isDirectory()) filesIn(abs, out, base);
     else if (entry.isFile()) out.push(relative(base, abs).split(sep).join("/"));
@@ -1415,6 +1584,119 @@ export function serialiseManifest(m: SeedManifest, before: string | null): strin
 }
 
 // =======================================================================================
+// `--respell`: retired paths outside the docs root, from the move record
+// =======================================================================================
+
+/**
+ * `text` with every retired docs path it spells — `docs/projects/alpha/proposal.md`
+ * in a code comment, `docs/backlog/` in a JSON config — respelled from `moves`
+ * (repository-relative, old → new; a folder carries what is inside it), and
+ * each hit by line. A path is only whole when nothing path-like touches it:
+ * `docs/projects/alpha` is not a prefix of `docs/projects/alpha-two`, and
+ * `mydocs/backlog` is not `docs/backlog`. A retired folder itself goes to its
+ * successor; a retired path nothing moved is reported and left as written
+ * (`to: null`). PURE.
+ */
+export function respellText(
+  text: string,
+  docsRootName: string,
+  moves: ReadonlyMap<string, string>
+): { text: string; hits: Array<{ line: number; from: string; to: string | null }> } {
+  const esc = docsRootName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(?<![A-Za-z0-9_-])${esc}/(?:${LEGACY_FOLDERS.join("|")})(?![A-Za-z0-9_-])(?:/[A-Za-z0-9._@+~-]*)*`, "g");
+  const keys = [...moves.keys()].sort((a, b) => b.length - a.length);
+  const hits: Array<{ line: number; from: string; to: string | null }> = [];
+  const edits: Array<{ start: number; end: number; value: string }> = [];
+  for (const m of text.matchAll(re)) {
+    const from = m[0].replace(/\.+$/, "");
+    const start = m.index as number;
+    const slash = from.endsWith("/") ? "/" : "";
+    const bare = slash ? from.slice(0, -1) : from;
+    let to: string | null = null;
+    const k = keys.find((key) => bare === key || bare.startsWith(`${key}/`));
+    if (k !== undefined) to = (moves.get(k) as string) + bare.slice(k.length) + slash;
+    else {
+      const folder = bare.slice(docsRootName.length + 1);
+      if (folder in FOLDER_SUCCESSOR) to = `${docsRootName}/${FOLDER_SUCCESSOR[folder]}${slash}`;
+    }
+    const line = text.slice(0, start).split("\n").length;
+    hits.push({ line, from, to });
+    if (to !== null && to !== from) edits.push({ start, end: start + from.length, value: to });
+  }
+  let out = text;
+  for (const e of edits.reverse()) out = out.slice(0, e.start) + e.value + out.slice(e.end);
+  return { text: out, hits };
+}
+
+/** Every regular text file a `--respell` argument names: the file, or every file under the folder. */
+function respellFiles(ctx: Ctx, args: string[]): string[] {
+  const out = new Set<string>();
+  for (const arg of args) {
+    const abs = resolve(arg);
+    if (!existsSync(abs)) fail(`--respell: ${arg} does not exist.`);
+    const all = statSync(abs).isDirectory() ? filesIn(abs).map((r) => join(abs, r)) : [abs];
+    for (const f of all) {
+      if (relative(realIfPossible(ctx.root), realIfPossible(f)).split(sep).some((part) => NOT_WALKED.has(part))) continue;
+      const bytes = readFileSync(f);
+      if (bytes.length > 5_000_000 || bytes.includes(0)) continue; // not text
+      out.add(f);
+    }
+  }
+  return [...out].sort();
+}
+
+/**
+ * `--respell <path>...`: list every retired docs path the named files spell,
+ * and what the move record respells it to; with `--write`, write those files
+ * — and only those. The migration's link rewrite covers Markdown links; this
+ * covers the rest (a code comment, `.anthill/`, a root DEV_KICKOFF.md).
+ */
+function respell(ctx: Ctx, args: string[], writeIt: boolean): void {
+  if (!existsSync(ctx.movesPath))
+    fail(
+      `--respell: there is no move record at ${ctx.movesPath}. It is written when this migration first moves\n` +
+        `   something in this repository, and kept after the run. Run the migration first, from this project's root (or pass --root).`
+    );
+  let rec: { docsRoot?: unknown; moves?: unknown };
+  try {
+    rec = JSON.parse(readFileSync(ctx.movesPath, "utf8"));
+  } catch (e) {
+    return fail(`--respell: the move record ${ctx.movesPath} is not valid JSON: ${(e as Error).message}`);
+  }
+  const docsRootName = typeof rec.docsRoot === "string" ? rec.docsRoot : ctx.docsRootName;
+  const pairs = Array.isArray(rec.moves) ? (rec.moves as Array<[string, string]>) : [];
+  const moves = new Map(pairs.map(([f, t]) => [`${docsRootName}/${f}`, `${docsRootName}/${t}`]));
+  const files = respellFiles(ctx, args);
+  let changed = 0;
+  let respelled = 0;
+  let left = 0;
+  const lines: string[] = [];
+  for (const f of files) {
+    const before = readFileSync(f, "utf8");
+    const { text, hits } = respellText(before, docsRootName, moves);
+    if (hits.length === 0) continue;
+    // Named from the real root: one reached through a symlink (/tmp, /var on macOS) would
+    // otherwise name every file by a climb out and back in.
+    const at = relative(realIfPossible(ctx.root), realIfPossible(f)).split(sep).join("/");
+    for (const h of hits) {
+      if (h.to === null) left++;
+      else respelled++;
+      lines.push(h.to === null ? `${at}:${h.line}: ${h.from} — left as written: nothing this migration moved is there` : `${at}:${h.line}: ${h.from} → ${h.to}`);
+    }
+    if (text !== before) {
+      changed++;
+      if (writeIt) writeFileSync(f, text);
+    }
+  }
+  say(`Retired ${docsRootName}/ paths in the ${files.length} file(s) named, from the move record ${ctx.movesPath}:`);
+  for (const l of lines) say(`   ${l}`);
+  say(
+    `\n${respelled} path(s) respelled in ${changed} file(s)${left ? `, ${left} left as written` : ""} — ` +
+      (writeIt ? "written. Review the diff before you commit." : "nothing written. Read the list, then run the same command with --write.")
+  );
+}
+
+// =======================================================================================
 // Invocation and context
 // =======================================================================================
 
@@ -1424,10 +1706,14 @@ interface Options {
   scaffold: string | null;
   skipFormat: boolean;
   force: boolean;
+  /** `--respell <path>...`: the paths named; null when not respelling. */
+  respell: string[] | null;
+  /** With `--respell`: write, rather than list. */
+  write: boolean;
 }
 
 export function parseArgs(argv: string[]): Options {
-  const opts: Options = { root: ".", dryRun: false, scaffold: null, skipFormat: false, force: false };
+  const opts: Options = { root: ".", dryRun: false, scaffold: null, skipFormat: false, force: false, respell: null, write: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const value = (): string => {
@@ -1447,7 +1733,15 @@ export function parseArgs(argv: string[]): Options {
     } else if (a === "--dry-run") opts.dryRun = true;
     else if (a === "--skip-format") opts.skipFormat = true;
     else if (a === "--force") opts.force = true;
-    else fail(`unknown argument \`${a}\`. Valid: --root, --dry-run, --scaffold-dir (--scaffold), --skip-format, --force.`);
+    else if (a === "--respell") opts.respell = opts.respell ?? [];
+    else if (a === "--write") opts.write = true;
+    else if (opts.respell !== null && a !== undefined && !a.startsWith("--")) opts.respell.push(a);
+    else fail(`unknown argument \`${a}\`. Valid: --root, --dry-run, --scaffold-dir (--scaffold), --skip-format, --force; or --respell <path>... [--write].`);
+  }
+  if (opts.write && opts.respell === null) fail("--write only goes with --respell <path>...: the migration itself writes without it.");
+  if (opts.respell !== null) {
+    if (opts.respell.length === 0) fail("--respell needs the files or folders to look in: --respell <path>... — it reads nothing you did not name.");
+    if (opts.dryRun || opts.scaffold !== null || opts.skipFormat || opts.force) fail("--respell takes only --root and --write.");
   }
   return opts;
 }
@@ -1486,6 +1780,8 @@ interface Changes {
   writes: Write[];
   /** Repository-relative `[from, to]` for every path that moves — for `lint.exclude`. */
   repoMoves: Array<[string, string]>;
+  /** Docs-relative `[from, to]`: every path the links follow — the move record. */
+  linkMoves: Array<[string, string]>;
   keptLibrary: string[];
 }
 
@@ -1510,6 +1806,8 @@ interface Ctx extends Options {
   state: RunState;
   /** Where the record lives: inside `.git/` when there is one. */
   statePath: string;
+  /** Where the move record lives: beside the record. */
+  movesPath: string;
   /** Whether this run is finishing an interrupted one from its recorded plan. */
   resumed: boolean;
   /** What this run removed that was not a document of the adopter's, for the last line. */
@@ -1517,12 +1815,13 @@ interface Ctx extends Options {
 }
 
 interface Journal {
-  plan: { moves: EntityMove[]; blockers: string[]; handled: string[]; junk: string[] };
+  plan: { moves: EntityMove[]; blockers: string[]; handled: string[]; junk: string[]; ownTemplates?: Array<[string, string]> };
   templates: TemplatePlan;
   cycles: { texts: Array<[string, string]>; itemCycle: Array<[string, string]>; notes: string[] };
   physical: Array<[string, string]>;
   writes: Write[];
   repoMoves: Array<[string, string]>;
+  linkMoves?: Array<[string, string]>;
   keptLibrary: string[];
 }
 
@@ -1535,6 +1834,8 @@ interface RunState {
   removed: { templates: number; readmes: number; junk: number; folders: number };
   /** The commit HEAD pointed at when the first run began — where to go back to. */
   base?: string;
+  /** What the run did for the adopter that they should check, kept across a stop so the run that completes still says it. */
+  notices?: string[];
 }
 
 const toJournal = (c: Changes): Journal => ({
@@ -1544,16 +1845,18 @@ const toJournal = (c: Changes): Journal => ({
   physical: c.physical,
   writes: c.writes,
   repoMoves: c.repoMoves,
+  linkMoves: c.linkMoves,
   keptLibrary: c.keptLibrary,
 });
 
 const fromJournal = (j: Journal): Changes => ({
-  plan: { ...j.plan, handled: new Set(j.plan.handled) },
+  plan: { ...j.plan, handled: new Set(j.plan.handled), ownTemplates: j.plan.ownTemplates ?? [] },
   templates: j.templates,
   cycles: { texts: new Map(j.cycles.texts), itemCycle: new Map(j.cycles.itemCycle), notes: j.cycles.notes },
   physical: j.physical,
   writes: j.writes,
   repoMoves: j.repoMoves,
+  linkMoves: j.linkMoves ?? [],
   keptLibrary: j.keptLibrary,
 });
 
@@ -1578,6 +1881,57 @@ const sha256 = (text: string) => createHash("sha256").update(text).digest("hex")
 const ours = (ctx: Ctx, rel: string) =>
   Object.hasOwn(ctx.state.written, rel) && ctx.state.written[rel] === hashOf(join(ctx.root, rel));
 
+/** Something the adopter should check, printed at the end of the run (and kept across a stop). */
+function notice(ctx: Ctx, line: string): void {
+  const all = (ctx.state.notices ??= []);
+  if (!all.includes(line)) all.push(line);
+}
+
+function printNotices(ctx: Ctx): void {
+  const all = ctx.state.notices ?? [];
+  if (all.length === 0) return;
+  say(`\nFor you to check — calls the run made for you, and text of yours it replaced (${all.length}):`);
+  for (const line of all) say(`   · ${line}`);
+}
+
+/** The command that prints `docsRel` as it was when the migration began; null without git. */
+function recoverCommand(ctx: Ctx, docsRel: string): string | null {
+  if (!ctx.state.base) return null;
+  const prefix = run(["git", "rev-parse", "--show-prefix"], ctx.root).stdout.trim();
+  return `git show ${ctx.state.base}:${prefix}${ctx.docsRootName}/${docsRel}`;
+}
+
+/**
+ * The owned files the refresh will replace or remove that hold edits of the
+ * adopter's: present, their text in no release before 9.0.0 (`OWNED_BEFORE_9`),
+ * and — for one the refresh replaces — not already the scaffold's.
+ */
+function editedOwned(ctx: Ctx): Array<{ rel: string; removed: boolean }> {
+  const sDocs = join(ctx.scaffoldDir, "docs");
+  const out: Array<{ rel: string; removed: boolean }> = [];
+  for (const [rel, keys] of Object.entries(OWNED_BEFORE_9)) {
+    const abs = join(ctx.docsRoot, rel);
+    if (!existsSync(abs) || !statSync(abs).isFile()) continue;
+    const key = proseKey(readFileSync(abs, "utf8"));
+    if (keys.includes(key)) continue;
+    const removed = rel in RETIRED_READMES;
+    if (!removed && (!existsSync(join(sDocs, rel)) || proseKey(readFileSync(join(sDocs, rel), "utf8")) === key)) continue;
+    out.push({ rel, removed });
+  }
+  return out;
+}
+
+/** The line that names an edited owned file, and how to get its text back. */
+function editedOwnedLine(ctx: Ctx, e: { rel: string; removed: boolean }): string {
+  const cmd = recoverCommand(ctx, e.rel);
+  return (
+    `${ctx.docsRootName}/${e.rel} differs from every release of the scaffold, so it holds edits of yours: ` +
+    `the refresh ${e.removed ? "removes it with its folder" : "replaces it with 9.0.0's"}. ` +
+    `An owned file is replaced whole on every refresh, so keep what you added in a page of your own (a playbook, or your root AGENTS.md). ` +
+    (cmd ? `Recover your text with: ${cmd}` : "There is no git history to recover it from: copy it aside before the run.")
+  );
+}
+
 function resolveContext(o: Options): Ctx {
   const root = resolve(o.root);
   const configPath = join(root, ".project-docs.json");
@@ -1598,12 +1952,19 @@ function resolveContext(o: Options): Ctx {
   const zero = () => ({ templates: 0, readmes: 0, junk: 0, folders: 0 });
   let state: RunState = { written: {}, journal: null, removed: zero() };
   const gitDir = Bun.spawnSync(["git", "rev-parse", "--absolute-git-dir"], { cwd: existsSync(root) ? root : ".", stdout: "pipe", stderr: "pipe", env: gitEnv() });
-  const statePath =
-    gitDir.exitCode === 0 && gitDir.stdout.toString().trim() ? join(gitDir.stdout.toString().trim(), STATE_NAME) : join(root, `.${STATE_NAME}`);
+  const inGit = gitDir.exitCode === 0 && gitDir.stdout.toString().trim() !== "";
+  const statePath = inGit ? join(gitDir.stdout.toString().trim(), STATE_NAME) : join(root, `.${STATE_NAME}`);
+  const movesPath = inGit ? join(gitDir.stdout.toString().trim(), MOVES_NAME) : join(root, `.${MOVES_NAME}`);
   if (existsSync(statePath)) {
     try {
       const parsed = JSON.parse(readFileSync(statePath, "utf8")) as Partial<RunState>;
-      state = { written: parsed.written ?? {}, journal: parsed.journal ?? null, removed: parsed.removed ?? zero(), ...(parsed.base ? { base: parsed.base } : {}) };
+      state = {
+        written: parsed.written ?? {},
+        journal: parsed.journal ?? null,
+        removed: parsed.removed ?? zero(),
+        ...(parsed.base ? { base: parsed.base } : {}),
+        ...(Array.isArray(parsed.notices) ? { notices: parsed.notices } : {}),
+      };
     } catch (e) {
       fail(
         `${statePath} — the record an earlier run of this migration left — is not valid JSON: ${(e as Error).message}.\n` +
@@ -1647,6 +2008,7 @@ function resolveContext(o: Options): Ctx {
     manifestBefore: null,
     state,
     statePath,
+    movesPath,
     resumed: false,
     removed: state.removed,
   };
@@ -1692,6 +2054,7 @@ function writeCandidates(ctx: Ctx): string[] {
     ...Object.keys(RETIRED_READMES).map(dn),
     ...c.templates.moves.flat().map(dn),
     ...c.templates.removals.map(dn),
+    ...c.plan.ownTemplates.flat().map(dn),
   ]);
   const m = readManifest(ctx);
   for (const rel of Object.keys(m.files)) if (verdictFor(m, ctx.docsRoot, rel) === "update") out.add(dn(rel));
@@ -1849,6 +2212,7 @@ function computeChanges(ctx: Ctx): Changes {
   for (const [from, to] of Object.entries(TEMPLATE_RENAMES)) linkMap.set(join(d, from), join(d, to));
   for (const [from, to] of Object.entries(RETIRED_TEMPLATES)) linkMap.set(join(d, from), join(d, to));
   for (const [from, to] of Object.entries(RETIRED_READMES)) linkMap.set(join(d, from), join(d, to));
+  for (const [from, to] of plan.ownTemplates) linkMap.set(join(d, from), join(d, to));
   // A link to a retired FOLDER itself goes to its successor. Only the folder: the link map
   // carries descendants too, and a link into a retired folder that nothing moved — one
   // already broken, or to a brief the adopter deleted — must stay as written, for the
@@ -1928,7 +2292,11 @@ function computeChanges(ctx: Ctx): Changes {
       };
     }
     const was = fmGet(fm, "type");
-    if (was !== null && RETIRED_TYPE_NAMES.has(was) && was !== type) {
+    // The v2.10 lint typed everything in a project folder but its fixed names and sessions/ as an
+    // `artifact`, so a report the adopter moved into projects/<slug>/reports/ — the guide's step for
+    // a report with no owner — is one there. Its new position says what it is.
+    const positional = was === "artifact" && (type === "report" || type === "write-up");
+    if (was !== null && ((RETIRED_TYPE_NAMES.has(was) && was !== type) || positional)) {
       let f = fmSet(fm, "type", type);
       if (!HAS_LIFECYCLE.has(type)) f = fmRemove(f, "lifecycle");
       return { text: joinFrontmatter(f, body), what: `type: ${was} → ${type} (its position)` };
@@ -1943,6 +2311,8 @@ function computeChanges(ctx: Ctx): Changes {
     ...Object.keys(RETIRED_READMES),
     ...templates.removals,
     ...templates.moves.map(([f]) => f),
+    // A template moves byte for byte: its links are placeholders, relative to where a copy of it will sit.
+    ...plan.ownTemplates.map(([f]) => f),
     ...OWNED_ROOT,
     ...OWNED_CATEGORIES.map((c) => `${c}/README.md`),
   ]);
@@ -1981,6 +2351,8 @@ function computeChanges(ctx: Ctx): Changes {
     let line: string;
     let kind: string;
     let date: string;
+    /** The document a born item with no session or plan is titled and described from. */
+    let heldFrom: string | null = null;
     if (mv.kind === "research") {
       const fm = splitFrontmatter(textOf(mv.from) ?? "").fm ?? "";
       title = fmGet(fm, "title") ?? titleize(slugOf(basename(mv.from), "investigation").slug);
@@ -1993,7 +2365,27 @@ function computeChanges(ctx: Ctx): Changes {
       const sessions = inside.filter((r) => r.startsWith(`${mv.from}/sessions/`)).sort();
       const source = [...[...sessions].reverse(), `${mv.from}/plan.md`].find((r) => splitFrontmatter(textOf(r) ?? "").fm !== null && fmGet(splitFrontmatter(textOf(r) ?? "").fm as string, "description"));
       title = titleize(basename(mv.from));
-      description = source ? (fmGet(splitFrontmatter(textOf(source) ?? "").fm as string, "description") as string) : `Work recorded in ${basename(mv.from)} before it had an item.`;
+      description = `Work recorded in ${basename(mv.from)} before it had an item.`;
+      if (source) description = fmGet(splitFrontmatter(textOf(source) ?? "").fm as string, "description") as string;
+      else {
+        // No session or plan to describe it: a folder that held only a brief or a report is the
+        // work that document names, so the item takes that document's title and description —
+        // its frontmatter's, or what the run synthesizes for a legacy document with none.
+        const held = inside
+          .filter((r) => !r.startsWith(`${mv.from}/sessions/`) && r !== `${mv.from}/plan.md`)
+          .sort()
+          .map((r) => {
+            const text = textOf(r) ?? "";
+            const fm = splitFrontmatter(text).fm ?? (splitFrontmatter(synthesizeFrontmatter("artifact", r, text, { date: "1970-01-01" })).fm as string);
+            return { r, title: fmGet(fm, "title"), description: fmGet(fm, "description") };
+          })
+          .find((h) => h.title && h.description);
+        if (held) {
+          title = held.title as string;
+          description = held.description as string;
+          heldFrom = held.r.slice(mv.from.length + 1);
+        }
+      }
       kind = "task";
       date = sessions.length ? (/(\d{4}-\d{2}-\d{2})/.exec(basename(sessions[sessions.length - 1] as string))?.[1] ?? dateOf(mv.from)) : dateOf(inside[0] ?? mv.from);
       line = "Work that ran before it had an item. Its record is the documents in this folder; the migration to 9.0.0 filed this item for it.";
@@ -2009,12 +2401,14 @@ function computeChanges(ctx: Ctx): Changes {
       ...(itemCycle ? [`cycle: ${itemCycle}`] : []),
       `generated: { by: ${ACTOR}, at: ${date} }`,
     ].join("\n");
-    created.push({ from: null, to: join(d, mv.to, "item.md"), text: joinFrontmatter(fm, `\n# ${title}\n\n${line}\n`), links: 0, fm: `created (item, ${kind}, ${mv.lifecycle})`, created: true });
+    created.push({ from: null, to: join(d, mv.to, "item.md"), text: joinFrontmatter(fm, `\n# ${title}\n\n${line}\n`), links: 0, fm: `created (item, ${kind}, ${mv.lifecycle})${heldFrom ? `, titled and described from ${heldFrom}` : ""}`, created: true });
   }
 
-  const repoMoves: Array<[string, string]> = [...fileMap.entries(), ...plan.moves.filter((m) => m.kind === "feature" || m.kind === "born-item").map((m) => [m.from, m.to] as [string, string])]
+  const repoMoves: Array<[string, string]> = [...fileMap.entries(), ...plan.ownTemplates, ...plan.moves.filter((m) => m.kind === "feature" || m.kind === "born-item").map((m) => [m.from, m.to] as [string, string])]
     .map(([f, t]) => [`${ctx.docsRootName}/${f}`, `${ctx.docsRootName}/${t}`]);
-  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, keptLibrary };
+  const docsRel = (abs: string) => relative(d, abs).split(sep).join("/");
+  const linkMoves = [...linkMap].map(([f, t]) => [docsRel(f), docsRel(t)] as [string, string]);
+  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, linkMoves, keptLibrary };
 }
 
 // =======================================================================================
@@ -2198,7 +2592,29 @@ function printPlan(ctx: Ctx): void {
   for (const w of c.writes.filter((x) => x.fm)) note(`frontmatter: ${relative(ctx.root, w.to)} — ${w.fm}`);
   for (const [f, t] of c.templates.moves) note(`template: ${d(f)} → ${d(t)}, its seed record carried with it`);
   for (const r of c.templates.removals) note(`template: ${d(r)} removed — the form for a retired type, untouched since the scaffold recorded it`);
+  const recordedNow = readManifest(ctx).files;
+  for (const [f, t] of c.plan.ownTemplates) {
+    const dropped = recordedNow[f] !== undefined ? ", and the seed record an earlier migration took of it by its name dropped" : "";
+    note(`template of yours: ${d(f)} → ${d(t)} — the scaffold never shipped it, so it is yours: moved as it is${dropped}`);
+    notice(ctx, `${d(t)} is a template of yours, moved as it is from ${d(f)}: the scaffold never shipped it${dropped}.`);
+  }
   for (const r of Object.keys(RETIRED_READMES).filter((x) => existsSync(join(ctx.docsRoot, x)))) note(`owned: ${d(r)} removed (retired with its folder)`);
+  // A project folder with no proposal records work that already ran; with no plan active the run
+  // reads it as finished. That is right for most, and a guess for each: say so where it is read.
+  const bornDone = c.plan.moves.filter((m) => m.kind === "born-item" && m.lifecycle === "done" && !m.archived);
+  if (bornDone.length > 0)
+    notice(
+      ctx,
+      `${bornDone.length} item(s) born from a project folder with no proposal were set \`done\`: with no plan active, the run read the work as finished, ` +
+        `and it cannot tell finished from stopped. Check each, and set one that is not finished: ` +
+        `bun scripts/pdocs/cli.ts set item/<slug> --lifecycle backlog (or ready, active, dropped)` +
+        bornDone.map((m) => `\n       ${d(`${m.to}/item.md`)}`).join("")
+    );
+  for (const e of editedOwned(ctx)) {
+    const line = editedOwnedLine(ctx, e);
+    note(`yours, in an owned file: ${line}`);
+    notice(ctx, line);
+  }
   for (const j of c.plan.junk) note(`not a document: ${d(j)} removed`);
   for (const n of c.cycles.notes) note(n);
   const links = c.writes.reduce((n, w) => n + w.links, 0);
@@ -2228,6 +2644,8 @@ function refreshOwned(ctx: Ctx): void {
   }
 
   const sDocs = join(s, "docs");
+  // Read before anything below replaces them.
+  const edited = new Map(editedOwned(ctx).map((e) => [e.rel, e]));
   const owned = [
     ...OWNED_ROOT,
     ...readdirSync(sDocs, { withFileTypes: true })
@@ -2253,6 +2671,8 @@ function refreshOwned(ctx: Ctx): void {
     writeFileSync(dst, text);
     track(ctx, dst);
     ok(`${ctx.docsRootName}/${rel} ${existed ? "replaced" : "installed"} (owned)`);
+    const e = edited.get(rel);
+    if (e) note(`  yours: ${editedOwnedLine(ctx, e)}`);
   }
   if (same) ok(`${same} owned file(s) already identical to the scaffold's`);
   for (const rel of filesIn(sDocs).filter((r) => basename(r) === ".gitkeep")) {
@@ -2268,12 +2688,59 @@ function refreshOwned(ctx: Ctx): void {
     track(ctx, join(ctx.docsRoot, rel));
     ctx.removed.readmes++;
     ok(`${ctx.docsRootName}/${rel} removed — owned, and its folder is retired; links to it now point at ${ctx.docsRootName}/${RETIRED_READMES[rel]}`);
+    const e = edited.get(rel);
+    if (e) note(`  yours: ${editedOwnedLine(ctx, e)}`);
   }
+}
+
+/**
+ * The move record (MOVES_NAME), written when this run has something to move,
+ * and kept after the run completes.
+ *
+ * MERGED, NEVER REPLACED, within one migration. A re-run after a stop late in
+ * the run (phase 8) plans afresh from the half-migrated tree, where only the
+ * templates are left to move: written whole, its record would lose every
+ * document move the first run made. So a record from the same starting commit
+ * (`base`) keeps its pairs, and this run's are added — keyed by `from`, a
+ * later plan's `to` winning, which only ever restates the same move. A record
+ * from another base is another migration's, and is replaced.
+ */
+function recordMoves(ctx: Ctx): void {
+  const c = ctx.changes as Changes;
+  if (c.physical.length === 0 && c.templates.moves.length === 0 && c.plan.ownTemplates.length === 0) return;
+  const base = ctx.state.base ?? null;
+  const merged = new Map<string, string>();
+  if (existsSync(ctx.movesPath))
+    try {
+      const rec = JSON.parse(readFileSync(ctx.movesPath, "utf8")) as { base?: unknown; docsRoot?: unknown; moves?: unknown };
+      if (rec.base === base && rec.docsRoot === ctx.docsRootName && Array.isArray(rec.moves))
+        for (const [f, t] of rec.moves as Array<[string, string]>) merged.set(f, t);
+    } catch {
+      // An unreadable record is replaced by this run's.
+    }
+  for (const [f, t] of c.linkMoves) merged.set(f, t);
+  const tmp = `${ctx.movesPath}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify({ docsRoot: ctx.docsRootName, base, moves: [...merged] }, null, 1)}\n`);
+  renameSync(tmp, ctx.movesPath);
+}
+
+/** The move record as absolute old → new paths: the file a run wrote, else this run's plan. */
+function moveTable(ctx: Ctx): Map<string, string> {
+  let moves: Array<[string, string]> = (ctx.changes as Changes | null)?.linkMoves ?? [];
+  if (existsSync(ctx.movesPath))
+    try {
+      const rec = JSON.parse(readFileSync(ctx.movesPath, "utf8")) as { moves?: Array<[string, string]> };
+      if (Array.isArray(rec.moves) && rec.moves.length > 0) moves = rec.moves;
+    } catch {
+      // An unreadable record only costs the suggestions; the plan's moves stand in.
+    }
+  return new Map(moves.map(([f, t]) => [join(ctx.docsRoot, f), join(ctx.docsRoot, t)]));
 }
 
 function moveDocuments(ctx: Ctx): void {
   step(5, "Move the documents and rewrite their frontmatter");
   const c = ctx.changes as Changes;
+  recordMoves(ctx);
   if (c.physical.length === 0 && !c.writes.some((w) => w.fm)) {
     ok("nothing to move — no document is left in a retired folder");
     return;
@@ -2418,7 +2885,24 @@ function reconcileSeeds(ctx: Ctx, version: string): void {
     ctx.removed.templates++;
     ok(`template removed: ${dn(rel)} — untouched since the scaffold recorded it; its type is retired`);
   }
+  for (const [from, to] of c.plan.ownTemplates) {
+    if (!existsSync(join(d, from))) continue;
+    if (existsSync(join(d, to))) fail(`${dn(to)} already exists — this run will not move your template ${dn(from)} over it.`);
+    mkdirSync(dirname(join(d, to)), { recursive: true });
+    renameSync(join(d, from), join(d, to));
+    track(ctx, join(d, from));
+    track(ctx, join(d, to));
+    ok(`template of yours moved: ${dn(from)} → ${dn(to)} — as it is; the scaffold never shipped it`);
+  }
   for (const rel of c.templates.dropped) delete m.files[rel];
+  // No record may name a path in a retired folder once it is gone: the scaffold's templates
+  // there were carried or dropped above, so what is left is a record an earlier migration
+  // took of an adopter's template by its name, as v2.8-to-v2.9 once did.
+  for (const rel of Object.keys(m.files))
+    if (LEGACY_FOLDERS.includes(rel.split("/")[0] as string) && !existsSync(join(d, rel))) {
+      delete m.files[rel];
+      note(`record ${dn(rel)} dropped — the scaffold never shipped it; an earlier migration recorded your template by its name`);
+    }
   // A retired library folder the adopter deleted before the run (the guide's
   // "Delete" option) takes its template's record with it: the record describes
   // a file that is gone on purpose, in a folder that is not coming back.
@@ -2541,11 +3025,27 @@ function verify(ctx: Ctx): void {
     const now = new Set(r.problems);
     newer = `Against the baseline the older lint reported (${b.total}): ${r.problems.filter((p) => !was.has(p)).length} new, ${b.problems.filter((p) => !now.has(p)).length} no longer reported, ${r.problems.filter((p) => was.has(p)).length} unchanged.`;
   }
+  // A MISSING FILE the move record accounts for gets its correction, suggested — never written.
+  const table = moveTable(ctx);
+  const fixes: string[] = [];
+  for (const p of r.problems) {
+    const m = /^MISSING FILE\s+(.+?): (\S.*?)(?: {2}\(not portable.*)?$/.exec(p);
+    if (!m) continue;
+    const fix = suggestLinkFix(join(ctx.root, m[1] as string), m[2] as string, table, existsSync);
+    if (fix !== null) fixes.push(`${m[1]}: ${m[2]} → ${fix}`);
+  }
+  const suggested =
+    fixes.length === 0
+      ? ""
+      : `\n\n   Suggested corrections for ${fixes.length} MISSING FILE link(s), each target found through this run's moves — most are\n` +
+        `   links a legacy _archive/ left one folder level short. Check each, then make it by hand; the run rewrites none:\n\n` +
+        indented(fixes.join("\n"));
   fail(
     `\`pdocs check\` exits ${r.code} on the migrated tree: ${r.total} problem(s). ${newer}\n` +
       `\n   The moves STAY — every one is named above — and the version markers were NOT moved: this tree is not at\n` +
       `   9.0.0 until the check passes. The worklist is \`bun scripts/pdocs/cli.ts report --format text\`; the problems are:\n\n` +
       indented(r.problems.join("\n")) +
+      suggested +
       `\n\n   Work them without committing, then run the same command: every phase finds its work done, the\n` +
       `   uncommitted changes this run made are recognised as its own, and the run passes once these are worked.`
   );
@@ -2661,6 +3161,10 @@ export function main(argv: string[]): number {
   let ctx: Ctx | null = null;
   try {
     ctx = resolveContext(opts);
+    if (opts.respell !== null) {
+      respell(ctx, opts.respell, opts.write);
+      return 0;
+    }
     preflight(ctx);
     ctx.scaffoldDir = getScaffold(ctx);
     const version = verifyScaffold(ctx);
@@ -2668,6 +3172,7 @@ export function main(argv: string[]): number {
     if (ctx.dryRun) {
       say("\n   Dry run — phases 4 to 11 would apply the plan above.");
       cleanup(ctx);
+      printNotices(ctx);
       const c = ctx.changes as Changes;
       say(`\nDry run complete — nothing was changed. ${c.plan.moves.length} move(s) planned, ${c.writes.length} document(s) to write.`);
       return 0;
@@ -2704,6 +3209,7 @@ export function main(argv: string[]): number {
     // The run is whole: its record has nothing left to tell a re-run.
     rmSync(ctx.statePath, { force: true });
     const rm = ctx.removed;
+    printNotices(ctx);
     say(
       `\nMigration complete. ${c.plan.moves.length} move(s), ${c.writes.length} document(s) written, no document of yours deleted; ` +
         `removed: ${rm.templates} untouched retired template(s), ${rm.readmes} retired owned README(s), ${rm.junk} non-document file(s) (.gitkeep, .DS_Store), ` +

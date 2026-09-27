@@ -285,7 +285,7 @@ const variantNeverHad = () => {
   commitAll(root, "never had it");
   return root;
 };
-/** A recorded path the scaffold no longer ships. */
+/** A recorded path the scaffold does not ship: the adopter's own, recorded by name pattern. */
 const variantUnshipped = () =>
   withManifest(
     withFiles(fixtureO(), { "docs/backlog/TEMPLATE-old.md": "old form\n" }, "an old form"),
@@ -867,11 +867,16 @@ describe("the whole migration on fixture O", () => {
     expect(manifestOf(root).files["cycles/TEMPLATE.md"]).toBe(hashOf(join(target(), CYCLE)) as string);
   });
 
-  test("a recorded path the scaffold no longer ships is reported, left as it is, record kept", () => {
+  test("a recorded path the scaffold does not ship is named as the adopter's own, left as it is, record kept", () => {
+    // No release since the record began (7.0.0) shipped a different set of
+    // templates, so such a record is one v2.8-to-v2.9 took by name pattern:
+    // the file is the adopter's. "No longer ships" sent Spellbook's agent
+    // looking for a scaffold file that never existed.
     const root = variantUnshipped();
     const r = migrate(root);
     expect(r.exitCode).toBe(0);
-    expect(r.out).toContain("· docs/backlog/TEMPLATE-old.md is recorded but the scaffold no longer ships it — left as it is, record kept");
+    expect(r.out).toContain("· docs/backlog/TEMPLATE-old.md is recorded, but the scaffold has never shipped it — it is yours; left as it is, record kept");
+    expect(r.out).not.toContain("no longer ships");
     expect(read(root, "docs/backlog/TEMPLATE-old.md")).toBe("old form\n");
     expect(manifestOf(root).files["backlog/TEMPLATE-old.md"]).toBe(sha("old form\n"));
     expect(Object.keys(manifestOf(root).files).length).toBe(20);
@@ -890,8 +895,8 @@ describe("the whole migration on fixture O", () => {
     expect(r.exitCode).toBe(0);
     expect(r.out).toContain('· docs/.pdocs-seed.json records "../outside.md", which is not a path inside the docs root — dropped from the record');
     expect(r.out).toContain('· docs/.pdocs-seed.json records "/etc/passwd", which is not a path inside the docs root — dropped from the record');
-    expect(r.out).not.toContain("outside.md is recorded but the scaffold no longer ships it");
-    expect(r.out).not.toContain("passwd is recorded but the scaffold no longer ships it");
+    expect(r.out).not.toContain("outside.md is recorded, but the scaffold");
+    expect(r.out).not.toContain("passwd is recorded, but the scaffold");
     const after = manifestOf(root);
     expect(after.files["../outside.md"]).toBeUndefined();
     expect(after.files["/etc/passwd"]).toBeUndefined();

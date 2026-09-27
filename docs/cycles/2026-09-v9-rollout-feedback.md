@@ -29,8 +29,8 @@ whatever it finds that is new opens the next round.
 
 ## Scope
 
-- [Spellbook feedback, round 2](../items/spellbook-feedback-round-2.md) — the
-  eight migration fixes land, so story-loom's run gets them.
+- [Spellbook feedback, round 2](../items/spellbook-feedback-round-2/item.md) —
+  the eight migration fixes land, so story-loom's run gets them.
 - [wocky-talky feedback, round 1](../items/wocky-talky-feedback-round-1/item.md)
   — finalize-branch, formatter guidance and `pdocs new`/`set` output fixed.
 - [The lint passes a template's placeholder body and H1](../items/lint-rejects-placeholder-bodies.md)
@@ -56,3 +56,4 @@ _Written at close, not before._
 ## Sessions
 
 - fix/pdocs-output-and-placeholder-lint (landed 2026-09-26)
+- fix/v3-migration-spellbook-round-2 (landed 2026-09-27)

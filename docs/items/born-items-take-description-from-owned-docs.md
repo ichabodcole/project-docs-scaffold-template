@@ -6,7 +6,7 @@ description:
   in <slug> before it had an item", and titles it from the folder name ("Ui
   experimentation framework").
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: ready
+lifecycle: done
 id: 01a0da5f-8b3b-74ea-a218-d9d8538797ef
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-25 }

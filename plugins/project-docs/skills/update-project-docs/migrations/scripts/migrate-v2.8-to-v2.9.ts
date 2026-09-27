@@ -15,7 +15,8 @@
  *   2  scaffold    — generate the current template to .scaffold-tmp
  *   3  refresh     — replace the OWNED files: scripts/pdocs/, docs/SCHEMA.md
  *   4  format      — templates only, and BEFORE step 5 (see below)
- *   5  adopt       — record every template's sha256 in docs/.pdocs-seed.json
+ *   5  adopt       — record the sha256 of every template the scaffold ships
+ *                    in docs/.pdocs-seed.json; a template of the adopter's is not recorded
  *   6  verify      — the tree still lints, and the new refusal works
  *   7  version     — bump both markers to the release we migrated to; the
  *                    JSON's one key patched in place, its other bytes kept
@@ -82,9 +83,13 @@ const SKIP_DIRS = new Set(["_archive", "node_modules", ".git"]);
  * both declared as templates by the registry since long before this migration.
  *
  * Kept in step with `_is_seeded` in `hooks/post_gen_project.py`; both are
- * exercised against the registry by `scripts/seeded-coverage.test.ts`. Erring
- * wide is safe — recording a path the scaffold never writes is a no-op — where
- * missing one silently drops a file out of the mechanism.
+ * exercised against the registry by `scripts/seeded-coverage.test.ts`.
+ *
+ * The pattern FINDS candidates; it does not decide what is recorded. Only a
+ * path the scaffold itself ships is (`shippedBy`). Recording by pattern alone
+ * was not the no-op it was once thought: an adopter's own `PROJECT-LEDGER` and
+ * `SPRINT-OUTCOME` templates were recorded, and 9.0.0's migration then read
+ * them as the scaffold's.
  */
 export function isSeeded(name: string): boolean {
   return (
@@ -103,6 +108,12 @@ function walk(dir: string, out: string[] = []): string[] {
     if (entry.isFile() && isSeeded(entry.name)) out.push(abs);
   }
   return out;
+}
+
+/** Docs-relative paths of the templates the scaffold at `scaffoldDir` ships. */
+export function shippedBy(scaffoldDir: string): Set<string> {
+  const docs = join(scaffoldDir, "docs");
+  return new Set(existsSync(docs) ? walk(docs).map((abs) => relative(docs, abs)) : []);
 }
 
 const sha = (abs: string) =>
@@ -499,9 +510,13 @@ function formatTemplates(ctx: Ctx, templates: string[]): void {
   ok(`formatted ${rel.length} template(s)`);
 }
 
-function adopt(ctx: Ctx, templates: string[], version: string): number {
+function adopt(ctx: Ctx, templates: string[], version: string, theirs: string[]): number {
   step(5, "Adopt the templates");
   const manifestPath = join(ctx.docsRoot, MANIFEST_NAME);
+  // A template of the adopter's own is named, and never recorded: a record says
+  // "the scaffold installed this", and every later migration acts on that.
+  for (const abs of [...theirs].sort())
+    note(`${ctx.docsRootName}/${relative(ctx.docsRoot, abs)} — the scaffold never shipped it, so it is yours: not recorded`);
 
   if (existsSync(manifestPath) && !ctx.reAdopt) {
     // Not silence. The previous shape printed "nothing to do" and returned 0,
@@ -697,11 +712,16 @@ export function main(argv: string[]): number {
     refreshOwned(ctx);
 
     const version = scaffoldVersion(ctx);
-    formatTemplates(ctx, walk(ctx.docsRoot));
+    // Only the templates the scaffold ships are the scaffold's to record, or to
+    // format; the rest matching the name pattern are the adopter's own.
+    const shipped = shippedBy(ctx.scaffoldDir);
+    const ours = (abs: string) => shipped.has(relative(ctx.docsRoot, abs));
+    formatTemplates(ctx, walk(ctx.docsRoot).filter(ours));
     // `adopt` hashes at call time, so this walk is the one whose bytes are
     // recorded — after formatting, which is the ordering the whole migration
     // turns on.
-    const count = adopt(ctx, walk(ctx.docsRoot), version);
+    const found = walk(ctx.docsRoot);
+    const count = adopt(ctx, found.filter(ours), version, found.filter((abs) => !ours(abs)));
 
     // TEST SEAM, and the only one. `manifestMatchesDisk` is the guard that makes
     // the format-before-record ordering enforce itself, and a unit test of the

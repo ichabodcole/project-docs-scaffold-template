@@ -8,9 +8,12 @@
  * run writing nothing; every guard WATCHED FAILING; and a WIRING WITNESS per
  * phase.
  *
- * The fixtures are real trees, generated OFFLINE: the v2.10 tree from this
- * repository's history at the 8.1.0 tag (D16), the 9.0.0 scaffold from the
- * working tree — never this repository's own docs.
+ * The fixtures are real trees, generated OFFLINE from this repository's
+ * history (D16): the v2.10 tree at the 8.1.0 tag, and the 9.0.0 scaffold at
+ * SCAFFOLD_TAG — the release the script itself fetches, so a re-pin is one
+ * line in the script. Never the working tree, whose payload has moved on
+ * (`cycles/TEMPLATE.md`, `features/README.md`), and never this repository's
+ * own docs.
  */
 import { afterAll, describe, expect, test } from "bun:test";
 import {
@@ -32,6 +35,7 @@ import {
   GIT_LOCAL_ENV,
   KEPT_LIBRARY,
   MARKDOWN_LINK_RE,
+  OWNED_BEFORE_9,
   addToScope,
   backlogLifecycle,
   bornItemLifecycle,
@@ -53,17 +57,21 @@ import {
   planCycles,
   planTemplates,
   positionalType,
+  proseKey,
   scopeEntryPath,
   renameRecord,
   researchLifecycle,
+  respellText,
   rewriteExcludeGlob,
   rewriteFromField,
   rewriteFolderLinks,
   rewriteLinks,
+  SCAFFOLD_TAG,
   SEEDED_PAGES,
   slugOf,
   splitFrontmatter,
   stripCode,
+  suggestLinkFix,
   synthesizeFrontmatter,
   uuidv7,
   verdictFor,
@@ -240,7 +248,8 @@ describe("buildMoveMap — over an in-memory file list", () => {
     expect(by["reports/2026-01-01-r-report.md"]?.to).toBe("items/a/reports/2026-01-01-r-report.md");
     expect(by["reports/2026-01-02-back-report.md"]?.to).toBe("items/b/reports/2026-01-02-back-report.md");
     const b = p.blockers.join("\n");
-    expect(b).toContain("reports/2026-01-03-orphan-report.md — a report with no owner");
+    expect(b).toContain("reports/2026-01-03-orphan-report.md — a report with no owner: no investigation is linked with it — none links to it, and it links to none; links from other documents do not decide");
+    expect(b).toContain("with its type set to `artifact`");
     expect(b).toContain("reports/2026-01-04-two-report.md — a report with 2 possible owners");
   });
 
@@ -277,12 +286,73 @@ describe("buildMoveMap — over an in-memory file list", () => {
       "backlog/notes.txt": "x",
       "investigations/assets/chart.png": "x",
       "projects/stray.md": "# stray\n",
-      "backlog/TEMPLATE-triage.md": "my own form\n",
     });
     const b = p.blockers.join("\n");
     expect(b).toContain('backlog/2026-01-01-x.md — lifecycle "wip" has no item state');
-    for (const f of ["backlog/notes.txt", "investigations/assets/chart.png", "projects/stray.md", "backlog/TEMPLATE-triage.md"])
+    for (const f of ["backlog/notes.txt", "investigations/assets/chart.png", "projects/stray.md"])
       expect(b).toContain(`${f} — not a document this migration knows where to put`);
+  });
+
+  test("a template the scaffold never shipped is the adopter's: it moves to TEMPLATES/ as it is, and only a clash stops the run", () => {
+    // Spellbook's PROJECT-LEDGER and SPRINT-OUTCOME were named "not a document this
+    // migration knows where to put" — every template lives in TEMPLATES/ from 9.0.0.
+    const p = plan({
+      "projects/TEMPLATES/PLAN.template.md": "the scaffold's\n",
+      "projects/TEMPLATES/PROJECT-LEDGER.template.md": "our ledger\n",
+      "projects/TEMPLATES/SPRINT-OUTCOME.template.md": "our outcome\n",
+      "backlog/TEMPLATE-triage.md": "our triage form\n",
+      "briefs/TEMPLATES/PITCH.template.md": "our pitch\n",
+      // Clashes: a name the scaffold ships there, one already in TEMPLATES/, and two onto one name.
+      "reports/TEMPLATES/ITEM.template.md": "ours\n",
+      "TEMPLATES/TAKEN.template.md": "already here\n",
+      "projects/TEMPLATES/TAKEN.template.md": "ours\n",
+      "fragments/TEMPLATE-triage.md": "a second triage form\n",
+      // An archived copy is not placed for the adopter.
+      "backlog/_archive/TEMPLATE-old.md": "old\n",
+    });
+    expect(p.ownTemplates).toEqual([
+      ["backlog/TEMPLATE-triage.md", "TEMPLATES/TEMPLATE-triage.md"],
+      ["briefs/TEMPLATES/PITCH.template.md", "TEMPLATES/PITCH.template.md"],
+      ["projects/TEMPLATES/PROJECT-LEDGER.template.md", "TEMPLATES/PROJECT-LEDGER.template.md"],
+      ["projects/TEMPLATES/SPRINT-OUTCOME.template.md", "TEMPLATES/SPRINT-OUTCOME.template.md"],
+    ]);
+    const b = p.blockers.join("\n");
+    expect(b).not.toContain("PROJECT-LEDGER");
+    expect(b).not.toContain("PLAN.template.md");
+    expect(b).toContain("reports/TEMPLATES/ITEM.template.md — a template of yours: the scaffold never shipped it. It would move to TEMPLATES/ITEM.template.md, which is the scaffold's own");
+    expect(b).toContain("projects/TEMPLATES/TAKEN.template.md — a template of yours: the scaffold never shipped it. It would move to TEMPLATES/TAKEN.template.md, which is already there");
+    expect(b).toContain("fragments/TEMPLATE-triage.md — a template of yours: the scaffold never shipped it. It would move to TEMPLATES/TEMPLATE-triage.md, which is where backlog/TEMPLATE-triage.md goes");
+    expect(b).toContain("backlog/_archive/TEMPLATE-old.md — a template of yours, in an archive: the scaffold never shipped it. Keep it outside backlog/, or delete it");
+    expect(b).not.toContain("not a document this migration knows where to put");
+  });
+
+  test("a name that differs from a taken one only in case is a clash: on a case-insensitive filesystem they are one file", () => {
+    // Planned for TEMPLATES/plan.template.md, it passed an exact-name check; on macOS the
+    // scaffold's PLAN.template.md then moved first and the run stopped mid-phase 8.
+    const p = plan({
+      "projects/TEMPLATES/PLAN.template.md": "the scaffold's\n",
+      "briefs/TEMPLATES/plan.template.md": "ours\n",
+      "TEMPLATES/Ledger.template.md": "already here\n",
+      "projects/TEMPLATES/LEDGER.template.md": "ours\n",
+      "backlog/TEMPLATE-x.md": "ours\n",
+      "fragments/TEMPLATE-X.md": "ours too\n",
+    });
+    const b = p.blockers.join("\n");
+    expect(b).toContain("briefs/TEMPLATES/plan.template.md — a template of yours: the scaffold never shipped it. It would move to TEMPLATES/plan.template.md, which is the scaffold's own TEMPLATES/PLAN.template.md — the names differ only in case, and on a case-insensitive filesystem (macOS, Windows) they are one file");
+    expect(b).toContain("projects/TEMPLATES/LEDGER.template.md — a template of yours: the scaffold never shipped it. It would move to TEMPLATES/LEDGER.template.md, which is already there as TEMPLATES/Ledger.template.md — the names differ only in case");
+    expect(b).toContain("fragments/TEMPLATE-X.md — a template of yours: the scaffold never shipped it. It would move to TEMPLATES/TEMPLATE-X.md, which is where backlog/TEMPLATE-x.md goes — the names differ only in case");
+    expect(p.ownTemplates).toEqual([["backlog/TEMPLATE-x.md", "TEMPLATES/TEMPLATE-x.md"]]);
+  });
+
+  test("the preflight stops on a case-only clash before anything moves", () => {
+    const root = fixtureO({ "docs/briefs/TEMPLATES/plan.template.md": "our plan form\n" });
+    const before = treeDigest(root);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("docs/briefs/TEMPLATES/plan.template.md — a template of yours");
+    expect(r.out).toContain("the scaffold's own TEMPLATES/PLAN.template.md — the names differ only in case");
+    expect(r.out).toContain("Nothing was written.");
+    expect(treeDigest(root)).toEqual(before);
   });
 });
 
@@ -379,6 +449,76 @@ describe("rewriteFolderLinks — a link to a retired folder itself, and nothing 
     const r = rewriteFolderLinks(text, "/r/README.md", map);
     expect(r.text).toBe("[a](docs/items/) [b](docs/features) [c](docs/projects/gone.md) [d](./docs/items/#x) `[e](docs/backlog/)`\n");
     expect(r.changed).toBe(3);
+  });
+});
+
+describe("suggestLinkFix — a broken link resolved through the run's moves", () => {
+  const D = "/r/docs";
+  const moves = new Map([
+    [`${D}/projects/_archive/gamma`, `${D}/features/_archive/gamma`],
+    [`${D}/projects/alpha`, `${D}/features/alpha`],
+    [`${D}/projects/alpha/proposal.md`, `${D}/features/alpha/feature.md`],
+    [`${D}/backlog/2026-01-01-x.md`, `${D}/items/x.md`],
+  ]);
+  const on = new Set([`${D}/features/alpha/feature.md`, `${D}/items/x.md`, `${D}/architecture/README.md`]);
+  const exists = (abs: string) => on.has(abs);
+  const file = `${D}/features/_archive/gamma/sessions/2025-12-02-old.md`;
+
+  test("a link a legacy archive left one folder level short: to a document that moved, and to one that did not", () => {
+    // Written at projects/gamma/sessions/ as ../../alpha/proposal.md; the archive added a level,
+    // and the rewrite kept what it then resolved to: docs/projects/_archive/alpha/proposal.md.
+    expect(suggestLinkFix(file, "../../../../projects/_archive/alpha/proposal.md#goals", moves, exists)).toBe("../../../alpha/feature.md#goals");
+    expect(suggestLinkFix(file, "../../../../projects/architecture/README.md", moves, exists)).toBe("../../../../architecture/README.md");
+  });
+
+  test("a target that moved but was written in a way the rewrite could not see", () => {
+    expect(suggestLinkFix(`${D}/playbooks/p.md`, "../backlog/2026-01-01-x.md", moves, exists)).toBe("../items/x.md");
+  });
+
+  test("nothing to suggest: a target found by neither reading, a URL, an absolute path", () => {
+    expect(suggestLinkFix(file, "../../nowhere.md", moves, exists)).toBeNull();
+    expect(suggestLinkFix(file, "https://example.com/a.md", moves, exists)).toBeNull();
+    expect(suggestLinkFix(file, "/abs/a.md", moves, exists)).toBeNull();
+  });
+});
+
+describe("respellText — retired docs paths in any text, from the move record", () => {
+  const moves = new Map([
+    ["docs/projects/alpha", "docs/features/alpha"],
+    ["docs/projects/alpha/proposal.md", "docs/features/alpha/feature.md"],
+    ["docs/backlog/2026-01-01-x.md", "docs/items/x.md"],
+  ]);
+  test("a whole path is respelled, the longest move first; a retired folder itself goes to its successor", () => {
+    const text = [
+      "// see docs/projects/alpha/proposal.md#goals and docs/projects/alpha/plan.md.",
+      '{ "items": "docs/backlog/", "one": "docs/backlog/2026-01-01-x.md" }',
+      "Also ../docs/projects/alpha and `docs/projects`.",
+    ].join("\n");
+    const r = respellText(text, "docs", moves);
+    expect(r.text).toBe(
+      [
+        "// see docs/features/alpha/feature.md#goals and docs/features/alpha/plan.md.",
+        '{ "items": "docs/items/", "one": "docs/items/x.md" }',
+        "Also ../docs/features/alpha and `docs/features`.",
+      ].join("\n")
+    );
+    expect(r.hits.map((h) => [h.line, h.from, h.to])).toEqual([
+      [1, "docs/projects/alpha/proposal.md", "docs/features/alpha/feature.md"],
+      [1, "docs/projects/alpha/plan.md", "docs/features/alpha/plan.md"],
+      [2, "docs/backlog/", "docs/items/"],
+      [2, "docs/backlog/2026-01-01-x.md", "docs/items/x.md"],
+      [3, "docs/projects/alpha", "docs/features/alpha"],
+      [3, "docs/projects", "docs/features"],
+    ]);
+  });
+  test("a path that only starts like one is not touched; a retired path nothing moved is reported and left", () => {
+    const text = "docs/projects/alpha-two/x.md mydocs/backlog/a.md docs/backlogs/a.md docs/investigations/gone.md\n";
+    const r = respellText(text, "docs", moves);
+    expect(r.text).toBe(text);
+    expect(r.hits).toEqual([
+      { line: 1, from: "docs/projects/alpha-two/x.md", to: null },
+      { line: 1, from: "docs/investigations/gone.md", to: null },
+    ]);
   });
 });
 
@@ -582,7 +722,7 @@ function sh(cmd: string[], cwd?: string, env?: Record<string, string>): string {
 interface Scaffolds {
   /** A generated 8.1.0 project: the v2.10 tree as a consumer has it. */
   old: string;
-  /** A generated project from the working tree: the 9.0.0 layout. */
+  /** A generated project at SCAFFOLD_TAG: the 9.0.0 layout, as the script fetches it. */
   current: string;
 }
 let scaffolds: Scaffolds | null = null;
@@ -594,18 +734,24 @@ function generatedScaffolds(): Scaffolds {
   const base = tmp("migrate-v30-scaffolds-");
   const config = join(base, "cookiecutter.yaml");
   writeFileSync(config, `replay_dir: "${join(base, "replay")}"\ncookiecutters_dir: "${join(base, "cookiecutters")}"\n`);
-  if (Bun.spawnSync(["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `${V210_TAG}^{commit}`], { stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode !== 0)
-    throw new Error(`tag ${V210_TAG} is not in this clone. Run \`git fetch --tags\` and re-run.`);
-  const dir = join(base, "template-v210");
-  mkdirSync(dir);
-  sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", join(base, "t.tar"), V210_TAG]);
-  sh(["tar", "-xf", join(base, "t.tar"), "-C", dir]);
+  const archived = (tag: string, name: string): string => {
+    if (Bun.spawnSync(["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `${tag}^{commit}`], { stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode !== 0)
+      throw new Error(`tag ${tag} is not in this clone. Run \`git fetch --tags\` and re-run.`);
+    const dir = join(base, name);
+    mkdirSync(dir);
+    sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", join(base, `${name}.tar`), tag]);
+    sh(["tar", "-xf", join(base, `${name}.tar`), "-C", dir]);
+    return dir;
+  };
   const generate = (template: string, into: string): string => {
     mkdirSync(into);
     sh(["cookiecutter", "--config-file", config, "--no-input", "-o", into, template, "install_target=New project folder"]);
     return join(into, "my-project");
   };
-  scaffolds = { old: generate(dir, join(base, "old")), current: generate(REPO_ROOT, join(base, "current")) };
+  scaffolds = {
+    old: generate(archived(V210_TAG, "template-v210"), join(base, "old")),
+    current: generate(archived(SCAFFOLD_TAG, "template-v300"), join(base, "current")),
+  };
   return scaffolds;
 }
 
@@ -680,6 +826,15 @@ function fixtureO(extra: Record<string, string> = {}): string {
   cfg.lint.exclude = ["docs/projects/alpha/artifacts/*-prototype.md"];
   write(root, { "docs/index.md": index, ".project-docs.json": `${JSON.stringify(cfg, null, 2)}\n` });
   commitAll(root, "the 8.1.0 tree, with every shape");
+  return root;
+}
+
+/** `root` with `rels` recorded in its seed record at their current bytes, committed — what v2.8-to-v2.9 did to a template matched by name. */
+function withRecorded(root: string, ...rels: string[]): string {
+  const m = readJson(join(root, "docs/.pdocs-seed.json"));
+  for (const rel of rels) m.files[rel] = hashOf(join(root, "docs", rel));
+  write(root, { "docs/.pdocs-seed.json": `${JSON.stringify(m, null, 2)}\n` });
+  commitAll(root, `recorded ${rels.join(", ")}`);
   return root;
 }
 
@@ -919,6 +1074,30 @@ describe("the whole migration on fixture O", () => {
     expect(fmGet(fm, "description")).toBe("Beta's second session.");
   });
 
+  test("a born item with no session or plan takes its title and description from the document it holds", () => {
+    // Five dogfood items born from folders holding only a brief or a report were
+    // "Work recorded in <slug> before it had an item", titled from the folder name.
+    const root = fixtureO({
+      "docs/projects/ui-experimentation-framework/artifacts/brief.md": doc(common("artifact", "UI experimentation framework", "A harness for trying UI variants side by side."), "# UI experimentation framework\n\nThe idea.\n"),
+      "docs/projects/perf-audit/reports/2026-01-02-audit-report.md": doc(common("artifact", "Performance audit", "Where the time goes on first load."), "# Performance audit\n\nFindings.\n"),
+      "docs/projects/_archive/old-spike/notes.md": "# Old spike\n\nWe tried the thing. It did not work.\n",
+    });
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const item = (rel: string) => {
+      const fm = fmOf(root, rel);
+      return [fmGet(fm, "title"), fmGet(fm, "description"), splitFrontmatter(read(root, rel)).body.split("\n").find((l) => l.startsWith("# "))];
+    };
+    expect(item("docs/items/ui-experimentation-framework/item.md")).toEqual(["UI experimentation framework", "A harness for trying UI variants side by side.", "# UI experimentation framework"]);
+    expect(item("docs/items/perf-audit/item.md")).toEqual(["Performance audit", "Where the time goes on first load.", "# Performance audit"]);
+    // A legacy archive's document with no frontmatter: its H1 and first sentence, as the run synthesizes them.
+    expect(item("docs/items/_archive/old-spike/item.md")).toEqual(["Old spike", "We tried the thing.", "# Old spike"]);
+    expect(r.out).toContain("docs/items/ui-experimentation-framework/item.md — created (item, task, done), titled and described from artifacts/brief.md");
+    // With a session, the session still describes it, and the folder names it.
+    expect(item("docs/items/beta/item.md").slice(0, 2)).toEqual(["Beta", "Beta was built without a proposal."]);
+  });
+
   test("memories and lessons are kept and declared; the config's other bytes are the adopter's", () => {
     const { root } = wholeRun();
     expect(existsSync(join(root, "docs/memories/2026-01-14-first-memory.md"))).toBe(true);
@@ -987,6 +1166,50 @@ describe("the whole migration on fixture O", () => {
     expect(existsSync(join(root, "docs/memories/TEMPLATE.md"))).toBe(true);
   });
 
+  test("a template of the adopter's that an earlier migration recorded by name moves to TEMPLATES/ as it is, its record dropped", () => {
+    const own = "docs/projects/TEMPLATES/PROJECT-LEDGER.template.md";
+    const root = withRecorded(fixtureO({ [own]: "# Project ledger\n\nOur own form.\n" }), "projects/TEMPLATES/PROJECT-LEDGER.template.md");
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain(
+      "· template of yours: docs/projects/TEMPLATES/PROJECT-LEDGER.template.md → docs/TEMPLATES/PROJECT-LEDGER.template.md — the scaffold never shipped it, so it is yours: moved as it is, and the seed record an earlier migration took of it by its name dropped"
+    );
+    expect(r.out.slice(r.out.indexOf("For you to check"))).toContain(
+      "docs/TEMPLATES/PROJECT-LEDGER.template.md is a template of yours, moved as it is from docs/projects/TEMPLATES/PROJECT-LEDGER.template.md: the scaffold never shipped it"
+    );
+    expect(read(root, "docs/TEMPLATES/PROJECT-LEDGER.template.md")).toBe("# Project ledger\n\nOur own form.\n");
+    const m = readJson(join(root, "docs/.pdocs-seed.json"));
+    expect(Object.keys(m.files).filter((k) => k.includes("PROJECT-LEDGER"))).toEqual([]);
+    expect(pdocs(root, "check", "--format", "json").exitCode).toBe(0);
+  });
+
+  test("the guide's ownerless-report step is committable: a report moved into a project's reports/ as an artifact passes the v2.10 lint, and the run makes it a report", () => {
+    // Left as `type: report` there, the v2.10 lint says WRONG TYPE and a pre-commit gate
+    // refuses the commit the preflight asks for.
+    const moved = "docs/projects/alpha/reports/2026-01-21-audit-report.md";
+    const root = fixtureO({ [moved]: doc(common("artifact", "Audit", "What the audit found."), "# Audit\n\nFound.\n") });
+    // Fixture O's baseline has problems of its own; the question is only whether this file is one.
+    expect(pdocs(root, "check", "--format", "text").stdout.toString()).not.toContain(moved);
+    const asReport = fixtureO({ [moved]: doc(common("report", "Audit", "What the audit found."), "# Audit\n\nFound.\n") });
+    expect(pdocs(asReport, "check", "--format", "text").stdout.toString()).toContain(`WRONG TYPE     ${moved}: "report" (its position says "artifact")`);
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("docs/features/alpha/reports/2026-01-21-audit-report.md — type: artifact → report (its position)");
+    expect(fmGet(fmOf(root, "docs/features/alpha/reports/2026-01-21-audit-report.md"), "type")).toBe("report");
+  });
+
+  test("the run's summary counts the born items set done for having no proposal, and lists each to check", () => {
+    const { r } = wholeRun();
+    const tail = r.out.slice(r.out.indexOf("For you to check"));
+    expect(tail).toContain(
+      "1 item(s) born from a project folder with no proposal were set `done`: with no plan active, the run read the work as finished, and it cannot tell finished from stopped. Check each, and set one that is not finished: bun scripts/pdocs/cli.ts set item/<slug> --lifecycle backlog (or ready, active, dropped)"
+    );
+    expect(tail).toContain("       docs/items/beta/item.md");
+    expect(tail.indexOf("For you to check")).toBeLessThan(tail.indexOf("Migration complete."));
+  });
+
   test("every move is named in the output", () => {
     const { r } = wholeRun();
     for (const line of [
@@ -999,6 +1222,195 @@ describe("the whole migration on fixture O", () => {
       "promoted → dropped: listed for review",
     ])
       expect(r.out).toContain(line);
+  });
+});
+
+// ─── Phase 10: a MISSING FILE resolved through the move record ──────────────
+
+describe("phase 10 suggests the correction for a MISSING FILE the move record accounts for", () => {
+  test("a legacy archive's links one level short: suggested, applied literally, and the re-run — planned afresh — suggests the rest and then passes", () => {
+    // Written at projects/gamma/sessions/, then archived by hand: each relative link lost a level.
+    const short = "docs/projects/_archive/gamma/sessions/2025-12-04-short.md";
+    const root = fixtureO({ [short]: "# Short\n\nSee [alpha](../../alpha/proposal.md#alpha) and [the architecture](../../../architecture/README.md).\n" });
+    const first = migrate(root);
+    expect(first.exitCode).toBe(1);
+    expect(first.out).toContain("MISSING FILE");
+    const moved = "docs/features/_archive/gamma/sessions/2025-12-04-short.md";
+    const alpha = new RegExp(`${moved}: (\\S+) → \\.\\./\\.\\./\\.\\./alpha/feature\\.md#alpha$`, "m").exec(first.out);
+    const arch = new RegExp(`${moved}: (\\S+) → \\.\\./\\.\\./\\.\\./\\.\\./architecture/README\\.md$`, "m").exec(first.out);
+    expect(first.out).toContain("Suggested corrections for 2 MISSING FILE link(s)");
+    expect(alpha).not.toBeNull();
+    expect(arch).not.toBeNull();
+    // The adopter applies ONE suggestion, as printed, without committing.
+    write(root, { [moved]: read(root, moved).replace(`(${alpha?.[1]})`, "(../../../alpha/feature.md#alpha)") });
+    const second = migrate(root);
+    expect(second.exitCode).toBe(1);
+    expect(second.out).toContain("Suggested corrections for 1 MISSING FILE link(s)");
+    expect(second.out).toContain(`${moved}: ${arch?.[1]} → ../../../../architecture/README.md`);
+    write(root, { [moved]: read(root, moved).replace(`(${arch?.[1]})`, "(../../../../architecture/README.md)") });
+    const third = migrate(root);
+    if (third.exitCode !== 0) console.log(third.out);
+    expect(third.exitCode).toBe(0);
+  });
+});
+
+// ─── --respell: retired paths outside the docs root ─────────────────────────
+
+describe("--respell lists the retired paths in the files named, and writes only with --write, only those", () => {
+  const OUTSIDE = {
+    "src/app.ts": "// see docs/projects/alpha/proposal.md and docs/backlog/2026-01-01-open-item.md\nexport const x = 1;\n",
+    ".anthill/config.json": '{ "board": "docs/backlog/", "feature": "docs/projects/alpha/" }\n',
+    "DEV_KICKOFF.md": "# Kickoff\n\nRead docs/projects/alpha/proposal.md first; not docs/projects/alpha-two/x.md.\n",
+    "CHANGELOG-local.md": "We retired docs/backlog/ in 2026.\n",
+  };
+  const respelled = () => {
+    const root = fixtureO(OUTSIDE);
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    commitAll(root, "migrated");
+    return root;
+  };
+  const respell = (root: string, ...args: string[]) =>
+    Bun.spawnSync(["bun", SCRIPT, "--root", root, "--respell", ...args], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
+
+  test("the listing first: every hit, file and line, and nothing written", () => {
+    const root = respelled();
+    const before = treeDigest(root);
+    const r = respell(root, "src", ".anthill", "DEV_KICKOFF.md");
+    const out = r.stdout.toString() + r.stderr.toString();
+    expect(r.exitCode).toBe(0);
+    for (const line of [
+      "src/app.ts:1: docs/projects/alpha/proposal.md → docs/features/alpha/feature.md",
+      "src/app.ts:1: docs/backlog/2026-01-01-open-item.md → docs/items/open-item.md",
+      ".anthill/config.json:1: docs/backlog/ → docs/items/",
+      ".anthill/config.json:1: docs/projects/alpha/ → docs/features/alpha/",
+      "DEV_KICKOFF.md:3: docs/projects/alpha/proposal.md → docs/features/alpha/feature.md",
+      "DEV_KICKOFF.md:3: docs/projects/alpha-two/x.md — left as written: nothing this migration moved is there",
+      "5 path(s) respelled in 3 file(s), 1 left as written — nothing written.",
+    ])
+      expect(out).toContain(line);
+    expect(out).not.toContain("CHANGELOG-local.md");
+    expect(treeDigest(root)).toEqual(before);
+  });
+
+  test("--write writes the files named and no other", () => {
+    const root = respelled();
+    const r = respell(root, "--write", "src", ".anthill", "DEV_KICKOFF.md");
+    expect(r.exitCode).toBe(0);
+    expect(read(root, "src/app.ts")).toBe("// see docs/features/alpha/feature.md and docs/items/open-item.md\nexport const x = 1;\n");
+    expect(read(root, ".anthill/config.json")).toBe('{ "board": "docs/items/", "feature": "docs/features/alpha/" }\n');
+    expect(read(root, "DEV_KICKOFF.md")).toContain("not docs/projects/alpha-two/x.md");
+    expect(read(root, "CHANGELOG-local.md")).toBe(OUTSIDE["CHANGELOG-local.md"]);
+    expect(git(root, "status", "--porcelain").split("\n").filter(Boolean).sort()).toEqual([" M .anthill/config.json", " M DEV_KICKOFF.md", " M src/app.ts"]);
+  });
+
+  test("a folder is walked without its VCS or dependency folders: node_modules/, .git/, .svn/, .hg/", () => {
+    const root = respelled();
+    write(root, {
+      "tools/node_modules/dep/index.js": "// docs/projects/alpha/proposal.md\n",
+      "tools/.svn/entries": "docs/projects/alpha/proposal.md\n",
+      "tools/.hg/store": "docs/projects/alpha/proposal.md\n",
+      "tools/mine.ts": "// docs/projects/alpha/proposal.md\n",
+    });
+    const r = respell(root, "--write", ".");
+    expect(r.exitCode).toBe(0);
+    // Each hit is named from the project root, whatever path reached it.
+    const hits = r.stdout.toString().split("\n").filter((l) => /^   \S/.test(l)).map((l) => l.trim().split(":")[0]);
+    expect([...new Set(hits)].sort()).toEqual([".anthill/config.json", "CHANGELOG-local.md", "DEV_KICKOFF.md", "src/app.ts", "tools/mine.ts"]);
+    expect(read(root, "tools/node_modules/dep/index.js")).toBe("// docs/projects/alpha/proposal.md\n");
+    expect(read(root, "tools/.svn/entries")).toBe("docs/projects/alpha/proposal.md\n");
+  });
+
+  test("with no move record it stops and says why; --write alone, or no path, is a bad invocation", () => {
+    const root = fixtureO();
+    const r = respell(root, "src");
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr.toString()).toContain("there is no move record");
+    const bad = (...args: string[]) => Bun.spawnSync(["bun", SCRIPT, ...args], { stdout: "pipe", stderr: "pipe", env: childEnv() });
+    expect(bad("--respell").exitCode).toBe(2);
+    expect(bad("--write").exitCode).toBe(2);
+    expect(bad("--respell", "src", "--dry-run").exitCode).toBe(2);
+  });
+});
+
+// ─── An owned file the refresh replaces or removes, edited by the adopter ────
+
+describe("owned files the refresh replaces or removes: an edit of the adopter's is named, with its recovery", () => {
+  test("OWNED_BEFORE_9 is every release before 9.0.0's owned Markdown, by proseKey — derived from the release tags", () => {
+    const tags = sh(["git", "-C", REPO_ROOT, "tag", "--list", "project-docs-scaffold-template-v*"])
+      .split("\n")
+      .filter((t) => t && Number(t.split("-v")[1]?.split(".")[0]) < 9);
+    expect(tags).toContain(V210_TAG);
+    // One `git cat-file --batch` over every tag:path pair, rather than a process per pair.
+    const pairs = Object.keys(OWNED_BEFORE_9).flatMap((rel) => tags.map((tag) => [rel, `${tag}:{{cookiecutter.project_slug}}/docs/${rel}`] as const));
+    const r = Bun.spawnSync(["git", "-C", REPO_ROOT, "cat-file", "--batch"], {
+      stdin: Buffer.from(pairs.map(([, spec]) => `${spec}\n`).join("")),
+      stdout: "pipe",
+      stderr: "pipe",
+      env: childEnv(),
+    });
+    const out = Buffer.from(r.stdout);
+    const derived: Record<string, Set<string>> = Object.fromEntries(Object.keys(OWNED_BEFORE_9).map((rel) => [rel, new Set<string>()]));
+    let at = 0;
+    for (const [rel] of pairs) {
+      const eol = out.indexOf(10, at);
+      const header = out.subarray(at, eol).toString();
+      at = eol + 1;
+      if (header.endsWith(" missing")) continue;
+      const size = Number(header.split(" ")[2]);
+      derived[rel]?.add(proseKey(out.subarray(at, at + size).toString()));
+      at += size + 1;
+    }
+    expect(OWNED_BEFORE_9).toEqual(Object.fromEntries(Object.entries(derived).map(([rel, keys]) => [rel, [...keys].sort()])));
+  }, 30_000);
+
+  test("proseKey ignores what a formatter changes — wrapping, table padding, emphasis marks — and the docs_version value", () => {
+    const shipped = read(generatedScaffolds().old, "docs/projects/README.md");
+    const reflowed = shipped.replace(/([a-z,])\n([a-z])/g, "$1 $2").replace(/\*\*/g, "__");
+    expect(reflowed).not.toBe(shipped);
+    expect(proseKey(reflowed)).toBe(proseKey(shipped));
+    const readme = read(generatedScaffolds().old, "docs/README.md");
+    expect(proseKey(readme.replace(/^docs_version:.*$/m, 'docs_version: "1.2.3"'))).toBe(proseKey(readme));
+    expect(proseKey(`${shipped}\n## Our sprints\n\nOne file per sprint.\n`)).not.toBe(proseKey(shipped));
+  });
+
+  test("the item's definition of done: one dry run names a recorded template of the adopter's and each edited owned file as theirs, with the git show that recovers it; the run repeats it, and following it recovers the text", () => {
+    // Spellbook's multi-sprint convention lived in its owned projects/README.md, and was removed silently;
+    // its own PROJECT-LEDGER template had been recorded as the scaffold's by an earlier migration.
+    const added = "\n## Multi-sprint projects\n\nOur own convention: one sprint file per sprint.\n";
+    const root = withRecorded(fixtureO({ "docs/projects/TEMPLATES/PROJECT-LEDGER.template.md": "# Project ledger\n\nOur own form.\n" }), "projects/TEMPLATES/PROJECT-LEDGER.template.md");
+    write(root, {
+      "docs/projects/README.md": `${read(root, "docs/projects/README.md")}${added}`,
+      "docs/architecture/README.md": `${read(root, "docs/architecture/README.md")}${added}`,
+    });
+    commitAll(root, "our own conventions, in owned READMEs");
+    const base = git(root, "rev-parse", "HEAD").trim();
+    const removed = `docs/projects/README.md differs from every release of the scaffold, so it holds edits of yours: the refresh removes it with its folder. An owned file is replaced whole on every refresh, so keep what you added in a page of your own (a playbook, or your root AGENTS.md). Recover your text with: git show ${base}:docs/projects/README.md`;
+    const replaced = `docs/architecture/README.md differs from every release of the scaffold, so it holds edits of yours: the refresh replaces it with 9.0.0's. An owned file is replaced whole on every refresh, so keep what you added in a page of your own (a playbook, or your root AGENTS.md). Recover your text with: git show ${base}:docs/architecture/README.md`;
+    const ownTemplate =
+      "docs/TEMPLATES/PROJECT-LEDGER.template.md is a template of yours, moved as it is from docs/projects/TEMPLATES/PROJECT-LEDGER.template.md: the scaffold never shipped it, and the seed record an earlier migration took of it by its name dropped.";
+    const dry = migrate(root, ["--dry-run"]);
+    expect(dry.exitCode).toBe(0);
+    const dryList = dry.out.slice(dry.out.indexOf("For you to check"));
+    for (const line of [removed, replaced, ownTemplate]) expect(dryList).toContain(line);
+    // Untouched owned files are not named.
+    expect(dry.out).not.toContain("docs/backlog/README.md differs");
+    expect(dry.out).not.toContain("docs/SCHEMA.md differs");
+    // An adopter's unrelated work in progress, uncommitted, beside the run.
+    write(root, { "notes/wip.md": "my draft\n" });
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const tail = r.out.slice(r.out.indexOf("For you to check"));
+    for (const line of [removed, replaced, ownTemplate]) expect(tail).toContain(line);
+    // Follow the printed instruction literally: it recovers the text, and touches nothing else.
+    const cmd = /Recover your text with: (git show \S+)$/m.exec(tail.slice(tail.indexOf("docs/projects/README.md differs")))?.[1] as string;
+    const recovered = Bun.spawnSync(["sh", "-c", cmd], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
+    expect(recovered.exitCode).toBe(0);
+    expect(recovered.stdout.toString()).toContain("Our own convention: one sprint file per sprint.");
+    expect(read(root, "notes/wip.md")).toBe("my draft\n");
+    expect(existsSync(join(root, "docs/projects"))).toBe(false);
   });
 });
 
@@ -1074,7 +1486,8 @@ describe("idempotence and dry run", () => {
     const r = migrate(fixtureO(), ["--dry-run"], { scaffold: null, env: { PATH: `${dir}:${process.env.PATH}` } });
     expect(r.exitCode).toBe(1);
     const args = read(dir, "args.log").split("\n");
-    expect(args[args.indexOf("--checkout") + 1]).toBe("project-docs-scaffold-template-v9.0.0");
+    expect(args[args.indexOf("--checkout") + 1]).toBe(SCAFFOLD_TAG);
+    expect(SCAFFOLD_TAG).toMatch(/^project-docs-scaffold-template-v9\.\d+\.\d+$/);
   });
 });
 
@@ -1464,6 +1877,39 @@ describe("an interrupted run is finished by re-running the same command, uncommi
     });
 });
 
+describe("the move record survives a stop: a re-run planned from the half-migrated tree does not shrink it", () => {
+  test("stopped in phase 8 with a template of the adopter's still to move: the re-run keeps every move, suggests from them, and --respell still finds them", () => {
+    const short = "docs/projects/_archive/gamma/sessions/2025-12-04-short.md";
+    const root = fixtureO({
+      "docs/projects/TEMPLATES/PROJECT-LEDGER.template.md": "# Project ledger\n",
+      [short]: "# Short\n\nSee [alpha](../../alpha/proposal.md).\n",
+      "src/app.ts": "// see docs/projects/alpha/proposal.md\n",
+    });
+    const moves = () => readJson(join(root, ".git", "pdocs-migrate-v2.10-to-v3.0.moves.json")).moves as Array<[string, string]>;
+    chmodSync(join(root, "docs/projects/TEMPLATES"), 0o555);
+    const first = migrate(root);
+    chmodSync(join(root, "docs/projects/TEMPLATES"), 0o755);
+    expect(first.exitCode).toBe(1);
+    expect(first.out).toContain("[8/12]");
+    const complete = moves();
+    expect(complete).toContainEqual(["projects/alpha", "features/alpha"]);
+    expect(complete).toContainEqual(["projects/TEMPLATES/PROJECT-LEDGER.template.md", "TEMPLATES/PROJECT-LEDGER.template.md"]);
+    // The re-run plans afresh — only the templates are left to move — and stops at verify on the short link.
+    const again = migrate(root);
+    expect(again.exitCode).toBe(1);
+    expect(moves()).toEqual(complete);
+    expect(again.out).toContain("docs/features/_archive/gamma/sessions/2025-12-04-short.md: ../../../../projects/_archive/alpha/proposal.md → ../../../alpha/feature.md");
+    const moved = "docs/features/_archive/gamma/sessions/2025-12-04-short.md";
+    write(root, { [moved]: read(root, moved).replace("(../../../../projects/_archive/alpha/proposal.md)", "(../../../alpha/feature.md)") });
+    const last = migrate(root);
+    if (last.exitCode !== 0) console.log(last.out);
+    expect(last.exitCode).toBe(0);
+    expect(moves()).toEqual(complete);
+    const r = Bun.spawnSync(["bun", SCRIPT, "--root", root, "--respell", "src"], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
+    expect(r.stdout.toString()).toContain("src/app.ts:1: docs/projects/alpha/proposal.md → docs/features/alpha/feature.md");
+  });
+});
+
 describe("a red verify, worked without committing, then the same command", () => {
   test("the re-run recognises its own uncommitted output, keeps the adopter's fixes, and completes", () => {
     const root = fixtureO({ "docs/memories/2026-01-22-bare.md": doc(common("memory", "Bare", "No tags."), "# Bare\n") });
@@ -1483,6 +1929,9 @@ describe("a red verify, worked without committing, then the same command", () =>
     expect(again.exitCode).toBe(0);
     expect(read(root, "docs/items/open-item.md")).toContain("My note after the migration.");
     expect(readJson(join(root, ".project-docs.json")).version).toBe("9.9.9");
+    // The re-run plans from the moved tree, where nothing is born any more: what the first
+    // run found for the adopter to check is still said by the run that completes.
+    expect(again.out.slice(again.out.indexOf("For you to check"))).toContain("docs/items/beta/item.md");
   });
 
   test("an edit of the adopter's in a path the re-run would write still stops it", () => {

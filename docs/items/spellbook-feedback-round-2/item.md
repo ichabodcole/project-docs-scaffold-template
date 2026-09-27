@@ -5,7 +5,7 @@ description:
   Eight fixes from Spellbook's 8.1.0 to 9.0.0 migration, worked as one branch
   before story-loom runs the same migration.
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: ready
+lifecycle: done
 id: 01a0dfd9-e990-71b9-83a6-53444cbca087
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-26 }
@@ -39,10 +39,38 @@ These fixes matter before story-loom runs the same migration.
 | 7   | "What it cannot check" says state mapping is faithful, so a stale state (`implemented` on a feature with open work) carries forward as `done`.                                                                                                                                                                                                      | `v2.10-to-v3.0.md`                                                                                      |
 | 8   | The cycle template's Outcome names what carried over to the next cycle, and says an `abandoned` cycle still writes one (what was falsified). The guide notes that the 8.x multi-sprint convention maps to cycles: one cycle per sprint, its work as items with `cycle:` and `parent:`. Non-`.md` evidence belongs in the owner's `artifacts/`.      | `docs/cycles/TEMPLATE.md` (seeded, so mirrored byte for byte); `v2.10-to-v3.0.md`; `features/README.md` |
 
+## Verdicts
+
+Worked on `fix/v3-migration-spellbook-round-2`,
+[its session](./sessions/2026-09-27-v3-migration-spellbook-round-2.md).
+
+1. **Adopted, and extended.** v2.8-to-v2.9 records only the templates its
+   scaffold ships, and v2.9-to-v2.10 calls an old wrong record "never shipped,
+   yours". v2.10-to-v3.0 moves an adopter's own template into `TEMPLATES/`
+   rather than stopping, since 9.0.0 keeps every template there and the move
+   needs no judgment. It still stops on a name clash (compared without case) or
+   a copy in `_archive/`.
+2. **Adopted.** `OWNED_BEFORE_9` holds every owned file as each earlier release
+   shipped it. A file matching none is named, with `git show <pre-run base>:…`.
+3. **Adopted in phase 10; `pdocs report` not changed.** `report.ts` is payload,
+   installed from the pinned tag, and has no move table after the run. Phase 10
+   suggests fixes and does not rewrite, because the one-level-short reading is a
+   guess. The moves persist in a record under `.git/`, so a re-run after a stop
+   still suggests.
+4. **Adopted as a mode, `--respell`.** A one-liner could not match whole paths,
+   map folder successors or list before writing.
+5. **Adopted.** The guide sets `type: artifact` so the v2.10 gate commits it,
+   and the migration turns it back into a report.
+6. **Adopted.** It is persisted across a stop.
+7. **Adopted.**
+8. **Adopted in this repository; delivery to story-loom is
+   [its own item](../repin-v3-migration-to-9.0.1.md)**, a 9.0.1 release with the
+   migration re-pinned to it.
+
 ## Definition of done
 
-- [ ] Each of the eight rows is fixed, with a test wherever the migration's
+- [x] Each of the eight rows is fixed, with a test wherever the migration's
       behaviour changes (1, 2, 3, 6).
-- [ ] A migration dry run on a fixture holding a local template and an edited
+- [x] A migration dry run on a fixture holding a local template and an edited
       owned README reports both as the user's own, with the recovery command.
 - [ ] Plugin 4.0.1 is released carrying them, before story-loom migrates.

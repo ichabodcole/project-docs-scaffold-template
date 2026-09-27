@@ -1,18 +1,20 @@
 ---
 type: item
-title: The catalog line can wrap into a nested list
+title: Re-pin v2.10-to-v3.0 to scaffold 9.0.1
 description:
-  When a library page's description contains ' - ', ' + ' or '1. ', pdocs new
-  can start a continuation line with it, and Prettier then reads a nested list
-  and rewrites the entry.
+  Story-loom migrates next; under D16 the migration installs the v9.0.0 tag's
+  cycle template and features README, so it must be re-pinned to the 9.0.1
+  release that carries the new text before plugin 4.0.1 ships.
 status: draft
-lifecycle: triage
-id: 01a0e03f-d229-74d5-a5ba-1a68fde61ec7
-kind: bug
-generated: { by: claude-opus-5-5, at: 2026-09-26 }
-tags: [pdocs, prettier]
-scope: pdocs
-from: items/wocky-talky-feedback-round-1/sessions/2026-09-26-pdocs-output-and-placeholder-lint.md
+lifecycle: ready
+id: 01a0e3c5-8a6f-7473-bfe9-23838f87f9cd
+kind: task
+generated: { by: claude-opus-5-5, at: 2026-09-27 }
+tags: [migrations, release]
+cycle: 2026-09-v9-rollout-feedback
+priority: high
+scope: migrations
+from: items/spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md
 ---
 
 <!--
@@ -60,27 +62,29 @@ value the lint would reject.
 docs/items/README.md has the states, the kinds and the rules.
 -->
 
-# The catalog line can wrap into a nested list
+# Re-pin v2.10-to-v3.0 to scaffold 9.0.1
 
-`catalogEntry` in `scripts/pdocs/commands/new.ts` wraps a library page's catalog
-line greedily at 80 columns. When the description contains `-`, `+` or `1. `, a
-continuation line can start with it, and Prettier then reads a nested list and
-rewrites the entry, changing its meaning. Found by the review of
-`fix/pdocs-output-and-placeholder-lint`, which fuzzed `catalogEntry` against
-Prettier. It predates that branch, and is rare in real descriptions.
-
-The same class, seen landing that branch: when `pdocs new session --owner`
-promotes a single-file item to a folder, the link it rewrites in the cycle file
-comes out wrapped differently from what Prettier produces, and the pre-commit
-format check failed until the file was reformatted by hand.
+Spellbook round 2 changed the cycle template's Outcome and the features README
+(row 8). Under D16, v2.10-to-v3.0 installs the files of the scaffold tag it is
+pinned to (`SCAFFOLD_TAG`, v9.0.0), so story-loom, which migrates next, would
+get the old text. Both reviewers of that branch and the owner chose to release
+scaffold 9.0.1 and re-pin the migration to it: 9.0.1 has the layout the script
+was written for, so the pin keeps D16's intent. A new migration for two wording
+changes would go against the update-project-docs skill's own rule. Projects
+already on 9.0.0 (Spellbook, wocky-talky) get the text by hand or from a later
+migration.
 
 ## Definition of done
 
-- [ ] A catalog line whose description contains `-`, `+` or `1. ` at a wrap
-      point is left unchanged by `prettier --check`, with a test.
-- [ ] A link rewritten by promotion or `pdocs archive` leaves the file
-      Prettier-stable, with a test.
+- [ ] Scaffold 9.0.1 is released, carrying the new cycle template and features
+      README.
+- [ ] `SCAFFOLD_TAG` names v9.0.1 in `plugins/` and `dist/`; the tests build
+      from that tag; a test pins the cookiecutter `--checkout <tag>`.
+- [ ] The guide's tag, version table and Verification, the script's "replaces it
+      with 9.0.0's" wording, and `update-project-docs/SKILL.md` Step 4 name
+      9.0.1.
+- [ ] Plugin 4.0.1 is released with it, before story-loom migrates.
 
 ## Related Documents
 
-- [pdocs output and the placeholder lint — 2026-09-26](./wocky-talky-feedback-round-1/sessions/2026-09-26-pdocs-output-and-placeholder-lint.md)
+- [v3 migration, Spellbook round 2 — 2026-09-27](./spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md)

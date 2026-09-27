@@ -1,18 +1,17 @@
 ---
 type: item
-title: The catalog line can wrap into a nested list
+title: A completing re-run's summary counts only its own plan
 description:
-  When a library page's description contains ' - ', ' + ' or '1. ', pdocs new
-  can start a continuation line with it, and Prettier then reads a nested list
-  and rewrites the entry.
+  After a stop, the run that completes v2.10-to-v3.0 prints '0 move(s), 0
+  document(s) written', counting only its own plan rather than the migration's.
 status: draft
 lifecycle: triage
-id: 01a0e03f-d229-74d5-a5ba-1a68fde61ec7
+id: 01a0e3c5-8b05-72d0-af59-19961bd11b60
 kind: bug
-generated: { by: claude-opus-5-5, at: 2026-09-26 }
-tags: [pdocs, prettier]
-scope: pdocs
-from: items/wocky-talky-feedback-round-1/sessions/2026-09-26-pdocs-output-and-placeholder-lint.md
+generated: { by: claude-opus-5-5, at: 2026-09-27 }
+tags: [migrations]
+scope: migrations
+from: items/spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md
 ---
 
 <!--
@@ -60,27 +59,18 @@ value the lint would reject.
 docs/items/README.md has the states, the kinds and the rules.
 -->
 
-# The catalog line can wrap into a nested list
+# A completing re-run's summary counts only its own plan
 
-`catalogEntry` in `scripts/pdocs/commands/new.ts` wraps a library page's catalog
-line greedily at 80 columns. When the description contains `-`, `+` or `1. `, a
-continuation line can start with it, and Prettier then reads a nested list and
-rewrites the entry, changing its meaning. Found by the review of
-`fix/pdocs-output-and-placeholder-lint`, which fuzzed `catalogEntry` against
-Prettier. It predates that branch, and is rare in real descriptions.
-
-The same class, seen landing that branch: when `pdocs new session --owner`
-promotes a single-file item to a folder, the link it rewrites in the cycle file
-comes out wrapped differently from what Prettier produces, and the pre-commit
-format check failed until the file was reformatted by hand.
+Found by the implementer of `fix/v3-migration-spellbook-round-2`. When
+v2.10-to-v3.0 completes on a re-run after a stop, its last line counts only that
+run's plan ("0 move(s), 0 document(s) written"), which reads as if the migration
+did nothing. The behaviour predates that branch.
 
 ## Definition of done
 
-- [ ] A catalog line whose description contains `-`, `+` or `1. ` at a wrap
-      point is left unchanged by `prettier --check`, with a test.
-- [ ] A link rewritten by promotion or `pdocs archive` leaves the file
-      Prettier-stable, with a test.
+- [ ] A completing re-run's last line reports the migration's totals from its
+      record, with a test that stops, re-runs and checks the line.
 
 ## Related Documents
 
-- [pdocs output and the placeholder lint — 2026-09-26](./wocky-talky-feedback-round-1/sessions/2026-09-26-pdocs-output-and-placeholder-lint.md)
+- [v3 migration, Spellbook round 2 — 2026-09-27](./spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md)

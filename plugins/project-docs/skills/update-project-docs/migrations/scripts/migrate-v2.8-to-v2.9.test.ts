@@ -58,6 +58,32 @@ if (a[0] === "find") process.exit(2);
 process.exit(0);
 `;
 
+/**
+ * The templates the scaffold shipped from 7.0.0 to 8.1.1 — one set, unchanged
+ * across those releases, and the only files adoption may record.
+ */
+const SHIPPED = [
+  "architecture/TEMPLATE.md",
+  "backlog/TEMPLATE.md",
+  "briefs/TEMPLATES/BRIEF.template.md",
+  "cycles/TEMPLATE.md",
+  "fragments/TEMPLATE.md",
+  "interaction-design/TEMPLATE.md",
+  "investigations/YYYY-MM-DD-TEMPLATE-investigation.md",
+  "lessons-learned/TEMPLATE.md",
+  "memories/TEMPLATE.md",
+  "playbooks/TEMPLATE.md",
+  "projects/TEMPLATES/DESIGN-RESOLUTION.template.md",
+  "projects/TEMPLATES/HANDOFF.template.md",
+  "projects/TEMPLATES/PLAN.template.md",
+  "projects/TEMPLATES/PROPOSAL.template.md",
+  "projects/TEMPLATES/TEST-PLAN.template.md",
+  "projects/TEMPLATES/YYYY-MM-DD-SESSION.template.md",
+  "reports/YYYY-MM-DD-TEMPLATE-report.md",
+  "specifications/TEMPLATE-domain.md",
+  "specifications/TEMPLATE-overview.md",
+];
+
 /** A stand-in for a generated scaffold: only the parts the script reads. */
 function scaffold(version = "9.9.9"): string {
   const s = tmp("mig29-scaffold-");
@@ -67,6 +93,7 @@ function scaffold(version = "9.9.9"): string {
     "docs/README.md": `---\ndocs_version: "${version}" # x-release-please-version\n---\n\n# Documentation\n`,
     "scripts/pdocs/seed.ts": "export const MARKER = 'seed';\n",
     "scripts/pdocs/cli.ts": STUB_CLI,
+    ...Object.fromEntries(SHIPPED.map((t) => [`docs/${t}`, "the scaffold's\n"])),
   });
   return s;
 }
@@ -135,6 +162,28 @@ describe("adoption", () => {
       "investigations/YYYY-MM-DD-TEMPLATE-investigation.md",
       "reports/YYYY-MM-DD-TEMPLATE-report.md",
     ]);
+  });
+
+  test("a template the scaffold never shipped is the adopter's: not recorded, and named as theirs", () => {
+    // Spellbook's PROJECT-LEDGER and SPRINT-OUTCOME matched the name pattern and
+    // were recorded, so 9.0.0's migration read them as the scaffold's.
+    const p = project({
+      ...TPL,
+      "docs/projects/TEMPLATES/PROJECT-LEDGER.template.md": "our ledger\n",
+      "docs/projects/TEMPLATES/SPRINT-OUTCOME.template.md": "our sprint outcome\n",
+      "docs/architecture/ADR-TEMPLATE.md": "our ADR form\n",
+    });
+    const dry = run(p, scaffold(), "--dry-run");
+    expect(out(dry)).toContain("would record 1 template(s)");
+    const r = run(p, scaffold());
+    expect(r.exitCode).toBe(0);
+    expect(Object.keys(manifest(p).files)).toEqual(["playbooks/TEMPLATE.md"]);
+    for (const rel of ["projects/TEMPLATES/PROJECT-LEDGER.template.md", "projects/TEMPLATES/SPRINT-OUTCOME.template.md", "architecture/ADR-TEMPLATE.md"])
+      expect(out(r)).toContain(`docs/${rel} — the scaffold never shipped it, so it is yours: not recorded`);
+    // A re-run does not ask for them to be recorded either.
+    const again = run(p, scaffold());
+    expect(again.exitCode).toBe(0);
+    expect(out(again)).toContain("every recorded hash still matches, and nothing is unrecorded");
   });
 
   test("a template under _archive/ is the adopter's history, not ours", () => {
