@@ -6,12 +6,13 @@ description:
   story-loom's migration can test them.
 tags: [feedback, migrations, pdocs]
 status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
-lifecycle: active
+lifecycle: closed
 started: 2026-09-26
 appetite:
   Until a release carries these fixes; story-loom migrates on that release.
 after: [] # cycles or features this one waits on: cycle/<slug>, feature/<slug>
 generated: { by: claude-opus-5-5, at: 2026-09-26 }
+closed: 2026-09-27
 ---
 
 # v9 rollout feedback
@@ -51,7 +52,51 @@ consumer has hit.
 
 ## Outcome
 
-_Written at close, not before._
+Everything the first two 9.0.0 consumers reported shipped in three branches,
+plus a fourth for the re-pin. It was released as scaffold 9.0.1, then 9.1.0,
+with plugin project-docs 4.1.0.
+
+- `pdocs new`, `set` and `find` write what consumers expect, and the lint now
+  reports a template's placeholders.
+- finalize-branch catches branch SHAs cited in the session record, commits a
+  dirty tree before review, and formats docs before committing.
+- The v2.10-to-v3.0 migration handles adopters' own templates, edited owned
+  files, links broken before the run, and paths outside `docs/`.
+- The migration is pinned to 9.0.1, so story-loom gets the new cycle template.
+
+Every branch was reviewed by an agent that ran the code, not just read it. Every
+review came back **With fixes**, and several of its findings were real bugs
+nobody had reported:
+
+- the placeholder lint flagged legitimate tags;
+- filling the H1 erased the names of owned documents;
+- the move record was overwritten after a stop;
+- case-only template clashes passed the preflight;
+- the format step split paths with spaces and downloaded Prettier into projects
+  without it.
+
+Cut or deferred: `pdocs set-keeps-lifecycle-comment` was dropped, because the
+owner retired the template's inline comments everywhere. Items filed from the
+reviews wait in triage:
+
+- the catalog line's list-wrap;
+- placeholder wording;
+- migration records shared across projects;
+- a re-run's summary counts;
+- Step 5's version markers.
+
+Learned, and not in the scope:
+
+- The plugin release was renumbered from the planned 4.0.1 to 4.1.0 under the
+  repo's own semver convention: every change here altered behaviour.
+- The coordinator's own session record cited branch SHAs, the exact fault it had
+  just filed. Only the new `HEAD` scan caught it.
+- The host machine sleeps mid-gate when unattended. Tests then "time out", and
+  that cost an implementer hours before `pmset` showed the cause.
+- A trial run on story-loom found its migration will stop on 19 preflight steps
+  and then 288 verify problems, none caused by this cycle.
+  [That readiness item](../items/story-loom-migration-readiness.md) is the next
+  thing to plan, before story-loom migrates on 4.1.0.
 
 ## Sessions
 
