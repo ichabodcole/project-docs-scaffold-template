@@ -279,6 +279,34 @@ fields, not folders. Projects still on the older layout (`projects/`,
 
 ## Version History
 
+### 4.1.0 (2026-09-27)
+
+**Fixes from the first 9.0.0 consumers** (Spellbook, wocky-talky) and the items
+filed at release. Every change alters what a skill or the migration does.
+
+- **`pdocs` output and the placeholder lint** (scaffold 9.0.1). `pdocs new`
+  strips the template's inline frontmatter comments, fills `YYYY-MM-DD`, writes
+  list fields as lists, fills the H1 from `--title`, and ends its text output
+  with the format step; `pdocs set` reports an unchanged value as already set;
+  `pdocs find --format json` carries `slug`. The lint reports `PLACEHOLDER` and
+  `BAD TAGS`. The skills that call them say what the CLI does.
+- **`finalize-branch`.** Step 4 cites branch work by description when the
+  landing squashes; Step 8 scans for SHAs the session cites (a veto on `HEAD^`
+  and a reword scan over the lines Step 7 added, matching a 7-character prefix).
+  With no commits but a dirty tree, Step 1 commits the code before the review.
+  Step 7 formats the changed docs after the last `pdocs` write.
+- **The v2.10 → v3.0 migration** (Spellbook round 2). An adopter's own template
+  moves into `TEMPLATES/`, stopping first on a name clash; owned files holding
+  the adopter's edits are named with the `git show` that recovers them; phase 10
+  suggests fixes for links the moves explain, and `--respell` respells retired
+  paths outside `docs/`. It is **pinned to scaffold 9.0.1**
+  (`project-docs-scaffold-template-v9.0.1`), which carries the cycle template's
+  Outcome and the features README wording; the migrated tree is at 9.0.1.
+- **The earlier migrations in the chain.** v2.8 → v2.9 records only the
+  templates its scaffold ships and names an adopter's own as theirs, unrecorded;
+  v2.9 → v2.10 reports a recorded template the scaffold never shipped as the
+  adopter's own instead of calling it retired.
+
 ### 4.0.0 (2026-09-24)
 
 **Work Taxonomy and Guidance Lifecycle.** The skills move onto the 9.0.0 docs

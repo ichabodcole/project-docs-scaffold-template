@@ -9,9 +9,10 @@
  * phase.
  *
  * The fixtures are real trees, generated OFFLINE from this repository's
- * history (D16): the v2.10 tree at the 8.1.0 tag, and the 9.0.0 scaffold at
- * SCAFFOLD_TAG — the release the script itself fetches, so a re-pin is one
- * line in the script. Never the working tree, whose payload has moved on
+ * history (D16): the v2.10 tree at the 8.1.0 tag, and the current scaffold at
+ * SCAFFOLD_TAG (9.0.1, the 9.0.0 layout) — the release the script itself
+ * fetches, so a re-pin is one line in the script, plus the pin test and the
+ * guide and skill that name it. Never the working tree, whose payload has moved on
  * (`cycles/TEMPLATE.md`, `features/README.md`), and never this repository's
  * own docs.
  */
@@ -66,6 +67,7 @@ import {
   rewriteFromField,
   rewriteFolderLinks,
   rewriteLinks,
+  SCAFFOLD_RELEASE,
   SCAFFOLD_TAG,
   SEEDED_PAGES,
   slugOf,
@@ -1387,7 +1389,7 @@ describe("owned files the refresh replaces or removes: an edit of the adopter's 
     commitAll(root, "our own conventions, in owned READMEs");
     const base = git(root, "rev-parse", "HEAD").trim();
     const removed = `docs/projects/README.md differs from every release of the scaffold, so it holds edits of yours: the refresh removes it with its folder. An owned file is replaced whole on every refresh, so keep what you added in a page of your own (a playbook, or your root AGENTS.md). Recover your text with: git show ${base}:docs/projects/README.md`;
-    const replaced = `docs/architecture/README.md differs from every release of the scaffold, so it holds edits of yours: the refresh replaces it with 9.0.0's. An owned file is replaced whole on every refresh, so keep what you added in a page of your own (a playbook, or your root AGENTS.md). Recover your text with: git show ${base}:docs/architecture/README.md`;
+    const replaced = `docs/architecture/README.md differs from every release of the scaffold, so it holds edits of yours: the refresh replaces it with ${SCAFFOLD_RELEASE}'s. An owned file is replaced whole on every refresh, so keep what you added in a page of your own (a playbook, or your root AGENTS.md). Recover your text with: git show ${base}:docs/architecture/README.md`;
     const ownTemplate =
       "docs/TEMPLATES/PROJECT-LEDGER.template.md is a template of yours, moved as it is from docs/projects/TEMPLATES/PROJECT-LEDGER.template.md: the scaffold never shipped it, and the seed record an earlier migration took of it by its name dropped.";
     const dry = migrate(root, ["--dry-run"]);
@@ -1478,7 +1480,7 @@ describe("idempotence and dry run", () => {
     expect(existsSync(at as string)).toBe(false);
   });
 
-  test("the cookiecutter call checks out project-docs-scaffold-template-v9.0.0 (D16)", () => {
+  test("the cookiecutter call checks out SCAFFOLD_TAG, never the template's HEAD (D16)", () => {
     const dir = tmp("migrate-v30-rec-");
     const log = join(dir, "args.log");
     writeFileSync(join(dir, "cookiecutter"), `#!/bin/sh\nprintf '%s\\n' "$@" > "${log}"\nexit 3\n`);
@@ -1486,8 +1488,30 @@ describe("idempotence and dry run", () => {
     const r = migrate(fixtureO(), ["--dry-run"], { scaffold: null, env: { PATH: `${dir}:${process.env.PATH}` } });
     expect(r.exitCode).toBe(1);
     const args = read(dir, "args.log").split("\n");
+    expect(args).toContain("--checkout");
     expect(args[args.indexOf("--checkout") + 1]).toBe(SCAFFOLD_TAG);
-    expect(SCAFFOLD_TAG).toMatch(/^project-docs-scaffold-template-v9\.\d+\.\d+$/);
+    expect(args).toContain("gh:ichabodcole/project-docs-scaffold-template");
+  });
+
+  test("SCAFFOLD_TAG is pinned to the 9.0.1 release, a tag in this clone, and the guide and the skill name that tag", () => {
+    // A re-pin is a decision (D16): it changes this line, and the guide and skill with it.
+    expect(SCAFFOLD_TAG).toBe("project-docs-scaffold-template-v9.0.1");
+    expect(SCAFFOLD_RELEASE).toBe("9.0.1");
+    // A tag, not a branch: `--checkout main` would fetch whatever the template is today.
+    const tag = Bun.spawnSync(["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `refs/tags/${SCAFFOLD_TAG}`], { stdout: "pipe", stderr: "pipe", env: childEnv() });
+    expect(tag.exitCode).toBe(0);
+    const skillDir = resolve(import.meta.dir, "../..");
+    const guide = readFileSync(join(skillDir, "migrations/v2.10-to-v3.0.md"), "utf8");
+    const checkouts = [...guide.matchAll(/--checkout (\S+)/g)].map((m) => m[1]);
+    expect(checkouts.length).toBeGreaterThan(0);
+    for (const c of checkouts) expect(c).toBe(SCAFFOLD_TAG);
+    const named = (text: string): string[] => [...new Set(text.match(/project-docs-scaffold-template-v9\.\d+\.\d+/g) ?? [])];
+    expect(named(guide)).toEqual([SCAFFOLD_TAG]);
+    expect(guide).toContain(`→ \`${SCAFFOLD_RELEASE}\``);
+    expect(guide).toContain(`The tree is at release ${SCAFFOLD_RELEASE}.`);
+    const skill = readFileSync(join(skillDir, "SKILL.md"), "utf8");
+    expect(named(skill)).toEqual([SCAFFOLD_TAG]);
+    expect(skill).toContain(`(scaffold ${SCAFFOLD_RELEASE})`);
   });
 });
 

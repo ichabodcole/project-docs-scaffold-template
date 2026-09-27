@@ -7,7 +7,7 @@ frontmatter and catalog wiring, so a skill only has to decide **when** and
 **what to call it**.
 
 > Self-contained. Everything below was run against the `pdocs` that ships with
-> scaffold 9.0.0 and its output transcribed. You need nothing outside this file
+> scaffold 9.0.1 and its output transcribed. You need nothing outside this file
 > to drive the tool. Anything not verified by running it is marked _unverified_
 > — there is nothing so marked today.
 

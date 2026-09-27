@@ -50,7 +50,8 @@ Branch `fix/v3-migration-spellbook-round-2`. Implements the eight rows of
 - **Delivery of row 8.** Under D16 the migration installs the v9.0.0 tag's
   files, so story-loom would get the old cycle template and features README. The
   owner chose a scaffold 9.0.1 release with the migration re-pinned to it
-  ([re-pin item](../../repin-v3-migration-to-9.0.1.md)) over a new migration.
+  ([re-pin item](../../repin-v3-migration-to-9.0.1/item.md)) over a new
+  migration.
 - The implementer's choices are in [the item's Verdicts](../item.md#verdicts):
   - move rather than stop;
   - suggest rather than rewrite;
@@ -112,7 +113,7 @@ Roster read from the Agent tool's dispatchable types in this session:
 
 **Follow-up items**, filed from this session:
 
-- [re-pin to 9.0.1](../../repin-v3-migration-to-9.0.1.md): `ready`,
+- [re-pin to 9.0.1](../../repin-v3-migration-to-9.0.1/item.md): `ready`,
   owner-approved
 - [records shared across projects in one repository](../../migration-records-per-project.md):
   `triage`

@@ -64,8 +64,8 @@ Worked on `fix/v3-migration-spellbook-round-2`,
 6. **Adopted.** It is persisted across a stop.
 7. **Adopted.**
 8. **Adopted in this repository; delivery to story-loom is
-   [its own item](../repin-v3-migration-to-9.0.1.md)**, a 9.0.1 release with the
-   migration re-pinned to it.
+   [its own item](../repin-v3-migration-to-9.0.1/item.md)**, a 9.0.1 release
+   with the migration re-pinned to it.
 
 ## Definition of done
 
@@ -73,4 +73,4 @@ Worked on `fix/v3-migration-spellbook-round-2`,
       behaviour changes (1, 2, 3, 6).
 - [x] A migration dry run on a fixture holding a local template and an edited
       owned README reports both as the user's own, with the recovery command.
-- [ ] Plugin 4.0.1 is released carrying them, before story-loom migrates.
+- [ ] Plugin 4.1.0 is released carrying them, before story-loom migrates.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * v2.10 → v3.0 (scaffold 9.0.0). The migration, not a description of one.
+ * v2.10 → v3.0 (scaffold 9.0.1, the 9.0.0 layout). The migration, not a description of one.
  *
  * WHY THIS IS A SCRIPT. It generates a scaffold and reads a version from it,
  * every later phase consumes the move map an earlier one built, several checks
@@ -10,7 +10,7 @@
  *   1  preflight  — a v2.10 tree, the tools, git, the baseline `pdocs check`,
  *                   and every JUDGMENT BLOCKER (briefs, reports without one
  *                   owner, edited retired templates, files it cannot place)
- *   2  scaffold   — the 9.0.0 template, at its own tag (D16), verified
+ *   2  scaffold   — the template at SCAFFOLD_TAG (9.0.1), its own tag (D16), verified
  *   3  plan       — the move map, every frontmatter rewrite, every config key;
  *                   `--dry-run` prints it and stops here
  *   4  refresh    — the owned files; the retired owned READMEs removed
@@ -83,8 +83,14 @@ import {
 } from "node:path";
 
 const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
-/** The scaffold release this migration was written against (plan D16). */
-export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.0.0";
+/**
+ * The scaffold release this migration installs (plan D16): 9.0.1, which has the
+ * 9.0.0 layout the script was written against and the cycle template and
+ * features README that shipped after it.
+ */
+export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.0.1";
+/** SCAFFOLD_TAG's release number, for the messages that name it. */
+export const SCAFFOLD_RELEASE = SCAFFOLD_TAG.slice(SCAFFOLD_TAG.lastIndexOf("-v") + 2);
 const MANIFEST_NAME = ".pdocs-seed.json";
 /**
  * The run's own record, kept until a run completes, inside the repository's git
@@ -1926,7 +1932,7 @@ function editedOwnedLine(ctx: Ctx, e: { rel: string; removed: boolean }): string
   const cmd = recoverCommand(ctx, e.rel);
   return (
     `${ctx.docsRootName}/${e.rel} differs from every release of the scaffold, so it holds edits of yours: ` +
-    `the refresh ${e.removed ? "removes it with its folder" : "replaces it with 9.0.0's"}. ` +
+    `the refresh ${e.removed ? "removes it with its folder" : `replaces it with ${SCAFFOLD_RELEASE}'s`}. ` +
     `An owned file is replaced whole on every refresh, so keep what you added in a page of your own (a playbook, or your root AGENTS.md). ` +
     (cmd ? `Recover your text with: ${cmd}` : "There is no git history to recover it from: copy it aside before the run.")
   );
@@ -2388,7 +2394,7 @@ function computeChanges(ctx: Ctx): Changes {
       }
       kind = "task";
       date = sessions.length ? (/(\d{4}-\d{2}-\d{2})/.exec(basename(sessions[sessions.length - 1] as string))?.[1] ?? dateOf(mv.from)) : dateOf(inside[0] ?? mv.from);
-      line = "Work that ran before it had an item. Its record is the documents in this folder; the migration to 9.0.0 filed this item for it.";
+      line = `Work that ran before it had an item. Its record is the documents in this folder; the migration to ${SCAFFOLD_RELEASE} filed this item for it.`;
     }
     const fm = [
       "type: item",
@@ -3043,7 +3049,7 @@ function verify(ctx: Ctx): void {
   fail(
     `\`pdocs check\` exits ${r.code} on the migrated tree: ${r.total} problem(s). ${newer}\n` +
       `\n   The moves STAY — every one is named above — and the version markers were NOT moved: this tree is not at\n` +
-      `   9.0.0 until the check passes. The worklist is \`bun scripts/pdocs/cli.ts report --format text\`; the problems are:\n\n` +
+      `   ${SCAFFOLD_RELEASE} until the check passes. The worklist is \`bun scripts/pdocs/cli.ts report --format text\`; the problems are:\n\n` +
       indented(r.problems.join("\n")) +
       suggested +
       `\n\n   Work them without committing, then run the same command: every phase finds its work done, the\n` +

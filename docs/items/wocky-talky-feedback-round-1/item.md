@@ -48,4 +48,4 @@ The lint passing a fresh cycle with every placeholder in place
 - [x] A fresh `pdocs new item --tags a,b` and `pdocs new cycle` in a generated
       payload pass `pdocs check` and `prettier --check` with no hand edits to
       their frontmatter.
-- [ ] Plugin 4.0.1 is released carrying them.
+- [ ] Plugin 4.1.0 is released carrying them.
