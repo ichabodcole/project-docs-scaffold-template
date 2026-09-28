@@ -95,8 +95,8 @@ Learned, and not in the scope:
   that cost an implementer hours before `pmset` showed the cause.
 - A trial run on story-loom found its migration will stop on 19 preflight steps
   and then 288 verify problems, none caused by this cycle.
-  [That readiness item](../items/story-loom-migration-readiness.md) is the next
-  thing to plan, before story-loom migrates on 4.1.0.
+  [That readiness item](../items/story-loom-migration-readiness/item.md) is the
+  next thing to plan, before story-loom migrates on 4.1.0.
 
 ## Sessions
 

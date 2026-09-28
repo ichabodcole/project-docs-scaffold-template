@@ -1,0 +1,51 @@
+---
+type: cycle
+title: Story-loom migration
+description:
+  Build the five migration changes the story-loom trial called for, release
+  them, and run story-loom's migration to 9.0.1 on that release.
+tags: [migrations, story-loom]
+status: draft
+lifecycle: planned
+started: 2026-09-27
+appetite:
+  Until story-loom is on 9.0.1 with a clean check and a commit its hook accepts.
+after: []
+generated: { by: claude-opus-5-5, at: 2026-09-27 }
+---
+
+# Story-loom migration
+
+## Why now
+
+Story-loom is the last active consumer still on the 8.x layout, and its
+migration was deferred while work was in flight there. A trial run on a clone of
+its `develop`
+([readiness write-up](../items/story-loom-migration-readiness/write-up.md))
+showed the run completes. It also showed that five gaps in the migration would
+make story-loom's commit hook refuse the result or risk its canon files, so
+those ship first.
+
+## Scope
+
+- [Prettier-shaped frontmatter](../items/migration-frontmatter-prettier-shape.md)
+  — a migrated tree passes a `prettier --check` hook.
+- [Root-relative and since-archived link suggestions](../items/phase-10-root-relative-and-archived-links.md)
+  — phase 10 suggests fixes for most of story-loom's 235 old archive breaks.
+- [Retype positional artifacts](../items/migration-retypes-positional-artifacts.md)
+  — nested workstream plans and sessions come out as `artifact`.
+- [Respell `lint.exclude` globs](../items/migration-respells-lint-exclude-globs.md)
+  — no hand edit, no forced re-run.
+- [Respell formatter ignore files](../items/migration-respells-formatter-ignores.md)
+  — story-loom's byte-exact canon files stay protected.
+- Then a release, and story-loom's own run, following the write-up's sequence.
+
+Out of scope, deliberately: migration changes 6–9 in the write-up (story-loom
+handles those cases by hand in minutes), and any story-loom work beyond the
+migration.
+
+## Outcome
+
+_Written at close, not before — and for an `abandoned` cycle too._
+
+## Sessions
