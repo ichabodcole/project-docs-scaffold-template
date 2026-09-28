@@ -93,6 +93,16 @@ fail `prettier --check`; the same tree before the run has 0.
 | Owned file not clean under story-loom's Prettier | 1     | `docs/playbooks/README.md`                                                          | The scaffold's bytes were formatted by a newer Prettier (3.9.x wraps the YAML `description` differently)                                                 | **(c) after**: `prettier --write`. The owned-file comparison ignores whitespace, so the next migration will not flag it.                                                                                                                                                                            |
 | Rewritten frontmatter                            | 1     | `items/operator-as-substrate-deltas/write-up.md`                                    | A frontmatter rewrite                                                                                                                                    | **(c) after**: `prettier --write`.                                                                                                                                                                                                                                                                  |
 
+**Correction (2026-09-28).** Re-running the synthesis on story-loom's own
+source, under its `.prettierrc` (`proseWrap: preserve`), shows two rows misread.
+The 11 "line wrap" files fail on Prettier's quote preference (a value holding
+`"` goes in single quotes) plus the missing blank line; nothing needs wrapping.
+The "rewritten frontmatter" file fails on a table whose columns the run's link
+respelling misaligned, not on its frontmatter. The migration now writes the
+first two correctly
+([the session](../migration-frontmatter-prettier-shape/sessions/2026-09-28-prettier-shaped-frontmatter.md));
+the table is [its own item](../link-respell-misaligns-tables.md).
+
 ## Live work the run marks wrongly
 
 | Entity                                                                    | Run's state                         | Actual                                                                                                                                                                                                   | Fix                                                                                                                                                                                                                                                                                                            |

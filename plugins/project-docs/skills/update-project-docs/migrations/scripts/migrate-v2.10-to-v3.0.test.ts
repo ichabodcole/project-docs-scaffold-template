@@ -25,7 +25,9 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -48,6 +50,7 @@ import {
   gitEnv,
   hashOf,
   isSeeded,
+  joinFrontmatter,
   isUuid,
   loadManifest,
   mayWrite,
@@ -58,6 +61,7 @@ import {
   planCycles,
   planTemplates,
   positionalType,
+  prettierFrontmatter,
   proseKey,
   scopeEntryPath,
   renameRecord,
@@ -78,6 +82,7 @@ import {
   uuidv7,
   verdictFor,
   within,
+  yamlScalar,
   type Verdict,
 } from "./migrate-v2.10-to-v3.0.ts";
 import * as seed from "../../../../../../scripts/pdocs/seed.ts";
@@ -532,11 +537,11 @@ describe("positionalType — a document's type from where it sits in its owner",
 });
 
 describe("synthesizeFrontmatter — a legacy archive's document with none", () => {
-  test("the title from the H1, the description from the first sentence; the body kept byte for byte", () => {
+  test("the title from the H1, the description from the first sentence; the body kept byte for byte, after one blank line", () => {
     const body = "# Proposal: dev-kickoff Skill\n\n**Date:** 2026-03-03 **Status:** Approved\n\n## Problem\n\nThe workflow has a gap. More follows.\n";
     const out = synthesizeFrontmatter("feature", "proposal.md", body, { date: "2026-03-03", extra: [["lifecycle", "done"]] });
     const { fm, body: after } = splitFrontmatter(out);
-    expect(after).toBe(body);
+    expect(after).toBe(`\n${body}`);
     expect(fmGet(fm as string, "type")).toBe("feature");
     expect(fmGet(fm as string, "title")).toBe("Proposal: dev-kickoff Skill");
     expect(fmGet(fm as string, "description")).toBe("The workflow has a gap.");
@@ -556,6 +561,34 @@ describe("synthesizeFrontmatter — a legacy archive's document with none", () =
     const out = synthesizeFrontmatter("artifact", "x.md", "# A: b\n\nWhy: because.\n", { date: "2026-01-01" });
     expect(out).toContain('title: "A: b"');
     expect(fmGet(splitFrontmatter(out).fm as string, "description")).toBe("Why: because.");
+  });
+});
+
+describe("the shape of what the run writes — Prettier's, for its defaults", () => {
+  test("joinFrontmatter: one blank line after the block, whatever the body began with", () => {
+    expect(joinFrontmatter("a: 1", "# H\n")).toBe("---\na: 1\n---\n\n# H\n");
+    expect(joinFrontmatter("a: 1", "\n# H\n")).toBe("---\na: 1\n---\n\n# H\n");
+    expect(joinFrontmatter("a: 1", "\n\n\n# H\n")).toBe("---\na: 1\n---\n\n# H\n");
+    expect(joinFrontmatter("a: 1", "")).toBe("---\na: 1\n---\n");
+  });
+
+  test("yamlScalar: plain where safe; single quotes when the value holds a double quote and needs no other escape (Prettier's rule)", () => {
+    const cases: Array<[string, string]> = [
+      ["Plain words", "Plain words"],
+      ["A: b", '"A: b"'],
+      ["It's here: now", `"It's here: now"`],
+      ['The "delta" work', `'The "delta" work'`],
+      [`The "delta" work's end`, `'The "delta" work''s end'`],
+      [`One "quote" or 'two'`, `'One "quote" or ''two'''`],
+      ['"', `'"'`],
+      [`'"'`, `'''"'''`],
+      ['A "b" \\ c', '"A \\"b\\" \\\\ c"'],
+    ];
+    for (const [s, want] of cases) {
+      expect([s, yamlScalar(s)]).toEqual([s, want]);
+      expect(fmGet(`k: ${yamlScalar(s)}`, "k")).toBe(s);
+      expect(lintIndex.unquoteScalar(yamlScalar(s))).toBe(s);
+    }
   });
 });
 
@@ -885,8 +918,11 @@ function treeDigest(root: string): Record<string, string> {
 const pdocs = (root: string, ...args: string[]) =>
   Bun.spawnSync(["bun", "scripts/pdocs/cli.ts", ...args], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
 
-/** A document's body with every link destination blanked — what "no prose changed" compares. */
-const prose = (text: string) => splitFrontmatter(text).body.replace(/\]\([^)]*\)/g, "]()");
+/**
+ * A document's body with every link destination blanked — what "no prose changed"
+ * compares. The blank line Prettier puts after a block is not prose.
+ */
+const prose = (text: string) => splitFrontmatter(text).body.replace(/^\n+/, "").replace(/\]\([^)]*\)/g, "]()");
 
 // ─── The owned diff between O and N is DERIVED, never pinned ─────────────────
 
@@ -1553,6 +1589,126 @@ describe("format before record", () => {
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("STOPPED: prettier exited 1");
     expect(readJson(join(root, "docs/.pdocs-seed.json")).version).toBe("8.1.0");
+  });
+});
+
+// ─── Frontmatter in Prettier's shape ─────────────────────────────────────────
+
+/**
+ * Documents whose frontmatter the run synthesizes or rewrites with values past
+ * the print width: a legacy archive with none (a long title, a long first
+ * sentence carrying a quoted phrase), and an investigation with a long
+ * description, so the item created for it carries one too.
+ */
+const LONG_VALUES: Record<string, string> = {
+  "docs/projects/_archive/delta/proposal.md":
+    '# Proposal: A deliberately long title for the delta feature, past eighty columns\n\n**Date:** 2025-11-01\n\nThe "delta" work needed a first sentence long enough that Prettier has to fold\nit onto an indented line under its key. It shipped.\n',
+  "docs/investigations/2026-01-16-long-question.md": doc(
+    common("investigation", "Long question", "Whether a description this long, once the run copies it onto the item it creates for the investigation, is folded the way Prettier folds it.", { lifecycle: "active" }),
+    "# Long question\n\nStill open.\n"
+  ),
+};
+
+/** `root` given this repository's Prettier and `.prettierrc`, as a consumer on Prettier 3.x has them. */
+function withPrettier(root: string): string {
+  mkdirSync(join(root, "node_modules/.bin"), { recursive: true });
+  symlinkSync(realpathSync(join(REPO_ROOT, "node_modules/prettier")), join(root, "node_modules/prettier"));
+  symlinkSync(join(root, "node_modules/prettier/bin/prettier.cjs"), join(root, "node_modules/.bin/prettier"));
+  write(root, { ".prettierrc": read(REPO_ROOT, ".prettierrc"), ".gitignore": "node_modules/\n" });
+  commitAll(root, "prettier, as the project has it");
+  return root;
+}
+
+/**
+ * The documents whose frontmatter the run synthesized, rewrote or created, from
+ * its phase 5 lines. Only these: the owned files and the adopter's untouched
+ * documents are not the run's to shape.
+ */
+const frontmatterWritten = (out: string) => [...out.matchAll(/✓ (?:created|frontmatter) (\S+\.md) — /g)].map((m) => m[1] as string);
+
+/** `prettier --check` over `files`, with this repository's Prettier and `config` (its `.prettierrc` by default). */
+function prettierCheck(root: string, files: string[], config = join(REPO_ROOT, ".prettierrc")): { exitCode: number | null; out: string } {
+  const r = Bun.spawnSync([join(REPO_ROOT, "node_modules/.bin/prettier"), "--check", "--config", config, ...files], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
+  return { exitCode: r.exitCode, out: r.stdout.toString() + r.stderr.toString() };
+}
+
+describe("frontmatter the run writes is in Prettier's shape", () => {
+  test("with the project's Prettier: `prettier --check` finds nothing to change in any document whose frontmatter the run wrote", () => {
+    const root = withPrettier(fixtureO(LONG_VALUES));
+    const r = migrate(root, [], { format: true });
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const written = frontmatterWritten(r.out);
+    // Synthesized (gamma, delta), rewritten (alpha, the backlog, the write-ups), created (the items).
+    for (const f of ["docs/features/_archive/delta/feature.md", "docs/features/alpha/feature.md", "docs/items/open-item.md", "docs/items/long-question/write-up.md", "docs/items/long-question/item.md"])
+      expect(written).toContain(f);
+    const check = prettierCheck(root, written);
+    expect(check.out).toContain("All matched files use Prettier code style!");
+    expect(check.exitCode).toBe(0);
+    // The long values were folded, and the lint still reads them back whole.
+    const delta = fmOf(root, "docs/features/_archive/delta/feature.md");
+    expect(delta).toContain("description:\n  ");
+    expect(fmGet(delta, "description")).toBe('The "delta" work needed a first sentence long enough that Prettier has to fold it onto an indented line under its key.');
+    expect(fmGet(fmOf(root, "docs/items/long-question/item.md"), "description")).toStartWith("Whether a description this long");
+    expect(pdocs(root, "check").exitCode).toBe(0);
+  });
+
+  test("without Prettier: a blank line after the block, Prettier's quotes, and nothing for Prettier's defaults to change", () => {
+    const root = fixtureO(LONG_VALUES);
+    const r = migrate(root);
+    expect(r.exitCode).toBe(0);
+    const text = read(root, "docs/features/_archive/delta/feature.md");
+    expect(text).toMatch(/\n---\n\n# Proposal: A deliberately long title/);
+    // More double quotes than single: Prettier would single-quote it, so the run does.
+    expect(text).toContain(`description: 'The "delta" work needed`);
+    // Prettier's defaults (proseWrap: preserve, printWidth: 80) keep a long value on its key's line.
+    const written = frontmatterWritten(r.out);
+    expect(written.length).toBeGreaterThan(10);
+    const defaults = join(tmp("migrate-v30-prettierrc-"), ".prettierrc");
+    writeFileSync(defaults, "{}\n");
+    const check = prettierCheck(root, written, defaults);
+    expect(check.out).toContain("All matched files use Prettier code style!");
+  });
+});
+
+describe("prettierFrontmatter — the project's own Prettier, or none; never a downloaded one", () => {
+  const block = `title: a\ndescription: 'The "delta" work needed a first sentence long enough that Prettier has to fold it.'`;
+
+  test("a project with no node_modules: every block falls back, it says so, and nothing is downloaded", () => {
+    const root = tmp("migrate-v30-noprettier-");
+    const cache = tmp("migrate-v30-bun-cache-");
+    const before = process.env.BUN_INSTALL_CACHE_DIR;
+    process.env.BUN_INSTALL_CACHE_DIR = cache;
+    try {
+      const r = prettierFrontmatter(root, [{ path: join(root, "docs/a.md"), fm: block }]);
+      expect(r.blocks).toEqual([null]);
+      expect(r.note).toContain("no Prettier in this project");
+    } finally {
+      if (before === undefined) delete process.env.BUN_INSTALL_CACHE_DIR;
+      else process.env.BUN_INSTALL_CACHE_DIR = before;
+    }
+    expect(readdirSync(cache)).toEqual([]);
+  });
+
+  test("the project's Prettier folds a long value; a config it cannot parse falls back, and says why", () => {
+    const root = tmp("migrate-v30-withprettier-");
+    mkdirSync(join(root, "node_modules"));
+    symlinkSync(realpathSync(join(REPO_ROOT, "node_modules/prettier")), join(root, "node_modules/prettier"));
+    write(root, { ".prettierrc": read(REPO_ROOT, ".prettierrc") });
+    const good = prettierFrontmatter(root, [{ path: join(root, "docs/a.md"), fm: block }]);
+    expect(good.note).toBeNull();
+    expect(good.blocks[0]).toContain(`description:\n  'The "delta" work`);
+    write(root, { ".prettierrc": "{ not json" });
+    const bad = prettierFrontmatter(root, [{ path: join(root, "docs/a.md"), fm: block }]);
+    expect(bad.blocks).toEqual([null]);
+    expect(bad.note).toContain("failed on a block");
+    expect(bad.note).toContain(".prettierrc");
+  });
+
+  test("the plan says so when the run falls back, and says nothing with --skip-format", () => {
+    const root = fixtureO(LONG_VALUES);
+    expect(migrate(root, ["--dry-run"], { format: true }).out).toContain("no Prettier in this project");
+    expect(migrate(root, ["--dry-run"]).out).not.toContain("no Prettier in this project");
   });
 });
 

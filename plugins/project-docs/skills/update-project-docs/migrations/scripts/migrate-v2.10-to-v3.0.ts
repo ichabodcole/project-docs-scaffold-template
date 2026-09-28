@@ -11,7 +11,8 @@
  *                   and every JUDGMENT BLOCKER (briefs, reports without one
  *                   owner, edited retired templates, files it cannot place)
  *   2  scaffold   — the template at SCAFFOLD_TAG (9.0.1), its own tag (D16), verified
- *   3  plan       — the move map, every frontmatter rewrite, every config key;
+ *   3  plan       — the move map, every frontmatter rewrite (each block as the
+ *                   project's own Prettier prints it), every config key;
  *                   `--dry-run` prints it and stops here
  *   4  refresh    — the owned files; the retired owned READMEs removed
  *   5  move       — every document to its new place, frontmatter rewritten
@@ -40,7 +41,12 @@
  *   --dry-run              generate the scaffold, print the plan, change nothing.
  *   --scaffold-dir <path>  use an already-generated scaffold (a project root, not
  *                          its docs/). Skips the network. `--scaffold` is an alias.
- *   --skip-format          do not run Prettier over the files this run creates.
+ *   --skip-format          do not run Prettier over the files this run creates, nor
+ *                          over the frontmatter it writes: each block is then in the
+ *                          shape Prettier's defaults (proseWrap: preserve) give it —
+ *                          a blank line after it, Prettier's quotes, values unwrapped.
+ *                          Without it, the frontmatter goes through the project's own
+ *                          Prettier, never a downloaded one (see prettierFrontmatter).
  *   --force                write over uncommitted changes in the paths this run
  *                          touches — on a re-run after a stop, over edits made
  *                          since the stop. Without it the preflight stops on them.
@@ -585,7 +591,15 @@ export function splitFrontmatter(text: string): { fm: string | null; body: strin
   return { fm: m[1] as string, body: text.slice(m[0].length) };
 }
 
-const joinFrontmatter = (fm: string, body: string) => `---\n${fm}\n---\n${body}`;
+/**
+ * A block and its body, in the shape Prettier prints them: one blank line between
+ * the closing fence and the body, whatever the body began with. A body that is
+ * only blank lines leaves the block alone at the end of the file.
+ */
+export function joinFrontmatter(fm: string, body: string): string {
+  const rest = body.replace(/^\n+/, "");
+  return rest === "" ? `---\n${fm}\n---\n` : `---\n${fm}\n---\n\n${rest}`;
+}
 
 /** Strip a trailing `# comment`, respecting quotes (the lint's rule). */
 function stripComment(v: string): string {
@@ -672,10 +686,81 @@ export function fmRemove(fm: string, key: string): string {
   return lines.join("\n");
 }
 
-/** A YAML scalar the lint reads back as `s`: plain where safe, double-quoted otherwise. */
+/**
+ * A YAML scalar the lint reads back as `s`: plain where safe, quoted otherwise —
+ * the quotes Prettier prints: single when `s` holds a double quote and needs no
+ * other escape, double otherwise.
+ */
 export function yamlScalar(s: string): string {
   if (/^[A-Za-z0-9(][^:#\n"'\\]*$/.test(s) && !/\s$/.test(s) && !/: /.test(s)) return s;
-  return JSON.stringify(s);
+  const doubled = JSON.stringify(s);
+  if (doubled.slice(1, -1).replace(/\\"/g, "").includes("\\") || !s.includes('"')) return doubled;
+  return `'${s.replace(/'/g, "''")}'`;
+}
+
+/**
+ * The child that shapes frontmatter with the project's own Prettier: resolved
+ * from the project root the way its own scripts resolve it. It runs under
+ * `bun --no-install`, so a project with no Prettier gets none: Bun would
+ * otherwise auto-install a missing package from npm. Reads
+ * `{ root, ignore, items: [{ path, fm }] }` on stdin and prints, as its last
+ * line, `{ version, missing, error, out }`: one formatted block per item in
+ * `out` (null where Prettier ignores the path or fails on it), and the first
+ * failure in `error`.
+ */
+const PRETTIER_CHILD = `
+const { createRequire } = require("node:module");
+const input = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+const result = { version: null, missing: false, error: null, out: input.items.map(() => null) };
+let prettier = null;
+try { prettier = createRequire(input.root + "/package.json")("prettier"); }
+catch (e) { if (e && e.code === "MODULE_NOT_FOUND") result.missing = true; else result.error = String((e && e.message) || e).split("\\n")[0]; }
+if (prettier) {
+  result.version = prettier.version || null;
+  for (const [i, { path, fm }] of input.items.entries()) {
+    try {
+      const info = await prettier.getFileInfo(path, input.ignore ? { ignorePath: input.ignore } : {});
+      if (info.ignored || info.inferredParser !== "markdown") continue;
+      const config = (await prettier.resolveConfig(path, { editorconfig: true })) || {};
+      result.out[i] = await prettier.format("---\\n" + fm + "\\n---\\n", { ...config, filepath: path });
+    } catch (e) { if (!result.error) result.error = path + ": " + String((e && e.message) || e).split("\\n")[0]; }
+  }
+}
+console.log(JSON.stringify(result));
+`;
+
+/**
+ * Each frontmatter block, as the project's own Prettier prints it at that
+ * document's path — its config, its overrides, its `.prettierignore`. A block
+ * is `null` where Prettier leaves it to the run: an ignored path, a failure, or
+ * no Prettier in the project. `note` says why, when any block fell back for a
+ * reason other than an ignored path; null otherwise.
+ */
+export function prettierFrontmatter(root: string, items: Array<{ path: string; fm: string }>): { blocks: Array<string | null>; note: string | null } {
+  if (items.length === 0) return { blocks: [], note: null };
+  const shape = "the frontmatter this run writes is in the shape Prettier's defaults give it";
+  const fallback = (why: string) => ({ blocks: items.map(() => null), note: `${why}: ${shape}` });
+  // One path, not a list: Prettier 2's getFileInfo takes only one.
+  const ignore = existsSync(join(root, ".prettierignore")) ? join(root, ".prettierignore") : null;
+  const r = Bun.spawnSync([process.execPath, "--no-install", "-e", PRETTIER_CHILD], {
+    cwd: root,
+    stdin: Buffer.from(JSON.stringify({ root, ignore, items })),
+    stdout: "pipe",
+    stderr: "pipe",
+    env: gitEnv(),
+  });
+  let res: { version: string | null; missing: boolean; error: string | null; out: Array<string | null> } | null = null;
+  try {
+    res = r.exitCode === 0 ? JSON.parse(r.stdout.toString().trim().split("\n").pop() ?? "") : null;
+  } catch {}
+  if (res === null || !Array.isArray(res.out) || res.out.length !== items.length)
+    return fallback(`your Prettier could not be run (${r.stderr.toString().trim().split("\n")[0] || `exit ${r.exitCode}`})`);
+  if (res.missing) return fallback("no Prettier in this project");
+  if (res.version === null) return fallback(`your Prettier could not be loaded (${res.error ?? "no version"})`);
+  const blocks = res.out.map((t) => (typeof t === "string" ? splitFrontmatter(t).fm : null));
+  if (!res.error) return { blocks, note: null };
+  const failed = blocks.filter((b) => b === null).length;
+  return { blocks, note: `your Prettier ${res.version} failed on a block (${res.error.replaceAll(`${root}/`, "")});${failed} of ${items.length} block(s) are in the shape Prettier's defaults give them` };
 }
 
 // =======================================================================================
@@ -1789,6 +1874,8 @@ interface Changes {
   /** Docs-relative `[from, to]`: every path the links follow — the move record. */
   linkMoves: Array<[string, string]>;
   keptLibrary: string[];
+  /** Why the frontmatter this run writes is not all in the project's own Prettier's shape; null when it is, or not asked for. */
+  shaping?: string | null;
 }
 
 interface Ctx extends Options {
@@ -2410,11 +2497,25 @@ function computeChanges(ctx: Ctx): Changes {
     created.push({ from: null, to: join(d, mv.to, "item.md"), text: joinFrontmatter(fm, `\n# ${title}\n\n${line}\n`), links: 0, fm: `created (item, ${kind}, ${mv.lifecycle})${heldFrom ? `, titled and described from ${heldFrom}` : ""}`, created: true });
   }
 
+  // --- every block the run wrote, as the project's own Prettier prints it. Without one
+  // (or with --skip-format) each keeps the shape above: Prettier's for its defaults.
+  let shaping: string | null = null;
+  if (!ctx.skipFormat) {
+    const fmOf = (text: string) => splitFrontmatter(text).fm;
+    const shaped = [...writes, ...created].filter((w) => fmOf(w.text) !== null && (w.from === null || fmOf(w.text) !== fmOf(readFileSync(w.from, "utf8"))));
+    const { blocks, note: why } = prettierFrontmatter(ctx.root, shaped.map((w) => ({ path: w.to, fm: fmOf(w.text) as string })));
+    shaping = why;
+    shaped.forEach((w, i) => {
+      const block = blocks[i];
+      if (block != null) w.text = joinFrontmatter(block, splitFrontmatter(w.text).body);
+    });
+  }
+
   const repoMoves: Array<[string, string]> = [...fileMap.entries(), ...plan.ownTemplates, ...plan.moves.filter((m) => m.kind === "feature" || m.kind === "born-item").map((m) => [m.from, m.to] as [string, string])]
     .map(([f, t]) => [`${ctx.docsRootName}/${f}`, `${ctx.docsRootName}/${t}`]);
   const docsRel = (abs: string) => relative(d, abs).split(sep).join("/");
   const linkMoves = [...linkMap].map(([f, t]) => [docsRel(f), docsRel(t)] as [string, string]);
-  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, linkMoves, keptLibrary };
+  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, linkMoves, keptLibrary, shaping };
 }
 
 // =======================================================================================
@@ -2596,6 +2697,7 @@ function printPlan(ctx: Ctx): void {
     if (mv.note) note(`  ${d(mv.from)}: ${mv.note}`);
   }
   for (const w of c.writes.filter((x) => x.fm)) note(`frontmatter: ${relative(ctx.root, w.to)} — ${w.fm}`);
+  if (c.shaping) note(c.shaping);
   for (const [f, t] of c.templates.moves) note(`template: ${d(f)} → ${d(t)}, its seed record carried with it`);
   for (const r of c.templates.removals) note(`template: ${d(r)} removed — the form for a retired type, untouched since the scaffold recorded it`);
   const recordedNow = readManifest(ctx).files;

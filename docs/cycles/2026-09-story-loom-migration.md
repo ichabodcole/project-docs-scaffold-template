@@ -28,7 +28,7 @@ those ship first.
 
 ## Scope
 
-- [Prettier-shaped frontmatter](../items/migration-frontmatter-prettier-shape.md)
+- [Prettier-shaped frontmatter](../items/migration-frontmatter-prettier-shape/item.md)
   — a migrated tree passes a `prettier --check` hook.
 - [Root-relative and since-archived link suggestions](../items/phase-10-root-relative-and-archived-links.md)
   — phase 10 suggests fixes for most of story-loom's 235 old archive breaks.
@@ -56,3 +56,5 @@ migration.
 _Written at close, not before — and for an `abandoned` cycle too._
 
 ## Sessions
+
+- fix/migration-frontmatter-prettier-shape (landed 2026-09-28)
