@@ -11,7 +11,7 @@ kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-25 }
 scope: project-docs
 priority: low
-parent: feature/toolbox-migration
+parent: feature/skill-surface-cleanup
 ---
 
 # Keep one html-mockup-prototyping skill

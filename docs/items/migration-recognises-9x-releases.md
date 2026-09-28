@@ -5,12 +5,14 @@ description:
   Re-run on a 9.0.0 tree, migrate-v2.10-to-v3.0 says an unedited SCHEMA.md holds
   the adopter's edits, because its release keys stop before 9.0.0.
 status: draft
-lifecycle: triage
+lifecycle: ready
 id: 01a0e770-e019-70df-8626-a7d0e53f7078
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 source: "#182"
+priority: high
+cycle: 2026-09-story-loom-migration
 ---
 
 # The v3.0 migration calls a 9.0.0 owned file an edit
@@ -29,8 +31,19 @@ each time the migration is re-pinned.
 To see it: generate a project from tag `project-docs-scaffold-template-v9.0.0`
 and run the migration's `--dry-run` against it.
 
+## Scope
+
+Widen the test's filter from "major version below 9" to "every release up to
+`SCAFFOLD_TAG`", and regenerate the list, then rename it (it will no longer be
+only "before 9"). A later re-pin then fails the test until the list is
+regenerated, so the omission can't recur silently.
+
+The lasting fix, a hash recorded at install so no list is needed, is
+[its own item](./record-owned-files-at-install.md).
+
 ## Definition of done
 
 - [ ] An owned file identical to any scaffold release up to the pinned one,
       9.0.0 and 9.0.1 included, is not reported as holding edits.
-- [ ] The test that pins the keys to the release tags covers those releases too.
+- [ ] The test derives the list from every release tag up to `SCAFFOLD_TAG`, so
+      a re-pin without regenerating it fails.

@@ -6,7 +6,7 @@ description:
   them, and run story-loom's migration to 9.0.1 on that release.
 tags: [migrations, story-loom]
 status: draft
-lifecycle: planned
+lifecycle: active
 started: 2026-09-27
 appetite:
   Until story-loom is on 9.0.1 with a clean check and a commit its hook accepts.
@@ -38,6 +38,13 @@ those ship first.
   — no hand edit, no forced re-run.
 - [Respell formatter ignore files](../items/migration-respells-formatter-ignores.md)
   — story-loom's byte-exact canon files stay protected.
+- Added at triage, 2026-09-28, from issues #182 and #154, because each touches
+  the migration or the release this cycle cuts:
+  [the v3.0 migration knows the 9.x releases](../items/migration-recognises-9x-releases.md),
+  [the skill names the upgrade case it is in](../items/document-patch-refresh-of-a-v3-tree.md),
+  [adoption prompts a root CLI pointer](../items/prompt-root-agent-file-cli-pointer.md)
+  and
+  [the lint checks a closed cycle's Outcome](../items/lint-closed-cycle-without-outcome.md).
 - Then a release, and story-loom's own run, following the write-up's sequence.
 
 Out of scope, deliberately: migration changes 6–9 in the write-up (story-loom

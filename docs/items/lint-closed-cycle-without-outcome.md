@@ -5,12 +5,14 @@ description:
   A cycle set closed or abandoned with the template's Outcome placeholder still
   in place passes pdocs check, so the terminal record is still unchecked.
 status: draft
-lifecycle: triage
+lifecycle: ready
 id: 01a0e770-e0e7-7171-8a32-52d67fed126b
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: pdocs
 source: "#154"
+priority: medium
+cycle: 2026-09-story-loom-migration
 ---
 
 # The lint passes a closed cycle whose Outcome is unwritten

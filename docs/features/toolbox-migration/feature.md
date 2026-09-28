@@ -1,15 +1,36 @@
 ---
 type: feature
-title: "Toolbox Migration — Splitting the Interactive Suite into Its Own Repo"
+title: "Plugin extraction: move every plugin but project-docs out of this repo"
 description:
-  Whether the toolbox family — its own design language, audience and release
-  cadence — should live in its own repository.
+  Move hivemind, toolbox, operator, recipes and agent-bridge to a repository of
+  their own, so this one holds project-docs and nothing else.
 status: stable
 lifecycle: backlog
 generated: { by: unknown, at: 2026-05-27 }
 ---
 
-# Toolbox Migration — Splitting the Interactive Suite into Its Own Repo
+# Plugin extraction: move every plugin but project-docs out of this repo
+
+## Decision (2026-09-28)
+
+Cole decided the split, and widened it. This repository keeps project-docs (the
+scaffold, `pdocs` and the `project-docs` plugin) and nothing else. Every other
+plugin moves to a repository of their own: `hivemind`, `toolbox`, `operator`,
+`recipes` and `agent-bridge`. The reason is maturity. Project-docs started as a
+catch-all for skills that were not yet big enough for their own repository, and
+it has now graduated into a framework of its own. The same graduation will keep
+happening to skills that start somewhere and outgrow it, so the new repository
+is where skills wait until they're ready to leave.
+
+The grapevine, magpie, tusk-board and digestify tools this page was first
+written about have already left, to Spellbook. What follows the decision is the
+original toolbox-only proposal, kept as the history of the signal. Its open
+questions on naming, marketplace coordination and migration-day cache pinning
+still apply to the wider move.
+
+Open alongside the move:
+[how skills reach runtimes other than Claude Code](../../items/skill-distribution-beyond-claude-plugins.md),
+since openpackage has stalled.
 
 ## Overview
 

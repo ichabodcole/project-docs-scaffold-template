@@ -31,7 +31,9 @@ claim the same request.
 ## Scope
 
 The items with `parent: feature/skill-surface-cleanup`
-(`pdocs view feature skill-surface-cleanup`). Out of scope: the toolbox moves,
+(`pdocs view feature skill-surface-cleanup`). Also in scope, since 2026-09-28:
+[which skills belong in project-docs](../../items/project-docs-skill-scope.md)
+and the moves it decides. Out of scope: moving plugins to another repository,
 which belong to `toolbox-migration`, and HiveMind's own skills.
 
 ## Success Criteria
