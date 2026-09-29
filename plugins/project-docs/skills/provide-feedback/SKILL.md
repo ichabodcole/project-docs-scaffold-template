@@ -1,25 +1,25 @@
 ---
 name: provide-feedback
 description:
-  Provide feedback on the project-docs-scaffold-template repo (the source of the
-  project-docs, recipes, toolbox, operator, agent-bridge, and hivemind plugins,
-  and the scaffold template itself). Feedback is anything worth sending upstream
-  — a bug, a rough edge, confusing guidance, missing coverage, an improvement
-  idea, or a suggestion; it does not have to be something that broke. Files the
-  feedback as a well-formed GitHub issue. Triggers when the user says "provide
-  feedback on project-docs", "I have feedback on the X skill/recipe/command",
-  "feedback on the scaffold", "this could be better in project-docs", "file an
-  issue against project-docs", "report this upstream", or "log this to the
-  project-docs repo".
+  Provide feedback on the project-docs plugin and scaffold template (repo
+  project-docs-scaffold-template), or on the plugins that moved to skill-garden
+  (recipes, toolbox, operator, agent-bridge, hivemind). Feedback is anything
+  worth sending upstream — a bug, a rough edge, confusing guidance, missing
+  coverage, an improvement idea, or a suggestion; it does not have to be
+  something that broke. Files the feedback as a well-formed GitHub issue.
+  Triggers when the user says "provide feedback on project-docs", "I have
+  feedback on the X skill/recipe/command", "feedback on the scaffold", "this
+  could be better in project-docs", "file an issue against project-docs",
+  "report this upstream", or "log this to the project-docs repo".
 ---
 
-# Provide Feedback on project-docs-scaffold-template
+# Provide Feedback on project-docs and skill-garden
 
 A lightweight utility skill that gives you exactly enough context to file
 well-formed **feedback** — a bug, a rough edge, confusing guidance, missing
 coverage, an improvement idea, or a suggestion — as a GitHub issue against the
-source repo for any plugin or template artifact shipped from
-`ichabodcole/project-docs-scaffold-template`.
+source repo of any plugin or template artifact shipped from
+`ichabodcole/project-docs-scaffold-template` or `ichabodcole/skill-garden`.
 
 Feedback is broader than a bug report: an improvement, a "this could read more
 clearly," or "I wish this skill also did X" all belong here. It does not have to
@@ -27,25 +27,25 @@ be something that broke.
 
 ## Target Repository
 
-All feedback is filed as a GitHub issue on:
+Feedback is filed as a GitHub issue on the repository that ships the component.
+Call it `<repo>` in the steps below:
 
-**`ichabodcole/project-docs-scaffold-template`**
-<https://github.com/ichabodcole/project-docs-scaffold-template>
+- **`ichabodcole/project-docs-scaffold-template`**
+  (<https://github.com/ichabodcole/project-docs-scaffold-template>):
+  - the `project-docs` plugin: skills, commands, agents;
+  - the cookiecutter scaffold template and its documentation structure.
+- **`ichabodcole/skill-garden`**
+  (<https://github.com/ichabodcole/skill-garden>), where these plugins moved on
+  2026-09-29:
+  - `recipes`: all recipes (e.g., `api-mcp-server`, `electron-betterauth`);
+  - `toolbox`: `maestro-testing`, `screenshot-optimization`,
+    `html-mockup-prototyping`;
+  - `operator`, `agent-bridge` and `hivemind`.
 
-This single repo is the source for:
-
-- `project-docs` plugin — skills, commands, agents
-- `recipes` plugin — all recipes (e.g., `api-mcp-server`, `electron-betterauth`,
-  etc.)
-- `toolbox` plugin — `maestro-testing`, `screenshot-optimization`,
-  `html-mockup-prototyping`
-- `operator` plugin
-- `agent-bridge` plugin
-- `hivemind` plugin
-- The cookiecutter scaffold template and its documentation structure
-
-If the user is giving feedback on any of the above, this is the right
-destination — even if they can't pinpoint which plugin the component belongs to.
+The plugin a component comes from decides the repository: `recipes:recipes` is
+skill-garden, `project-docs:finalize-branch` is project-docs. If the user can't
+say which plugin it is, ask. If it still isn't clear, file on project-docs and
+say so in the issue.
 
 ## Workflow
 
@@ -104,8 +104,7 @@ improvements and suggestions, not just net-new features).
 This step is **required**. Show the user the full draft (or a clear summary if
 the body is long — component, title, the point, label), then ask:
 
-> "Ready to submit this feedback to
-> `ichabodcole/project-docs-scaffold-template`?"
+> "Ready to submit this feedback to `<repo>`?"
 
 Wait for explicit approval. If the user wants changes, revise and re-confirm.
 
@@ -115,7 +114,7 @@ Wait for explicit approval. If the user wants changes, revise and re-confirm.
 
 ```bash
 gh issue create \
-  --repo ichabodcole/project-docs-scaffold-template \
+  --repo <repo> \
   --title "<title>" \
   --label "<label>" \
   --body "<body>"
@@ -125,7 +124,7 @@ gh issue create \
 the user can click:
 
 ```
-https://github.com/ichabodcole/project-docs-scaffold-template/issues/new?title=<url-encoded-title>&body=<url-encoded-body>&labels=<label>
+https://github.com/<repo>/issues/new?title=<url-encoded-title>&body=<url-encoded-body>&labels=<label>
 ```
 
 ### 5. Return the issue URL
