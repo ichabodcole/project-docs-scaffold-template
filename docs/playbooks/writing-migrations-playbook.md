@@ -61,17 +61,23 @@ is `.claude/skills/migration-authoring/SKILL.md`.
     each place that names the pin, and nothing else:
     - the script: `SCAFFOLD_TAG` (`SCAFFOLD_RELEASE` follows) and the release
       its header comments name;
-    - its test: the pin test's expected tag and release;
+    - its test: the pin test's expected tag and release, and the release its
+      header comment names;
     - its guide: the `--checkout` line and the tag in `## Run it`, the
-      scaffold's `From → to` in the version table, and the release in the sample
+      scaffold's `From → to` in the version table (and the plugin's, when the
+      release ships with a plugin bump), and the release in the sample
       `Version markers` output and final line;
     - `update-project-docs/SKILL.md`: Step 4's sentence naming the tag the
       script fetches, and the `(scaffold X.Y.Z)` in its table row.
 
     Run the script's tests: the `OWNED_RELEASES` test fails until you regenerate
     it from the tags whenever the new release changed an owned file, and prints
-    the derived value. Rebuild `dist/`. `update-project-docs` refreshes a tree
-    by re-running the newest script, and the script stamps the markers with the
+    the derived value. Run the whole suite, not only the pin test: a lint rule
+    the new release added can stop the verify phase on the fixture (9.2.0's
+    `NO OUTCOME` did), and it will on an adopter's tree too — name the finding
+    in the guide's "If the run stopped" step, then give the fixture what the
+    rule asks. Rebuild `dist/`. `update-project-docs` refreshes a tree by
+    re-running the newest script, and the script stamps the markers with the
     release it installs: an unpinned release is one no adopter can reach.
 
 ## Verification
