@@ -10,7 +10,7 @@
  *
  * The fixtures are real trees, generated OFFLINE from this repository's
  * history (D16): the v2.10 tree at the 8.1.0 tag, and the current scaffold at
- * SCAFFOLD_TAG (9.1.0, the 9.0.0 layout) — the release the script itself
+ * SCAFFOLD_TAG (9.2.0, the 9.0.0 layout) — the release the script itself
  * fetches, so a re-pin is one line in the script, plus the pin test and the
  * guide and skill that name it. Never the working tree, whose payload has moved on
  * (`cycles/TEMPLATE.md`, `features/README.md`), and never this repository's
@@ -1097,7 +1097,7 @@ const SHAPES: Record<string, string> = {
   "docs/reports/2026-01-11-evidence-report.md": doc(common("report", "Evidence", "What was found."), "# Evidence\n\nFor [the question](../investigations/2026-01-10-question-investigation.md).\n"),
   "docs/cycles/2026-01-mixed.md": doc(
     { ...common("cycle", "Mixed", "A cycle with mixed scope."), lifecycle: "closed", started: "2026-01-01", closed: "2026-01-31", appetite: "A month.", scope: "\n  [\n    backlog/2026-01-01-open-item,\n    backlog/2026-01-02-done-item,\n    project/alpha,\n  ]", after: "[]" },
-    "# Mixed\n\n## Scope\n\n- [Alpha](../projects/alpha/proposal.md)\n- [Open item](../backlog/2026-01-01-open-item.md)\n"
+    "# Mixed\n\n## Scope\n\n- [Alpha](../projects/alpha/proposal.md)\n- [Open item](../backlog/2026-01-01-open-item.md)\n\n## Outcome\n\nAlpha shipped; the open item carried over.\n"
   ),
   "docs/memories/2026-01-14-first-memory.md": doc(common("memory", "First memory", "Something that happened.", { tags: "[history]" }), "# First memory\n\nIt happened.\n"),
   "docs/memories/2026-01-15-second-memory.md": doc(common("memory", "Second memory", "Something else that happened.", { tags: "[history]" }), "# Second memory\n\nThen this.\n"),
@@ -1890,10 +1890,10 @@ describe("idempotence and dry run", () => {
     expect(args).toContain("gh:ichabodcole/project-docs-scaffold-template");
   });
 
-  test("SCAFFOLD_TAG is pinned to the 9.1.0 release, a tag in this clone, and the guide and the skill name that tag", () => {
+  test("SCAFFOLD_TAG is pinned to the 9.2.0 release, a tag in this clone, and the guide and the skill name that tag", () => {
     // A re-pin is a decision (D16): it changes this line, and the guide and skill with it.
-    expect(SCAFFOLD_TAG).toBe("project-docs-scaffold-template-v9.1.0");
-    expect(SCAFFOLD_RELEASE).toBe("9.1.0");
+    expect(SCAFFOLD_TAG).toBe("project-docs-scaffold-template-v9.2.0");
+    expect(SCAFFOLD_RELEASE).toBe("9.2.0");
     // A tag, not a branch: `--checkout main` would fetch whatever the template is today.
     const tag = Bun.spawnSync(["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `refs/tags/${SCAFFOLD_TAG}`], { stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(tag.exitCode).toBe(0);
@@ -2023,9 +2023,10 @@ describe("update-project-docs Steps 2 and 3, run as written on trees generated f
       .filter((r) => Bun.spawnSync(["bash", "-c", r.test], { cwd: n900, env: childEnv(), stdout: "pipe", stderr: "pipe" }).exitCode === 0).length;
     expect(earlyTrue).toBeGreaterThan(0);
     expect(walk(n900)).toMatchObject({ verdict: "tree is behind", early: false, kase: 3, applying: [] });
+    for (const v of ["9.0.1", "9.1.0"]) expect(at(v)).toMatchObject({ verdict: "tree is behind", early: false, kase: 3, applying: [] });
     expect(at(SCAFFOLD_RELEASE)).toMatchObject({ verdict: "same release", kase: 4, applying: [] });
     expect(past).toMatchObject({ verdict: "tree is NEWER", kase: 1, applying: [] });
-  });
+  }, 120_000); // nine trees generated with cookiecutter
 });
 
 describe("update-project-docs Step 2 reads the release this plugin installs from the newest script", () => {

@@ -279,6 +279,35 @@ fields, not folders. Projects still on the older layout (`projects/`,
 
 ## Version History
 
+### 4.2.0 (2026-09-29)
+
+**The story-loom migration cycle.** Every change alters what the migration or a
+skill does.
+
+- **The v2.10 → v3.0 migration writes what the adopter's tools accept.**
+  Frontmatter, owned files and re-padded tables pass the project's own Prettier
+  (never a downloaded one). Ignore files and `lint.exclude` globs are respelled
+  with the moves, and a document in `lint.exclude` moves but is never edited. A
+  document whose new position says `artifact` is retyped. Phase 10 reads a
+  broken link from the project root and as archived since, and suggests the fix.
+- **It never sets a tree back.** It recognises owned files from every release up
+  to its pin, and it and the earlier scripts refuse a tree already past the
+  release they install. The legacy guides fetch their own era's scaffold, so the
+  chain hands off. It is **pinned to scaffold 9.2.0**
+  (`project-docs-scaffold-template-v9.2.0`); the migrated tree is at 9.2.0.
+- **`update-project-docs` names the upgrade case before acting**: newer than
+  this plugin (nothing to migrate), a migration applies, behind with none
+  (re-run the newest script to refresh), or already current. Step 5 checks the
+  markers the scripts set instead of writing them. The migrations playbook
+  re-pins the newest migration at every scaffold release.
+- **The CLI is pointed at, not re-explained.** Step 6's blurb is a pointer to
+  `pdocs --help`; a migration run and the scaffold install say when the root
+  `AGENTS.md`/`CLAUDE.md` has none; `docs/AGENTS.md`, `docs/CLAUDE.md` and the
+  library READMEs name the command for their action.
+- **`pdocs check` reports `NO OUTCOME`** for a closed or abandoned cycle whose
+  Outcome is missing or still the template's placeholder; `sweep-project` says
+  so when it closes one.
+
 ### 4.1.0 (2026-09-27)
 
 **Fixes from the first 9.0.0 consumers** (Spellbook, wocky-talky) and the items
