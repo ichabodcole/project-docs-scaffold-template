@@ -84,25 +84,16 @@ iteration through real projects, which is what this project is doing.
   architecture docs, specifications, playbooks, features, work items, cycles,
   and more
 
-- **Provides a five-plugin Claude Code ecosystem** built around the scaffold:
-  - **project-docs** — the core workflow plugin: 6 commands, 27 skills, 9 agents
-    covering the full pipeline (workshop-idea, create-investigation,
-    create-project, generate-proposal, generate-design-resolution,
-    generate-dev-plan, generate-test-plan, finalize-branch, review-docs,
-    project-summary, project-manifesto, ground-in-project, idea-to-spec,
-    generate-spec, implementation-blueprint, consolidate-long-branch, …).
-  - **recipes** — an umbrella `recipes:recipes` skill that indexes and loads 21
-    implementation recipes (authentication, sync, IPC, voice-to-text, quality
-    gates, …) plus a `create-recipe` skill for extracting new ones.
-  - **toolbox** — specialist utilities not specific to documentation:
-    html-mockup-prototyping, maestro-testing, screenshot-optimization. (The
-    agent-surface "spells" — digestify, tuskboard (now `bounty`), grapevine,
-    magpie — were extracted to the standalone `spellbook` repo, now their single
-    source of truth.)
-  - **operator** — Operator Editor integration with `operator-setup` and
-    `operator-triage`.
-  - **agent-bridge** — a `bridge-agent` skill for cross-project knowledge
-    sharing and agent-to-agent communication via the agent-bridge MCP server.
+- **Provides the project-docs Claude Code plugin** built around the scaffold:
+  the core workflow plugin, with 6 commands, 27 skills and 9 agents covering the
+  full pipeline (workshop-idea, create-investigation, create-project,
+  generate-proposal, generate-design-resolution, generate-dev-plan,
+  generate-test-plan, finalize-branch, review-docs, project-summary,
+  project-manifesto, ground-in-project, idea-to-spec, generate-spec,
+  implementation-blueprint, consolidate-long-branch, …). The other plugins that
+  grew up here (recipes, toolbox, operator, agent-bridge, hivemind) moved to
+  [skill-garden](https://github.com/ichabodcole/skill-garden) on 2026-09-29, as
+  the agent-surface "spells" moved to `spellbook` before them.
 
 - **Manages the full work pipeline** from question through completion: research
   item → feature → [design resolution] → plan → [test plan] → items → sessions →
@@ -113,8 +104,8 @@ iteration through real projects, which is what this project is doing.
   an automatic close: `sweep-project` reconciles a plan against what was built,
   and archives only on human confirmation.
 
-- **Ships skills as portable, cross-agent bundles.** Every plugin builds into a
-  `dist/<plugin>/openpackage.yml` distribution that conforms to the
+- **Ships skills as portable, cross-agent bundles.** The plugin builds into a
+  `dist/project-docs/openpackage.yml` distribution that conforms to the
   [Agent Skills](https://agentskills.io) open standard, so the same skills work
   outside Claude Code (OpenCode, Codex, Crush, Cursor, …).
 

@@ -3,8 +3,8 @@ type: item
 title: Remove the extracted plugins from this repository
 description:
   Once skill-garden's marketplace is installed and working, remove the five
-  plugins from plugins/, dist/ and the marketplace, narrow the dist scripts, and
-  point the remaining mentions at skill-garden.
+  plugins from plugins/, dist/ and the marketplace, and point the remaining
+  mentions at skill-garden.
 status: draft
 lifecycle: active
 id: 01a0ee6f-0427-72bb-8bd2-a0bb7d5f2f60
@@ -33,5 +33,6 @@ change.
 - [ ] Nothing in the project-docs plugin, the root docs or the live `docs/`
       pages points at a path that has left. Mentions of the moved plugins name
       skill-garden.
-- [ ] The three items that moved to skill-garden are gone from `docs/items/`.
+- [ ] The three items that moved to skill-garden are `dropped` here, each
+      pointing at its skill-garden copy (the lint forbids deleting an item).
 - [ ] The gate passes, and release-please proposes no scaffold release.

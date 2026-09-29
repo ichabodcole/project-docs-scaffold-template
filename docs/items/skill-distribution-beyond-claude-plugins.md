@@ -34,4 +34,5 @@ answer.
 
 **Moved to skill-garden** on 2026-09-29, with the plugin it concerns: now
 [skill-garden/docs/items/skill-distribution-beyond-claude-plugins.md](https://github.com/ichabodcole/skill-garden/blob/main/docs/items/skill-distribution-beyond-claude-plugins.md).
-Dropped here, not done.
+Dropped here, not done. Its answer also decides whether this repository keeps
+its own `dist/` openpackage build for project-docs.

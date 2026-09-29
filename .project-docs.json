@@ -28,10 +28,6 @@
       "migrations",
       "project-docs",
       "hivemind",
-      "operator",
-      "recipes",
-      "toolbox",
-      "agent-bridge",
       "docs"
     ]
   }
