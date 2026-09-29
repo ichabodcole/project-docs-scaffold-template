@@ -55,4 +55,4 @@ architecture overview, data model, and service API table; two reference docs
 
 **Related Documents:**
 
-- [media-library SKILL.md](../../../../../plugins/recipes/skills/recipes/library/media-library/RECIPE.md)
+- [media-library SKILL.md](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/media-library/RECIPE.md)

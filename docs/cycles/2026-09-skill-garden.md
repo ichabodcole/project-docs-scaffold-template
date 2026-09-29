@@ -69,3 +69,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 ## Sessions
 
 - skill-garden bootstrap, in ~/Projects/skill-garden (open)
+- chore/remove-extracted-plugins (open)

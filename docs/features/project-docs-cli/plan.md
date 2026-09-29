@@ -538,4 +538,4 @@ the collect/print split and `plugin/scripts/anthill/cli.ts` for dispatch and
 manifest shape, both in `~/Projects/dreamwood/anthill`; and
 `src/acc/exit-codes.ts` in `~/Projects/agent-cli-conformance` for the exit-code
 bands. This repository publishes the recipe those follow —
-[project-cli-toolkit](../../../plugins/recipes/skills/recipes/library/project-cli-toolkit/RECIPE.md).
+[project-cli-toolkit](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/project-cli-toolkit/RECIPE.md).

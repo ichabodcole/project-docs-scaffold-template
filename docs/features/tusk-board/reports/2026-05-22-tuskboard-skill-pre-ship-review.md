@@ -371,7 +371,7 @@ explicit.
 
 - **Source skill:** `plugins/toolbox/skills/tuskboard/SKILL.md`
 - **Underlying recipe:**
-  [`agent-surface-bun` recipe](../../../../plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
+  [`agent-surface-bun` recipe](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
 - **Architecture review:**
   [`docs/projects/tusk-board/reviews/architecture.md`](../reviews/architecture.md)
 

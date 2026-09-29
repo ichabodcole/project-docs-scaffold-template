@@ -6,7 +6,7 @@ description:
   plugins from plugins/, dist/ and the marketplace, narrow the dist scripts, and
   point the remaining mentions at skill-garden.
 status: draft
-lifecycle: backlog
+lifecycle: active
 id: 01a0ee6f-0427-72bb-8bd2-a0bb7d5f2f60
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
