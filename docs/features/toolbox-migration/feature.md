@@ -5,7 +5,7 @@ description:
   Move hivemind, toolbox, operator, recipes and agent-bridge to a repository of
   their own, so this one holds project-docs and nothing else.
 status: stable
-lifecycle: backlog
+lifecycle: active
 generated: { by: unknown, at: 2026-05-27 }
 ---
 
@@ -27,6 +27,14 @@ written about have already left, to Spellbook. What follows the decision is the
 original toolbox-only proposal, kept as the history of the signal. Its open
 questions on naming, marketplace coordination and migration-day cache pinning
 still apply to the wider move.
+
+**Decisions for the move (2026-09-29).** The destination is
+`git@github.com:ichabodcole/skill-garden.git`. It starts with a fresh history,
+its first commit naming the project-docs commit it was copied from. It is
+generated from the project-docs scaffold at 9.2.0, and the live items about
+these plugins move with them. It has no openpackage `dist/` build for now. The
+cut is hard, with no release where the plugins ship from both repositories. The
+work is the [skill garden cycle](../../cycles/2026-09-skill-garden.md).
 
 Open alongside the move:
 [how skills reach runtimes other than Claude Code](../../items/skill-distribution-beyond-claude-plugins.md),
