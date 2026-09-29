@@ -71,6 +71,9 @@ exists only after that migration has run. Use it. Step 3 says how.
 
 Not every version bump requires a migration. Minor and patch releases that don't
 change structure won't have a migration file — only major structural changes do.
+They can still change files the scaffold owns (`docs/SCHEMA.md`, a template,
+`scripts/pdocs/`), which is why Step 2 has a case for a tree that is behind with
+no migration to run.
 
 **What does NOT trigger a version bump:**
 
@@ -103,29 +106,68 @@ in `.project-docs.json`, and `docs` when that file is absent. Every path in this
 skill and in the migration guides is written as `docs/...` for readability; if
 the project's root is something else, substitute it.
 
-### Step 2: Identify Target Version
+### Step 2: Work Out Which Case the Tree Is In
 
-Check the latest version available. The target is typically the version in the
-scaffold template you're upgrading to. Only structural transitions have a
-migration file, so expect gaps: the `## Available Migrations` table is the
-authoritative list, and a version range absent from it needs no migration work.
+Every upgrade is one of four cases. Work out which from the checks below, and
+**say which case it is, with the two release numbers it was decided from, before
+doing anything else.** Each case has one action.
+
+Two numbers decide it: the tree's release, from Step 1, and **the release this
+plugin installs** — the scaffold release its newest migration script is pinned
+to. Every scaffold release re-pins the newest script to itself, so that number
+is the release being adopted. Read it from the script, not from this page:
+
+```bash
+NEWEST=$(ls "$SKILL_DIR"/migrations/scripts/migrate-v*.ts | grep -vE '\.(test|codemod)\.ts$' | sort -V | tail -1)
+INSTALLS=$(sed -n 's/.*SCAFFOLD_TAG = "project-docs-scaffold-template-v\([0-9.]*\)".*/\1/p' "$NEWEST")
+TREE=<the version Step 1 read>
+echo "tree $TREE, this plugin installs $INSTALLS (from $(basename "$NEWEST"))"
+[ "$TREE" = "$INSTALLS" ] && echo "same release" || {
+  [ "$(printf '%s\n%s\n' "$TREE" "$INSTALLS" | sort -V | tail -1)" = "$TREE" ] \
+    && echo "tree is NEWER" || echo "tree is behind"; }
+```
+
+`SKILL_DIR` is this skill's directory, set in the same shell or pasted as the
+literal path. Compare release numbers part by part (`9.0.10` is later than
+`9.0.9`), which is what `sort -V` does. A tree Step 1 found no version in is on
+v1: it is case 2.
+
+Then take the first case that matches:
+
+| Case                          | How you know                                           | Action                                                                                                                                                                                                                                                            |
+| ----------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Tree is newer**          | `tree is NEWER`                                        | **Nothing to migrate.** An older migration has nothing to give a newer tree, and the scripts refuse to set one back. Run no script. Say that a newer project-docs plugin may carry a newer migration, then go on to Steps 6 and 7.                                |
+| **2. A migration applies**    | Step 3 finds a row that applies                        | Run the migrations Step 3 lists, in table order (Step 4). Then Steps 5–7.                                                                                                                                                                                         |
+| **3. Behind, no migration**   | `tree is behind`, and Step 3 finds no row that applies | **Refresh: re-run the newest script** (`$NEWEST`), `--dry-run` first, as Step 4 runs any script. It finds its structural work done, refreshes the files the scaffold owns, reconciles the seeded templates, and sets both markers to `$INSTALLS`. Then Steps 5–7. |
+| **4. Already at the release** | `same release`, and Step 3 finds no row that applies   | Nothing to migrate. Run Steps 6 and 7.                                                                                                                                                                                                                            |
+
+Whether a migration row exists for the release you are adopting does not decide
+between cases 3 and 4; the markers against `$INSTALLS` do. A patch or minor
+release with no structural change is case 3, and needs no row of its own.
 
 ### Step 3: Find Applicable Migrations
 
-Look in this skill's `migrations/` folder for each version step between current
-and target. Migrations must be applied **in sequence** — you can't skip
-versions.
+Test the rows of the `## Available Migrations` table by this rule:
 
-Example: upgrading from pre-2.0 to 2.3 requires:
+- **A row whose From is `2.5` or earlier** (`pre-2.0` through `2.5`, the first
+  five) is tested **only when the tree has no `.project-docs.json`**. Those rows
+  test for folders 9.0.0 removed (`docs/projects/`, `docs/briefs/`), so on any
+  tree that has the file they come back true for work that is not undone.
+  `.project-docs.json` arrived with the v2.7 layer; a tree without it is from
+  before that, and those rows are its to run.
+- **Every other row's `Applies If` is tested on any tree.** Each checks for
+  something only that migration's work leaves behind (or removes).
 
-1. `migrations/v1-to-v2.md`
-2. `migrations/v2.0-to-v2.3.md`
+```bash
+LEGACY=$([ -f .project-docs.json ] && echo no || echo yes)
+echo "test the From-2.5-or-earlier rows: $LEGACY"
+```
 
-**Then run each candidate's presence check** from the `Applies If` column of the
-`## Available Migrations` table, and drop the ones that have already been
-applied. The version number narrows the list; the presence check settles it. A
-migration re-run against a tree that already has it is not always harmless — and
-for the ones that are, the check costs a single `ls`.
+The rows whose `Applies If` comes back true are the migrations to run, **in
+table order** — they run in sequence, and each one's work is what the next one
+expects. None true: no migration applies (Step 2's cases 3 and 4). A migration
+re-run against a tree that already has it is not always harmless, which is why
+each is tested rather than run.
 
 ### Step 4: Execute Each Migration
 
@@ -142,7 +184,7 @@ For each migration file:
    runs against its own era's scaffold**: it fetches the scaffold release it was
    written against, never the latest one (`v2.6-to-v2.7`, `v2.8-to-v2.9` and
    `v2.9-to-v2.10` fetch the tag `project-docs-scaffold-template-v8.1.0`;
-   `v2.10-to-v3.0` fetches `project-docs-scaffold-template-v9.0.1`), so a later
+   `v2.10-to-v3.0` fetches `project-docs-scaffold-template-v9.1.0`), so a later
    release's layout never reaches a script that has not seen it, and the chain
    runs in order from any starting version. `--scaffold-dir` still overrides; if
    a scaffold phase stops saying the scaffold is older than the migration
@@ -156,16 +198,32 @@ For each migration file:
    of a script
 4. Move to the next migration
 
-### Step 5: Update Version Marker
+### Step 5: Check the Version Markers
 
-After all migrations are applied, write the new version to **both** markers, so
-they can't disagree:
+**The migration scripts set the markers; this step checks them.** Each script's
+`Version markers` phase writes both — `docs_version` in `docs/README.md` and
+`version` in `.project-docs.json` — to the scaffold release it installed, and
+prints that release. Do not write a version yourself: a number no script
+installed claims files the tree does not have.
 
-- `docs_version` in `docs/README.md` frontmatter
-- `version` in `.project-docs.json`, if the project has one (v2.7+)
+```bash
+grep docs_version docs/README.md
+[ -f .project-docs.json ] && grep '"version"' .project-docs.json
+```
 
-In the scaffold repo itself both are maintained by release-please. In a
-downstream project nothing maintains them but this step.
+Both must carry one value, and it must be the release the last script installed.
+If they disagree, or differ from that release, re-run that script (`--dry-run`
+first): its version phase sets both together.
+
+The one exception is a **guide-shaped** migration (the legacy rows) with no
+script behind the version step: where its guide says to set `docs_version`, set
+it to the value the guide names, then check as above. That value is never later
+than the pin of the next migration in the chain — each guide generates its
+scaffold at its own era's tag — because a script refuses a tree already past the
+release it installs. If a guide's value is later, stop and report it: the guide
+fetched the wrong release.
+
+In the scaffold repo itself both are maintained by release-please.
 
 ### Step 6: Ensure Root-Level Agent Context
 
@@ -295,9 +353,8 @@ cleanup with nothing put in its place.
 There is no migration row for it, because
 [v2.6-to-v2.7](migrations/v2.6-to-v2.7.md)'s precondition is already true on it:
 that migration applies while **either** half of the layer is missing, the
-contract or the tooling. Step 3 may still have missed it, because the version
-number narrows the list first and a `docs/` copied from a 2.9 scaffold says 2.9.
-Run the script anyway, from the repository root, `--dry-run` first — `SKILL_DIR`
+contract or the tooling, and Step 3 tests it on every tree. If Step 3 missed it,
+run the script anyway, from the repository root, `--dry-run` first — `SKILL_DIR`
 is this skill's directory, set in the same shell or pasted as the literal path:
 
 ```bash
@@ -321,16 +378,13 @@ Then **re-run this step, and Step 6**. Step 6 ran before the CLI existed, so its
 ## Available Migrations
 
 The **Applies If** column is a shell test that is true when the migration is
-still needed. Run it before applying (Step 3) — the version number narrows the
-list, this settles it.
+still needed. Run it before applying (Step 3), which says which rows to test.
 
-**Narrow by version first, always.** The older rows test for paths that 9.0.0
-removes — `[ ! -d docs/projects ]` (v1→v2), `[ ! -d docs/briefs ]` (v2.4→v2.5),
-`docs/projects/TEMPLATES/…` (v2.0→v2.3, v2.3→v2.4) — so on a 9.0.0 tree those
-tests come back **true**. They are only meaningful on a tree whose version is
-inside the row's From range. A project with no version marker at all is dated by
-Step 1's detection before any row is tested; never run the whole column against
-it.
+**Which rows to test on a given tree is Step 3's rule**: the rows From `2.5` or
+earlier only on a tree with no `.project-docs.json` — they test for paths that
+9.0.0 removes (`[ ! -d docs/projects ]`, `[ ! -d docs/briefs ]`,
+`docs/projects/TEMPLATES/…`), so on a later tree they come back **true** — and
+every other row on any tree.
 
 | Migration                                                  | From    | To                     | Applies If                                                                         | Summary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------------------------------------------------- | ------- | ---------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -343,7 +397,7 @@ it.
 | [migrations/v2.7-to-v2.8.md](migrations/v2.7-to-v2.8.md)   | 2.7     | 2.8.0                  | `[ -f docs/lint.ts ] && grep -q 'scripts/docs-lint/index.ts' docs/lint.ts`         | **Legacy.** Replace the single-file `docs/lint.ts` with the `pdocs` CLI under `scripts/pdocs/`; REMOVE the `docs:*` scripts and the `tsconfig` reach into `scripts/` as development artefacts, refresh the templates, and re-point every reference to it                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | [migrations/v2.8-to-v2.9.md](migrations/v2.8-to-v2.9.md)   | 2.8     | 2.9.0                  | `[ ! -f docs/.pdocs-seed.json ]`                                                   | **Run as a script**, not a checklist: `bun "$SKILL_DIR/migrations/scripts/migrate-v2.8-to-v2.9.ts"` from the project root, `--dry-run` first. Templates become **seeded** — the scaffold records what it installed in `docs/.pdocs-seed.json`, and a later migration updates a template only while you have not edited it. Also opens the type vocabulary via `lint.types`, and makes `pdocs find --type` refuse an unknown type instead of returning nothing at exit 0                                                                                                                                                                                                                                 |
 | [migrations/v2.9-to-v2.10.md](migrations/v2.9-to-v2.10.md) | 2.9     | 2.10.0                 | `! grep -q isSeeded scripts/pdocs/lint/rules.ts 2>/dev/null`                       | **Run as a script**, not a checklist: `bun "$SKILL_DIR/migrations/scripts/migrate-v2.9-to-v2.10.ts"` from the project root, `--dry-run` first. Refreshes the **owned** files — `scripts/pdocs/` and `docs/SCHEMA.md` — to the release that fixed the first consumer's issues (a template is an exact name shape, so a real page called `templates.md` is linted), and is the first migration to **reconcile the seeded templates**: each one is updated while you have not edited it, installed if new, and otherwise named and kept. The refreshed lint may find problems the older one hid; the run then stops after the refresh, before the markers move, and re-running passes once they are worked |
-| [migrations/v2.10-to-v3.0.md](migrations/v2.10-to-v3.0.md) | 2.10    | 3.0.0 (scaffold 9.0.1) | `[ ! -d docs/items ] \|\| [ -d docs/backlog ] \|\| [ -d docs/projects ]`           | **Run as a script**, not a checklist: `bun "$SKILL_DIR/migrations/scripts/migrate-v2.10-to-v3.0.ts"` from the project root, `--dry-run` first. **The first migration that moves your documents**: `projects/`, `backlog/`, `fragments/`, `investigations/` and `reports/` become features and work items under `features/` and `items/`, frontmatter rewritten, every link respelled, every move named, nothing deleted; `scope:` on cycles becomes `cycle:` on items; `memories/` and `lessons-learned/` are kept and declared. Briefs and reports without one owner are judgment steps its preflight lists — see the guide's "Before you run it"                                                      |
+| [migrations/v2.10-to-v3.0.md](migrations/v2.10-to-v3.0.md) | 2.10    | 3.0.0 (scaffold 9.1.0) | `[ ! -d docs/items ] \|\| [ -d docs/backlog ] \|\| [ -d docs/projects ]`           | **Run as a script**, not a checklist: `bun "$SKILL_DIR/migrations/scripts/migrate-v2.10-to-v3.0.ts"` from the project root, `--dry-run` first. **The first migration that moves your documents**: `projects/`, `backlog/`, `fragments/`, `investigations/` and `reports/` become features and work items under `features/` and `items/`, frontmatter rewritten, every link respelled, every move named, nothing deleted; `scope:` on cycles becomes `cycle:` on items; `memories/` and `lessons-learned/` are kept and declared. Briefs and reports without one owner are judgment steps its preflight lists — see the guide's "Before you run it"                                                      |
 
 ## Root-Level Conventions
 
@@ -501,24 +555,16 @@ not the writer — so a project can pass that check and still have nothing
 anywhere that says a CLI exists. Hence a separate row. If the check exits
 non-zero, recommend a section like this:
 
-````markdown
+```markdown
 ## Documentation CLI
 
 Documents under `docs/` are created with the `pdocs` CLI, not by hand:
-
-```bash
-bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
+`bun scripts/pdocs/cli.ts new <type> <name>`. Run
+`bun scripts/pdocs/cli.ts --help` for what else it does.
 ```
 
-The type decides the folder, the filename shape and the template, and the CLI
-fills the frontmatter — for a library page it also writes the catalog line in
-`docs/index.md`. The same CLI reads the tree: `check` (the gate), `find`,
-`view`, `backlinks`, `orphans`; and changes work in place: `set`, `promote`,
-`archive`.
-
-`bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
-`docs/SCHEMA.md` is the frontmatter contract the gate enforces.
-````
+It points at the CLI rather than describing it: the CLI's own help is the
+reference, and a copy of it here is one more thing to go stale.
 
 The check's second clause is there for the other half of the problem: a project
 whose `AGENTS.md` was written against v2.7 still names `bun docs/lint.ts`, a

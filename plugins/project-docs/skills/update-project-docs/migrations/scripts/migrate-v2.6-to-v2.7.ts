@@ -526,6 +526,23 @@ function dirtyPathsTheRunWrites(ctx: Ctx): string[] {
     .sort();
 }
 
+/**
+ * The later of `versions` that is past `installs`, compared as release numbers
+ * part by part; null when none is. A value that is not `X.Y.Z` is not compared.
+ */
+export function laterThan(installs: string, versions: unknown[]): string | null {
+  const parse = (v: unknown) => (typeof v === "string" && /^\d+\.\d+\.\d+$/.test(v) ? v.split(".").map(Number) : null);
+  const cmp = (a: number[], b: number[]) => a.map((n, i) => n - (b[i] as number)).find((d) => d !== 0) ?? 0;
+  const base = parse(installs);
+  if (!base) return null;
+  let best: string | null = null;
+  for (const v of versions) {
+    const p = parse(v);
+    if (p && cmp(p, base) > 0 && (best === null || cmp(p, parse(best) as number[]) > 0)) best = v as string;
+  }
+  return best;
+}
+
 function preflight(ctx: Ctx): void {
   step(1, "Preflight");
   // A v2.6 tree has no .project-docs.json yet — this migration writes it — so
@@ -544,6 +561,18 @@ function preflight(ctx: Ctx): void {
     fail(
       `${ctx.docsRootName}/README.md carries no docs_version line — a pre-2.0 tree, or not a project-docs one. ` +
         `Migrations run in sequence: v1-to-v2 comes first.`
+    );
+  // A tree past the release this run installs — the pin, or a --scaffold-dir's
+  // own — would have its layer and markers set back to it.
+  const installs =
+    [ctx.scaffold ? docsVersionOf(resolve(ctx.scaffold), "docs") : UNKNOWN_VERSION].find((v) => v !== UNKNOWN_VERSION) ||
+    SCAFFOLD_TAG.slice(SCAFFOLD_TAG.lastIndexOf("-v") + 2);
+  const ahead = laterThan(installs, [ctx.config?.version, ctx.carriedVersion]);
+  if (ahead)
+    fail(
+      `this tree is already past what this migration installs: it is at release ${ahead}, and this migration\n` +
+        `   installs ${installs}. There is nothing for it to do, and running it would set the tree back.\n\n` +
+        `   update-project-docs works out which migration, if any, a tree at ${ahead} needs — its Step 2.`
     );
   ok(
     `project at ${ctx.root}, docsRoot ${ctx.docsRootName}/, docs_version ${ctx.carriedVersion}` +

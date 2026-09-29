@@ -5,7 +5,7 @@ description:
   update-project-docs has no path for a tree already on v3.0 adopting a newer
   scaffold patch, and says nothing about the version markers that leaves behind.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0e770-e05e-7526-9140-0cde39272320
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -44,19 +44,19 @@ action that doesn't depend on which release you're adopting. Today that's
 "re-run the latest script"; later it might be a refresh command of its own.
 
 Related:
-[Step 5 rewrites markers the scripts set](./update-skill-step-5-rewrites-markers.md),
+[Step 5 rewrites markers the scripts set](../update-skill-step-5-rewrites-markers.md),
 about who writes the markers, and
-[recording owned files at install](./record-owned-files-at-install.md), which
+[recording owned files at install](../record-owned-files-at-install.md), which
 would let the refresh tell an edited owned file from an old one.
 
 ## Definition of done
 
-- [ ] `update-project-docs` begins by working out which case the tree is in,
+- [x] `update-project-docs` begins by working out which case the tree is in,
       from checks it names, and says so before acting.
-- [ ] Each case has one action, and none is written for a specific release: a
+- [x] Each case has one action, and none is written for a specific release: a
       later patch needs no new row or section.
-- [ ] The "behind, no migration" case refreshes the owned files and sets both
+- [x] The "behind, no migration" case refreshes the owned files and sets both
       markers to the adopted release, not the release a script fetched.
-- [ ] Spellbook's case, 9.0.0 to 9.1.0, walked through the skill as written,
+- [x] Spellbook's case, 9.0.0 to 9.1.0, walked through the skill as written,
       lands on that case and ends with a current `SCHEMA.md` and markers at
       9.1.0.

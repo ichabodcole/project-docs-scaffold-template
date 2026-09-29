@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { CONFIG_FILENAME } from "../docs-lint/config.ts";
 import { join, relative } from "node:path";
 import { parseFrontmatter } from "../docs-lint/index.ts";
-import { ENTITY_FILE, ITEMS_FOLDER } from "./registry.ts";
+import { ENTITY_FILE, ITEMS_FOLDER, registryIndex } from "./registry.ts";
 import {
   type Ctx,
   type WorkbenchDocument,
@@ -144,8 +144,92 @@ export function workProblems(
   }
 
   problems.push(...blockedCycles(items, byId));
+  problems.push(...cycleOutcomeProblems(ctx, model.cycles));
   return problems;
 }
+
+/** The states a cycle ends in, each of which owes an Outcome. */
+const CYCLE_ENDS = new Set(["closed", "abandoned"]);
+
+/** An Outcome heading: `## Outcome` or `## Outcomes`, with anything after it. */
+const OUTCOME_HEADING = /^##\s+outcomes?(?![\w-])/i;
+
+/**
+ * The paragraphs under a body's Outcome heading (`## Outcome`, `## Outcomes`,
+ * or either with text after it — `## Outcome — shipped`), up to the next H2,
+ * each with HTML comments removed and whitespace collapsed; empty ones dropped.
+ * A heading inside a fenced code block is not a heading. `null` when there is
+ * no Outcome heading.
+ */
+export function outcomeParagraphs(body: string): string[] | null {
+  const lines = body.split("\n");
+  let fence: string | null = null;
+  let at = -1;
+  let end = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] as string;
+    const f = /^\s{0,3}(`{3,}|~{3,})/.exec(line);
+    if (f) {
+      const mark = f[1] as string;
+      if (fence === null) fence = mark;
+      else if (mark[0] === fence[0] && mark.length >= fence.length) fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+    if (at === -1) {
+      if (OUTCOME_HEADING.test(line)) at = i;
+    } else if (/^## /.test(line)) {
+      end = i;
+      break;
+    }
+  }
+  if (at === -1) return null;
+  return lines
+    .slice(at + 1, end)
+    .join("\n")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s+/g, " ").trim())
+    .filter((p) => p !== "");
+}
+
+/**
+ * A `closed` or `abandoned` cycle whose `## Outcome` is missing, empty, or
+ * still only the cycle template's own placeholder paragraphs — read from the
+ * template the project has, so an edited template's placeholder counts. A
+ * `planned` or `active` cycle is not asked: the Outcome is written at close.
+ */
+export function cycleOutcomeProblems(ctx: Ctx, cycles: readonly WorkEntity[]): string[] {
+  const ended = cycles.filter((c) => c.lifecycle !== null && CYCLE_ENDS.has(c.lifecycle));
+  if (ended.length === 0) return [];
+  const template = [registryIndex(ctx.config).get("cycle")?.template ?? []].flat()[0];
+  const tplPath = template ? join(ctx.repoRoot, template) : null;
+  const placeholder = new Set(
+    tplPath && existsSync(tplPath) ? outcomeParagraphs(bodyOf(readFileSync(tplPath, "utf8"))) ?? [] : []
+  );
+  const problems: string[] = [];
+  for (const c of ended) {
+    const abs = join(ctx.repoRoot, c.path);
+    if (!existsSync(abs)) continue;
+    const paragraphs = outcomeParagraphs(bodyOf(readFileSync(abs, "utf8")));
+    const why =
+      paragraphs === null
+        ? "has no `## Outcome` section"
+        : paragraphs.length === 0
+          ? "has an empty `## Outcome`"
+          : paragraphs.every((p) => placeholder.has(p))
+            ? "still has the template's placeholder under `## Outcome`"
+            : null;
+    if (why)
+      problems.push(
+        `NO OUTCOME  ${c.path}: ${c.lifecycle}, but ${why}  (write what shipped, what was cut and what was learned)`
+      );
+  }
+  return problems;
+}
+
+/** A document's text below its frontmatter block. */
+const bodyOf = (raw: string): string => raw.replace(/^---\n[\s\S]*?\n---\n?/, "");
 
 /**
  * Every loop in the `blocked_by` graph, once each. An item blocking itself is a

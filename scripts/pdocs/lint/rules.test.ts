@@ -1317,7 +1317,7 @@ describe("the gate — a link may leave docs/, not the repository", () => {
       status: "stable",
       lifecycle: "closed",
       generated: GENERATED,
-    }) + `# Co-presence\n\n${body}\n`;
+    }) + `# Co-presence\n\n${body}\n\n## Outcome\n\nShipped.\n`;
 
   test("a sibling checkout that EXISTS fails locally, in both tiers; a file elsewhere in the repository passes", () => {
     const root = minimal({
@@ -1378,7 +1378,7 @@ describe("the gate — the repository is git's, not the config's", () => {
           lifecycle: "closed",
           generated: GENERATED,
         }) +
-        "# Mono\n\n[c](../../../../CONTRIBUTING.md) [o](../../../../../outside.md)\n",
+        "# Mono\n\n[c](../../../../CONTRIBUTING.md) [o](../../../../../outside.md)\n\n## Outcome\n\nShipped.\n",
     });
     for (const [rel, body] of Object.entries(files)) {
       mkdirSync(dirname(join(app, rel)), { recursive: true });
@@ -1422,7 +1422,7 @@ describe("the gate — the repository is git's, not the config's", () => {
           status: "stable",
           lifecycle: "closed",
           generated: GENERATED,
-        }) + "# Mono\n\n[c](../../../../../real/CONTRIBUTING.md)\n",
+        }) + "# Mono\n\n[c](../../../../../real/CONTRIBUTING.md)\n\n## Outcome\n\nShipped.\n",
     });
     for (const [rel, body] of Object.entries(files)) {
       mkdirSync(dirname(join(app, rel)), { recursive: true });
@@ -1470,7 +1470,7 @@ describe("the gate — the repository is git's, not the config's", () => {
           status: "stable",
           lifecycle: "closed",
           generated: GENERATED,
-        }) + "# Mono\n\n[c](../../../../CONTRIBUTING.md)\n",
+        }) + "# Mono\n\n[c](../../../../CONTRIBUTING.md)\n\n## Outcome\n\nShipped.\n",
     });
     for (const [rel, body] of Object.entries(files)) {
       mkdirSync(dirname(join(app, rel)), { recursive: true });

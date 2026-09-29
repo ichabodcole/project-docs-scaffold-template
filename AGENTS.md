@@ -189,22 +189,9 @@ npm test              # bun test
 ### Documentation CLI
 
 Documents under `docs/` are created with the `pdocs` CLI, not by hand:
-
-```bash
-bun scripts/pdocs/cli.ts new <type> <name> --title "…" --description "…"
-```
-
-The type decides the folder, the filename shape and the template, and the CLI
-fills the frontmatter — for a library page it also writes the catalog line in
-[docs/index.md](./docs/index.md). The same CLI reads the tree: `check` (the
-gate, which is what `npm run docs:lint` runs), `find`, `view`, `backlinks`,
-`orphans`; and changes work in place: `set`, `promote`, `archive`.
-
-`bun scripts/pdocs/cli.ts help` lists every command, flag and exit code.
-[docs/SCHEMA.md](./docs/SCHEMA.md) is the frontmatter contract the gate
-enforces, and
-[the CLI reference](./plugins/project-docs/skills/create-project/references/pdocs.md)
-is the full page.
+`bun scripts/pdocs/cli.ts new <type> <name>`. Run
+`bun scripts/pdocs/cli.ts --help` for what else it does (`npm run docs:lint`
+runs its `check`).
 
 ### Two Runtimes, One Gate
 

@@ -322,6 +322,123 @@ describe("workProblems — entity folders and the archive", () => {
   });
 });
 
+describe("NO OUTCOME — a closed or abandoned cycle records what happened", () => {
+  // The cycle template this repository ships, byte for byte: the placeholder is
+  // read from it, never written into the rule.
+  const TEMPLATE = readFileSync(join(REPO_ROOT, "docs/cycles/TEMPLATE.md"), "utf8");
+  const tplOutcome = /## Outcome\n([\s\S]*?)\n## /.exec(TEMPLATE.replace(/^---\n[\s\S]*?\n---\n/, ""))?.[1] as string;
+  const cycleAt = (lifecycle: string, body: string, extra: Record<string, string> = {}) =>
+    `${doc({
+      type: "cycle",
+      title: "A cycle",
+      description: "A stretch of work.",
+      status: "draft",
+      lifecycle,
+      started: "2026-09-01",
+      ...(lifecycle === "closed" ? { closed: "2026-09-20" } : {}),
+      generated: GENERATED,
+      ...extra,
+    }).replace("# X\n", "# A cycle\n")}\n## Why now\n\nBecause.\n\n${body}`;
+  const WRITTEN = "## Outcome\n\nBoth items shipped. The lint rule was cut and carried over.\n\n## Sessions\n";
+  const rows = (ctx: Ctx) => only(ctx, "NO OUTCOME");
+
+  test("the template's Outcome placeholder is a real one: it is what this test puts in a cycle", () => {
+    expect(tplOutcome).toContain("_Written at close, not before");
+  });
+
+  test("closed with the template's placeholder, abandoned with no Outcome, closed with an empty one: each reported", () => {
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": TEMPLATE,
+      "docs/cycles/2026-07-placeholder.md": cycleAt("closed", `## Outcome\n${tplOutcome}\n## Sessions\n`),
+      "docs/cycles/2026-08-missing.md": cycleAt("abandoned", "## Sessions\n"),
+      "docs/cycles/2026-06-empty.md": cycleAt("closed", "## Outcome\n\n<!-- later -->\n\n## Sessions\n"),
+    });
+    expect(rows(ctx).sort()).toEqual([
+      "NO OUTCOME  docs/cycles/2026-06-empty.md: closed, but has an empty `## Outcome`  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-07-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-08-missing.md: abandoned, but has no `## Outcome` section  (write what shipped, what was cut and what was learned)",
+    ]);
+  });
+
+  test("a written Outcome is clean — also when the italic prompt was left above it", () => {
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": TEMPLATE,
+      "docs/cycles/2026-07-done.md": cycleAt("closed", WRITTEN),
+      "docs/cycles/2026-08-kept-prompt.md": cycleAt(
+        "abandoned",
+        "## Outcome\n\n_Written at close, not before — and for an `abandoned` cycle too._\n\nFalsified: the consumer never migrated.\n"
+      ),
+    });
+    expect(rows(ctx)).toEqual([]);
+  });
+
+  test("a planned or active cycle with the placeholder is not reported: the Outcome is written at close", () => {
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": TEMPLATE,
+      "docs/cycles/2026-09-now.md": cycleAt("active", `## Outcome\n${tplOutcome}\n## Sessions\n`),
+      "docs/cycles/2026-10-next.md": cycleAt("planned", "## Sessions\n"),
+    });
+    expect(rows(ctx)).toEqual([]);
+  });
+
+  test("the placeholder is the project's own template's: an edited one counts, and the stock prompt is then prose", () => {
+    const edited = TEMPLATE.replace(tplOutcome, "\n[Fill in at close.]\n\n");
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": edited,
+      "docs/cycles/2026-07-theirs.md": cycleAt("closed", "## Outcome\n\n[Fill in at close.]\n\n## Sessions\n"),
+      "docs/cycles/2026-08-stock.md": cycleAt("closed", `## Outcome\n${tplOutcome}\n## Sessions\n`),
+    });
+    expect(rows(ctx)).toEqual([
+      "NO OUTCOME  docs/cycles/2026-07-theirs.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+    ]);
+  });
+
+  test("an Outcome heading with text after it, and `## Outcomes`, are the section", () => {
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": TEMPLATE,
+      "docs/cycles/2026-07-dash.md": cycleAt("closed", "## Outcome — shipped\n\nBoth items landed.\n\n## Sessions\n"),
+      "docs/cycles/2026-08-plural.md": cycleAt("closed", "## Outcomes\n\nThe lint rule shipped; the CLI flag was cut.\n"),
+      "docs/cycles/2026-06-dash-placeholder.md": cycleAt("closed", `## Outcome — shipped\n${tplOutcome}\n## Sessions\n`),
+      "docs/cycles/2026-05-outcomes-based.md": cycleAt("closed", "## Outcome-based planning\n\nNot an Outcome.\n"),
+    });
+    expect(rows(ctx).sort()).toEqual([
+      "NO OUTCOME  docs/cycles/2026-05-outcomes-based.md: closed, but has no `## Outcome` section  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-06-dash-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+    ]);
+  });
+
+  test("a `## Outcome` inside a fenced code block is not the section", () => {
+    const fenced = "## Why now\n\n```markdown\n## Outcome\n\nAn example, not a record.\n```\n\n";
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": TEMPLATE,
+      "docs/cycles/2026-07-fenced-placeholder.md": cycleAt("closed", `${fenced}## Outcome\n${tplOutcome}\n## Sessions\n`),
+      "docs/cycles/2026-08-fenced-only.md": cycleAt("abandoned", `${fenced}~~~\n## Outcome\n\nAlso an example.\n~~~\n`),
+    });
+    expect(rows(ctx).sort()).toEqual([
+      "NO OUTCOME  docs/cycles/2026-07-fenced-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-08-fenced-only.md: abandoned, but has no `## Outcome` section  (write what shipped, what was cut and what was learned)",
+    ]);
+  });
+
+  test("`pdocs check` fails on it, under a docs root of another name", () => {
+    const ctx = fixture(
+      {
+        "handbook/SCHEMA.md": readFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), "utf8"),
+        "handbook/cycles/TEMPLATE.md": TEMPLATE,
+        "handbook/cycles/2026-07-placeholder.md": cycleAt("closed", `## Outcome\n${tplOutcome}\n## Sessions\n`),
+      },
+      {},
+      "handbook"
+    );
+    const r = Bun.spawnSync(["bun", CLI, "check", "--root", ctx.repoRoot, "--format", "json"], { env: childEnv(), stdout: "pipe", stderr: "pipe" });
+    const messages = (JSON.parse(r.stdout.toString()).data.problems as Array<{ message: string }>).map((p) => p.message);
+    expect(r.exitCode).toBe(9);
+    expect(messages).toContain(
+      "NO OUTCOME  handbook/cycles/2026-07-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)"
+    );
+  });
+});
+
 describe("workProblems — a fixture with every defect reports each once", () => {
   test("every Task 1.7 defect, each exactly once", () => {
     const ctx = fixture(

@@ -4,6 +4,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 
 LAYER_NOTE = """     ─────────────────────────────────────────────────────
@@ -13,13 +14,9 @@ LAYER_NOTE = """     ───────────────────�
      See [docs/README.md](./docs/README.md) for the full
      structure overview and document type guide.
 
-     `bun scripts/pdocs/cli.ts` is the tool for this tree.
-     `check` gates it; `new <type>` creates a document in the
-     right folder, with the right filename and frontmatter;
-     `find`, `backlinks` and `orphans` query it. Run
-     `bun scripts/pdocs/cli.ts help` for the whole surface —
-     it answers in JSON whenever its output is not a
-     terminal. Prefer it over writing documents by hand.
+     Documents under `docs/` are created with the `pdocs`
+     CLI, not by hand: `bun scripts/pdocs/cli.ts new <type> <name>`.
+     Run `bun scripts/pdocs/cli.ts --help` for what else it does.
 
      Every document carries a frontmatter block, and
      [docs/SCHEMA.md](./docs/SCHEMA.md) is the contract for
@@ -30,6 +27,37 @@ LAYER_NOTE = """     ───────────────────�
      `bun scripts/pdocs/cli.ts view board`.
      ─────────────────────────────────────────────────────
 """
+
+# update-project-docs Step 6's "Documentation CLI pointer" row: the same two
+# patterns over the root AGENTS.md and CLAUDE.md read as one stream.
+# scripts/post-gen-hook.test.ts runs the row's own shell check against the same
+# cases and holds the two equal.
+CLI_POINTER = re.compile(r"pdocs(/cli\.ts)? new")
+STALE_LINT = re.compile(r"docs/lint(\.test)?\.ts")
+
+
+def root_points_at_cli(root):
+    """Whether the root agent file already points at the pdocs CLI."""
+    text = ""
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        path = os.path.join(root, name)
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8") as f:
+                text += f.read() + "\n"
+    return bool(CLI_POINTER.search(text)) and not STALE_LINT.search(text)
+
+
+def print_layer_step(number, root):
+    """The step naming the root agent file's CLI pointer, or saying it has one."""
+    if root_points_at_cli(root):
+        print(f"  {number}. Your AGENTS.md / CLAUDE.md already points at the pdocs CLI.")
+        print("     /project-docs:update-project-docs Step 6 checks its other")
+        print("     conventions.\n")
+        return
+    print(f"  {number}. Your AGENTS.md / CLAUDE.md does not point at the pdocs CLI yet,")
+    print("     so an agent that starts there may write documents by hand. Add")
+    print("     this (update-project-docs Step 6 recommends the same):\n")
+    print(LAYER_NOTE)
 
 
 SEED_MANIFEST = ".pdocs-seed.json"
@@ -246,9 +274,7 @@ def install_to_current_directory():
     print("     /plugin install project-docs")
     print("  3. Review and customize docs/PROJECT_MANIFESTO.md")
     print("  4. Read docs/SCHEMA.md — the frontmatter contract the lint enforces")
-    print("  5. Add this to your CLAUDE.md or AGENTS.md so AI agents")
-    print("     discover the docs structure and reach for the CLI:\n")
-    print(LAYER_NOTE)
+    print_layer_step(5, parent_dir)
     print("  6. Start documenting! 📝\n")
 
 
@@ -273,9 +299,7 @@ def install_to_new_folder():
     print("     /plugin install project-docs")
     print("  4. Review and customize docs/README.md if needed")
     print("  5. Read docs/SCHEMA.md — the frontmatter contract the lint enforces")
-    print("  6. Add this to your CLAUDE.md or AGENTS.md so AI agents")
-    print("     discover the docs structure and reach for the CLI:\n")
-    print(LAYER_NOTE)
+    print_layer_step(6, project_dir)
     print("  7. Start documenting! 📝\n")
 
 

@@ -66,7 +66,7 @@ directory within your project. This gives you all the new READMEs, templates,
 and directory structures locally — no need to fetch files from GitHub.
 
 ```bash
-cookiecutter gh:ichabodcole/project-docs-scaffold-template -o .scaffold-tmp
+cookiecutter gh:ichabodcole/project-docs-scaffold-template --checkout project-docs-scaffold-template-v2.0.0 -o .scaffold-tmp
 ```
 
 This creates `.scaffold-tmp/<project-name>/docs/` with the complete v2

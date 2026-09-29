@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * v2.10 → v3.0 (scaffold 9.0.1, the 9.0.0 layout). The migration, not a description of one.
+ * v2.10 → v3.0 (scaffold 9.1.0, the 9.0.0 layout). The migration, not a description of one.
  *
  * WHY THIS IS A SCRIPT. It generates a scaffold and reads a version from it,
  * every later phase consumes the move map an earlier one built, several checks
@@ -10,7 +10,7 @@
  *   1  preflight  — a v2.10 tree, the tools, git, the baseline `pdocs check`,
  *                   and every JUDGMENT BLOCKER (briefs, reports without one
  *                   owner, edited retired templates, files it cannot place)
- *   2  scaffold   — the template at SCAFFOLD_TAG (9.0.1), its own tag (D16), verified
+ *   2  scaffold   — the template at SCAFFOLD_TAG (9.1.0), its own tag (D16), verified
  *   3  plan       — the move map, every frontmatter rewrite (each block as the
  *                   project's own Prettier prints it), every config key;
  *                   `--dry-run` prints it and stops here
@@ -98,11 +98,13 @@ import {
 
 const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
 /**
- * The scaffold release this migration installs (plan D16): 9.0.1, which has the
+ * The scaffold release this migration installs (plan D16): 9.1.0, which has the
  * 9.0.0 layout the script was written against and the cycle template and
- * features README that shipped after it.
+ * features README that shipped after it. As the newest migration it is re-pinned
+ * at every scaffold release (the writing-migrations playbook), so re-running it
+ * refreshes a tree to the release being adopted.
  */
-export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.0.1";
+export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.1.0";
 /** SCAFFOLD_TAG's release number, for the messages that name it. */
 export const SCAFFOLD_RELEASE = SCAFFOLD_TAG.slice(SCAFFOLD_TAG.lastIndexOf("-v") + 2);
 const MANIFEST_NAME = ".pdocs-seed.json";
@@ -1954,6 +1956,45 @@ export function docsVersionOf(readme: string): string | null {
   return /^docs_version:\s*"([^"]+)"/m.exec(readFileSync(readme, "utf8"))?.[1] ?? null;
 }
 
+/**
+ * Whether the root agent file points at the CLI: `update-project-docs` Step 6's
+ * "Documentation CLI pointer" row, the same two patterns over AGENTS.md and
+ * CLAUDE.md read as one stream. The test beside this file runs the row's own
+ * shell check against the same cases and holds the two equal.
+ */
+export function rootPointsAtCli(root: string): boolean {
+  const text = ["AGENTS.md", "CLAUDE.md"]
+    .map((f) => join(root, f))
+    .filter((f) => existsSync(f))
+    .map((f) => readFileSync(f, "utf8"))
+    .join("\n");
+  return /pdocs(\/cli\.ts)? new/.test(text) && !/docs\/lint(\.test)?\.ts/.test(text);
+}
+
+/** `a` against `b` as release numbers, part by part: negative, zero or positive. Null when either is not `X.Y.Z`. */
+export function compareReleases(a: string, b: string): number | null {
+  const parse = (v: string) => (/^\d+\.\d+\.\d+$/.test(v) ? v.split(".").map(Number) : null);
+  const x = parse(a);
+  const y = parse(b);
+  if (!x || !y) return null;
+  for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return (x[i] as number) - (y[i] as number);
+  return 0;
+}
+
+/**
+ * The later of the tree's two version markers — `.project-docs.json` `version`
+ * and `docs_version` in the docs README — and which one it came from. The later
+ * one, because a run sets BOTH: either marker past the release it installs is a
+ * marker the run would set back. Null when neither is an `X.Y.Z` release.
+ */
+export function treeRelease(configVersion: unknown, docsVersion: string | null): { version: string; from: string } | null {
+  const found: Array<{ version: string; from: string }> = [];
+  if (typeof configVersion === "string" && compareReleases(configVersion, configVersion) !== null)
+    found.push({ version: configVersion, from: ".project-docs.json version" });
+  if (docsVersion && compareReleases(docsVersion, docsVersion) !== null) found.push({ version: docsVersion, from: "docs_version" });
+  return found.reduce<{ version: string; from: string } | null>((best, f) => (!best || (compareReleases(f.version, best.version) as number) > 0 ? f : best), null);
+}
+
 export function serialiseManifest(m: SeedManifest, before: string | null): string {
   const indent = (before && /^([ \t]+)"/m.exec(before)?.[1]) || "  ";
   const files: Record<string, string> = {};
@@ -3402,6 +3443,26 @@ function computeChanges(ctx: Ctx): Changes {
 
 function preflight(ctx: Ctx): void {
   step(1, "Preflight");
+  // A TREE PAST THE RELEASE THIS RUN INSTALLS. The run would complete, replace
+  // the owned files with the older release's and set every marker back to it.
+  // The release installed is SCAFFOLD_RELEASE, or a --scaffold-dir's own.
+  const installs = (ctx.scaffold && docsVersionOf(join(resolve(ctx.scaffold), "docs/README.md"))) || SCAFFOLD_RELEASE;
+  const docsVersion = docsVersionOf(join(ctx.docsRoot, "README.md"));
+  const at = treeRelease(ctx.config?.version, docsVersion);
+  if (at && (compareReleases(at.version, installs) ?? 0) > 0) {
+    // One marker stale: name the other, so the stop does not read as if both said it.
+    const other = at.from === "docs_version" ? { from: ".project-docs.json version", v: ctx.config?.version } : { from: "docs_version", v: docsVersion };
+    const disagree =
+      typeof other.v === "string" && other.v !== at.version
+        ? ` (its ${other.from} says ${other.v}: the markers disagree, and the later one is what a run would set back)`
+        : "";
+    fail(
+      `this tree is already past what this migration installs: its ${at.from} is ${at.version}${disagree}, and this\n` +
+        `   migration installs ${installs}. There is nothing for it to do, and running it would set the tree back.\n\n` +
+        `   A newer project-docs plugin may carry a newer migration. Without one there is nothing to migrate:\n` +
+        `   update-project-docs goes on to its root-file and verify steps.`
+    );
+  }
   const missing: string[] = [];
   if (!ctx.config) missing.push(".project-docs.json (v2.6-to-v2.7 writes it)");
   if (!existsSync(join(ctx.docsRoot, "SCHEMA.md"))) missing.push(`${ctx.docsRootName}/SCHEMA.md (v2.6-to-v2.7 installs it)`);
@@ -4281,6 +4342,11 @@ export function main(argv: string[]): number {
         `removed: ${rm.templates} untouched retired template(s), ${rm.readmes} retired owned README(s), ${rm.junk} non-document file(s) (.gitkeep, .DS_Store), ` +
         `${rm.folders} emptied retired folder(s). The tree is at release ${version}.`
     );
+    if (!rootPointsAtCli(ctx.root))
+      say(
+        `\nYour root AGENTS.md / CLAUDE.md does not point at the pdocs CLI, so an agent that starts there may write\n` +
+          `documents by hand. update-project-docs Step 6 ("Documentation CLI pointer") has the section to add.`
+      );
     return 0;
   } catch (e) {
     if (ctx?.wrote)

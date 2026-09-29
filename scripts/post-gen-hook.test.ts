@@ -201,6 +201,40 @@ describe("the seed manifest records STYLE.md", () => {
   });
 });
 
+const SKILL = join(import.meta.dir, "..", "plugins", "project-docs", "skills", "update-project-docs", "SKILL.md");
+
+/** The `Documentation CLI pointer` row's Check, verbatim from update-project-docs Step 6's table. */
+function rowCheck(): string {
+  const row = readFileSync(SKILL, "utf8").split("\n").find((l) => l.startsWith("| Documentation CLI pointer")) as string;
+  return (/\| `(.+?)` — \*\*precondition/.exec(row)?.[1] as string).replaceAll("\\|", "|");
+}
+
+/** The section Step 6 recommends, from its subsection's fenced block. */
+function stepSixBlurb(): string {
+  const skill = readFileSync(SKILL, "utf8");
+  const sub = skill.slice(skill.indexOf("### Documentation CLI pointer"));
+  return /```markdown\n([\s\S]*?)```/.exec(sub)?.[1] as string;
+}
+
+/** The root agent files each case has; every case is run through the row's check and the hook's. */
+const POINTER_CASES: Record<string, Record<string, string>> = {
+  "neither file": {},
+  "Step 6's section, in AGENTS.md alone": { "AGENTS.md": "" },
+  "the short form, in CLAUDE.md alone": { "CLAUDE.md": "Create documents with `pdocs new <type>`.\n" },
+  "a mention with no `new`": { "AGENTS.md": "The gate is `bun scripts/pdocs/cli.ts check`.\n" },
+  "stale: the CLI and the retired lint": { "AGENTS.md": "`bun scripts/pdocs/cli.ts new item x`\n", "CLAUDE.md": "Run `bun docs/lint.ts`.\n" },
+  "the hook's own note": { "AGENTS.md": "" },
+};
+
+function pointerCase(name: string): string {
+  const root = mkdtempSync(join(tmpdir(), "pdocs-pointer-"));
+  const files = { ...POINTER_CASES[name] };
+  if (name === "Step 6's section, in AGENTS.md alone") files["AGENTS.md"] = stepSixBlurb();
+  if (name === "the hook's own note") files["AGENTS.md"] = hookEval("m.LAYER_NOTE", tmpdir()) as string;
+  for (const [rel, body] of Object.entries(files)) writeFileSync(join(root, rel), body);
+  return root;
+}
+
 describe("the note for a project's AGENTS.md", () => {
   // `docs/memories/` is retired in 9.0.0; the board is where recent and
   // in-flight work is visible now.
@@ -208,5 +242,46 @@ describe("the note for a project's AGENTS.md", () => {
     const note = hookEval("m.LAYER_NOTE", tmpdir()) as string;
     expect(note).toContain("bun scripts/pdocs/cli.ts view board");
     expect(note).not.toContain("memories");
+  });
+
+  test("points at the CLI and its --help, and lists none of its other commands", () => {
+    const note = hookEval("m.LAYER_NOTE", tmpdir()) as string;
+    expect(note).toContain("bun scripts/pdocs/cli.ts --help");
+    for (const verb of ["find", "backlinks", "orphans", "`set`", "promote", "archive"]) expect(note).not.toContain(verb);
+  });
+
+  test("the hook's check is update-project-docs Step 6's row, case for case", () => {
+    const check = rowCheck();
+    const verdicts: Record<string, boolean> = {};
+    for (const name of Object.keys(POINTER_CASES)) {
+      const root = pointerCase(name);
+      const shell = spawnSync("bash", ["-c", check], { cwd: root, encoding: "utf8", env: childEnv() }).status === 0;
+      expect([name, hookEval(`m.root_points_at_cli(${JSON.stringify(root)})`, root)]).toEqual([name, shell]);
+      verdicts[name] = shell;
+    }
+    // The cases mean what they say: Step 6's section and the hook's note both pass it.
+    expect(verdicts).toEqual({
+      "neither file": false,
+      "Step 6's section, in AGENTS.md alone": true,
+      "the short form, in CLAUDE.md alone": true,
+      "a mention with no `new`": false,
+      "stale: the CLI and the retired lint": false,
+      "the hook's own note": true,
+    });
+  });
+
+  test("an install into a project whose AGENTS.md has no CLI pointer says so and names Step 6; one that has it does not print the note", () => {
+    const bare = fixture();
+    writeFileSync(join(bare.parent, "AGENTS.md"), "# Agents\n\nBe nice.\n");
+    const told = install(bare.parent).out;
+    expect(told).toContain("does not point at the pdocs CLI yet");
+    expect(told).toContain("update-project-docs Step 6");
+    expect(told).toContain("bun scripts/pdocs/cli.ts --help");
+
+    const pointed = fixture();
+    writeFileSync(join(pointed.parent, "AGENTS.md"), stepSixBlurb());
+    const quiet = install(pointed.parent).out;
+    expect(quiet).toContain("already points at the pdocs CLI");
+    expect(quiet).not.toContain("does not point at the pdocs CLI");
   });
 });

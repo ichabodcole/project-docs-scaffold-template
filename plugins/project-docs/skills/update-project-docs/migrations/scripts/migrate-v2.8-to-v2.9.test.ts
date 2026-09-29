@@ -13,6 +13,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -24,7 +25,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { childEnv } from "../../../../../../scripts/pdocs/test-env.ts";
 
-import { manifestMatchesDisk } from "./migrate-v2.8-to-v2.9.ts";
+import { laterThan, manifestMatchesDisk } from "./migrate-v2.8-to-v2.9.ts";
 
 const SCRIPT = join(import.meta.dir, "migrate-v2.8-to-v2.9.ts");
 const roots: string[] = [];
@@ -226,6 +227,24 @@ describe("guards that must be able to fire", () => {
       createHash("sha256").update("changed\n").digest("hex")
     );
     expect(run(p, scaffold()).exitCode).toBe(0); // clean again
+  });
+
+  test("a tree past the release the migration installs stops, and nothing is written", () => {
+    const p = project(TPL, { version: "10.0.0" });
+    const before = readFileSync(join(p, ".project-docs.json"), "utf8");
+    const r = run(p, scaffold());
+    expect(r.exitCode).toBe(1);
+    expect(out(r)).toContain("STOPPED: this tree is already past what this migration installs: it is at release 10.0.0, and this migration\n   installs 9.9.9.");
+    expect(out(r)).toContain("There is nothing for it to do");
+    expect(existsSync(join(p, "docs/.pdocs-seed.json"))).toBe(false);
+    expect(existsSync(join(p, "scripts/pdocs"))).toBe(false);
+    expect(readFileSync(join(p, ".project-docs.json"), "utf8")).toBe(before);
+    expect(laterThan("9.9.9", ["9.9.9", "9.10.0"])).toBe("9.10.0");
+  });
+
+  test("a tree at exactly the release the migration installs runs", () => {
+    const p = project(TPL, { version: "9.9.9" });
+    expect(run(p, scaffold()).exitCode).toBe(0);
   });
 
   test("a tree that is not a project-docs tree stops the run", () => {
@@ -614,5 +633,58 @@ describe("D16 — the scaffold this migration fetches is its own release", () =>
     expect(out(r)).toContain("stub cookiecutter: recorded");
     expect(readFileSync(log, "utf8")).toContain("gh:ichabodcole/project-docs-scaffold-template\n");
     expect(argAfter(log, "--checkout")).toBe("project-docs-scaffold-template-v8.1.0");
+  });
+});
+
+describe("the chain hands off: a tree v2.7-to-v2.8's guide stamps is one this script accepts", () => {
+  const REPO_ROOT = join(import.meta.dir, "../../../../../..");
+  const GUIDE = readFileSync(join(import.meta.dir, "../v2.7-to-v2.8.md"), "utf8");
+  const section = (n: number) => GUIDE.slice(GUIDE.indexOf(`### [Agent] ${n}.`), GUIDE.indexOf(`### [Agent] ${n + 1}.`));
+  const firstBash = (text: string) => /```bash\n([\s\S]*?)```/.exec(text)?.[1] as string;
+
+  /** A project generated OFFLINE from a release tag of this repository. */
+  function generatedAt(tag: string): string {
+    if (!Bun.which("cookiecutter")) throw new Error("cookiecutter is not on PATH — these tests do not skip without it.");
+    const base = tmp("mig29-chain-");
+    const tpl = join(base, "template");
+    mkdirSync(tpl);
+    const sh = (cmd: string[]) => {
+      const r = Bun.spawnSync(cmd, { stdout: "pipe", stderr: "pipe", env: childEnv() });
+      if (r.exitCode !== 0) throw new Error(`${cmd.join(" ")}: ${r.stderr.toString()}`);
+    };
+    sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", join(base, "t.tar"), tag]);
+    sh(["tar", "-xf", join(base, "t.tar"), "-C", tpl]);
+    writeFileSync(join(base, "cc.yaml"), `replay_dir: "${join(base, "replay")}"\ncookiecutters_dir: "${join(base, "cc")}"\n`);
+    sh(["cookiecutter", "--config-file", join(base, "cc.yaml"), "--no-input", "-o", join(base, "out"), tpl, "install_target=New project folder"]);
+    return join(base, "out", "my-project");
+  }
+
+  test("step 3 pins its era's tag, step 12 stamps that release, and the next script runs on the result", () => {
+    // The tag step 3 fetches, read off the guide itself.
+    const tag = /--checkout (\S+)/.exec(firstBash(section(3)))?.[1] as string;
+    expect(tag).toBe("project-docs-scaffold-template-v8.1.0");
+    const scaffold = generatedAt(tag);
+    // A v2.7-era tree, as the reviewer reproduced it.
+    const tree = generatedAt("project-docs-scaffold-template-v7.0.0");
+    // Step 12's block, verbatim, with $SCAFFOLD as step 3 derives it.
+    const step12 = Bun.spawnSync(["bash", "-c", firstBash(section(12))], {
+      cwd: tree,
+      env: childEnv({ SCAFFOLD: `${scaffold}/` }),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    expect(step12.exitCode).toBe(0);
+    expect(step12.stdout.toString()).toContain("migrating to 8.1.0");
+    expect(JSON.parse(readFileSync(join(tree, ".project-docs.json"), "utf8")).version).toBe("8.1.0");
+    const r = run(tree, scaffold, "--dry-run");
+    expect(out(r)).not.toContain("later than");
+    expect(r.exitCode).toBe(0);
+  });
+
+  test("the unpinned fetch it replaced stamped the template's latest, which this script refuses", () => {
+    const tree = project(TPL, { version: "9.1.0" });
+    const r = run(tree, scaffold("8.1.0"));
+    expect(r.exitCode).toBe(1);
+    expect(out(r)).toContain("it is at release 9.1.0, and this migration\n   installs 8.1.0");
   });
 });

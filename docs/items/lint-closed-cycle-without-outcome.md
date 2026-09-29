@@ -5,7 +5,7 @@ description:
   A cycle set closed or abandoned with the template's Outcome placeholder still
   in place passes pdocs check, so the terminal record is still unchecked.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0e770-e0e7-7171-8a32-52d67fed126b
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -27,6 +27,9 @@ problems reported were the untouched `tags` and `appetite`.
 
 ## Definition of done
 
-- [ ] `pdocs check` reports a `closed` or `abandoned` cycle whose `## Outcome`
+- [x] `pdocs check` reports a `closed` or `abandoned` cycle whose `## Outcome`
       is missing or is still the template's placeholder. It does not report a
       `planned` or `active` cycle for this.
+
+Landed with four other items; the record is
+[the upgrade cases session](./document-patch-refresh-of-a-v3-tree/sessions/2026-09-29-upgrade-cases-and-pointers.md).

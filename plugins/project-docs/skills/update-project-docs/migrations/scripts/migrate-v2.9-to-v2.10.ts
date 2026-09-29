@@ -248,6 +248,23 @@ export function docsVersionOf(readme: string): string | null {
 }
 
 /**
+ * The later of `versions` that is past `installs`, compared as release numbers
+ * part by part; null when none is. A value that is not `X.Y.Z` is not compared.
+ */
+export function laterThan(installs: string, versions: unknown[]): string | null {
+  const parse = (v: unknown) => (typeof v === "string" && /^\d+\.\d+\.\d+$/.test(v) ? v.split(".").map(Number) : null);
+  const cmp = (a: number[], b: number[]) => a.map((n, i) => n - (b[i] as number)).find((d) => d !== 0) ?? 0;
+  const base = parse(installs);
+  if (!base) return null;
+  let best: string | null = null;
+  for (const v of versions) {
+    const p = parse(v);
+    if (p && cmp(p, base) > 0 && (best === null || cmp(p, parse(best) as number[]) > 0)) best = v as string;
+  }
+  return best;
+}
+
+/**
  * The manifest as text, in the indent the file already uses (two spaces when
  * it does not exist yet), `version` first, keys sorted, trailing newline —
  * the shape the cookiecutter hook and the v2.9 script both write.
@@ -577,6 +594,18 @@ function dirtyPathsTheRunWrites(ctx: Ctx): string[] {
 
 function preflight(ctx: Ctx): void {
   step(1, "Preflight");
+  // A tree past the release this run installs — the pin, or a --scaffold-dir's
+  // own — would have its owned files and markers set back to it.
+  const installs =
+    (ctx.scaffold && docsVersionOf(join(resolve(ctx.scaffold), "docs/README.md"))) ||
+    SCAFFOLD_TAG.slice(SCAFFOLD_TAG.lastIndexOf("-v") + 2);
+  const ahead = laterThan(installs, [ctx.config?.version, docsVersionOf(join(ctx.docsRoot, "README.md"))]);
+  if (ahead)
+    fail(
+      `this tree is already past what this migration installs: it is at release ${ahead}, and this migration\n` +
+        `   installs ${installs}. There is nothing for it to do, and running it would set the tree back.\n\n` +
+        `   update-project-docs works out which migration, if any, a tree at ${ahead} needs — its Step 2.`
+    );
   // A v2.9 tree has all four. Each missing one belongs to an earlier
   // migration, and the stop names which — migrations run in sequence.
   const missing: string[] = [];

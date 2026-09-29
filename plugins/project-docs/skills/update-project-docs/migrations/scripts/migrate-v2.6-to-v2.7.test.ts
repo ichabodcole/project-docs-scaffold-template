@@ -34,6 +34,7 @@ import {
   reserialiseLike,
   seededIn,
   undeclaredFolders,
+  laterThan,
 } from "./migrate-v2.6-to-v2.7.ts";
 import {
   isSeeded as v29IsSeeded,
@@ -2236,6 +2237,21 @@ describe("guards that must be able to fire", () => {
     });
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("docs/cycles/TEMPLATE.md has no frontmatter block — the scaffold is older than v2.7");
+  });
+
+  test("preflight: a tree past the release the migration installs stops before anything is written", () => {
+    const fresh = fixtureA({ undeclaredFolder: false });
+    const root = withFiles(fresh, {
+      "docs/README.md": readFileSync(join(fresh, "docs/README.md"), "utf8").replace(/^docs_version:\s*"[^"]*"/m, 'docs_version: "9.1.0"'),
+    });
+    const before = treeDigest(root);
+    const r = migrate(root, [], { scaffold: null, env: { PATH: stubCookiecutter("copy") } });
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain(`STOPPED: this tree is already past what this migration installs: it is at release 9.1.0, and this migration\n   installs ${target()}.`);
+    expect(r.out).toContain("There is nothing for it to do");
+    expect(r.out).toContain("Nothing was written.");
+    expect(treeDigest(root)).toEqual(before);
+    expect(laterThan("8.1.0", ["0.0.0", "8.1.0"])).toBeNull();
   });
 
   test("preflight: an existing lint.adopting: false is a finished adoption and stops the run before anything is written", () => {

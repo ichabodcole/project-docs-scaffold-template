@@ -334,6 +334,23 @@ export function writeVersionInto(path: string, before: string, version: string):
   return 're-serialised, indent kept: no top-level "version" to patch in place';
 }
 
+/**
+ * The later of `versions` that is past `installs`, compared as release numbers
+ * part by part; null when none is. A value that is not `X.Y.Z` is not compared.
+ */
+export function laterThan(installs: string, versions: unknown[]): string | null {
+  const parse = (v: unknown) => (typeof v === "string" && /^\d+\.\d+\.\d+$/.test(v) ? v.split(".").map(Number) : null);
+  const cmp = (a: number[], b: number[]) => a.map((n, i) => n - (b[i] as number)).find((d) => d !== 0) ?? 0;
+  const base = parse(installs);
+  if (!base) return null;
+  let best: string | null = null;
+  for (const v of versions) {
+    const p = parse(v);
+    if (p && cmp(p, base) > 0 && (best === null || cmp(p, parse(best) as number[]) > 0)) best = v as string;
+  }
+  return best;
+}
+
 function preflight(o: Options): Ctx {
   step(1, "Preflight");
   const root = resolve(o.root);
@@ -355,6 +372,21 @@ function preflight(o: Options): Ctx {
   if (!existsSync(docsRoot))
     fail(`no ${docsRootName}/ at ${root} — docsRoot names a directory that is not there.`);
   ok(`project at ${root}, docsRoot ${docsRootName}/`);
+
+  // A tree past the release this run installs — the pin, or a --scaffold's own —
+  // would have its owned files and markers set back to it.
+  const readmeVersion = (readme: string) =>
+    existsSync(readme) ? (/^docs_version:\s*"([^"]+)"/m.exec(readFileSync(readme, "utf8"))?.[1] ?? null) : null;
+  const installs =
+    (o.scaffold && readmeVersion(join(resolve(o.scaffold), "docs/README.md"))) ||
+    SCAFFOLD_TAG.slice(SCAFFOLD_TAG.lastIndexOf("-v") + 2);
+  const ahead = laterThan(installs, [config.version, readmeVersion(join(docsRoot, "README.md"))]);
+  if (ahead)
+    fail(
+      `this tree is already past what this migration installs: it is at release ${ahead}, and this migration\n` +
+        `   installs ${installs}. There is nothing for it to do, and running it would set the tree back.\n\n` +
+        `   update-project-docs works out which migration, if any, a tree at ${ahead} needs — its Step 2.`
+    );
 
   if (!o.scaffold && !have("cookiecutter"))
     fail(

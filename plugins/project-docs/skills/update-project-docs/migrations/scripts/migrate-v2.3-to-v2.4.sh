@@ -141,7 +141,7 @@ locate_scaffold() {
     return
   fi
   echo -e "${RED}Error: No scaffold found. Run cookiecutter first or pass --scaffold-dir PATH.${NC}" >&2
-  echo -e "  ${BLUE}cookiecutter gh:ichabodcole/project-docs-scaffold-template -o .scaffold-tmp${NC}" >&2
+  echo -e "  ${BLUE}cookiecutter gh:ichabodcole/project-docs-scaffold-template --checkout project-docs-scaffold-template-v2.4.0 -o .scaffold-tmp${NC}" >&2
   exit 1
 }
 

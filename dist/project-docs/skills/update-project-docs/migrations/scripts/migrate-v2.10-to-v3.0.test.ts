@@ -10,7 +10,7 @@
  *
  * The fixtures are real trees, generated OFFLINE from this repository's
  * history (D16): the v2.10 tree at the 8.1.0 tag, and the current scaffold at
- * SCAFFOLD_TAG (9.0.1, the 9.0.0 layout) — the release the script itself
+ * SCAFFOLD_TAG (9.1.0, the 9.0.0 layout) — the release the script itself
  * fetches, so a re-pin is one line in the script, plus the pin test and the
  * guide and skill that name it. Never the working tree, whose payload has moved on
  * (`cycles/TEMPLATE.md`, `features/README.md`), and never this repository's
@@ -83,6 +83,9 @@ import {
   rewriteFolderLinks,
   rewriteLinks,
   SCAFFOLD_RELEASE,
+  compareReleases,
+  rootPointsAtCli,
+  treeRelease,
   SCAFFOLD_TAG,
   SEEDED_PAGES,
   slugOf,
@@ -1887,10 +1890,10 @@ describe("idempotence and dry run", () => {
     expect(args).toContain("gh:ichabodcole/project-docs-scaffold-template");
   });
 
-  test("SCAFFOLD_TAG is pinned to the 9.0.1 release, a tag in this clone, and the guide and the skill name that tag", () => {
+  test("SCAFFOLD_TAG is pinned to the 9.1.0 release, a tag in this clone, and the guide and the skill name that tag", () => {
     // A re-pin is a decision (D16): it changes this line, and the guide and skill with it.
-    expect(SCAFFOLD_TAG).toBe("project-docs-scaffold-template-v9.0.1");
-    expect(SCAFFOLD_RELEASE).toBe("9.0.1");
+    expect(SCAFFOLD_TAG).toBe("project-docs-scaffold-template-v9.1.0");
+    expect(SCAFFOLD_RELEASE).toBe("9.1.0");
     // A tag, not a branch: `--checkout main` would fetch whatever the template is today.
     const tag = Bun.spawnSync(["git", "-C", REPO_ROOT, "rev-parse", "--verify", "--quiet", `refs/tags/${SCAFFOLD_TAG}`], { stdout: "pipe", stderr: "pipe", env: childEnv() });
     expect(tag.exitCode).toBe(0);
@@ -1906,6 +1909,156 @@ describe("idempotence and dry run", () => {
     const skill = readFileSync(join(skillDir, "SKILL.md"), "utf8");
     expect(named(skill)).toEqual([SCAFFOLD_TAG]);
     expect(skill).toContain(`(scaffold ${SCAFFOLD_RELEASE})`);
+  });
+});
+
+describe("the end of a run names a root agent file with no CLI pointer — by Step 6's own check", () => {
+  const skillText = () => readFileSync(resolve(import.meta.dir, "../../SKILL.md"), "utf8");
+  const rowCheck = () => {
+    const row = skillText().split("\n").find((l) => l.startsWith("| Documentation CLI pointer")) as string;
+    return (/\| `(.+?)` — \*\*precondition/.exec(row)?.[1] as string).replaceAll("\\|", "|");
+  };
+  const blurb = () => {
+    const sub = skillText().slice(skillText().indexOf("### Documentation CLI pointer"));
+    return /```markdown\n([\s\S]*?)```/.exec(sub)?.[1] as string;
+  };
+
+  test("rootPointsAtCli agrees with the row's shell check, case for case", () => {
+    const cases: Array<[string, Record<string, string>, boolean]> = [
+      ["neither file", {}, false],
+      ["Step 6's section, in AGENTS.md alone", { "AGENTS.md": blurb() }, true],
+      ["the short form, in CLAUDE.md alone", { "CLAUDE.md": "Create documents with `pdocs new <type>`.\n" }, true],
+      ["a mention with no `new`", { "AGENTS.md": "The gate is `bun scripts/pdocs/cli.ts check`.\n" }, false],
+      ["stale: the CLI and the retired lint", { "AGENTS.md": "`bun scripts/pdocs/cli.ts new item x`\n", "CLAUDE.md": "Run `bun docs/lint.ts`.\n" }, false],
+    ];
+    for (const [name, files, want] of cases) {
+      const root = tmp("migrate-v30-pointer-");
+      write(root, files);
+      const shell = Bun.spawnSync(["bash", "-c", rowCheck()], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode === 0;
+      expect([name, shell, rootPointsAtCli(root)]).toEqual([name, want, want]);
+    }
+  });
+
+  test("a run on a project whose root has no pointer ends by naming Step 6; one whose AGENTS.md has it does not", () => {
+    const { r } = wholeRun();
+    expect(r.exitCode).toBe(0);
+    const tail = r.out.slice(r.out.indexOf("Migration complete."));
+    expect(tail).toContain('Your root AGENTS.md / CLAUDE.md does not point at the pdocs CLI');
+    expect(tail).toContain('update-project-docs Step 6 ("Documentation CLI pointer")');
+
+    const pointed = fixtureO({ "AGENTS.md": blurb() });
+    const quiet = migrate(pointed);
+    expect(quiet.exitCode).toBe(0);
+    expect(quiet.out).not.toContain("does not point at the pdocs CLI");
+  });
+});
+
+describe("update-project-docs Steps 2 and 3, run as written on trees generated from release tags", () => {
+  const skillDir = resolve(import.meta.dir, "../..");
+  const skill = () => readFileSync(join(skillDir, "SKILL.md"), "utf8");
+  const blockOf = (from: string, to: string) => {
+    const s = skill();
+    return /```bash\n([\s\S]*?)```/.exec(s.slice(s.indexOf(from), s.indexOf(to)))?.[1] as string;
+  };
+  /** The migrations table: name, From, Applies If (unescaped). */
+  const rows = () =>
+    skill()
+      .split("\n")
+      .filter((l) => l.startsWith("| [migrations/"))
+      .map((l) => l.split(/(?<!\\)\|/).slice(1, -1).map((c) => c.trim()))
+      .map((c) => ({ name: /\[migrations\/(.*?)\.md\]/.exec(c[0] as string)?.[1] as string, from: c[1] as string, test: (c[3] as string).replace(/^`|`$/g, "").replaceAll("\\|", "|") }));
+  // Step 3's rule: the rows From 2.5 or earlier are the first five.
+  const EARLY = new Set(["pre-2.0", "2.0–2.2", "2.3", "2.4", "2.5"]);
+
+  const generated = (tag: string): string => {
+    const base = tmp("migrate-v30-matrix-");
+    const tpl = join(base, "tpl");
+    mkdirSync(tpl);
+    sh(["git", "-C", REPO_ROOT, "archive", "--format=tar", "-o", join(base, "t.tar"), tag]);
+    sh(["tar", "-xf", join(base, "t.tar"), "-C", tpl]);
+    writeFileSync(join(base, "cc.yaml"), `replay_dir: "${join(base, "replay")}"\ncookiecutters_dir: "${join(base, "cc")}"\n`);
+    sh(["cookiecutter", "--config-file", join(base, "cc.yaml"), "--no-input", "-o", join(base, "out"), tpl, "install_target=New project folder"]);
+    return join(base, "out", "my-project");
+  };
+
+  /** Step 1's version, Step 2's verdict, Step 3's rows — and the case they make. */
+  const walk = (root: string) => {
+    const cfg = join(root, ".project-docs.json");
+    const tree = existsSync(cfg) ? readJson(cfg).version : (/docs_version:\s*"([^"]+)"/.exec(read(root, "docs/README.md"))?.[1] as string);
+    const step2 = Bun.spawnSync(["bash", "-c", blockOf("### Step 2:", "### Step 3:").replace("TREE=<the version Step 1 read>", `TREE=${tree}`)], {
+      cwd: root,
+      env: childEnv({ SKILL_DIR: skillDir }),
+      stdout: "pipe",
+      stderr: "pipe",
+    }).stdout.toString().trim().split("\n");
+    const early = Bun.spawnSync(["bash", "-c", blockOf("### Step 3:", "### Step 4:")], { cwd: root, env: childEnv(), stdout: "pipe", stderr: "pipe" }).stdout.toString().trim().endsWith("yes");
+    const applying = rows()
+      .filter((r) => early || !EARLY.has(r.from))
+      .filter((r) => Bun.spawnSync(["bash", "-c", r.test], { cwd: root, env: childEnv(), stdout: "pipe", stderr: "pipe" }).exitCode === 0)
+      .map((r) => r.name);
+    const verdict = step2[1];
+    const kase = verdict === "tree is NEWER" ? 1 : applying.length ? 2 : verdict === "tree is behind" ? 3 : 4;
+    return { tree, verdict, early, applying, kase };
+  };
+
+  test("each release lands on the case it should, and the early rows are tested only on a tree from before .project-docs.json", () => {
+    const at = (v: string) => walk(generated(`project-docs-scaffold-template-v${v}`));
+    const past = (() => {
+      const root = generated(SCAFFOLD_TAG);
+      const [a, b] = SCAFFOLD_RELEASE.split(".").map(Number) as [number, number];
+      const v = `${a}.${b + 1}.0`;
+      write(root, { "docs/README.md": read(root, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${v}"`) });
+      write(root, { ".project-docs.json": read(root, ".project-docs.json").replace(/"version":\s*"[^"]*"/, `"version": "${v}"`) });
+      return walk(root);
+    })();
+    const later = ["v2.6-to-v2.7", "v2.8-to-v2.9", "v2.9-to-v2.10", "v2.10-to-v3.0"];
+    expect(at("2.3.0")).toMatchObject({ verdict: "tree is behind", early: true, kase: 2, applying: ["v2.4-to-v2.5", "v2.5-to-v2.6", ...later] });
+    expect(at("6.3.0")).toMatchObject({ verdict: "tree is behind", early: true, kase: 2, applying: later });
+    expect(at("8.0.0")).toMatchObject({ verdict: "tree is behind", early: false, kase: 2, applying: ["v2.9-to-v2.10", "v2.10-to-v3.0"] });
+    expect(at("8.1.0")).toMatchObject({ verdict: "tree is behind", early: false, kase: 2, applying: ["v2.10-to-v3.0"] });
+    // A 9.x tree: the early rows' own tests would come back true on it, and are not run.
+    const n900 = generated("project-docs-scaffold-template-v9.0.0");
+    const earlyTrue = rows()
+      .filter((r) => EARLY.has(r.from))
+      .filter((r) => Bun.spawnSync(["bash", "-c", r.test], { cwd: n900, env: childEnv(), stdout: "pipe", stderr: "pipe" }).exitCode === 0).length;
+    expect(earlyTrue).toBeGreaterThan(0);
+    expect(walk(n900)).toMatchObject({ verdict: "tree is behind", early: false, kase: 3, applying: [] });
+    expect(at(SCAFFOLD_RELEASE)).toMatchObject({ verdict: "same release", kase: 4, applying: [] });
+    expect(past).toMatchObject({ verdict: "tree is NEWER", kase: 1, applying: [] });
+  });
+});
+
+describe("update-project-docs Step 2 reads the release this plugin installs from the newest script", () => {
+  test("its block, run verbatim, names the newest script's pin and each case; the step names no release itself", () => {
+    const skillDir = resolve(import.meta.dir, "../..");
+    const skill = readFileSync(join(skillDir, "SKILL.md"), "utf8");
+    const step = skill.slice(skill.indexOf("### Step 2:"), skill.indexOf("### Step 3:"));
+    const block = /```bash\n([\s\S]*?)```/.exec(step)?.[1] as string;
+    expect(block).toContain("TREE=<the version Step 1 read>");
+    // The newest script by its label, part by part — independently of `sort -V`.
+    const label = (f: string) => (/^migrate-v([\d.]+)-to-v([\d.]+)\.ts$/.exec(f)?.slice(1) ?? []).flatMap((v) => v.split(".").map(Number));
+    const newest = readdirSync(import.meta.dir)
+      .filter((f) => label(f).length > 0)
+      .sort((a, b) => {
+        const [x, y] = [label(a), label(b)];
+        for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
+        return 0;
+      })
+      .pop() as string;
+    const pin = /SCAFFOLD_TAG = "project-docs-scaffold-template-v([\d.]+)"/.exec(readFileSync(join(import.meta.dir, newest), "utf8"))?.[1] as string;
+    const [a, b, c] = pin.split(".").map(Number) as [number, number, number];
+    for (const [tree, verdict] of [
+      [pin, "same release"],
+      [`${a}.${b}.${c + 10}`, "tree is NEWER"],
+      [`${a + 1}.0.0`, "tree is NEWER"],
+      ["8.1.0", "tree is behind"],
+    ] as const) {
+      const r = Bun.spawnSync(["bash", "-c", block.replace("TREE=<the version Step 1 read>", `TREE=${tree}`)], { env: childEnv({ SKILL_DIR: skillDir }), stdout: "pipe", stderr: "pipe" });
+      expect(r.exitCode).toBe(0);
+      expect(r.stdout.toString()).toBe(`tree ${tree}, this plugin installs ${pin} (from ${newest})\n${verdict}\n`);
+    }
+    // A re-pin needs no edit to the case analysis: it names no scaffold release.
+    expect(step.replace(/`9\.0\.10` is later than\s+`9\.0\.9`/, "")).not.toMatch(/\b\d+\.\d+\.\d+\b/);
   });
 });
 
@@ -2726,6 +2879,97 @@ describe("guards that must be able to fire", () => {
 
   test("the seam refuses a path outside the docs root", () => {
     stops(migrate(fixtureO(), [], { env: { PDOCS_MIGRATE_TEST_MUTATE: "../outside.md" } }), "PDOCS_MIGRATE_TEST_MUTATE must name a path inside the docs root", false);
+  });
+});
+
+describe("a tree past the release the run installs is refused, not set back", () => {
+  test("compareReleases and treeRelease — numeric, the later marker, non-releases ignored", () => {
+    expect(compareReleases("9.1.0", "9.0.1")).toBeGreaterThan(0);
+    expect(compareReleases("9.0.10", "9.0.9")).toBeGreaterThan(0);
+    expect(compareReleases("10.0.0", "9.9.9")).toBeGreaterThan(0);
+    expect(compareReleases("9.0.1", "9.0.1")).toBe(0);
+    expect(compareReleases("9.0.0", "9.0.1")).toBeLessThan(0);
+    expect(compareReleases("9.1", "9.0.1")).toBeNull();
+    expect(treeRelease("9.0.1", "9.1.0")).toEqual({ version: "9.1.0", from: "docs_version" });
+    expect(treeRelease("9.1.0", "9.0.1")).toEqual({ version: "9.1.0", from: ".project-docs.json version" });
+    expect(treeRelease(undefined, "8.1.0")).toEqual({ version: "8.1.0", from: "docs_version" });
+    expect(treeRelease(7, null)).toBeNull();
+  });
+
+  /** O migrated with the pinned scaffold, committed: a tree at exactly SCAFFOLD_RELEASE. */
+  let atPin: string | null = null;
+  const migratedAtPin = (): string => {
+    if (atPin) return atPin;
+    const root = fixtureO();
+    const r = migrate(root, [], { scaffold: generatedScaffolds().current });
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    commitAll(root, `migrated to ${SCAFFOLD_RELEASE}`);
+    atPin = root;
+    return root;
+  };
+  /** A copy of that tree with its markers set, committed. */
+  const markedAt = (readme: string, config: string): string => {
+    const root = tmp("migrate-v30-marked-");
+    cpSync(migratedAtPin(), root, { recursive: true });
+    write(root, { "docs/README.md": read(root, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${readme}"`) });
+    write(root, { ".project-docs.json": read(root, ".project-docs.json").replace(/"version":\s*"[^"]*"/, `"version": "${config}"`) });
+    commitAll(root, `markers at ${readme} / ${config}`);
+    return root;
+  };
+  // Without --scaffold-dir, as an adopter runs it: the fetch is a copy of the pinned scaffold.
+  const pinned = (root: string, args: string[] = []) => migrate(root, args, { scaffold: null, env: { PATH: stubCookiecutter("copy", generatedScaffolds().current) } });
+
+  // A release past the pin, whatever the pin is: the next minor.
+  const PAST = (() => {
+    const [a, b] = SCAFFOLD_RELEASE.split(".").map(Number) as [number, number];
+    return `${a}.${b + 1}.0`;
+  })();
+
+  test("a tree past the pin stops in the preflight, says there is nothing to do, and writes nothing — dry run too", () => {
+    const root = markedAt(PAST, PAST);
+    const before = treeDigest(root);
+    for (const args of [[], ["--dry-run"]]) {
+      const r = pinned(root, args);
+      expect(r.exitCode).toBe(1);
+      expect(r.out).toContain(
+        `STOPPED: this tree is already past what this migration installs: its .project-docs.json version is ${PAST}, and this\n   migration installs ${SCAFFOLD_RELEASE}. There is nothing for it to do, and running it would set the tree back.`
+      );
+      expect(r.out).toContain("A newer project-docs plugin may carry a newer migration. Without one there is nothing to migrate");
+      expect(r.out).toContain("update-project-docs goes on to its root-file and verify steps.");
+      expect(r.out).not.toContain("disagree");
+      expect(r.out).toContain("Nothing was written.");
+      expect(r.out).not.toContain("[2/12]");
+    }
+    expect(treeDigest(root)).toEqual(before);
+  });
+
+  test("either marker ahead is enough, and the stop names the stale one", () => {
+    const r = pinned(markedAt(PAST, SCAFFOLD_RELEASE));
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain(
+      `its docs_version is ${PAST} (its .project-docs.json version says ${SCAFFOLD_RELEASE}: the markers disagree, and the later one is what a run would set back), and this`
+    );
+  });
+
+  test(`a tree at exactly the pin (${SCAFFOLD_RELEASE}) re-runs, and ones at 9.0.1 and 9.0.0 run and are stamped ${SCAFFOLD_RELEASE}`, () => {
+    const same = pinned(markedAt(SCAFFOLD_RELEASE, SCAFFOLD_RELEASE));
+    if (same.exitCode !== 0) console.log(same.out);
+    expect(same.exitCode).toBe(0);
+    for (const v of ["9.0.1", "9.0.0"]) {
+      const root = markedAt(v, v);
+      const r = pinned(root);
+      if (r.exitCode !== 0) console.log(r.out);
+      expect(r.exitCode).toBe(0);
+      expect(readJson(join(root, ".project-docs.json")).version).toBe(SCAFFOLD_RELEASE);
+      expect(read(root, "docs/README.md")).toContain(`docs_version: "${SCAFFOLD_RELEASE}"`);
+    }
+  });
+
+  test("with --scaffold-dir the release compared is that scaffold's own", () => {
+    const r = migrate(markedAt("9.9.10", "9.9.10"));
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("its .project-docs.json version is 9.9.10, and this\n   migration installs 9.9.9.");
   });
 });
 

@@ -249,7 +249,8 @@ pdocs set cycle/<cycle-slug> --lifecycle closed --closed YYYY-MM-DD
 which you are writing and why. Then, in the cycle file's body:
 
 - The `## Outcome` section, replacing its `_Written at close, not before._`
-  placeholder.
+  placeholder. Until it is written, `pdocs check` reports the cycle as
+  `NO OUTCOME`.
 - **`## Sessions`** — every line still marked `(open)` moved to
   `(landed YYYY-MM-DD)`. A closed cycle that still says a branch is open is the
   most visible way to get this wrong.

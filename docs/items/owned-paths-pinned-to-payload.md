@@ -6,12 +6,13 @@ description:
   neither refreshed nor compared and the pin test still passes; pre-release tags
   also compare as NaN.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ebb2-2e02-7105-bc97-f7b512957633
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-recognises-9x-releases/sessions/2026-09-28-owned-releases-up-to-the-pin.md
+priority: low
 ---
 
 # Pin the migration's owned paths to what the scaffold ships

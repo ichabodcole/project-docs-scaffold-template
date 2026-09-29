@@ -41,6 +41,7 @@ import {
   serialiseManifest,
   verdictFor,
   within,
+  laterThan,
 } from "./migrate-v2.9-to-v2.10.ts";
 import {
   hashOf as seedHashOf,
@@ -1061,6 +1062,36 @@ describe("bad invocation exits 2, not 1", () => {
 });
 
 describe("guards that must be able to fire", () => {
+  /** fixtureO with both markers at `version`, committed. */
+  const markedAt = (version: string): string => {
+    const root = fixtureO();
+    write(root, { "docs/README.md": read(root, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${version}"`) });
+    write(root, { ".project-docs.json": read(root, ".project-docs.json").replace(/"version":\s*"[^"]*"/, `"version": "${version}"`) });
+    commitAll(root, `markers at ${version}`);
+    return root;
+  };
+  // Without --scaffold-dir, as an adopter runs it: the fetch is a copy of the pinned scaffold.
+  const pinned = (root: string) => migrate(root, [], { scaffold: null, env: { PATH: stubCookiecutter("copy", generatedScaffolds().current) } });
+
+  test("preflight: a tree past the release this migration installs stops, and nothing is written", () => {
+    const root = markedAt("9.1.0");
+    const before = treeDigest(root);
+    const r = pinned(root);
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain("STOPPED: this tree is already past what this migration installs: it is at release 9.1.0, and this migration\n   installs 8.1.0. There is nothing for it to do, and running it would set the tree back.");
+    expect(r.out).toContain("update-project-docs works out which migration, if any, a tree at 9.1.0 needs");
+    expect(r.out).toContain("Nothing was written.");
+    expect(treeDigest(root)).toEqual(before);
+    expect(laterThan("8.1.0", ["8.1.0", "8.0.10", "nope", 9])).toBeNull();
+    expect(laterThan("8.1.0", ["8.10.0", "9.0.0"])).toBe("9.0.0");
+  });
+
+  test("preflight: a tree at exactly the release it installs runs", () => {
+    const r = pinned(markedAt("8.1.0"));
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+  });
+
   test("preflight: a .project-docs.json that is not valid JSON stops the run", () => {
     const root = fixtureO();
     writeFileSync(join(root, ".project-docs.json"), "{ not json");

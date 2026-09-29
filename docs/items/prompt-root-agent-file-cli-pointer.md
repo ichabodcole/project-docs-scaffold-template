@@ -5,7 +5,7 @@ description:
   Only an optional Step 6 row prompts a root AGENTS.md pointer to pdocs, so a
   full migration can finish without one.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0e770-e0a1-710e-a816-3a6a86fe94f3
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -52,11 +52,14 @@ The touch points:
 
 ## Definition of done
 
-- [ ] An adopter, by install or by any migration, is told when their root agent
+- [x] An adopter, by install or by any migration, is told when their root agent
       file has no CLI pointer, and pointed at Step 6.
-- [ ] Step 6's blurb is a pointer to the CLI and its `--help`, not a list of its
+- [x] Step 6's blurb is a pointer to the CLI and its `--help`, not a list of its
       commands.
-- [ ] `docs/AGENTS.md` and `docs/CLAUDE.md` point at the CLI near the top, in
+- [x] `docs/AGENTS.md` and `docs/CLAUDE.md` point at the CLI near the top, in
       the payload too.
-- [ ] Each category README with an action names the command for it, and no page
+- [x] Each category README with an action names the command for it, and no page
       repeats the CLI's reference.
+
+Landed with four other items; the record is
+[the upgrade cases session](./document-patch-refresh-of-a-v3-tree/sessions/2026-09-29-upgrade-cases-and-pointers.md).

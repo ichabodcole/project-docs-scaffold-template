@@ -57,6 +57,22 @@ is `.claude/skills/migration-authoring/SKILL.md`.
     Recovery advice must be reversible and scoped: stash, never a whole-tree
     `git clean` or `git checkout -- .`, and name how to restore untracked files
     (`stash@{0}^3`).
+14. **At every scaffold release, re-pin the newest migration to it.** Change
+    each place that names the pin, and nothing else:
+    - the script: `SCAFFOLD_TAG` (`SCAFFOLD_RELEASE` follows) and the release
+      its header comments name;
+    - its test: the pin test's expected tag and release;
+    - its guide: the `--checkout` line and the tag in `## Run it`, the
+      scaffold's `From → to` in the version table, and the release in the sample
+      `Version markers` output and final line;
+    - `update-project-docs/SKILL.md`: Step 4's sentence naming the tag the
+      script fetches, and the `(scaffold X.Y.Z)` in its table row.
+
+    Run the script's tests: the `OWNED_RELEASES` test fails until you regenerate
+    it from the tags whenever the new release changed an owned file, and prints
+    the derived value. Rebuild `dist/`. `update-project-docs` refreshes a tree
+    by re-running the newest script, and the script stamps the markers with the
+    release it installs: an unpinned release is one no adopter can reach.
 
 ## Verification
 
@@ -71,3 +87,6 @@ is `.claude/skills/migration-authoring/SKILL.md`.
 - [ ] No test lists `scripts/pdocs/` files as a literal expected diff.
 - [ ] Following each recovery instruction literally on such a fixture loses
       nothing, and the message test asserts it names no whole-tree clean.
+- [ ] At a scaffold release: the newest migration's `SCAFFOLD_TAG` names that
+      release, `OWNED_RELEASES` is regenerated (its test passes), and
+      `npm run check:dist` is clean.

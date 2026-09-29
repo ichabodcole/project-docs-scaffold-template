@@ -41,7 +41,7 @@ those ship first.
 - Added at triage, 2026-09-28, from issues #182 and #154, because each touches
   the migration or the release this cycle cuts:
   [the v3.0 migration knows the 9.x releases](../items/migration-recognises-9x-releases/item.md),
-  [the skill names the upgrade case it is in](../items/document-patch-refresh-of-a-v3-tree.md),
+  [the skill names the upgrade case it is in](../items/document-patch-refresh-of-a-v3-tree/item.md),
   [adoption prompts a root CLI pointer](../items/prompt-root-agent-file-cli-pointer.md)
   and
   [the lint checks a closed cycle's Outcome](../items/lint-closed-cycle-without-outcome.md).
@@ -54,6 +54,12 @@ those ship first.
 - Added at triage, 2026-09-28, from the second branch's review, because
   story-loom's 212 synthesized documents would hit it:
   [a setext heading's underline becomes the description](../items/synthesized-description-reads-setext-underline.md).
+- Added at triage, 2026-09-28, from the owned-releases review, because it is the
+  other half of #182 and belongs with the upgrade-case guidance:
+  [the migration refuses a tree newer than its pin](../items/migration-refuses-newer-tree.md).
+- Added 2026-09-28, with Cole's decision that every scaffold release re-pins the
+  newest migration and the scripts set the markers:
+  [Step 5 checks the markers rather than writing them](../items/update-skill-step-5-rewrites-markers.md).
 - Then a release, and story-loom's own run, following the write-up's sequence.
 
 Out of scope, deliberately: migration changes 6–9 in the write-up (story-loom
@@ -72,3 +78,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - fix/phase-10-root-relative-and-archived-links (landed 2026-09-28)
 - fix/migration-polish-round (landed 2026-09-28)
 - fix/migration-recognises-9x-releases (landed 2026-09-28)
+- fix/upgrade-case-cli-pointer-outcome-lint (landed 2026-09-29)
