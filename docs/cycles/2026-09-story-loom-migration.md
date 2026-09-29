@@ -79,3 +79,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - fix/migration-polish-round (landed 2026-09-28)
 - fix/migration-recognises-9x-releases (landed 2026-09-28)
 - fix/upgrade-case-cli-pointer-outcome-lint (landed 2026-09-29)
+- chore/repin-9.2.0-plugin-4.2.0 (landed 2026-09-29)
