@@ -53,9 +53,9 @@ smaller project-docs.
 - **[Bootstrap skill-garden](../items/skill-garden-bootstrap.md)**: the new
   repository exists from the 9.2.0 scaffold, holds the five plugins and its own
   marketplace, carries their live items, and Cole has installed from it.
-- **[Remove the extracted plugins](../items/remove-extracted-plugins.md)**: this
-  repository holds project-docs alone, and nothing here points at a plugin that
-  has left.
+- **[Remove the extracted plugins](../items/remove-extracted-plugins/item.md)**:
+  this repository holds project-docs alone, and nothing here points at a plugin
+  that has left.
 
 Out of scope, deliberately: which project-docs skills should move too (the
 [skill-scope research](../items/project-docs-skill-scope.md), for a later
@@ -69,4 +69,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 ## Sessions
 
 - skill-garden bootstrap, in ~/Projects/skill-garden (open)
-- chore/remove-extracted-plugins (open)
+- chore/remove-extracted-plugins (landed 2026-09-29)
