@@ -47,6 +47,10 @@ skill-garden, `project-docs:finalize-branch` is project-docs. If the user can't
 say which plugin it is, ask. If it still isn't clear, file on project-docs and
 say so in the issue.
 
+`html-mockup-prototyping` ships in both: as
+`project-docs:html-mockup-prototyping` and as `toolbox:html-mockup-prototyping`.
+The plugin the user invoked decides, as above.
+
 ## Workflow
 
 ### 1. Identify the component
@@ -96,7 +100,7 @@ Pick a title that names the component and the point in one line, e.g.:
 - `project-docs/generate-dev-plan: unclear when to create a test plan`
 - `project-docs/finalize-branch: gate chapters on functional independence, not commit count`
 
-Pick one label: `bug`, `docs`, or `enhancement` (use `enhancement` for
+Pick one label: `bug`, `documentation`, or `enhancement` (use `enhancement` for
 improvements and suggestions, not just net-new features).
 
 ### 3. Confirm with the user before submitting
