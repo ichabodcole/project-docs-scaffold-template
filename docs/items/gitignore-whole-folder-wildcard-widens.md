@@ -5,12 +5,13 @@ description:
   docs/projects/** and docs/projects/* become features and items wildcards that
   ignore every future entity, while the bare docs/projects/ is flagged.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ea5f-13a3-77bc-b288-0cdc06d39319
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md
+priority: low
 ---
 
 # A whole-folder wildcard in .gitignore widens silently

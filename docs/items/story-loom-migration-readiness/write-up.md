@@ -151,7 +151,10 @@ the table is [its own item](../link-respell-misaligns-tables.md).
 `.prettierignore` protecting moved files itself, stops included
 ([the session](../migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md)):
 skip pre-run step 2, and in post-run step 4 skip dropping the old line (the run
-drops it) but still format and check the canon is unchanged.
+drops it) but still format and check the canon is unchanged. Post-run step 1's
+retype is done by the run too
+([session](../migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md)):
+skip it.
 
 **Pre-run (story-loom, committed before the run):**
 

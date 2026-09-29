@@ -5,12 +5,13 @@ description:
   When the adopter already added the new spelling after a negation, drop mode
   moves it to where the old line stood and the negation's meaning flips.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ea5f-13f4-77f9-afb7-e8297bcb2f0d
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md
+priority: low
 ---
 
 # Dropping an old ignore line can move a negation's anchor

@@ -61,7 +61,12 @@ import {
   patchTopLevelVersion,
   planCycles,
   planTemplates,
-  positionalType,
+  ownedType,
+  ARTIFACT_FIELDS,
+  ENTITY_FILE_TYPE,
+  OWNED_FILE_TYPE,
+  OWNER_SUBFOLDER,
+  retypeAsArtifact,
   prettierFrontmatter,
   proseKey,
   scopeEntryPath,
@@ -93,7 +98,8 @@ import * as seed from "../../../../../../scripts/pdocs/seed.ts";
 import * as uuid from "../../../../../../scripts/pdocs/uuid.ts";
 import * as links from "../../../../../../scripts/pdocs/links-rewrite.ts";
 import * as lintIndex from "../../../../../../scripts/pdocs/docs-lint/index.ts";
-import { GIT_LOCAL_ENV as RULES_GIT_LOCAL_ENV, gitEnv as rulesGitEnv } from "../../../../../../scripts/pdocs/lint/rules.ts";
+import { GIT_LOCAL_ENV as RULES_GIT_LOCAL_ENV, gitEnv as rulesGitEnv, documentProblems as lintDocumentProblems, ownedType as lintOwnedType, allowedFields as lintAllowedFields } from "../../../../../../scripts/pdocs/lint/rules.ts";
+import * as registry from "../../../../../../scripts/pdocs/lint/registry.ts";
 import { patchTopLevelVersion as v210Patch } from "./migrate-v2.9-to-v2.10.ts";
 
 const SCRIPT = join(import.meta.dir, "migrate-v2.10-to-v3.0.ts");
@@ -533,11 +539,61 @@ describe("respellText — retired docs paths in any text, from the move record",
   });
 });
 
-describe("positionalType — a document's type from where it sits in its owner", () => {
+describe("ownedType — a document's type from where it sits in its owner, as the 9.x lint types it", () => {
+  test("the mirrored tables equal the lint's registry", () => {
+    expect(ENTITY_FILE_TYPE).toEqual(Object.fromEntries(Object.values(registry.ENTITY_FILE).map((e) => [e.name, e.type])));
+    expect(OWNED_FILE_TYPE).toEqual(registry.OWNED_FILE_TYPE);
+    expect(OWNER_SUBFOLDER).toEqual(registry.OWNER_SUBFOLDER);
+  });
+
+  test("the mirrored rule equals the lint's ownedType over every shape of path", () => {
+    const names = ["x.md", ...Object.keys(ENTITY_FILE_TYPE), ...Object.keys(OWNED_FILE_TYPE)];
+    const inner = [
+      ...names,
+      ...names.map((n) => `workstreams/ws/${n}`),
+      ...Object.values(OWNER_SUBFOLDER).flatMap((f) => [`${f}/x.md`, `${f}/deeper/x.md`, `workstreams/ws/${f}/x.md`, `${f}/plan.md`]),
+      "_archive/x.md",
+    ];
+    const paths = ["features", "items"].flatMap((owner) =>
+      ["", "_archive/"].flatMap((pre) => [...names.map((n) => [owner, `${pre}${n}`]), ...inner.map((i) => [owner, `${pre}e/${i}`])])
+    );
+    expect(paths.length).toBeGreaterThan(100);
+    for (const [owner, within] of paths) expect([owner, within, ownedType(owner as string, within as string)]).toEqual([owner, within, lintOwnedType(owner as string, within as string)]);
+  });
+
   test.each([
-    ["feature.md", "feature"], ["item.md", "item"], ["plan.md", "plan"], ["write-up.md", "write-up"], ["DEV_KICKOFF.md", "kickoff"],
-    ["sessions/2026-01-01-s.md", "session"], ["reports/2026-01-01-r-report.md", "report"], ["artifacts/n.md", "artifact"], ["design.md", "artifact"],
-  ])("%s → %s", (rel, type) => expect(positionalType(rel)).toBe(type));
+    ["features", "alpha/plan.md", "plan"],
+    ["features", "alpha/workstreams/ws/plan.md", "artifact"],
+    ["features", "alpha/sessions/2026-01-01-s.md", "session"],
+    ["features", "alpha/workstreams/ws/sessions/2026-01-01-s.md", "artifact"],
+    ["items", "question/reports/r-report.md", "report"],
+    ["items", "_archive/question/workstreams/ws/reports/r-report.md", "artifact"],
+    ["features", "alpha/workstreams/ws/design-resolution.md", "artifact"],
+  ])("%s/%s → %s", (owner, within, type) => expect(ownedType(owner, within)).toBe(type));
+
+  test("ARTIFACT_FIELDS is exactly the lint's allowed set for an artifact — a key added to either side fails", () => {
+    expect(new Set(ARTIFACT_FIELDS)).toEqual(lintAllowedFields("artifact"));
+    expect(ARTIFACT_FIELDS).toHaveLength(new Set(ARTIFACT_FIELDS).size);
+  });
+
+  test("…and the lint's UNKNOWN FIELD verdicts on an artifact agree with it, key by key", () => {
+    const keys = new Set([...ARTIFACT_FIELDS, "lifecycle", ...[...registry.defaultRegistryIndex().values()].flatMap((r) => [...r.extra, ...(r.required ?? [])])]);
+    const base: Record<string, string> = { type: "artifact", title: "T", description: "D.", status: "stable", generated: "{ by: fixture, at: 2026-01-01 }" };
+    for (const key of keys) {
+      const fields = { ...base, ...(key in base ? {} : { [key]: "x" }) };
+      const raw = `---\n${Object.entries(fields).map(([k, v]) => `${k}: ${v}`).join("\n")}\n---\n\n# T\n`;
+      const { problems } = lintDocumentProblems({ path: "/x", rel: "docs/features/a/w/x.md", type: "artifact" }, raw, "docs", false);
+      expect([key, problems.some((p) => p.startsWith("UNKNOWN FIELD"))]).toEqual([key, !ARTIFACT_FIELDS.includes(key)]);
+    }
+  });
+
+  test("retypeAsArtifact keeps the fields an artifact may carry, in place, and names what it drops", () => {
+    const fm = "type: plan\ntitle: WS plan\ndescription: How it went.\nstatus: stable\nlifecycle: completed\nparent: feature/x\ngenerated: { by: a, at: 2026-01-01 }\ntags: [a]";
+    expect(retypeAsArtifact(fm)).toEqual({
+      fm: "type: artifact\ntitle: WS plan\ndescription: How it went.\nstatus: stable\ngenerated: { by: a, at: 2026-01-01 }\ntags: [a]",
+      dropped: [["lifecycle", "completed"], ["parent", "feature/x"]],
+    });
+  });
 });
 
 describe("synthesizeFrontmatter — a legacy archive's document with none", () => {
@@ -1993,6 +2049,79 @@ describe("a document in lint.exclude moves with its folder, and nothing in it is
     expect(read(root, "docs/features/alpha/checkpoint/canon/Bare.md")).toBe(bare);
     expect(r.out).toContain("document(s) in lint.exclude were moved with their folder but not edited");
     expect(r.out).toContain("docs/features/alpha/checkpoint/canon/Bare.md");
+  });
+});
+
+// ─── A position that says artifact ───────────────────────────────────────────
+
+/** A workstream nested in a project: its own plan and a session, as story-loom's storyline-engine has them. */
+const WORKSTREAM_BODY = "# WS one plan\n\nSee the [feature plan](../../plan.md).\n\n*   one\n*   two\n";
+const WORKSTREAM: Record<string, string> = {
+  "docs/projects/alpha/workstreams/ws-one/plan.md": doc(common("plan", "WS one plan", "How the first workstream was built.", { lifecycle: "completed", tags: "[workstream]" }), WORKSTREAM_BODY),
+  "docs/projects/alpha/workstreams/ws-one/sessions/2026-01-09-ws-session.md": doc(common("session", "WS session", "A session inside the workstream."), "# WS session\n\nDone.\n"),
+  // In lint.exclude: moved, never edited.
+  "docs/projects/alpha/workstreams/ws-two/plan.md": doc(common("plan", "WS two plan", "Kept as written.", { lifecycle: "completed" }), "# WS two\n"),
+};
+
+describe("a document whose new position says artifact is retyped", () => {
+  test("a nested plan and a nested session become artifacts, lifecycle dropped and named, body byte for byte; the owner's own plan and sessions keep their types; a re-run changes nothing", () => {
+    const root = withIgnored(fixtureO(WORKSTREAM), {}, ["docs/projects/alpha/workstreams/ws-two/**"]);
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(pdocs(root, "check").exitCode).toBe(0);
+
+    const plan = read(root, "docs/features/alpha/workstreams/ws-one/plan.md");
+    expect(fmGet(splitFrontmatter(plan).fm as string, "type")).toBe("artifact");
+    expect(fmGet(splitFrontmatter(plan).fm as string, "lifecycle")).toBeNull();
+    expect(fmGet(splitFrontmatter(plan).fm as string, "tags")).toBe("[workstream]");
+    expect(splitFrontmatter(plan).body).toBe(splitFrontmatter(WORKSTREAM["docs/projects/alpha/workstreams/ws-one/plan.md"] as string).body);
+    const session = read(root, "docs/features/alpha/workstreams/ws-one/sessions/2026-01-09-ws-session.md");
+    expect(fmGet(splitFrontmatter(session).fm as string, "type")).toBe("artifact");
+
+    expect(r.out).toContain("· frontmatter: docs/features/alpha/workstreams/ws-one/plan.md — type: plan → artifact (its position), dropped lifecycle: completed");
+    expect(r.out).toContain("· frontmatter: docs/features/alpha/workstreams/ws-one/sessions/2026-01-09-ws-session.md — type: session → artifact (its position)");
+    expect(r.out).toContain("docs/features/alpha/workstreams/ws-one/plan.md — lifecycle: completed");
+
+    expect(fmGet(fmOf(root, "docs/features/alpha/plan.md"), "type")).toBe("plan");
+    expect(fmGet(fmOf(root, "docs/features/alpha/plan.md"), "lifecycle")).toBe("active");
+    expect(fmGet(fmOf(root, "docs/features/alpha/sessions/2026-01-07-first.md"), "type")).toBe("session");
+    expect(read(root, "docs/features/alpha/workstreams/ws-two/plan.md")).toBe(WORKSTREAM["docs/projects/alpha/workstreams/ws-two/plan.md"] as string);
+
+    commitAll(root, "migrated");
+    const before = treeDigest(root);
+    expect(migrate(root).exitCode).toBe(0);
+    expect(treeDigest(root)).toEqual(before);
+  });
+
+  test("a document already typed artifact is left byte for byte, its tool keys (a deck's marp, theme) included", () => {
+    const deck = "---\ntype: artifact\ntitle: Deck\ndescription: The alpha deck.\nstatus: stable\ngenerated: { by: fixture, at: 2026-01-01 }\nmarp: true\ntheme: gaia\n---\n\n# Deck\n";
+    const nested = deck.replace("title: Deck", "title: Nested deck");
+    const root = fixtureO({ "docs/projects/alpha/artifacts/deck.md": deck, "docs/projects/alpha/workstreams/ws-one/deck.md": nested });
+    const r = migrate(root);
+    // The keys are left for the lint to name, which stops the run at verify — after every move.
+    expect(r.exitCode).toBe(1);
+    expect(r.out).toContain('UNKNOWN FIELD  docs/features/alpha/artifacts/deck.md: "marp"');
+    expect(read(root, "docs/features/alpha/artifacts/deck.md")).toBe(deck);
+    expect(read(root, "docs/features/alpha/workstreams/ws-one/deck.md")).toBe(nested);
+    expect(r.out).not.toContain("deck.md — type: artifact");
+  });
+
+  test("with the project's Prettier, the retyped frontmatter is in Prettier's shape", () => {
+    const root = withPrettier(fixtureO(WORKSTREAM));
+    const r = migrate(root, [], { format: true });
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const files = ["docs/features/alpha/workstreams/ws-one/plan.md", "docs/features/alpha/workstreams/ws-one/sessions/2026-01-09-ws-session.md"];
+    for (const f of files) expect(fmGet(fmOf(root, f), "type")).toBe("artifact");
+    // The body is the adopter's and unformatted (its bullets are not Prettier's): check only the block.
+    for (const f of files) {
+      const block = `---\n${splitFrontmatter(read(root, f)).fm}\n---\n`;
+      const tmpFile = join(root, "fm-only.md");
+      writeFileSync(tmpFile, block);
+      expect(prettierCheck(root, ["fm-only.md"]).exitCode).toBe(0);
+      rmSync(tmpFile);
+    }
   });
 });
 

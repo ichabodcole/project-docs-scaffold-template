@@ -2709,22 +2709,76 @@ function firstDate(ctx: Ctx, abs: string): string {
 // before anything is written, from the tree as it stands
 // =======================================================================================
 
-/** A document's type from its position inside an owner folder (SCHEMA.md § Layout). */
-export function positionalType(relInOwner: string): string {
-  const fixed: Record<string, string> = {
-    "feature.md": "feature",
-    "item.md": "item",
-    "plan.md": "plan",
-    "design-resolution.md": "design-resolution",
-    "test-plan.md": "test-plan",
-    "DEV_KICKOFF.md": "kickoff",
-    "handoff.md": "handoff",
-    "write-up.md": "write-up",
-  };
-  if (fixed[relInOwner]) return fixed[relInOwner] as string;
-  if (relInOwner.startsWith("sessions/")) return "session";
-  if (relInOwner.startsWith("reports/")) return "report";
-  return "artifact";
+// The 9.x lint's positional typing, MIRRORED: this script runs against a tree whose
+// scripts/pdocs/ is the adopter's older copy until phase 4, and against a pinned scaffold,
+// so it cannot import the lint. The test pins each table to scripts/pdocs/lint/registry.ts
+// and `ownedType` to scripts/pdocs/lint/rules.ts's over every shape of path.
+
+/** MIRROR of `ENTITY_FILE` (registry.ts): an owner folder's entry file, by name. */
+export const ENTITY_FILE_TYPE: Record<string, string> = { "feature.md": "feature", "item.md": "item" };
+/** MIRROR of `OWNED_FILE_TYPE` (registry.ts): the owned documents with a fixed name. */
+export const OWNED_FILE_TYPE: Record<string, string> = {
+  "plan.md": "plan",
+  "design-resolution.md": "design-resolution",
+  "test-plan.md": "test-plan",
+  "DEV_KICKOFF.md": "kickoff",
+  "handoff.md": "handoff",
+  "write-up.md": "write-up",
+};
+/** MIRROR of `OWNER_SUBFOLDER` (registry.ts): where an owned type sits when not at its owner's top. */
+export const OWNER_SUBFOLDER: Record<string, string> = { session: "sessions", artifact: "artifacts", report: "reports" };
+const SUBFOLDER_TYPE: Record<string, string> = Object.fromEntries(Object.entries(OWNER_SUBFOLDER).map(([t, f]) => [f, t]));
+
+/**
+ * MIRROR of `ownedType` (rules.ts): the type a document's position inside an owner
+ * folder gives it. `owner` is `features` or `items`; `within` is the path under
+ * it. A leading `_archive/` is stripped; only the entity's own top-level fixed
+ * names and its own `sessions/`, `reports/` and `artifacts/` are typed — anything
+ * deeper (`workstreams/<ws>/plan.md`, `workstreams/<ws>/sessions/…`) is an
+ * `artifact`. An entry file where its entity cannot sit keeps its entity type:
+ * the lint reports it as misplaced, and a retype would not answer that.
+ */
+export function ownedType(owner: string, within: string): string {
+  let segs = within.split("/");
+  if (segs[0] === "_archive" && segs.length > 1) segs = segs.slice(1);
+  if (segs.length === 1) {
+    const name = segs[0] as string;
+    if (owner === "items") return name === "feature.md" ? "feature" : "item";
+    return ENTITY_FILE_TYPE[name] ?? "";
+  }
+  const rest = segs.slice(1);
+  const name = rest[rest.length - 1] as string;
+  const entity = ENTITY_FILE_TYPE[name];
+  if (rest.length === 1) {
+    if (entity) return entity;
+    return OWNED_FILE_TYPE[name] ?? "artifact";
+  }
+  if (entity) return entity;
+  return SUBFOLDER_TYPE[rest[0] as string] ?? "artifact";
+}
+
+/**
+ * The fields an `artifact` may carry: the lint's universal required and optional
+ * ones, and nothing an artifact's registry row adds (it adds none). A document
+ * retyped to `artifact` keeps these and drops the rest. Pinned by the test to the
+ * lint's own `allowedFields("artifact")`, as a set.
+ */
+export const ARTIFACT_FIELDS = ["type", "title", "description", "status", "generated", "tags", "related", "supersedes"];
+
+/**
+ * `fm` retyped as an `artifact`: `type` set, every key an artifact may not carry
+ * removed, the rest kept in place. Returns the block and each dropped key with
+ * its value, for the plan to name. PURE.
+ */
+export function retypeAsArtifact(fm: string): { fm: string; dropped: Array<[string, string]> } {
+  let f = fmSet(fm, "type", "artifact");
+  const dropped: Array<[string, string]> = [];
+  for (const line of f.split("\n")) {
+    const key = /^([A-Za-z_][\w-]*):/.exec(line)?.[1];
+    if (key && !ARTIFACT_FIELDS.includes(key) && !dropped.some(([k]) => k === key)) dropped.push([key, fmGet(f, key) ?? ""]);
+  }
+  for (const [key] of dropped) f = fmRemove(f, key);
+  return { fm: f, dropped };
 }
 
 const RETIRED_TYPE_NAMES = new Set(["proposal", "backlog", "fragment", "brief", "investigation", "memory", "lesson"]);
@@ -2853,9 +2907,10 @@ function computeChanges(ctx: Ctx): Changes {
       if (itemCycle) f = fmInsertAfter(f, "kind", "cycle", itemCycle);
       return { text: joinFrontmatter(f, body), what: `type: ${mv.kind} → item, lifecycle: ${mv.was ?? "(none)"} → ${mv.lifecycle}, id and kind added${itemCycle ? `, cycle: ${itemCycle}` : ""}` };
     }
-    // An owned document: typed by position. Untouched unless it has no frontmatter or a retired type.
-    const ownerRoot = mv.kind === "report" ? newRel.slice(0, newRel.indexOf("/reports/")) : mv.to;
-    const type = positionalType(newRel.slice(ownerRoot.length + 1));
+    // An owned document: typed by position, as the 9.x lint types it. Untouched unless it has
+    // no frontmatter, a retired type, or a type its new position does not allow.
+    const owner = newRel.slice(0, newRel.indexOf("/"));
+    const type = ownedType(owner, newRel.slice(owner.length + 1));
     if (fm === null) {
       const lc = ARCHIVED_OWNED_LIFECYCLE[type];
       return {
@@ -2864,6 +2919,23 @@ function computeChanges(ctx: Ctx): Changes {
       };
     }
     const was = fmGet(fm, "type");
+    // A document whose new position says `artifact` — a workstream's own plan.md, a
+    // session nested under one, a report two folders down — is one there: 9.x types
+    // only the entity's own top-level documents. It keeps its body and the fields an
+    // artifact may carry; the rest (a completed plan's lifecycle, say) is dropped and named.
+    // One already typed `artifact` is left as it is: a key a tool reads (a deck's `marp`,
+    // `theme`) is the adopter's, and the lint names it rather than the run dropping it.
+    if (type === "artifact" && was !== null && was !== "artifact") {
+      const r = retypeAsArtifact(fm);
+      if (r.fm !== fm) {
+        const dropped = r.dropped.map(([k, v]) => `${k}: ${v}`).join(", ");
+        return {
+          text: joinFrontmatter(r.fm, body),
+          what: `type: ${was} → artifact (its position)${dropped ? `, dropped ${dropped}` : ""}`,
+        };
+      }
+      return { text, what: null };
+    }
     // The v2.10 lint typed everything in a project folder but its fixed names and sessions/ as an
     // `artifact`, so a report the adopter moved into projects/<slug>/reports/ — the guide's step for
     // a report with no owner — is one there. Its new position says what it is.
@@ -3185,6 +3257,14 @@ function printPlan(ctx: Ctx): void {
     if (mv.note) note(`  ${d(mv.from)}: ${mv.note}`);
   }
   for (const w of c.writes.filter((x) => x.fm)) note(`frontmatter: ${relative(ctx.root, w.to)} — ${w.fm}`);
+  const retyped = c.writes.filter((w) => w.fm?.includes("→ artifact (its position), dropped"));
+  if (retyped.length)
+    notice(
+      ctx,
+      `${retyped.length} document(s) retyped \`artifact\` by position — a brief in artifacts/, or a plan or session nested below its owner's own ` +
+        `(a workstream's): 9.x types only an entity's top-level documents. The fields an artifact cannot carry were dropped; what each held, should you want it in the body:` +
+        retyped.map((w) => `\n       ${relative(ctx.root, w.to)} — ${(w.fm as string).slice((w.fm as string).indexOf("dropped ") + 8)}`).join("")
+    );
   if (c.shaping) note(c.shaping);
   for (const [f, t] of c.templates.moves) note(`template: ${d(f)} → ${d(t)}, its seed record carried with it`);
   for (const r of c.templates.removals) note(`template: ${d(r)} removed — the form for a retired type, untouched since the scaffold recorded it`);

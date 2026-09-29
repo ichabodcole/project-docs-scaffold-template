@@ -5,12 +5,14 @@ description:
   When a legacy document's H1 is a setext heading, synthesizeFrontmatter takes
   its ==== underline as the description.
 status: draft
-lifecycle: triage
+lifecycle: ready
 id: 01a0ea5f-1307-72bc-940f-e07d3884a946
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md
+priority: medium
+cycle: 2026-09-story-loom-migration
 ---
 
 # Synthesized frontmatter reads a setext underline as the description

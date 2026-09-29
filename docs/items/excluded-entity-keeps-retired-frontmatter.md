@@ -5,12 +5,13 @@ description:
   "A feature or item whose entry document lint.exclude names moves but keeps
   type: proposal or a backlog shape, and the run does not say so."
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ea5f-1353-77e9-9530-99e55266d981
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md
+priority: low
 ---
 
 # An excluded entity's entry document keeps its retired frontmatter

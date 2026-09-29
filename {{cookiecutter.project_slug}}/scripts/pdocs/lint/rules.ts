@@ -598,6 +598,25 @@ export function libraryFiles(ctx: Ctx): Array<{
 }
 
 /**
+ * The keys a document of `type` may carry: the universal required and optional
+ * ones, `lifecycle` when the type has one, and the type's registry extras.
+ * Every other key is an UNKNOWN FIELD. Exported so a migration that retypes a
+ * document can pin the fields it keeps to this set rather than to a copy.
+ */
+export function allowedFields(
+  type: string,
+  registry: ReadonlyMap<string, RegistryRow> = defaultRegistryIndex()
+): Set<string> {
+  const row = registry.get(type);
+  return new Set([
+    ...REQUIRED,
+    ...OPTIONAL,
+    ...(row?.lifecycle ? ["lifecycle"] : []),
+    ...(row?.extra ?? []),
+  ]);
+}
+
+/**
  * Presence, vocabulary and field hygiene for ONE document. Pure over its inputs
  * so both tiers can call it, which is the whole point: these rules are about
  * the document, not about which folder it lives in.
@@ -646,12 +665,7 @@ export function documentProblems(
     ...(requireTags ? ["tags"] : []),
     ...(row?.required ?? []),
   ];
-  const allowed = new Set([
-    ...REQUIRED,
-    ...OPTIONAL,
-    ...(lifecycle ? ["lifecycle"] : []),
-    ...(row?.extra ?? []),
-  ]);
+  const allowed = allowedFields(type, registry);
 
   for (const key of required) if (!fields.get(key)) missing.push(key);
   if (lifecycle && !fields.get("lifecycle")) missing.push("lifecycle");

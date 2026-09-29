@@ -32,7 +32,7 @@ those ship first.
   — a migrated tree passes a `prettier --check` hook.
 - [Root-relative and since-archived link suggestions](../items/phase-10-root-relative-and-archived-links.md)
   — phase 10 suggests fixes for most of story-loom's 235 old archive breaks.
-- [Retype positional artifacts](../items/migration-retypes-positional-artifacts.md)
+- [Retype positional artifacts](../items/migration-retypes-positional-artifacts/item.md)
   — nested workstream plans and sessions come out as `artifact`.
 - [Respell `lint.exclude` globs](../items/migration-respells-lint-exclude-globs.md)
   — no hand edit, no forced re-run.
@@ -51,6 +51,9 @@ those ship first.
   [installed owned files are Prettier-clean](../items/owned-files-installed-unformatted.md)
   and
   [the format phase never downloads Prettier](../items/migration-format-phase-downloads-prettier.md).
+- Added at triage, 2026-09-28, from the second branch's review, because
+  story-loom's 212 synthesized documents would hit it:
+  [a setext heading's underline becomes the description](../items/synthesized-description-reads-setext-underline.md).
 - Then a release, and story-loom's own run, following the write-up's sequence.
 
 Out of scope, deliberately: migration changes 6–9 in the write-up (story-loom
@@ -65,3 +68,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 
 - fix/migration-frontmatter-prettier-shape (landed 2026-09-28)
 - fix/migration-respells-formatter-ignores (landed 2026-09-28)
+- fix/migration-retypes-positional-artifacts (landed 2026-09-28)
