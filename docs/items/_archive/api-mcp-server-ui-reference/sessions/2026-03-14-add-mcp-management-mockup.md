@@ -66,4 +66,4 @@ The mockup was already built as an external artifact. Work focused on:
 
 **Related Documents:**
 
-- [api-mcp-server SKILL.md](../../../../../plugins/recipes/skills/recipes/library/api-mcp-server/RECIPE.md)
+- [api-mcp-server SKILL.md](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/api-mcp-server/RECIPE.md)

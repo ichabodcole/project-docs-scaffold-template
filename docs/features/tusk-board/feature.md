@@ -209,7 +209,7 @@ work.
 
 **Related Documents:**
 
-- [agent-surface-bun recipe](../../../plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
+- [agent-surface-bun recipe](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
   — the underlying pattern.
 - `plugins/toolbox/skills/tuskboard/SKILL.md` — current invocation contract for
   both flows.

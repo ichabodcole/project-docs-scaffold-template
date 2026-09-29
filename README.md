@@ -101,14 +101,13 @@ git clone https://github.com/ichabodcole/project-docs-scaffold-template.git
 Then point your tool's skills path at `dist/<plugin>/skills/`. See each plugin's
 dist README for tool-specific configuration examples.
 
-| Package                                   | Skills | Description                      |
-| ----------------------------------------- | ------ | -------------------------------- |
-| [`dist/project-docs`](dist/project-docs/) | 22     | Documentation workflow skills    |
-| [`dist/recipes`](dist/recipes/)           | 14     | Implementation recipe blueprints |
-| [`dist/operator`](dist/operator/)         | 2      | Operator document triage skills  |
+| Package                                   | Skills | Description                   |
+| ----------------------------------------- | ------ | ----------------------------- |
+| [`dist/project-docs`](dist/project-docs/) | 22     | Documentation workflow skills |
 
 > **Note:** Agents and commands are Claude Code-specific. Other tools will load
-> only the skills.
+> only the skills. The recipes, toolbox, operator, agent-bridge and hivemind
+> plugins moved to [skill-garden](https://github.com/ichabodcole/skill-garden).
 
 ## Installation
 

@@ -55,7 +55,7 @@ wants to read the tree programmatically has to import from a content folder.
 ## Proposed Solution
 
 A CLI at `scripts/pdocs/`, invoked as `bun scripts/pdocs/cli.ts`, following the
-[project-cli-toolkit recipe](../../../plugins/recipes/skills/recipes/library/project-cli-toolkit/RECIPE.md)
+[project-cli-toolkit recipe](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/project-cli-toolkit/RECIPE.md)
 this repository publishes and `anthill` already follows.
 
 ```
@@ -301,5 +301,5 @@ lint move is delicate.
   closed cycle this follows
 - [Changing pdocs playbook](../../playbooks/changing-pdocs-playbook.md) — what
   checking 137 documents turned up, as steps
-- [Project CLI toolkit recipe](../../../plugins/recipes/skills/recipes/library/project-cli-toolkit/RECIPE.md)
+- [Project CLI toolkit recipe](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/project-cli-toolkit/RECIPE.md)
   — the pattern, published here and followed by `anthill`

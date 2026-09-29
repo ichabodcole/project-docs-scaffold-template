@@ -37,7 +37,7 @@ cut is hard, with no release where the plugins ship from both repositories. The
 work is the [skill garden cycle](../../cycles/2026-09-skill-garden.md).
 
 Open alongside the move:
-[how skills reach runtimes other than Claude Code](../../items/skill-distribution-beyond-claude-plugins.md),
+[how skills reach runtimes other than Claude Code](https://github.com/ichabodcole/skill-garden/blob/main/docs/items/skill-distribution-beyond-claude-plugins.md),
 since openpackage has stalled.
 
 ## Overview

@@ -55,4 +55,4 @@ Scaffold checklist also caught an accidental plugin version downgrade (1.3.1 →
 
 **Related Documents:**
 
-- [Recipe](../../../../../plugins/recipes/skills/recipes/library/agent-feedback-reporting/RECIPE.md)
+- [Recipe](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/agent-feedback-reporting/RECIPE.md)

@@ -571,7 +571,7 @@ request in `curl` outperforms research by a wide margin.
 
 ## Related Patterns
 
-- [api-mcp-server recipe](../../../../plugins/recipes/skills/recipes/library/api-mcp-server/RECIPE.md)
+- [api-mcp-server recipe](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/api-mcp-server/RECIPE.md)
   — MCP server scaffolding, which is where the playbook this once pointed at
   ended up
 - [RFC 7591 – OAuth 2.0 Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591)

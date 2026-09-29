@@ -5,7 +5,7 @@ description:
   openpackage has stalled; find a consistent way to install these skills for
   Codex and other runtimes alongside the Claude plugin marketplace.
 status: draft
-lifecycle: backlog
+lifecycle: dropped
 id: 01a0e970-e6e3-7482-ab7b-a92274d6fea9
 kind: research
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -31,3 +31,7 @@ answer.
       today, and what each costs to maintain beside the Claude marketplace.
 - [ ] It recommends one, or says why none is worth it yet, and whether `dist/`'s
       openpackage build should stay.
+
+**Moved to skill-garden** on 2026-09-29, with the plugin it concerns: now
+[skill-garden/docs/items/skill-distribution-beyond-claude-plugins.md](https://github.com/ichabodcole/skill-garden/blob/main/docs/items/skill-distribution-beyond-claude-plugins.md).
+Dropped here, not done.

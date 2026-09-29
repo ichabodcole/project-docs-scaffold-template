@@ -218,7 +218,7 @@ the participants can collectively author.
 - `plugins/toolbox/skills/grapevine/SKILL.md` — the operational doc: verb
   signatures, presence model, recipes, alias guidance, `--stdin` examples.
   Everything an agent _using_ grapevine needs.
-- [agent-surface-bun recipe](../../../plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
+- [agent-surface-bun recipe](https://github.com/ichabodcole/skill-garden/blob/main/plugins/recipes/skills/recipes/library/agent-surface-bun/RECIPE.md)
   — parent pattern. Grapevine inherits Bun + JSONL conventions but is
   multi-tenant (one daemon, many channels) where the recipe's references are
   per-session.
