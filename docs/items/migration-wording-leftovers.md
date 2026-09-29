@@ -6,12 +6,13 @@ description:
   and this repository's root AGENTS.md still says its docs use the pre-9.0.0
   folders.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ec63-5e7c-7509-86b7-ecc5a512aa5b
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: migrations
 from: items/document-patch-refresh-of-a-v3-tree/sessions/2026-09-29-upgrade-cases-and-pointers.md
+priority: low
 ---
 
 # Migration wording that predates refreshes

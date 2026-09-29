@@ -5,12 +5,13 @@ description:
   Step 3 lists the migrations that apply once, up front, and Step 4 runs the
   list, so a row an earlier script made unnecessary still runs.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ec63-5e2e-735c-bd37-2a5a5d1446d4
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: migrations
 from: items/document-patch-refresh-of-a-v3-tree/sessions/2026-09-29-upgrade-cases-and-pointers.md
+priority: low
 ---
 
 # update-project-docs re-tests each migration just before running it
