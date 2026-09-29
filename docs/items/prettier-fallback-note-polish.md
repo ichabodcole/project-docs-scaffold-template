@@ -6,12 +6,13 @@ description:
   Prettier missing a dependency as absent, and counts ignored blocks as
   failures.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ea0f-3adc-7629-be6f-6a47e0634867
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-frontmatter-prettier-shape/sessions/2026-09-28-prettier-shaped-frontmatter.md
+priority: low
 ---
 
 # Polish the migration's Prettier fallback note

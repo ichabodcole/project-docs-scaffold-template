@@ -36,7 +36,7 @@ those ship first.
   — nested workstream plans and sessions come out as `artifact`.
 - [Respell `lint.exclude` globs](../items/migration-respells-lint-exclude-globs.md)
   — no hand edit, no forced re-run.
-- [Respell formatter ignore files](../items/migration-respells-formatter-ignores.md)
+- [Respell formatter ignore files](../items/migration-respells-formatter-ignores/item.md)
   — story-loom's byte-exact canon files stay protected.
 - Added at triage, 2026-09-28, from issues #182 and #154, because each touches
   the migration or the release this cycle cuts:
@@ -45,6 +45,12 @@ those ship first.
   [adoption prompts a root CLI pointer](../items/prompt-root-agent-file-cli-pointer.md)
   and
   [the lint checks a closed cycle's Outcome](../items/lint-closed-cycle-without-outcome.md).
+- Added at triage, 2026-09-28, from the first branch's review, because
+  story-loom's run would hit them:
+  [a respelled link misaligns its table](../items/link-respell-misaligns-tables.md),
+  [installed owned files are Prettier-clean](../items/owned-files-installed-unformatted.md)
+  and
+  [the format phase never downloads Prettier](../items/migration-format-phase-downloads-prettier.md).
 - Then a release, and story-loom's own run, following the write-up's sequence.
 
 Out of scope, deliberately: migration changes 6–9 in the write-up (story-loom
@@ -58,3 +64,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 ## Sessions
 
 - fix/migration-frontmatter-prettier-shape (landed 2026-09-28)
+- fix/migration-respells-formatter-ignores (landed 2026-09-28)

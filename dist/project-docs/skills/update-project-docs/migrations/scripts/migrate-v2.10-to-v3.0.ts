@@ -16,8 +16,16 @@
  *                   `--dry-run` prints it and stops here
  *   4  refresh    — the owned files; the retired owned READMEs removed
  *   5  move       — every document to its new place, frontmatter rewritten
+ *                   (first, each moved path's new spelling added to the ignore
+ *                   files beside the old; a document in lint.exclude moves
+ *                   but is never edited)
  *   6  links      — every link that pointed at a moved document, respelled
- *   7  config     — `lint` arrays patched in place; every other byte kept
+ *   7  config     — `lint` arrays patched in place; every other byte kept.
+ *                   First, the ignore files at the root (.prettierignore,
+ *                   .eslintignore, .gitignore, biome.json[c]): phase 5 added
+ *                   each moved path's new spelling beside the old before the
+ *                   first move; here the old ones are dropped. A retired path in
+ *                   a config that is code (eslint.config.*) is named, not rewritten
  *   8  seeds      — templates moved with their records (renameRecord),
  *                   retired ones removed only while untouched, the rest
  *                   reconciled by verdict; STYLE.md installed
@@ -1788,6 +1796,472 @@ function respell(ctx: Ctx, args: string[], writeIt: boolean): void {
 }
 
 // =======================================================================================
+// Ignore files: a formatter's or linter's exclusions follow what moved
+// =======================================================================================
+
+/**
+ * Ignore files in gitignore syntax the run respells, at the project root.
+ * `.gitignore` is one: Prettier 3 reads it as an ignore file, and a folder git
+ * ignored moves with its entity and would otherwise be committed from there.
+ */
+export const IGNORE_FILES = [".prettierignore", ".eslintignore", ".gitignore"];
+/** Biome's config: JSON, so its glob strings are respelled in the file's own text. */
+export const BIOME_FILES = ["biome.json", "biome.jsonc"];
+/** Configs that are code, or carry globs in shapes too varied to rewrite safely: a retired path in one is named, never rewritten. */
+const FLAG_ONLY_RE = /^(?:eslint\.config\.[cm]?[jt]s|\.eslintrc(?:\.(?:js|cjs|json|ya?ml))?|prettier\.config\.[cm]?[jt]s|\.prettierrc(?:\.(?:json5?|ya?ml|toml|[cm]?js|ts))?)$/;
+
+const GLOB_CHARS = /[*?[\]{}\\]/;
+
+/**
+ * Whether `pattern` — repository-relative, anchored, no `!` — ignores `path`,
+ * as gitignore reads it: the path itself, or any folder above it. `dirOnly` (a
+ * trailing `/`) matches only a folder above it.
+ */
+export function ignoreMatches(pattern: string, dirOnly: boolean, path: string): boolean {
+  const g = new Bun.Glob(pattern);
+  const segs = path.split("/");
+  for (let i = 1; i <= segs.length; i++) {
+    if (dirOnly && i === segs.length) break;
+    if (g.match(segs.slice(0, i).join("/"))) return true;
+  }
+  return false;
+}
+
+/**
+ * `pattern` bound to the move `[from, to]`: the part of it that matched `from`
+ * replaced by `to`, the rest kept. `docs/projects/*∕canon/` and the move
+ * `docs/projects/alpha` → `docs/features/alpha` give `docs/features/alpha/canon/`.
+ * `null` when the pattern cannot match `from` or anything under it.
+ */
+function bindPattern(pattern: string, from: string, to: string): string | null {
+  const p = pattern.split("/");
+  const f = from.split("/");
+  for (let i = 0; i < f.length; i++) {
+    if (i >= p.length) return to; // the pattern names a folder above `from`: all of it follows
+    if (p[i] === "**") return `${to}/${p.slice(i).join("/")}`;
+    if (!new Bun.Glob(p[i] as string).match(f[i] as string)) return null;
+  }
+  return p.length === f.length ? to : `${to}/${p.slice(f.length).join("/")}`;
+}
+
+/**
+ * One ignore pattern — `.prettierignore` syntax, or a Biome glob — with every
+ * retired path respelled from `moves` (repository-relative `[from, to]`, a
+ * folder or a file, every file under a moved folder listed as well). PURE.
+ *
+ *   · a pattern naming no retired folder is returned as it is;
+ *   · a path spelled out to (or into) something that moved follows it —
+ *     `docs/projects/alpha/checkpoint/canon/` → `docs/features/alpha/checkpoint/canon/` —
+ *     so long as the new spelling still ignores every moved file the old one did
+ *     (`docs/projects/alpha/proposal.*` would miss `feature.md`: named instead);
+ *   · a wildcard where the entity would be (`docs/projects/*∕canon/`), or the
+ *     retired folder itself (`docs/projects/`), becomes one pattern per moved
+ *     entity whose files it ignored, each spelled out: an entity may now sit in
+ *     `features/` or `items/`, and `docs/features/*∕canon/` would also ignore
+ *     every feature filed after the run;
+ *   · with `wide` (`.gitignore`), a wildcard where the entity would be instead
+ *     becomes one glob per category the retired folder's entities go to
+ *     (`docs/features/*∕scratch/`, `docs/items/*∕scratch/`): what git ignores
+ *     must stay ignored on every machine and for entities filed later, not only
+ *     for the ones this checkout holds;
+ *   · a `!` negation (Biome's `!!` too), a leading `/` or `./` and a trailing `/`
+ *     are kept on every line it becomes.
+ *
+ * Returns the lines to write in its place, or `lines: null` and `why` when it
+ * names a retired path this function will not guess at (a retired folder behind
+ * a leading wildcard, a brace pattern, an escaped `\!` or `\#`, a pattern whose
+ * files it cannot cover exactly, one that matched nothing the run moved): the
+ * caller leaves it as written and names it.
+ */
+export function respellIgnorePattern(
+  pattern: string,
+  moves: ReadonlyArray<[string, string]>,
+  docsRootName: string,
+  o: { wide?: boolean } = {}
+): { lines: string[] | null; why?: string } {
+  const esc = docsRootName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const legacy = LEGACY_FOLDERS.join("|");
+  const namesRetired = new RegExp(`(?:^|/)${esc}/(?:${legacy})(?:/|$)`);
+  if (pattern.startsWith("\\"))
+    return namesRetired.test(pattern.slice(1).replace(/^[!#]?(?:\.?\/)?/, "")) ? { lines: null, why: "an escaped pattern (`\\!`, `\\#`) naming a retired path" } : { lines: [pattern] };
+  const m = /^(!{0,2})(\/|\.\/)?(.*?)(\/?)$/.exec(pattern) as RegExpExecArray;
+  const [, neg = "", lead = "", body = "", trail = ""] = m;
+  if (!new RegExp(`^${esc}/(?:${legacy})(?:/|$)`).test(body)) {
+    if (namesRetired.test(body)) return { lines: null, why: "it names a retired folder behind a wildcard" };
+    return { lines: [pattern] };
+  }
+  if (/[{}]/.test(body)) return { lines: null, why: "a brace pattern: gitignore reads `{` and `}` literally, so it is not respelled into several lines" };
+  const segs = body.split("/");
+  const firstGlob = segs.findIndex((s) => GLOB_CHARS.test(s));
+  const literal = (firstGlob === -1 ? segs : segs.slice(0, firstGlob)).join("/");
+  const dress = (p: string, dir: boolean) => `${neg}${lead}${p}${dir ? trail : ""}`;
+  const froms = new Set(moves.map(([f]) => f));
+  const isFile = (from: string) => ![...froms].some((o) => o.startsWith(`${from}/`));
+  const leaves = moves.filter(([f]) => isFile(f));
+  const dirOnly = trail === "/";
+  const ignored = leaves.filter(([f]) => ignoreMatches(body, dirOnly, f));
+  const missed = (pat: string, dir: boolean) => ignored.filter(([, t]) => !ignoreMatches(pat, dir, t)).length;
+
+  // Spelled out to something that moved: it follows that move, longest first — if the
+  // new spelling still ignores every moved file the old one did.
+  const byLength = [...moves].sort((a, b) => b[0].length - a[0].length);
+  const k = byLength.find(([from]) => literal === from || literal.startsWith(`${from}/`));
+  if (k) {
+    const next = k[1] + body.slice(k[0].length);
+    const lost = missed(next, dirOnly);
+    if (lost > 0) return { lines: null, why: `respelled to \`${next}\` it would no longer ignore ${lost} moved file(s) it ignored (a file the run renamed)` };
+    return { lines: [dress(next, true)] };
+  }
+
+  // `.gitignore`: a wildcard where the entity would be goes category-wide.
+  const atEntity = firstGlob === 2 || (firstGlob === 3 && segs[2] === "_archive");
+  if (o.wide && atEntity) {
+    const folder = segs[1] as string;
+    const categories = folder === "projects" ? ["features", "items"] : [FOLDER_SUCCESSOR[folder] as string];
+    const lines = categories.map((cat) => `${docsRootName}/${cat}${body.slice(`${docsRootName}/${folder}`.length)}`);
+    const lost = ignored.filter(([, t]) => !lines.some((l) => ignoreMatches(l, dirOnly, t))).length;
+    if (lost > 0) return { lines: null, why: `${lost} moved file(s) it ignored would not be ignored by the same glob under ${categories.join("/ or ")}/` };
+    return { lines: lines.map((l) => dress(l, true)) };
+  }
+  if (o.wide)
+    return literal === segs.slice(0, 2).join("/") && firstGlob === -1
+      ? { lines: null, why: "it ignores a whole retired folder, and its successor holds far more than it did" }
+      : { lines: null, why: "it names a retired path, and nothing the run moved matched it" };
+
+  // A wildcard at or above the entity: bound to each move under the literal part,
+  // shallowest first (then by name), keeping a binding only when it ignores a moved file the
+  // pattern ignored that no earlier binding covers.
+  if (ignored.length === 0) return { lines: null, why: "it names a retired path, and nothing the run moved matched it" };
+  const uncovered = new Map(ignored.map(([f, t]) => [f, t]));
+  const out: string[] = [];
+  const under = [...moves].filter(([f]) => f.startsWith(`${literal}/`)).sort((a, b) => a[0].split("/").length - b[0].split("/").length || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  for (const [from, to] of under) {
+    if (uncovered.size === 0) break;
+    const bound = bindPattern(body, from, to);
+    if (bound === null) continue;
+    // A folder-only pattern bound to a moved FILE itself names that file: no trailing `/`.
+    const boundDir = dirOnly && !(bound === to && isFile(from));
+    const covers = [...uncovered].filter(([, t]) => ignoreMatches(bound, boundDir, t));
+    if (covers.length === 0) continue;
+    for (const [f] of covers) uncovered.delete(f);
+    out.push(dress(bound, boundDir));
+  }
+  if (uncovered.size > 0) return { lines: null, why: `${uncovered.size} file(s) it ignored could not be followed exactly` };
+  return { lines: [...new Set(out)] };
+}
+
+export interface IgnoreRespell {
+  /** The file's text after the pass; the input when nothing changed. */
+  text: string;
+  /** One line per pattern the pass changed: `line N: …`. */
+  changes: string[];
+  /** One line per pattern left as written that names a retired path: for a hand edit. */
+  flags: string[];
+}
+
+/**
+ * How a pass writes a respelled pattern:
+ *   replace — the new lines in the old one's place (what the file will say once the run is done);
+ *   add     — the new lines just after the old one, which stays: written BEFORE the first
+ *             move, so whatever the old line protected is protected at both spellings through
+ *             a stop mid-move. A new line already in the file is not added again;
+ *   drop    — the old line removed, once nothing is left at the old path (phase 7). A new
+ *             line missing from the file (taken out during a stop) is put back in its place.
+ */
+export type IgnoreMode = "replace" | "add" | "drop";
+
+/**
+ * An ignore file in gitignore syntax (`.prettierignore`, `.eslintignore`,
+ * `.gitignore` — with `wide`) with each pattern that names a retired path
+ * respelled by `respellIgnorePattern`, as `mode` says; a pattern that becomes
+ * several lines keeps its position, so a later `!` negation still follows it.
+ * Comments, blank lines and every other line are kept byte for byte. Each mode
+ * is idempotent, and `add` then `drop` leaves what `replace` would. PURE.
+ */
+export function respellIgnoreText(
+  text: string,
+  moves: ReadonlyArray<[string, string]>,
+  docsRootName: string,
+  o: { wide?: boolean; mode?: IgnoreMode } = {}
+): IgnoreRespell {
+  const mode = o.mode ?? "replace";
+  const changes: string[] = [];
+  const flags: string[] = [];
+  const bare = (raw: string) => raw.replace(/\r$/, "").replace(/(?<!\\)[ \t]+$/, "");
+  const present = new Set(text.split("\n").map(bare));
+  // `drop`: every new spelling goes where its old line stood, in order; a copy of it
+  // elsewhere (phase 5's, just below, or one the adopter added) is taken out.
+  const respelled = new Set<string>();
+  if (mode === "drop")
+    for (const raw of text.split("\n")) {
+      const pat = bare(raw);
+      if (pat === "" || pat.startsWith("#")) continue;
+      const r = respellIgnorePattern(pat, moves, docsRootName, { wide: o.wide });
+      if (r.lines && !(r.lines.length === 1 && r.lines[0] === pat)) for (const l of r.lines) respelled.add(l);
+    }
+  const emitted = new Set<string>();
+  const out = text.split("\n").map((raw, i) => {
+    const cr = raw.endsWith("\r") ? "\r" : "";
+    const pat = bare(raw);
+    if (pat === "" || pat.startsWith("#")) return raw;
+    const r = respellIgnorePattern(pat, moves, docsRootName, { wide: o.wide });
+    if (r.lines === null) {
+      flags.push(`line ${i + 1}: \`${pat}\` — ${r.why}; left as written`);
+      return raw;
+    }
+    if (r.lines.length === 1 && r.lines[0] === pat) return respelled.has(pat) ? null : raw;
+    if (mode === "replace") {
+      changes.push(`line ${i + 1}: ${pat} → ${r.lines.join(", ")}`);
+      return r.lines.map((l) => l + cr).join("\n");
+    }
+    const missing = r.lines.filter((l) => !present.has(l));
+    if (mode === "add") {
+      if (missing.length === 0) return raw;
+      changes.push(`line ${i + 1}: ${missing.join(", ")} added beside ${pat}`);
+      for (const l of missing) present.add(l);
+      return [raw, ...missing.map((l) => l + cr)].join("\n");
+    }
+    changes.push(`line ${i + 1}: ${pat} dropped — ${r.lines.join(", ")} ${r.lines.length > 1 ? "stand" : "stands"} in its place`);
+    const here = r.lines.filter((l) => !emitted.has(l));
+    for (const l of here) emitted.add(l);
+    return here.length ? here.map((l) => l + cr).join("\n") : null;
+  });
+  return { text: out.filter((l): l is string => l !== null).join("\n"), changes, flags };
+}
+
+/** Every JSON string token in `text` outside comments: where it sits, its value, and whether it is an array element (not a key, not an object's value). */
+function jsonStrings(text: string): Array<{ start: number; end: number; value: string; inArray: boolean }> {
+  const out: Array<{ start: number; end: number; value: string; inArray: boolean }> = [];
+  const stack: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i] as string;
+    if (ch === "/" && text[i + 1] === "/") {
+      const nl = text.indexOf("\n", i);
+      i = nl === -1 ? text.length : nl;
+    } else if (ch === "/" && text[i + 1] === "*") {
+      const close = text.indexOf("*/", i + 2);
+      i = close === -1 ? text.length : close + 2;
+    } else if (ch === "[" || ch === "{") {
+      stack.push(ch);
+      i++;
+    } else if (ch === "]" || ch === "}") {
+      stack.pop();
+      i++;
+    } else if (ch === '"') {
+      const end = endOfJsonString(text, i);
+      let value: unknown = null;
+      try {
+        value = JSON.parse(text.slice(i, end));
+      } catch {
+        value = null;
+      }
+      if (typeof value === "string") out.push({ start: i, end, value, inArray: stack[stack.length - 1] === "[" });
+      i = end;
+    } else i++;
+  }
+  return out;
+}
+
+/** JSONC as JSON: comments and trailing commas out, strings untouched — to prove a rewrite still parses. */
+export function jsoncToJson(text: string): string {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    const ch = text[i] as string;
+    if (ch === '"') {
+      const end = endOfJsonString(text, i);
+      out += text.slice(i, end);
+      i = end;
+    } else if (ch === "/" && text[i + 1] === "/") {
+      const nl = text.indexOf("\n", i);
+      i = nl === -1 ? text.length : nl;
+    } else if (ch === "/" && text[i + 1] === "*") {
+      const close = text.indexOf("*/", i + 2);
+      i = close === -1 ? text.length : close + 2;
+    } else {
+      out += ch;
+      i++;
+    }
+  }
+  return out.replace(/,(\s*[\]}])/g, "$1");
+}
+
+/**
+ * A Biome config (`biome.json`, `biome.jsonc`) with every glob string that names
+ * a retired path respelled in the file's own text — `files.ignore`/`include`
+ * (v1), `files.includes` with its `!` negations (v2), an override's — and every
+ * other byte kept, in the three modes of `respellIgnoreText`. Only an array
+ * element may become several strings (or be dropped); a string that is an
+ * object's value is respelled only to a single string, and named otherwise.
+ * Comments are skipped, never read as strings. PURE.
+ */
+export function respellBiomeText(
+  text: string,
+  moves: ReadonlyArray<[string, string]>,
+  docsRootName: string,
+  o: { mode?: IgnoreMode } = {}
+): IgnoreRespell {
+  const mode = o.mode ?? "replace";
+  const changes: string[] = [];
+  const flags: string[] = [];
+  const edits: Array<{ start: number; end: number; value: string }> = [];
+  const tokens = jsonStrings(text);
+  const present = new Set(tokens.filter((t) => t.inArray).map((t) => t.value));
+  for (const t of tokens) {
+    // A key is followed by `:`; it is not a glob.
+    if (/^\s*:/.test(text.slice(t.end))) continue;
+    const r = respellIgnorePattern(t.value, moves, docsRootName);
+    const line = text.slice(0, t.start).split("\n").length;
+    if (r.lines === null) {
+      flags.push(`line ${line}: \`${t.value}\` — ${r.why}; left as written`);
+      continue;
+    }
+    if (r.lines.length === 1 && r.lines[0] === t.value) continue;
+    const quote = (ls: string[]) => ls.map((l) => JSON.stringify(l)).join(", ");
+    if (!t.inArray) {
+      if (r.lines.length > 1) flags.push(`line ${line}: \`${t.value}\` — becomes ${r.lines.join(", ")}, and it is not in a list to hold several; left as written`);
+      else if (mode !== "add") {
+        changes.push(`line ${line}: ${t.value} → ${r.lines[0]}`);
+        edits.push({ start: t.start, end: t.end, value: quote(r.lines) });
+      }
+      continue;
+    }
+    if (mode === "replace") {
+      changes.push(`line ${line}: ${t.value} → ${r.lines.join(", ")}`);
+      edits.push({ start: t.start, end: t.end, value: quote(r.lines) });
+      continue;
+    }
+    const missing = r.lines.filter((l) => !present.has(l));
+    for (const l of missing) present.add(l);
+    if (mode === "add") {
+      if (missing.length === 0) continue;
+      changes.push(`line ${line}: ${missing.join(", ")} added beside ${t.value}`);
+      edits.push({ start: t.start, end: t.end, value: quote([t.value, ...missing]) });
+      continue;
+    }
+    changes.push(`line ${line}: ${t.value} dropped — ${r.lines.join(", ")} ${r.lines.length > 1 ? "stand" : "stands"} in its place`);
+    if (missing.length) edits.push({ start: t.start, end: t.end, value: quote(missing) });
+    else {
+      // The element and one comma beside it: the one after, else the one before.
+      const after = /^\s*,[ \t]*/.exec(text.slice(t.end));
+      if (after) edits.push({ start: t.start, end: t.end + after[0].length, value: "" });
+      else {
+        const before = /,\s*$/.exec(text.slice(0, t.start));
+        edits.push({ start: before ? t.start - before[0].length : t.start, end: t.end, value: "" });
+      }
+    }
+  }
+  let out = text;
+  for (const e of edits.sort((a, b) => a.start - b.start).reverse()) out = out.slice(0, e.start) + e.value + out.slice(e.end);
+  return { text: out, changes, flags };
+}
+
+/** One ignore file or tool config at the project root, and what the run makes of it. */
+interface IgnorePlan {
+  /** Project-relative. */
+  rel: string;
+  /** The text to write; null when the file is only named (code, or nothing changes). */
+  text: string | null;
+  changes: string[];
+  flags: string[];
+}
+
+/**
+ * Every ignore file and tool config at the project root that names a retired
+ * path, planned from `moves` (repository-relative, from the plan) against the
+ * file's CURRENT text — so a resumed run, and a run over an ignore file edited
+ * during a stop, respell what is there now. Read-only.
+ */
+function planIgnoreFiles(ctx: Ctx, moves: ReadonlyArray<[string, string]>, mode: IgnoreMode): IgnorePlan[] {
+  const out: IgnorePlan[] = [];
+  const names = existsSync(ctx.root) ? readdirSync(ctx.root).sort() : [];
+  for (const name of names) {
+    const abs = join(ctx.root, name);
+    if (!statSync(abs).isFile()) continue;
+    const before = () => readFileSync(abs, "utf8");
+    if (IGNORE_FILES.includes(name) || BIOME_FILES.includes(name)) {
+      const text = before();
+      const biome = BIOME_FILES.includes(name);
+      const r = biome
+        ? respellBiomeText(text, moves, ctx.docsRootName, { mode })
+        : respellIgnoreText(text, moves, ctx.docsRootName, { mode, wide: name === ".gitignore" });
+      if (biome && r.text !== text) {
+        try {
+          JSON.parse(name === "biome.json" ? r.text : jsoncToJson(r.text));
+        } catch {
+          out.push({ rel: name, text: null, changes: [], flags: [...r.changes.map((c) => `${c} — not written: the result would not parse; respell it by hand`), ...r.flags] });
+          continue;
+        }
+      }
+      if (r.changes.length || r.flags.length) out.push({ rel: name, text: r.text === text ? null : r.text, changes: r.changes, flags: r.flags });
+    } else if (FLAG_ONLY_RE.test(name)) {
+      const map = new Map(moves.map(([f, t]) => [f, t]));
+      const { hits } = respellText(before(), ctx.docsRootName, map);
+      if (hits.length)
+        out.push({
+          rel: name,
+          text: null,
+          changes: [],
+          flags: hits.map((h) => `line ${h.line}: \`${h.from}\` — ${h.to === null ? "nothing this migration moved is there" : `now ${h.to}`}; a config in code is not rewritten, respell it by hand`),
+        });
+    }
+  }
+  return out;
+}
+
+/**
+ * The "For you to check" lines for an ignore plan (made with `replace`): one per
+ * file, naming each pattern. Without line numbers, so a resumed run — whose file
+ * holds the lines phase 5 added — names each the same way and adds nothing twice.
+ */
+function ignoreNotices(ctx: Ctx, plans: IgnorePlan[]): void {
+  const strip = (l: string) => l.replace(/^line \d+: /, "");
+  for (const p of plans) {
+    if (p.changes.length && p.text !== null)
+      notice(ctx, `${p.rel}: ${p.changes.length} pattern(s) naming a moved path respelled, so what it excluded stays excluded — check them:${p.changes.map((c) => `\n       ${strip(c)}`).join("")}`);
+    if (p.flags.length)
+      notice(ctx, `${p.rel}: ${p.flags.length} pattern(s) naming a retired path left as written — respell each by hand, or a file it protected is no longer excluded:${p.flags.map((c) => `\n       ${strip(c)}`).join("")}`);
+  }
+}
+
+/** Write each planned ignore file, and print what changed; flags print only when `flags` is set. */
+function writeIgnorePlans(ctx: Ctx, plans: IgnorePlan[], flags: boolean): number {
+  let wrote = 0;
+  for (const p of plans) {
+    if (p.text !== null) {
+      writeFileSync(join(ctx.root, p.rel), p.text);
+      track(ctx, join(ctx.root, p.rel));
+      wrote++;
+      for (const c of p.changes) ok(`${p.rel}: ${c}`);
+    }
+    if (flags) for (const f of p.flags) note(`for you: ${p.rel}: ${f}`);
+  }
+  return wrote;
+}
+
+/**
+ * Phase 5, before the first move: each ignore file gains the new spelling of every
+ * pattern naming a path about to move, beside the old one. From here to the end
+ * of the run — a stop mid-move and its re-run included — what the file protected
+ * is protected wherever it sits.
+ */
+function addIgnoreSpellings(ctx: Ctx): void {
+  const plans = planIgnoreFiles(ctx, (ctx.changes as Changes).repoMoves, "add");
+  if (writeIgnorePlans(ctx, plans, false) > 0) saveState(ctx);
+}
+
+/** Phase 7, first: every move is made, so each old spelling phase 5 kept is dropped; what the run only flags is named. */
+function respellIgnoreFiles(ctx: Ctx): void {
+  const plans = planIgnoreFiles(ctx, (ctx.changes as Changes).repoMoves, "drop");
+  if (plans.length === 0) {
+    ok("no ignore file or tool config at the root names a retired path");
+    return;
+  }
+  writeIgnorePlans(ctx, plans, true);
+}
+
+// =======================================================================================
 // Invocation and context
 // =======================================================================================
 
@@ -1876,6 +2350,8 @@ interface Changes {
   keptLibrary: string[];
   /** Why the frontmatter this run writes is not all in the project's own Prettier's shape; null when it is, or not asked for. */
   shaping?: string | null;
+  /** Documents in `lint.exclude` (project-relative, where they end up): moved with their folder, never edited. */
+  excludedKept?: string[];
 }
 
 interface Ctx extends Options {
@@ -1916,6 +2392,7 @@ interface Journal {
   repoMoves: Array<[string, string]>;
   linkMoves?: Array<[string, string]>;
   keptLibrary: string[];
+  excludedKept?: string[];
 }
 
 interface RunState {
@@ -1940,6 +2417,7 @@ const toJournal = (c: Changes): Journal => ({
   repoMoves: c.repoMoves,
   linkMoves: c.linkMoves,
   keptLibrary: c.keptLibrary,
+  excludedKept: c.excludedKept ?? [],
 });
 
 const fromJournal = (j: Journal): Changes => ({
@@ -1951,6 +2429,7 @@ const fromJournal = (j: Journal): Changes => ({
   repoMoves: j.repoMoves,
   linkMoves: j.linkMoves ?? [],
   keptLibrary: j.keptLibrary,
+  excludedKept: j.excludedKept ?? [],
 });
 
 const projectRel = (ctx: Ctx, abs: string) => relative(ctx.root, abs).split(sep).join("/");
@@ -2423,7 +2902,16 @@ function computeChanges(ctx: Ctx): Changes {
     ...docsFiles.map((r) => [join(d, r), join(d, fileMap.get(r) ?? r)] as [string, string]),
     ...outside.map((p) => [join(ctx.root, p), join(ctx.root, p)] as [string, string]),
   ];
+  // A file `lint.exclude` names — at its old spelling or its new one — is the adopter's to
+  // keep byte for byte (canon a tool reads back, a Slidev deck): it moves with its folder,
+  // and nothing in it is rewritten, frontmatter or links.
+  const repoRel = (abs: string) => relative(ctx.root, abs).split(sep).join("/");
+  const excludedKept: string[] = [];
   for (const [fromAbs, toAbs] of candidates) {
+    if (fromAbs.startsWith(`${d}${sep}`) && (excluded(repoRel(fromAbs)) || excluded(repoRel(toAbs)))) {
+      excludedKept.push(repoRel(toAbs));
+      continue;
+    }
     const original = readFileSync(fromAbs, "utf8");
     const rel = fromAbs.startsWith(`${d}${sep}`) ? relative(d, fromAbs).split(sep).join("/") : null;
     const fmStep = rel ? frontmatterFor(rel, original) : { text: original, what: null };
@@ -2515,7 +3003,7 @@ function computeChanges(ctx: Ctx): Changes {
     .map(([f, t]) => [`${ctx.docsRootName}/${f}`, `${ctx.docsRootName}/${t}`]);
   const docsRel = (abs: string) => relative(d, abs).split(sep).join("/");
   const linkMoves = [...linkMap].map(([f, t]) => [docsRel(f), docsRel(t)] as [string, string]);
-  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, linkMoves, keptLibrary, shaping };
+  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, linkMoves, keptLibrary, shaping, excludedKept };
 }
 
 // =======================================================================================
@@ -2731,6 +3219,20 @@ function printPlan(ctx: Ctx): void {
   const cfg = patchLintArrays((ctx.config?.lint ?? {}) as LintKeys, { moves: c.repoMoves, keptLibrary: c.keptLibrary, docsRootName: ctx.docsRootName });
   for (const ch of cfg.changes) note(`config: ${ch}`);
   for (const n of cfg.notes) note(`config — for you: ${n}`);
+  const ignores = planIgnoreFiles(ctx, c.repoMoves, "replace");
+  for (const p of ignores) {
+    if (p.text !== null) for (const ch of p.changes) note(`ignore file: ${p.rel}: ${ch}`);
+    for (const f of p.flags) note(`ignore file — for you: ${p.rel}: ${f}`);
+  }
+  ignoreNotices(ctx, ignores);
+  const kept = (c.excludedKept ?? []).filter((p) => c.physical.some(([f, t]) => f !== t && (join(ctx.root, p) === t || join(ctx.root, p).startsWith(`${t}${sep}`))));
+  if (kept.length) {
+    const line =
+      `${kept.length} document(s) in lint.exclude ${ctx.dryRun ? "would be" : "were"} moved with their folder but not edited — no frontmatter written, no link respelled; ` +
+      `a link in one to a moved document is yours to fix:${kept.map((p) => `\n       ${p}`).join("")}`;
+    note(line);
+    notice(ctx, line);
+  }
   for (const k of c.keptLibrary) note(`kept: ${d(k)}/ — a retired library folder, declared in lint.types so it stays lintable (D11)`);
   ok(
     `${c.plan.moves.length} move(s): ${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ") || "none — nothing left in a retired folder"}; ` +
@@ -2861,6 +3363,9 @@ function moveDocuments(ctx: Ctx): void {
     ctx.state.journal = toJournal(c);
     saveState(ctx);
   }
+  // Before the first move: an ignore file must protect a moved file at both spellings
+  // until phase 7, whatever stops the run in between.
+  addIgnoreSpellings(ctx);
   for (const [from, to] of c.physical) {
     const fromThere = existsSync(from);
     const toThere = existsSync(to);
@@ -2928,8 +3433,11 @@ function closeJournal(ctx: Ctx): void {
 }
 
 function patchConfig(ctx: Ctx): void {
-  step(7, "Patch .project-docs.json");
+  step(7, "Patch .project-docs.json and the ignore files");
   const c = ctx.changes as Changes;
+  // Before the config, and so before the journal closes: a re-plan of a moved tree
+  // has no moves to respell an ignore file from.
+  respellIgnoreFiles(ctx);
   const before = readFileSync(ctx.configPath, "utf8");
   const cfg = JSON.parse(before) as Record<string, unknown>;
   const lint = (cfg.lint ?? {}) as LintKeys;

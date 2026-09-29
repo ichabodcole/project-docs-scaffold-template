@@ -7,12 +7,14 @@ description:
   (features/README.md in 9.0.1) fail prettier --check under another Prettier
   version or config.
 status: draft
-lifecycle: triage
+lifecycle: ready
 id: 01a0ea0f-3a93-7239-9703-d1301f006c7b
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-frontmatter-prettier-shape/sessions/2026-09-28-prettier-shaped-frontmatter.md
+priority: medium
+cycle: 2026-09-story-loom-migration
 ---
 
 # Owned files the refresh installs are not Prettier-clean for every consumer

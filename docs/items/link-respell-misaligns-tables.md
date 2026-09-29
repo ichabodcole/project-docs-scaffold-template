@@ -5,12 +5,14 @@ description:
   When the migration lengthens a link in a Markdown table cell the columns no
   longer line up, and a consumer's prettier --check rejects the file.
 status: draft
-lifecycle: triage
+lifecycle: ready
 id: 01a0ea0f-3a47-7667-a579-0ea1cbfbe1c8
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-frontmatter-prettier-shape/sessions/2026-09-28-prettier-shaped-frontmatter.md
+priority: high
+cycle: 2026-09-story-loom-migration
 ---
 
 # Respelling a link inside a table misaligns the table

@@ -6,12 +6,14 @@ description:
   Prettier that does not pass --skip-format gets the latest Prettier fetched and
   run.
 status: draft
-lifecycle: triage
+lifecycle: ready
 id: 01a0ea0f-39fd-73ba-bb40-9bc0fbdd8efc
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-frontmatter-prettier-shape/sessions/2026-09-28-prettier-shaped-frontmatter.md
+priority: medium
+cycle: 2026-09-story-loom-migration
 ---
 
 # The v3.0 migration's format phase can download Prettier

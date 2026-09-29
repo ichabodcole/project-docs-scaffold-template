@@ -147,6 +147,12 @@ the table is [its own item](../link-respell-misaligns-tables.md).
 
 ## Recommended sequence for the real run
 
+**Updated as the cycle's fixes land (2026-09-28).** The run now keeps
+`.prettierignore` protecting moved files itself, stops included
+([the session](../migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md)):
+skip pre-run step 2, and in post-run step 4 skip dropping the old line (the run
+drops it) but still format and check the canon is unchanged.
+
 **Pre-run (story-loom, committed before the run):**
 
 1. Run v2.9→v2.10: dry run, real run, commit. It is clean: 1 template updated

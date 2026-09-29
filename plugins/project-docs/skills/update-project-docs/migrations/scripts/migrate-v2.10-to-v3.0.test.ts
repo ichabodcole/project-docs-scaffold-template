@@ -52,6 +52,7 @@ import {
   isSeeded,
   joinFrontmatter,
   isUuid,
+  jsoncToJson,
   loadManifest,
   mayWrite,
   movedTo,
@@ -66,6 +67,9 @@ import {
   scopeEntryPath,
   renameRecord,
   researchLifecycle,
+  respellBiomeText,
+  respellIgnorePattern,
+  respellIgnoreText,
   respellText,
   rewriteExcludeGlob,
   rewriteFromField,
@@ -1181,7 +1185,10 @@ describe("the whole migration on fixture O", () => {
     expect(read(root, "docs/features/alpha/plan.md")).toContain("[question](../../items/question/write-up.md)");
     expect(read(root, "docs/features/alpha/artifacts/notes.md")).toContain("[Backlog item](../../../items/open-item.md)");
     expect(read(root, "docs/cycles/2026-01-mixed.md")).toContain("[Alpha](../features/alpha/feature.md)");
-    const all = readdirSync(join(root, "docs"), { recursive: true }).map(String).filter((p) => p.endsWith(".md"));
+    // The deck is in lint.exclude: it moves, and keeps its bytes — links included.
+    const deck = "features/alpha/artifacts/deck-prototype.md";
+    expect(read(root, `docs/${deck}`)).toBe(SHAPES["docs/projects/alpha/artifacts/deck-prototype.md"] as string);
+    const all = readdirSync(join(root, "docs"), { recursive: true }).map(String).filter((p) => p.endsWith(".md") && p !== deck);
     for (const p of all) expect([p, read(root, `docs/${p}`).includes("proposal.md)")]).toEqual([p, false]);
   });
 
@@ -1709,6 +1716,283 @@ describe("prettierFrontmatter — the project's own Prettier, or none; never a d
     const root = fixtureO(LONG_VALUES);
     expect(migrate(root, ["--dry-run"], { format: true }).out).toContain("no Prettier in this project");
     expect(migrate(root, ["--dry-run"]).out).not.toContain("no Prettier in this project");
+  });
+});
+
+// ─── Ignore files follow what moved ──────────────────────────────────────────
+
+describe("respellIgnorePattern / respellIgnoreText / respellBiomeText — a pattern follows what it ignored", () => {
+  const moves: Array<[string, string]> = [
+    ["docs/projects/alpha", "docs/features/alpha"],
+    ["docs/projects/alpha/proposal.md", "docs/features/alpha/feature.md"],
+    ["docs/projects/alpha/checkpoint/canon/Hero.md", "docs/features/alpha/checkpoint/canon/Hero.md"],
+    ["docs/projects/beta", "docs/items/beta"],
+    ["docs/projects/beta/checkpoint/canon/Villain.md", "docs/items/beta/checkpoint/canon/Villain.md"],
+    ["docs/projects/beta/sessions/s.md", "docs/items/beta/sessions/s.md"],
+    ["docs/projects/_archive/gamma", "docs/features/_archive/gamma"],
+    ["docs/projects/_archive/gamma/plan.md", "docs/features/_archive/gamma/plan.md"],
+    ["docs/backlog/2026-01-01-a.md", "docs/items/a.md"],
+  ];
+
+  test.each([
+    ["dist/", ["dist/"]],
+    ["canon/", ["canon/"]],
+    ["docs/**/canon/", ["docs/**/canon/"]],
+    ["docs/projects/alpha/checkpoint/canon/", ["docs/features/alpha/checkpoint/canon/"]],
+    ["/docs/projects/alpha/checkpoint/canon/", ["/docs/features/alpha/checkpoint/canon/"]],
+    ["./docs/projects/beta/checkpoint/canon/Villain.md", ["./docs/items/beta/checkpoint/canon/Villain.md"]],
+    ["!docs/projects/alpha/checkpoint/canon/Hero.md", ["!docs/features/alpha/checkpoint/canon/Hero.md"]],
+    ["!!docs/backlog/2026-01-01-a.md", ["!!docs/items/a.md"]],
+    ["docs/projects/alpha/proposal.md", ["docs/features/alpha/feature.md"]],
+    ["docs/projects/alpha/**/*.md", ["docs/features/alpha/**/*.md"]],
+    // A wildcard where the entity would be: one line per entity, wherever it went.
+    ["docs/projects/*/checkpoint/canon/", ["docs/features/alpha/checkpoint/canon/", "docs/items/beta/checkpoint/canon/"]],
+    ["docs/projects/**/canon/*.md", ["docs/features/alpha/**/canon/*.md", "docs/items/beta/**/canon/*.md"]],
+    ["docs/projects/*/proposal.md", ["docs/features/alpha/feature.md"]],
+    // The retired folder itself: each entity under it, the archive's included.
+    ["docs/projects/", ["docs/features/alpha/", "docs/items/beta/", "docs/features/_archive/gamma/"]],
+    ["docs/backlog/*.md", ["docs/items/a.md"]],
+  ] as const)("%s → %p", (pattern, want) => {
+    expect(respellIgnorePattern(pattern, moves, "docs")).toEqual({ lines: [...want] });
+  });
+
+  test.each([
+    ["**/docs/projects/alpha/canon/", "behind a wildcard"],
+    ["docs/projects/zeta/", "nothing the run moved matched it"],
+    // Spelled out, but the run renamed the one file it ignored: the new spelling would miss it.
+    ["docs/projects/alpha/proposal.*", "would no longer ignore 1 moved file(s)"],
+    // gitignore reads braces literally: this ignored nothing, and two lines would ignore two folders.
+    ["docs/projects/{alpha,beta}/checkpoint/", "a brace pattern"],
+    ["\\!docs/projects/alpha/checkpoint/", "an escaped pattern"],
+    ["\\#docs/projects/alpha/checkpoint/", "an escaped pattern"],
+  ])("%s is left as written, and says why", (pattern, why) => {
+    const r = respellIgnorePattern(pattern, moves, "docs");
+    expect(r.lines).toBeNull();
+    expect(r.why).toContain(why);
+  });
+
+  test("`.gitignore` (wide): a wildcard at the entity goes category-wide, so a later entity's files stay ignored; a spelled-out path still follows its move", () => {
+    const wide = (p: string) => respellIgnorePattern(p, moves, "docs", { wide: true });
+    expect(wide("docs/projects/*/scratch/")).toEqual({ lines: ["docs/features/*/scratch/", "docs/items/*/scratch/"] });
+    expect(wide("docs/projects/**/canon/*.md")).toEqual({ lines: ["docs/features/**/canon/*.md", "docs/items/**/canon/*.md"] });
+    expect(wide("docs/projects/_archive/*/tmp/")).toEqual({ lines: ["docs/features/_archive/*/tmp/", "docs/items/_archive/*/tmp/"] });
+    expect(wide("docs/backlog/*.tmp")).toEqual({ lines: ["docs/items/*.tmp"] });
+    expect(wide("docs/projects/alpha/checkpoint/canon/")).toEqual({ lines: ["docs/features/alpha/checkpoint/canon/"] });
+    expect(wide("docs/projects/").lines).toBeNull();
+  });
+
+  test("a file: comments and blank lines byte for byte, a negation after its pattern, CRLF kept, and a second pass changes nothing", () => {
+    const text = "# docs/projects/alpha/checkpoint/canon/ is byte-exact\r\n\r\ndocs/projects/*/checkpoint/canon/*.md\r\n!docs/projects/alpha/checkpoint/canon/Hero.md\r\nnode_modules/\r\n";
+    const r = respellIgnoreText(text, moves, "docs");
+    expect(r.text).toBe(
+      "# docs/projects/alpha/checkpoint/canon/ is byte-exact\r\n\r\ndocs/features/alpha/checkpoint/canon/*.md\r\ndocs/items/beta/checkpoint/canon/*.md\r\n!docs/features/alpha/checkpoint/canon/Hero.md\r\nnode_modules/\r\n"
+    );
+    expect(r.changes).toEqual([
+      "line 3: docs/projects/*/checkpoint/canon/*.md → docs/features/alpha/checkpoint/canon/*.md, docs/items/beta/checkpoint/canon/*.md",
+      "line 4: !docs/projects/alpha/checkpoint/canon/Hero.md → !docs/features/alpha/checkpoint/canon/Hero.md",
+    ]);
+    expect(r.flags).toEqual([]);
+    expect(respellIgnoreText(r.text, moves, "docs")).toEqual({ text: r.text, changes: [], flags: [] });
+  });
+
+  test("add then drop: both spellings in between, each pass idempotent, and the end is what replace writes — a new line taken out during a stop is put back", () => {
+    const text = "# canon\ndocs/projects/*/checkpoint/canon/*.md\n!docs/projects/alpha/checkpoint/canon/Hero.md\n";
+    const added = respellIgnoreText(text, moves, "docs", { mode: "add" });
+    expect(added.text).toBe(
+      "# canon\ndocs/projects/*/checkpoint/canon/*.md\ndocs/features/alpha/checkpoint/canon/*.md\ndocs/items/beta/checkpoint/canon/*.md\n!docs/projects/alpha/checkpoint/canon/Hero.md\n!docs/features/alpha/checkpoint/canon/Hero.md\n"
+    );
+    expect(respellIgnoreText(added.text, moves, "docs", { mode: "add" }).text).toBe(added.text);
+    const dropped = respellIgnoreText(added.text, moves, "docs", { mode: "drop" });
+    expect(dropped.text).toBe(respellIgnoreText(text, moves, "docs").text);
+    expect(respellIgnoreText(dropped.text, moves, "docs", { mode: "drop" })).toEqual({ text: dropped.text, changes: [], flags: [] });
+    // The adopter deleted one added line while the run was stopped: drop restores it where the old one stood.
+    const edited = added.text.replace("docs/items/beta/checkpoint/canon/*.md\n", "");
+    expect(respellIgnoreText(edited, moves, "docs", { mode: "drop" }).text).toBe(dropped.text);
+  });
+
+  test("Biome: each glob string respelled in the file's own text, a negation kept, comments not read as globs", () => {
+    const text = '{\n  // docs/projects/alpha is where canon lived\n  "files": { "includes": ["**", "!docs/projects/*/checkpoint/canon", "!docs/backlog/2026-01-01-a.md"] }\n}\n';
+    const r = respellBiomeText(text, moves, "docs");
+    expect(r.text).toBe(
+      '{\n  // docs/projects/alpha is where canon lived\n  "files": { "includes": ["**", "!docs/features/alpha/checkpoint/canon", "!docs/items/beta/checkpoint/canon", "!docs/items/a.md"] }\n}\n'
+    );
+    expect(r.changes).toHaveLength(2);
+    expect(respellBiomeText(r.text, moves, "docs").changes).toEqual([]);
+    // add then drop lands on the same bytes, the dropped element's comma with it.
+    const added = respellBiomeText(text, moves, "docs", { mode: "add" }).text;
+    expect(added).toContain('"!docs/projects/*/checkpoint/canon", "!docs/features/alpha/checkpoint/canon", "!docs/items/beta/checkpoint/canon"');
+    expect(respellBiomeText(added, moves, "docs", { mode: "drop" }).text).toBe(r.text);
+  });
+
+  test("Biome: a string outside a list is respelled only to one string; one that would become several is named, and the file still parses", () => {
+    const text = '{\n  "vcs": { "root": "docs/projects/" },\n  "files": { "root": "docs/projects/alpha/checkpoint" },\n}\n';
+    const r = respellBiomeText(text, moves, "docs");
+    expect(r.text).toBe('{\n  "vcs": { "root": "docs/projects/" },\n  "files": { "root": "docs/features/alpha/checkpoint" },\n}\n');
+    expect(r.flags).toEqual([expect.stringContaining("not in a list to hold several")]);
+    expect(() => JSON.parse(jsoncToJson(r.text))).not.toThrow();
+  });
+});
+
+/** A byte-exact canon note that Prettier would reformat: `*` bullets and a setext heading. */
+const CANON = "---\nname: Hero\n---\n\nHero\n====\n\n*   brave\n*   tired\n";
+
+/** `root` with `files` written, `lint.exclude` extended by `exclude`, committed. */
+function withIgnored(root: string, files: Record<string, string>, exclude: string[]): string {
+  const cfg = readJson(join(root, ".project-docs.json"));
+  cfg.lint.exclude = [...cfg.lint.exclude, ...exclude];
+  write(root, { ...files, ".project-docs.json": `${JSON.stringify(cfg, null, 2)}\n` });
+  commitAll(root, "ignore files, and what they protect");
+  return root;
+}
+
+/** Prettier's own verdict: whether `.prettierignore` (and `.gitignore`) at `root` ignore `rel`. Never downloads: the repository's binary. */
+function prettierIgnores(root: string, rel: string): boolean {
+  const r = Bun.spawnSync([join(REPO_ROOT, "node_modules/.bin/prettier"), "--file-info", rel], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
+  if (r.exitCode !== 0) throw new Error(`prettier --file-info ${rel} exited ${r.exitCode}: ${r.stderr.toString()}`);
+  return JSON.parse(r.stdout.toString()).ignored === true;
+}
+
+/** Git's own verdict: whether `.gitignore` at `root` ignores `rel`. */
+const gitIgnores = (root: string, rel: string) => Bun.spawnSync(["git", "check-ignore", "-q", rel], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() }).exitCode === 0;
+
+describe("the run respells retired paths in the ignore files, so what was excluded from formatting stays excluded", () => {
+  test("the item's definition of done: a canon file .prettierignore protected before the run is still ignored after it, byte for byte", () => {
+    const root = withIgnored(
+      fixtureO(),
+      {
+        "docs/projects/alpha/checkpoint/canon/Hero.md": CANON,
+        ".prettierignore": "# byte-exact canon, read back by a tool\ndocs/projects/alpha/checkpoint/canon/\n",
+      },
+      ["docs/projects/alpha/checkpoint/**"]
+    );
+    // Before: ignored, and Prettier WOULD change it, so the protection is load-bearing.
+    expect(prettierIgnores(root, "docs/projects/alpha/checkpoint/canon/Hero.md")).toBe(true);
+    const unprotected = prettierCheck(root, ["--ignore-path", "/dev/null", "docs/projects/alpha/checkpoint/canon/Hero.md"]);
+    expect(unprotected.exitCode).not.toBe(0);
+
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(read(root, "docs/features/alpha/checkpoint/canon/Hero.md")).toBe(CANON);
+    expect(prettierIgnores(root, "docs/features/alpha/checkpoint/canon/Hero.md")).toBe(true);
+    expect(read(root, ".prettierignore")).toBe("# byte-exact canon, read back by a tool\ndocs/features/alpha/checkpoint/canon/\n");
+    expect(r.out).toContain("✓ .prettierignore: line 2: docs/features/alpha/checkpoint/canon/ added beside docs/projects/alpha/checkpoint/canon/");
+    expect(r.out).toContain("✓ .prettierignore: line 2: docs/projects/alpha/checkpoint/canon/ dropped — docs/features/alpha/checkpoint/canon/ stands in its place");
+    expect(r.out).toContain("· .prettierignore: 1 pattern(s) naming a moved path respelled");
+  });
+
+  test("a run stopped mid-move leaves the moved canon ignored; the re-run keeps it ignored and drops the old line", () => {
+    const root = withIgnored(
+      fixtureO(),
+      {
+        "docs/projects/alpha/checkpoint/canon/Hero.md": CANON,
+        ".prettierignore": "docs/projects/alpha/checkpoint/canon/\n",
+      },
+      ["docs/projects/alpha/checkpoint/**"]
+    );
+    chmodSync(join(root, "docs/investigations/_archive"), 0o555);
+    const stopped = migrate(root);
+    chmodSync(join(root, "docs/investigations/_archive"), 0o755);
+    expect(stopped.exitCode).toBe(1);
+    // alpha moved before the stop; the canon is protected where it now sits.
+    expect(existsSync(join(root, "docs/features/alpha/checkpoint/canon/Hero.md"))).toBe(true);
+    expect(prettierIgnores(root, "docs/features/alpha/checkpoint/canon/Hero.md")).toBe(true);
+    expect(read(root, ".prettierignore")).toBe("docs/projects/alpha/checkpoint/canon/\ndocs/features/alpha/checkpoint/canon/\n");
+
+    const resumed = migrate(root);
+    if (resumed.exitCode !== 0) console.log(resumed.out);
+    expect(resumed.exitCode).toBe(0);
+    expect(read(root, ".prettierignore")).toBe("docs/features/alpha/checkpoint/canon/\n");
+    expect(prettierIgnores(root, "docs/features/alpha/checkpoint/canon/Hero.md")).toBe(true);
+    expect(read(root, "docs/features/alpha/checkpoint/canon/Hero.md")).toBe(CANON);
+  });
+
+  test("a glob, a negation and a comment line; .eslintignore, .gitignore (category-wide) and biome.jsonc respelled, eslint.config.js named; a re-run changes nothing", () => {
+    const ignore =
+      "# docs/projects/alpha/checkpoint/canon/ — the comment keeps its words\n" +
+      "docs/projects/*/checkpoint/canon/*.md\n" +
+      "!docs/projects/alpha/checkpoint/canon/Loose.md\n";
+    const root = withIgnored(
+      fixtureO(),
+      {
+        "docs/projects/alpha/checkpoint/canon/Hero.md": CANON,
+        "docs/projects/alpha/checkpoint/canon/Loose.md": CANON,
+        "docs/projects/beta/checkpoint/canon/Villain.md": CANON,
+        ".prettierignore": ignore,
+        ".eslintignore": "docs/projects/alpha/checkpoint/\n",
+        ".gitignore": "docs/projects/*/scratch/\n",
+        "biome.jsonc": '{\n  // canon is byte-exact\n  "files": { "includes": ["**", "!docs/projects/*/checkpoint",] }\n}\n',
+        "eslint.config.js": 'export default [{ ignores: ["docs/projects/alpha/checkpoint/**"] }];\n',
+      },
+      ["docs/projects/alpha/checkpoint/**", "docs/projects/beta/checkpoint/**"]
+    );
+    write(root, { "docs/projects/alpha/scratch/notes.txt": "scratch\n" });
+    for (const f of ["alpha/checkpoint/canon/Hero.md", "beta/checkpoint/canon/Villain.md"]) expect(prettierIgnores(root, `docs/projects/${f}`)).toBe(true);
+    expect(prettierIgnores(root, "docs/projects/alpha/checkpoint/canon/Loose.md")).toBe(false);
+    expect(gitIgnores(root, "docs/projects/alpha/scratch/notes.txt")).toBe(true);
+
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(prettierIgnores(root, "docs/features/alpha/checkpoint/canon/Hero.md")).toBe(true);
+    expect(prettierIgnores(root, "docs/items/beta/checkpoint/canon/Villain.md")).toBe(true);
+    expect(prettierIgnores(root, "docs/features/alpha/checkpoint/canon/Loose.md")).toBe(false);
+    expect(read(root, ".prettierignore")).toBe(
+      "# docs/projects/alpha/checkpoint/canon/ — the comment keeps its words\n" +
+        "docs/features/alpha/checkpoint/canon/*.md\n" +
+        "docs/items/beta/checkpoint/canon/*.md\n" +
+        "!docs/features/alpha/checkpoint/canon/Loose.md\n"
+    );
+    expect(read(root, ".eslintignore")).toBe("docs/features/alpha/checkpoint/\n");
+    expect(read(root, ".gitignore")).toBe("docs/features/*/scratch/\ndocs/items/*/scratch/\n");
+    // What git ignored stays ignored — for the entity that moved, and for one filed after the run.
+    expect(gitIgnores(root, "docs/features/alpha/scratch/notes.txt")).toBe(true);
+    write(root, { "docs/items/later/scratch/new.txt": "new\n" });
+    expect(gitIgnores(root, "docs/items/later/scratch/new.txt")).toBe(true);
+    expect(read(root, "biome.jsonc")).toBe('{\n  // canon is byte-exact\n  "files": { "includes": ["**", "!docs/features/alpha/checkpoint", "!docs/items/beta/checkpoint",] }\n}\n');
+    expect(read(root, "eslint.config.js")).toBe('export default [{ ignores: ["docs/projects/alpha/checkpoint/**"] }];\n');
+    expect(r.out).toContain("eslint.config.js: 1 pattern(s) naming a retired path left as written — respell each by hand");
+    expect(r.out).toContain("`docs/projects/alpha/checkpoint/` — now docs/features/alpha/checkpoint/; a config in code is not rewritten, respell it by hand");
+    expect(r.out).toContain("docs/projects/*/scratch/ → docs/features/*/scratch/, docs/items/*/scratch/");
+
+    rmSync(join(root, "docs/items/later"), { recursive: true });
+    commitAll(root, "migrated");
+    const before = treeDigest(root);
+    const again = migrate(root);
+    expect(again.exitCode).toBe(0);
+    expect(treeDigest(root)).toEqual(before);
+  });
+
+  test("--dry-run plans each respelling and each flag, and writes nothing", () => {
+    const root = withIgnored(
+      fixtureO(),
+      {
+        "docs/projects/alpha/checkpoint/canon/Hero.md": CANON,
+        ".prettierignore": "docs/projects/alpha/checkpoint/canon/\n",
+        "eslint.config.js": 'export default [{ ignores: ["docs/projects/alpha/checkpoint/**"] }];\n',
+      },
+      ["docs/projects/alpha/checkpoint/**"]
+    );
+    const before = treeDigest(root);
+    const r = migrate(root, ["--dry-run"]);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("· ignore file: .prettierignore: line 1: docs/projects/alpha/checkpoint/canon/ → docs/features/alpha/checkpoint/canon/");
+    expect(r.out).toContain("· ignore file — for you: eslint.config.js: line 1:");
+    expect(r.out).toContain("For you to check");
+    expect(treeDigest(root)).toEqual(before);
+  });
+});
+
+describe("a document in lint.exclude moves with its folder, and nothing in it is rewritten", () => {
+  test("a canon file with no frontmatter and links in it, excluded, is byte-identical after the run — and the run says so", () => {
+    const bare = "Bare\n====\n\nSee [the proposal](../../proposal.md) and [the backlog](../../../../backlog/2026-01-01-open-item.md).\n";
+    const root = withIgnored(fixtureO(), { "docs/projects/alpha/checkpoint/canon/Bare.md": bare }, ["docs/projects/alpha/checkpoint/**"]);
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(read(root, "docs/features/alpha/checkpoint/canon/Bare.md")).toBe(bare);
+    expect(r.out).toContain("document(s) in lint.exclude were moved with their folder but not edited");
+    expect(r.out).toContain("docs/features/alpha/checkpoint/canon/Bare.md");
   });
 });
 
