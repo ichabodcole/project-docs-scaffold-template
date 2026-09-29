@@ -17,11 +17,11 @@ scope: migrations
 
 A migration decides whether an adopter edited an owned file (`SCHEMA.md`,
 `AGENTS.md`, the category READMEs) by comparing it to every release it knows
-about. `migrate-v2.10-to-v3.0.ts` holds that list as `OWNED_BEFORE_9`, which a
-test derives from the release tags. The list has to grow each time the migration
-is re-pinned. And a file from a release it doesn't know is reported as edited,
-which is
-[how #182's false alarm happened](./migration-recognises-9x-releases.md).
+about. `migrate-v2.10-to-v3.0.ts` holds that list as `OWNED_RELEASES`, which a
+test derives from the release tags up to the pinned one. The list has to grow
+each time the migration is re-pinned. And a file from a release it doesn't know
+is reported as edited, which is
+[how #182's false alarm happened](./migration-recognises-9x-releases/item.md).
 
 Templates don't have this problem: the scaffold writes `docs/.pdocs-seed.json`
 with a hash of each seeded file it installed, and a migration compares against

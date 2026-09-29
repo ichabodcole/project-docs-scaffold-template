@@ -40,7 +40,7 @@ those ship first.
   — story-loom's byte-exact canon files stay protected.
 - Added at triage, 2026-09-28, from issues #182 and #154, because each touches
   the migration or the release this cycle cuts:
-  [the v3.0 migration knows the 9.x releases](../items/migration-recognises-9x-releases.md),
+  [the v3.0 migration knows the 9.x releases](../items/migration-recognises-9x-releases/item.md),
   [the skill names the upgrade case it is in](../items/document-patch-refresh-of-a-v3-tree.md),
   [adoption prompts a root CLI pointer](../items/prompt-root-agent-file-cli-pointer.md)
   and
@@ -71,3 +71,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - fix/migration-retypes-positional-artifacts (landed 2026-09-28)
 - fix/phase-10-root-relative-and-archived-links (landed 2026-09-28)
 - fix/migration-polish-round (landed 2026-09-28)
+- fix/migration-recognises-9x-releases (landed 2026-09-28)

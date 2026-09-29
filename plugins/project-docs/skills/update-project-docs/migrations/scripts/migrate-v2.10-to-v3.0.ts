@@ -173,6 +173,8 @@ export const FOLDER_SUCCESSOR: Record<string, string> = {
 const OWNED_ROOT = ["SCHEMA.md", "README.md", "AGENTS.md", "CLAUDE.md"];
 /** The 9.0.0 category folders whose README.md the refresh replaces (owned). */
 const OWNED_CATEGORIES = ["architecture", "specifications", "interaction-design", "playbooks", "cycles", "features", "items"];
+/** Every owned file the refresh replaces or removes, docs-relative: the rows of `OWNED_RELEASES`. */
+export const OWNED_PATHS = [...OWNED_ROOT, ...OWNED_CATEGORIES.map((c) => `${c}/README.md`), ...Object.keys(RETIRED_READMES)];
 /**
  * A Markdown text reduced to what a formatter cannot change: the `docs_version`
  * value, emphasis and escape marks, table padding and all wrapping are dropped,
@@ -190,23 +192,29 @@ export function proseKey(text: string): string {
 }
 
 /**
- * Every owned Markdown file the refresh replaces or removes, as each release
- * before 9.0.0 shipped it, by `proseKey`. A file whose key is in none of its
- * releases holds edits of the adopter's — Spellbook kept its multi-sprint
- * convention in its owned `projects/README.md` — and the run names it with the
- * command that recovers it. Derived from the release tags, and pinned to them
- * by the test beside this file.
+ * Every owned Markdown file the refresh replaces or removes (`OWNED_PATHS`), as
+ * each scaffold release up to and including the pinned one (`SCAFFOLD_TAG`)
+ * shipped it, by `proseKey`. A file whose key is in none of its releases, and
+ * is not the fetched scaffold's, holds edits of the adopter's — Spellbook kept
+ * its multi-sprint convention in its owned `projects/README.md` — and the run
+ * names it with the command that recovers it. A tree an earlier run of this
+ * migration put on 9.0.0 holds 9.0.0's copies: they are releases too.
+ *
+ * Derived from the release tags and pinned to them by the test beside this
+ * file: re-pinning `SCAFFOLD_TAG` fails that test until this is regenerated.
  */
-export const OWNED_BEFORE_9: Record<string, string[]> = {
-  "SCHEMA.md": ["901d5b55b7d48422", "bcf64b0b7e5f20ea", "ed4c7ff0666db6f1"],
-  "README.md": ["1be5adeeeb3eda24", "2dfa4eca342cb5c5", "3fd655241d87344f", "7b9204982f2451be", "8b94b8d4f8c3e2de", "fe573ebb6c6ea6b7", "feac07aacbdf0615"],
-  "AGENTS.md": ["28870996acb9be93", "3510f2c1d02a4463", "4e85093fe9f42c12", "dbf3ee4501c58069", "fc5ac2d9fdf95b05"],
+export const OWNED_RELEASES: Record<string, string[]> = {
+  "SCHEMA.md": ["6a7f72fdb958b0b7", "6f56fbcf5ec845de", "901d5b55b7d48422", "bcf64b0b7e5f20ea", "ed4c7ff0666db6f1"],
+  "README.md": ["1be5adeeeb3eda24", "2dfa4eca342cb5c5", "3fd655241d87344f", "7b9204982f2451be", "8b94b8d4f8c3e2de", "f2bf59dce2c8c345", "fe573ebb6c6ea6b7", "feac07aacbdf0615"],
+  "AGENTS.md": ["28870996acb9be93", "3510f2c1d02a4463", "4e85093fe9f42c12", "833f44053c166134", "dbf3ee4501c58069", "fc5ac2d9fdf95b05"],
   "CLAUDE.md": ["2292934d5083c5d4"],
-  "architecture/README.md": ["d84ef4267ad8ac4f"],
-  "specifications/README.md": ["06db0a77fae2f7b8"],
-  "interaction-design/README.md": ["4efdc4a3ca453eb7"],
-  "playbooks/README.md": ["21d3c4d5ed2e0f53", "e89e2ebd733d3e25"],
-  "cycles/README.md": ["c3c1cbf60ce2e388"],
+  "architecture/README.md": ["570a3828bbc218f8", "d84ef4267ad8ac4f"],
+  "specifications/README.md": ["06db0a77fae2f7b8", "b2ffc15d87181a74"],
+  "interaction-design/README.md": ["46040d4e8fc8d55b", "4efdc4a3ca453eb7"],
+  "playbooks/README.md": ["21d3c4d5ed2e0f53", "60a25bd0073e27a9", "e89e2ebd733d3e25"],
+  "cycles/README.md": ["7a4c39296dc16c50", "c3c1cbf60ce2e388"],
+  "features/README.md": ["a1f78ad4d0d8a864", "b6fe554241e35cac"],
+  "items/README.md": ["1c636f9c85bc3a2f"],
   "backlog/README.md": ["90ca6ce56a72d3df", "aca2f560332d6c77"],
   "briefs/README.md": ["20bc4cbaf98abaf7"],
   "fragments/README.md": ["47be902ce910b87d"],
@@ -2748,13 +2756,14 @@ function recoverCommand(ctx: Ctx, docsRel: string): string | null {
 
 /**
  * The owned files the refresh will replace or remove that hold edits of the
- * adopter's: present, their text in no release before 9.0.0 (`OWNED_BEFORE_9`),
- * and — for one the refresh replaces — not already the scaffold's.
+ * adopter's: present, their text in no scaffold release up to the pinned one
+ * (`OWNED_RELEASES`), and — for one the refresh replaces — not already the
+ * fetched scaffold's.
  */
 function editedOwned(ctx: Ctx): Array<{ rel: string; removed: boolean }> {
   const sDocs = join(ctx.scaffoldDir, "docs");
   const out: Array<{ rel: string; removed: boolean }> = [];
-  for (const [rel, keys] of Object.entries(OWNED_BEFORE_9)) {
+  for (const [rel, keys] of Object.entries(OWNED_RELEASES)) {
     const abs = join(ctx.docsRoot, rel);
     if (!existsSync(abs) || !statSync(abs).isFile()) continue;
     const key = proseKey(readFileSync(abs, "utf8"));

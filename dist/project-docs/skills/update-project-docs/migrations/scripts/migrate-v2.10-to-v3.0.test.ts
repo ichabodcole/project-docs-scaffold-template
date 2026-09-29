@@ -38,7 +38,8 @@ import {
   GIT_LOCAL_ENV,
   KEPT_LIBRARY,
   MARKDOWN_LINK_RE,
-  OWNED_BEFORE_9,
+  OWNED_RELEASES,
+  OWNED_PATHS,
   addToScope,
   backlogLifecycle,
   bornItemLifecycle,
@@ -1694,13 +1695,23 @@ describe("--respell lists the retired paths in the files named, and writes only 
 // ─── An owned file the refresh replaces or removes, edited by the adopter ────
 
 describe("owned files the refresh replaces or removes: an edit of the adopter's is named, with its recovery", () => {
-  test("OWNED_BEFORE_9 is every release before 9.0.0's owned Markdown, by proseKey — derived from the release tags", () => {
+  test("OWNED_RELEASES is every owned file as every release up to SCAFFOLD_TAG shipped it, by proseKey — derived from the release tags", () => {
+    const semver = (v: string) => v.split(".").map(Number);
+    const upTo = (v: string, pin: string) => {
+      const [a, b] = [semver(v), semver(pin)];
+      for (let i = 0; i < 3; i++) if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) < (b[i] ?? 0);
+      return true;
+    };
     const tags = sh(["git", "-C", REPO_ROOT, "tag", "--list", "project-docs-scaffold-template-v*"])
       .split("\n")
-      .filter((t) => t && Number(t.split("-v")[1]?.split(".")[0]) < 9);
+      .filter((t) => t && upTo(t.slice(t.lastIndexOf("-v") + 2), SCAFFOLD_RELEASE));
+    // Semver, not string order: 9.0.1 is in, and so is 8.10.x should it exist; the pin itself is in.
     expect(tags).toContain(V210_TAG);
+    expect(tags).toContain(SCAFFOLD_TAG);
+    // Every owned path the refresh replaces or removes has a row.
+    expect(Object.keys(OWNED_RELEASES).sort()).toEqual([...OWNED_PATHS].sort());
     // One `git cat-file --batch` over every tag:path pair, rather than a process per pair.
-    const pairs = Object.keys(OWNED_BEFORE_9).flatMap((rel) => tags.map((tag) => [rel, `${tag}:{{cookiecutter.project_slug}}/docs/${rel}`] as const));
+    const pairs = OWNED_PATHS.flatMap((rel) => tags.map((tag) => [rel, `${tag}:{{cookiecutter.project_slug}}/docs/${rel}`] as const));
     const r = Bun.spawnSync(["git", "-C", REPO_ROOT, "cat-file", "--batch"], {
       stdin: Buffer.from(pairs.map(([, spec]) => `${spec}\n`).join("")),
       stdout: "pipe",
@@ -1708,7 +1719,7 @@ describe("owned files the refresh replaces or removes: an edit of the adopter's 
       env: childEnv(),
     });
     const out = Buffer.from(r.stdout);
-    const derived: Record<string, Set<string>> = Object.fromEntries(Object.keys(OWNED_BEFORE_9).map((rel) => [rel, new Set<string>()]));
+    const derived: Record<string, Set<string>> = Object.fromEntries(OWNED_PATHS.map((rel) => [rel, new Set<string>()]));
     let at = 0;
     for (const [rel] of pairs) {
       const eol = out.indexOf(10, at);
@@ -1719,8 +1730,36 @@ describe("owned files the refresh replaces or removes: an edit of the adopter's 
       derived[rel]?.add(proseKey(out.subarray(at, at + size).toString()));
       at += size + 1;
     }
-    expect(OWNED_BEFORE_9).toEqual(Object.fromEntries(Object.entries(derived).map(([rel, keys]) => [rel, [...keys].sort()])));
+    expect(OWNED_RELEASES).toEqual(Object.fromEntries(Object.entries(derived).map(([rel, keys]) => [rel, [...keys].sort()])));
   }, 30_000);
+
+  test("a tree an earlier run put on 9.0.0: its 9.0.0 owned files, reformatted or not, are not named as edits and are replaced quietly; a genuinely edited one still is", () => {
+    const at900 = (rel: string) => sh(["git", "-C", REPO_ROOT, "show", `project-docs-scaffold-template-v9.0.0:{{cookiecutter.project_slug}}/docs/${rel}`]);
+    const root = fixtureO();
+    expect(migrate(root).exitCode).toBe(0);
+    // Owned files as 9.0.0 shipped them: SCHEMA.md, README.md and features/README.md changed in 9.0.1.
+    const readme = at900("README.md").replace(/^docs_version:.*$/m, /^docs_version:.*$/m.exec(read(root, "docs/README.md"))?.[0] ?? "");
+    // SCHEMA.md as a formatter left it: every wrapped line joined, emphasis marks swapped.
+    const schema = at900("SCHEMA.md").replace(/([a-z,])\n([a-z])/g, "$1 $2").replace(/\*\*/g, "__");
+    expect(schema).not.toBe(at900("SCHEMA.md"));
+    write(root, { "docs/SCHEMA.md": schema, "docs/README.md": readme, "docs/features/README.md": at900("features/README.md") });
+    // A genuine edit, in a file that exists only from 9.0.0 on.
+    write(root, { "docs/items/README.md": `${read(root, "docs/items/README.md")}\n## Our triage rota\n\nWho triages which week.\n` });
+    commitAll(root, "on 9.0.0's owned files, with one edited");
+    const dry = migrate(root, ["--dry-run"]);
+    expect(dry.exitCode).toBe(0);
+    for (const rel of ["SCHEMA.md", "README.md", "features/README.md"]) expect(dry.out).not.toContain(`docs/${rel} differs from every release`);
+    expect(dry.out).toContain("docs/items/README.md differs from every release of the scaffold, so it holds edits of yours");
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    for (const rel of ["SCHEMA.md", "features/README.md"]) {
+      expect(r.out).toContain(`✓ docs/${rel} replaced (owned)`);
+      expect(read(root, `docs/${rel}`)).toBe(read(target(), `docs/${rel}`));
+    }
+    expect(r.out).not.toMatch(/yours: docs\/(SCHEMA|README|features\/README)\.md/);
+    expect(r.out).toContain("yours: docs/items/README.md differs from every release");
+  });
 
   test("proseKey ignores what a formatter changes — wrapping, table padding, emphasis marks — and the docs_version value", () => {
     const shipped = read(generatedScaffolds().old, "docs/projects/README.md");
