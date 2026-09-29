@@ -1013,7 +1013,7 @@ function verify(ctx: Ctx): void {
     newer =
       `Against the baseline the older lint reported (${b.total}): ${fresh} new to the refreshed lint, ${gone} no longer reported, ${same} unchanged.` +
       (b.total === 0
-        ? " Story-loom's real page named `templates.md`, skipped as a template by the old rule, is the case this exists for."
+        ? " A page the old rule skipped as a template (one named `templates.md`, say) is the case this exists for."
         : fresh === 0
           ? " Nothing here is new to the refreshed lint; the tree was not clean before this run."
           : "");

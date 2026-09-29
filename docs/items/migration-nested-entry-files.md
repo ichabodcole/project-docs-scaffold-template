@@ -6,12 +6,13 @@ description:
   and one with a retired type is retyped to the entity type, contrary to the
   guide's wording.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0eacd-1a69-740d-8844-d8d3db1f2deb
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md
+priority: low
 ---
 
 # A nested feature.md or item.md is neither fixed nor named in advance

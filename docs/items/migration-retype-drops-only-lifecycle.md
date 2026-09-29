@@ -6,12 +6,13 @@ description:
   non-artifact type, it removes lifecycle but keeps other keys that type does
   not allow.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0eacd-1ab8-744f-9bcb-1e8eb0cbc062
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md
+priority: low
 ---
 
 # Retyping to a type other than artifact drops only lifecycle

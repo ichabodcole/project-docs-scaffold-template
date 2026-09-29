@@ -815,7 +815,7 @@ describe("the whole migration on fixture O", () => {
     expect(r.exitCode).toBe(1);
     expect(r.out).toContain("✓ scripts/pdocs/ refreshed");
     expect(r.out).toContain("✓ docs/.pdocs-seed.json written");
-    expect(r.out).toContain("STOPPED: `pdocs check` exits 9 on the refreshed tree: 3 problem(s). Against the baseline the older lint reported (0): 3 new to the refreshed lint, 0 no longer reported, 0 unchanged. Story-loom's real page");
+    expect(r.out).toContain("STOPPED: `pdocs check` exits 9 on the refreshed tree: 3 problem(s). Against the baseline the older lint reported (0): 3 new to the refreshed lint, 0 no longer reported, 0 unchanged. A page the old rule skipped as a template (one named `templates.md`, say) is the case this exists for.");
     expect(r.out).toContain("The refresh STAYS");
     expect(r.out).toContain("markers were NOT moved: this tree is not at v2.10 until the check passes");
     expect(r.out).toContain("`bun scripts/pdocs/cli.ts report --format text`");

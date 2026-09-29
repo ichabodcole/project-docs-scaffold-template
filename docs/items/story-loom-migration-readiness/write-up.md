@@ -154,7 +154,9 @@ skip pre-run step 2, and in post-run step 4 skip dropping the old line (the run
 drops it) but still format and check the canon is unchanged. Post-run step 1's
 retype is done by the run too
 ([session](../migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md)):
-skip it.
+skip it. Pre-run step 9 shrinks: phase 10 now suggests 201 of the 235 archive
+breaks (was 93), so fix links after the run from its suggestions
+([session](../phase-10-root-relative-and-archived-links/sessions/2026-09-28-root-and-archived-link-readings.md)).
 
 **Pre-run (story-loom, committed before the run):**
 

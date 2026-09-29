@@ -87,6 +87,8 @@ import {
   splitFrontmatter,
   stripCode,
   suggestLinkFix,
+  suggestLinkFixes,
+  archivedReading,
   synthesizeFrontmatter,
   uuidv7,
   verdictFor,
@@ -496,6 +498,89 @@ describe("suggestLinkFix — a broken link resolved through the run's moves", ()
     expect(suggestLinkFix(file, "../../nowhere.md", moves, exists)).toBeNull();
     expect(suggestLinkFix(file, "https://example.com/a.md", moves, exists)).toBeNull();
     expect(suggestLinkFix(file, "/abs/a.md", moves, exists)).toBeNull();
+  });
+});
+
+describe("suggestLinkFixes — from the root, and archived since; ambiguity suggests nothing", () => {
+  const R = "/r";
+  const D = `${R}/docs`;
+  const moves = new Map([
+    [`${D}/projects/alpha`, `${D}/features/alpha`],
+    [`${D}/projects/alpha/proposal.md`, `${D}/features/alpha/feature.md`],
+    [`${D}/projects/_archive/beta`, `${D}/features/_archive/beta`],
+    [`${D}/projects/_archive/beta/proposal.md`, `${D}/features/_archive/beta/feature.md`],
+    [`${D}/projects/_archive/gamma`, `${D}/features/_archive/gamma`],
+    [`${D}/backlog/_archive/2026-01-02-y.md`, `${D}/items/_archive/y.md`],
+    [`${D}/backlog/2026-01-03-z.md`, `${D}/items/z.md`],
+    [`${D}/backlog/_archive/2026-01-03-z.md`, `${D}/items/_archive/z.md`],
+  ]);
+  const on = new Set([
+    `${D}/features/alpha/feature.md`, `${D}/features/_archive/beta/feature.md`, `${D}/items/_archive/y.md`,
+    `${D}/items/z.md`, `${D}/items/_archive/z.md`, `${D}/architecture/README.md`,
+  ]);
+  const exists = (abs: string) => on.has(abs);
+  const fromRoot = { root: R, docsRootName: "docs" };
+  const file = `${D}/features/_archive/gamma/artifacts/links.md`;
+  const s = (target: string) => suggestLinkFixes(file, target, moves, exists, fromRoot);
+  /** Where a suggestion lands, followed from the file's new place. */
+  const lands = (fix: string) => resolve(dirname(file), fix.replace(/#.*$/, ""));
+
+  test("archivedReading inserts _archive/ after the retired category folder, and only there", () => {
+    expect(archivedReading(`${D}/backlog/x.md`, D)).toBe(`${D}/backlog/_archive/x.md`);
+    expect(archivedReading(`${D}/projects/beta/plan.md`, D)).toBe(`${D}/projects/_archive/beta/plan.md`);
+    expect(archivedReading(`${D}/backlog/_archive/x.md`, D)).toBeNull();
+    expect(archivedReading(`${D}/architecture/x.md`, D)).toBeNull();
+    expect(archivedReading(`${R}/elsewhere/backlog/x.md`, D)).toBeNull();
+  });
+
+  test("from the root: a link that starts with the docs root's name, read through the move record, anchor kept", () => {
+    const r = s("docs/projects/alpha/proposal.md#goals");
+    expect(r).toEqual({ fix: "../../../alpha/feature.md#goals", reading: "from the root" });
+    expect(lands((r as { fix: string }).fix)).toBe(`${D}/features/alpha/feature.md`);
+    expect(s("docs/architecture/README.md")).toEqual({ fix: "../../../../architecture/README.md", reading: "from the root" });
+  });
+
+  test("from the root, archived since: found only with _archive/ inserted", () => {
+    const r = s("docs/projects/beta/proposal.md");
+    expect(r).toEqual({ fix: "../../beta/feature.md", reading: "from the root, archived since" });
+    expect(lands((r as { fix: string }).fix)).toBe(`${D}/features/_archive/beta/feature.md`);
+  });
+
+  test("one level short, archived since: a hand-archived document's link to a target archived after it", () => {
+    // Written at projects/gamma/artifacts/ as ../../../backlog/…; archiving gamma by hand made it
+    // resolve to docs/projects/backlog/…, and the move kept that.
+    const r = s("../../../../projects/backlog/2026-01-02-y.md");
+    expect(r).toEqual({ fix: "../../../../items/_archive/y.md", reading: "one level short, archived since" });
+    expect(lands((r as { fix: string }).fix)).toBe(`${D}/items/_archive/y.md`);
+  });
+
+  test("two readings on different documents: nothing is suggested, and both are named", () => {
+    expect(s("../../../../projects/backlog/2026-01-03-z.md")).toEqual({
+      ambiguous: [
+        { fix: "../../../../items/z.md", reading: "one level short" },
+        { fix: "../../../../items/_archive/z.md", reading: "one level short, archived since" },
+      ],
+    });
+    expect(suggestLinkFix(file, "../../../../projects/backlog/2026-01-03-z.md", moves, exists, fromRoot)).toBeNull();
+  });
+
+  test("a candidate outside the project root is never suggested, however it was reached", () => {
+    const root = "/r";
+    const SD = `${root}/site/docs`;
+    const m = new Map([[`${SD}/projects/_archive/gamma`, `${SD}/features/_archive/gamma`]]);
+    const escaping = `${SD}/features/_archive/gamma/links.md`;
+    // One level short climbs from site/docs/projects/_archive past /r and lands on /outside.md.
+    const anywhere = () => true;
+    expect(suggestLinkFixes(escaping, "../../../../../outside.md", m, anywhere, { root, docsRootName: "site/docs" })).toBeNull();
+    // Inside the project, the same reading still suggests.
+    expect(suggestLinkFixes(escaping, "../../../../README.md", m, (abs) => abs === `${root}/README.md`, { root, docsRootName: "site/docs" })).toEqual({ fix: "../../../../../README.md", reading: "one level short" });
+  });
+
+  test("dangling, or not starting with the docs root's name: nothing", () => {
+    expect(s("docs/projects/zeta/proposal.md")).toBeNull();
+    expect(s("projects/alpha/proposal.md")).toBeNull();
+    // Without the root to read from, no root reading is tried.
+    expect(suggestLinkFixes(file, "docs/projects/alpha/proposal.md", moves, exists)).toBeNull();
   });
 });
 
@@ -1337,8 +1422,8 @@ describe("phase 10 suggests the correction for a MISSING FILE the move record ac
     expect(first.exitCode).toBe(1);
     expect(first.out).toContain("MISSING FILE");
     const moved = "docs/features/_archive/gamma/sessions/2025-12-04-short.md";
-    const alpha = new RegExp(`${moved}: (\\S+) → \\.\\./\\.\\./\\.\\./alpha/feature\\.md#alpha$`, "m").exec(first.out);
-    const arch = new RegExp(`${moved}: (\\S+) → \\.\\./\\.\\./\\.\\./\\.\\./architecture/README\\.md$`, "m").exec(first.out);
+    const alpha = new RegExp(`${moved}: (\\S+) → \\.\\./\\.\\./\\.\\./alpha/feature\\.md#alpha  \\(one level short\\)` + "$", "m").exec(first.out);
+    const arch = new RegExp(`${moved}: (\\S+) → \\.\\./\\.\\./\\.\\./\\.\\./architecture/README\\.md  \\(one level short\\)` + "$", "m").exec(first.out);
     expect(first.out).toContain("Suggested corrections for 2 MISSING FILE link(s)");
     expect(alpha).not.toBeNull();
     expect(arch).not.toBeNull();
@@ -1352,6 +1437,67 @@ describe("phase 10 suggests the correction for a MISSING FILE the move record ac
     const third = migrate(root);
     if (third.exitCode !== 0) console.log(third.out);
     expect(third.exitCode).toBe(0);
+  });
+});
+
+describe("phase 10 also reads a broken link from the root, and with _archive/ inserted", () => {
+  test("each reading suggested only when it lands on a file, the suggestion followed from the new place lands there; ambiguous and dangling ones get none", () => {
+    // Written in projects/gamma/artifacts/ before gamma was archived by hand.
+    const links = "docs/projects/_archive/gamma/artifacts/links.md";
+    const root = fixtureO({
+      [links]:
+        "# Links\n\n" +
+        "- [alpha](docs/projects/alpha/proposal.md#alpha)\n" + // (a) from the root
+        "- [gamma plan](docs/projects/gamma/plan.md)\n" + // (b) from the root, archived since
+        "- [archived item](../../../backlog/2026-01-05-archived-item.md)\n" + // (c) one level short, archived since
+        "- [twin](../../../reports/2026-01-21-twin-report.md)\n" + // (d) ambiguous: a live and an archived report share a name
+        "- [zeta](docs/projects/zeta/proposal.md)\n", // (e) dangling
+      "docs/investigations/2026-01-20-first-investigation.md": doc(common("investigation", "First", "The first question.", { lifecycle: "active" }), "# First\n\n[Report](../reports/2026-01-21-twin-report.md)\n"),
+      "docs/investigations/_archive/2026-01-22-second.md": doc(common("investigation", "Second", "The second question.", { lifecycle: "concluded" }), "# Second\n\n[Report](../../reports/_archive/2026-01-21-twin-report.md)\n"),
+      "docs/reports/2026-01-21-twin-report.md": doc(common("report", "Twin", "The live twin."), "# Twin\n"),
+      "docs/reports/_archive/2026-01-21-twin-report.md": doc(common("report", "Twin", "The archived twin."), "# Twin\n"),
+    });
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    const moved = "docs/features/_archive/gamma/artifacts/links.md";
+    const line = (reading: string) => new RegExp(`^\\s*${moved}: \\S+ → (\\S+)  \\(${reading}\\)` + "$", "m").exec(r.out)?.[1];
+    const follow = (fix: string | undefined) => join(root, dirname(moved), (fix ?? "").replace(/#.*$/, ""));
+    const a = line("from the root");
+    expect(a).toBe("../../../alpha/feature.md#alpha");
+    expect(existsSync(follow(a))).toBe(true);
+    const b = line("from the root, archived since");
+    expect(existsSync(follow(b))).toBe(true);
+    expect(follow(b)).toBe(join(root, "docs/features/_archive/gamma/plan.md"));
+    const c = line("one level short, archived since");
+    expect(existsSync(follow(c))).toBe(true);
+    expect(follow(c)).toBe(join(root, "docs/items/_archive/archived-item.md"));
+    expect(r.out).toMatch(new RegExp(`Ambiguous[\\s\\S]*${moved}: \\S*twin-report\\.md — \\S+ \\(one level short\\) or \\S+ \\(one level short, archived since\\)`));
+    expect(r.out).not.toMatch(new RegExp(`${moved}: \\S*twin-report\\.md →`));
+    expect(r.out).toContain(`${moved}: docs/projects/zeta/proposal.md`);
+    expect(r.out).not.toMatch(/zeta\/proposal\.md →/);
+  });
+});
+
+describe("phase 10 reads from the root under a docs root of another name", () => {
+  test("docsRoot `documentation`: a link starting with it is read from the project root, and the suggestion lands", () => {
+    const root = fixtureO({
+      "docs/projects/_archive/gamma/artifacts/links.md": "# Links\n\n- [alpha](documentation/projects/alpha/proposal.md#alpha)\n",
+    });
+    git(root, "mv", "docs", "documentation");
+    const cfg = readJson(join(root, ".project-docs.json"));
+    cfg.docsRoot = "documentation";
+    cfg.lint.exclude = cfg.lint.exclude.map((g: string) => g.replace(/^docs\//, "documentation/"));
+    write(root, {
+      ".project-docs.json": `${JSON.stringify(cfg, null, 2)}\n`,
+      "README.md": read(root, "README.md").replaceAll("](docs/", "](documentation/"),
+    });
+    commitAll(root, "the docs root is documentation/");
+    const r = migrate(root);
+    expect(r.exitCode).toBe(1);
+    const moved = "documentation/features/_archive/gamma/artifacts/links.md";
+    const fix = new RegExp(`^\\s*${moved}: documentation/projects/alpha/proposal\\.md#alpha → (\\S+)  \\(from the root\\)` + "$", "m").exec(r.out)?.[1];
+    expect(fix).toBe("../../../alpha/feature.md#alpha");
+    expect(existsSync(join(root, dirname(moved), (fix as string).replace(/#.*$/, "")))).toBe(true);
   });
 });
 

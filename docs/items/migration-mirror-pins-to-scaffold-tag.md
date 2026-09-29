@@ -7,12 +7,13 @@ description:
   installs, so a future lint change would invite fixing the mirror to a lint the
   migration never uses.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0eacd-1a1d-70c7-83e6-a5e845d75022
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: migrations
 from: items/migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md
+priority: low
 ---
 
 # Pin the migration's lint mirror to the scaffold it installs

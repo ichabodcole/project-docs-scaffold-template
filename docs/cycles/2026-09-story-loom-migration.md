@@ -30,7 +30,7 @@ those ship first.
 
 - [Prettier-shaped frontmatter](../items/migration-frontmatter-prettier-shape/item.md)
   — a migrated tree passes a `prettier --check` hook.
-- [Root-relative and since-archived link suggestions](../items/phase-10-root-relative-and-archived-links.md)
+- [Root-relative and since-archived link suggestions](../items/phase-10-root-relative-and-archived-links/item.md)
   — phase 10 suggests fixes for most of story-loom's 235 old archive breaks.
 - [Retype positional artifacts](../items/migration-retypes-positional-artifacts/item.md)
   — nested workstream plans and sessions come out as `artifact`.
@@ -69,3 +69,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - fix/migration-frontmatter-prettier-shape (landed 2026-09-28)
 - fix/migration-respells-formatter-ignores (landed 2026-09-28)
 - fix/migration-retypes-positional-artifacts (landed 2026-09-28)
+- fix/phase-10-root-relative-and-archived-links (landed 2026-09-28)

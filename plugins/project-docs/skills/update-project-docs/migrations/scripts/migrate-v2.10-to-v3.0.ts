@@ -944,27 +944,65 @@ export function movedFrom(abs: string, moveMap: ReadonlyMap<string, string>): st
   return best === null ? abs : best[0] + abs.slice(best[1].length);
 }
 
+/** The project a link is read in: its root (where `.project-docs.json` is) and the docs root's name under it. */
+export interface RootReading {
+  /** The project root, absolute. No candidate outside it is suggested. */
+  root: string;
+  /** The docs root, relative to `root` (`docs`). */
+  docsRootName: string;
+}
+
+/** What phase 10 can say about one broken link. */
+export type LinkSuggestion =
+  | { fix: string; reading: string }
+  | { ambiguous: Array<{ fix: string; reading: string }> }
+  | null;
+
+/**
+ * `abs`, an old-layout path, with `_archive/` inserted after the retired
+ * category folder it sits in (`docs/backlog/x.md` → `docs/backlog/_archive/x.md`):
+ * where a document archived AFTER the link to it was written now sits. Null when
+ * it is not in a retired category folder, or is already in its `_archive/`.
+ */
+export function archivedReading(abs: string, docsRoot: string): string | null {
+  if (!abs.startsWith(docsRoot + sep)) return null;
+  const segs = abs.slice(docsRoot.length + 1).split(sep);
+  if (segs.length < 2 || !LEGACY_FOLDERS.includes(segs[0] as string) || segs[1] === "_archive") return null;
+  return join(docsRoot, segs[0] as string, "_archive", ...segs.slice(1));
+}
+
 /**
  * The link `target`, broken in the file at `fileAbs`, respelled to a document
- * this run's moves account for — or null. Two readings, in order:
+ * this run's moves account for. Every candidate is an OLD-layout path read
+ * through the move record (`movedTo`), and counts only if the file is there.
  *
- *   1. the target itself moved (a link the rewrite could not see);
- *   2. the link was written ONE FOLDER LEVEL SHORT where the file stood before
- *      the run: resolved from the folder above, it names a document that moved
- *      or exists. A legacy `_archive/` was moved into by hand without its links
- *      being respelled, so every relative link in it lost a level — 62 of
- *      Spellbook's 82 phase-10 problems.
+ *   1. moved — the target itself moved (a link the rewrite could not see).
+ *      Exact, not a reading: when it lands, it is the answer.
+ *   Otherwise, the READINGS, in this order:
+ *   2. one level short — written where the file stood before the run, resolved
+ *      from the folder above: a legacy `_archive/` was moved into by hand without
+ *      its links being respelled, so every relative link in it lost a level;
+ *   3. from the root — a link that starts with the docs root's name
+ *      (`docs/projects/x/proposal.md`) written from the PROJECT root (where
+ *      `.project-docs.json` is — in a monorepo, the package, not the repository);
+ *   4–6. archived since — readings 2, 3 and the link as it resolves now, with
+ *      `_archive/` inserted after the retired category folder: the target was
+ *      archived after the link was written.
  *
- * A suggestion, never a rewrite: the second reading is a reading, and a link
- * broken for another reason can land on a real file by chance. PURE over
- * `exists`.
+ * Readings that land on the same file agree, and the first names it. Readings
+ * that land on DIFFERENT files are ambiguous: nothing is suggested, and the
+ * caller names the candidates — a wrong suggestion is worse than none. With
+ * `fromRoot`, a candidate outside the project root is never suggested. A
+ * suggestion, never a rewrite, relative from the file's new place, its anchor
+ * kept. PURE over `exists`.
  */
-export function suggestLinkFix(
+export function suggestLinkFixes(
   fileAbs: string,
   target: string,
   moveMap: ReadonlyMap<string, string>,
-  exists: (abs: string) => boolean
-): string | null {
+  exists: (abs: string) => boolean,
+  fromRoot?: RootReading
+): LinkSuggestion {
   if (/^[a-z][a-z0-9+.-]*:/i.test(target)) return null;
   const hash = target.indexOf("#");
   const pathPart = hash === -1 ? target : target.slice(0, hash);
@@ -972,17 +1010,57 @@ export function suggestLinkFix(
   if (pathPart === "" || isAbsolute(pathPart)) return null;
   const dir = dirname(fileAbs);
   const now = resolve(dir, pathPart);
+  const spell = (candidate: string) => {
+    let rel = relative(dir, candidate).split(sep).join("/");
+    if (pathPart.startsWith("./") && !rel.startsWith(".")) rel = `./${rel}`;
+    if (pathPart.endsWith("/") && !rel.endsWith("/")) rel += "/";
+    return `${rel}${anchor}`;
+  };
+  // A candidate outside the project is never suggested: a reading that climbs past its root
+  // (one level short, from a file near the top) lands wherever the climb ends, and a file
+  // there is chance, not the target.
+  const inside = (abs: string) => !fromRoot || abs.startsWith(resolve(fromRoot.root) + sep);
+  const moved = movedTo(now, moveMap);
+  if (moved !== now && inside(moved) && exists(moved)) return { fix: spell(moved), reading: "moved" };
+
   const before = movedFrom(fileAbs, moveMap);
   // The link as it was written where the file stood: the rewrite kept what it resolved to.
   const written = relative(dirname(before), now);
   const shortBy1 = resolve(dirname(dirname(before)), written);
-  for (const candidate of [movedTo(now, moveMap), movedTo(shortBy1, moveMap)]) {
-    if (candidate === now || !exists(candidate)) continue;
-    let rel = relative(dir, candidate).split(sep).join("/");
-    if (pathPart.startsWith("./") && !rel.startsWith(".")) rel = `./${rel}`;
-    return `${rel}${anchor}`;
+  const docsRoot = fromRoot ? join(fromRoot.root, fromRoot.docsRootName) : null;
+  const rootRead =
+    fromRoot && (pathPart === fromRoot.docsRootName || pathPart.replace(/^\.\//, "").startsWith(`${fromRoot.docsRootName}/`))
+      ? resolve(fromRoot.root, pathPart)
+      : null;
+  const readings: Array<[string, string | null]> = [
+    ["one level short", shortBy1],
+    ["from the root", rootRead],
+    ["one level short, archived since", docsRoot ? archivedReading(shortBy1, docsRoot) : null],
+    ["from the root, archived since", docsRoot && rootRead ? archivedReading(rootRead, docsRoot) : null],
+    ["archived since", docsRoot ? archivedReading(now, docsRoot) : null],
+  ];
+  const found: Array<{ abs: string; reading: string }> = [];
+  for (const [reading, old] of readings) {
+    if (old === null) continue;
+    const candidate = movedTo(old, moveMap);
+    if (candidate === now || !inside(candidate) || !exists(candidate)) continue;
+    if (!found.some((f) => f.abs === candidate)) found.push({ abs: candidate, reading });
   }
-  return null;
+  if (found.length === 0) return null;
+  if (found.length === 1) return { fix: spell((found[0] as { abs: string }).abs), reading: (found[0] as { reading: string }).reading };
+  return { ambiguous: found.map((f) => ({ fix: spell(f.abs), reading: f.reading })) };
+}
+
+/** `suggestLinkFixes`, as the one suggestion or null (ambiguous is null). */
+export function suggestLinkFix(
+  fileAbs: string,
+  target: string,
+  moveMap: ReadonlyMap<string, string>,
+  exists: (abs: string) => boolean,
+  fromRoot?: RootReading
+): string | null {
+  const r = suggestLinkFixes(fileAbs, target, moveMap, exists, fromRoot);
+  return r !== null && "fix" in r ? r.fix : null;
 }
 
 /** Docs-relative path a link in `fromRel` resolves to. */
@@ -3724,18 +3802,29 @@ function verify(ctx: Ctx): void {
   // A MISSING FILE the move record accounts for gets its correction, suggested — never written.
   const table = moveTable(ctx);
   const fixes: string[] = [];
+  const ambiguous: string[] = [];
+  const fromRoot = { root: ctx.root, docsRootName: ctx.docsRootName };
   for (const p of r.problems) {
     const m = /^MISSING FILE\s+(.+?): (\S.*?)(?: {2}\(not portable.*)?$/.exec(p);
     if (!m) continue;
-    const fix = suggestLinkFix(join(ctx.root, m[1] as string), m[2] as string, table, existsSync);
-    if (fix !== null) fixes.push(`${m[1]}: ${m[2]} → ${fix}`);
+    const s = suggestLinkFixes(join(ctx.root, m[1] as string), m[2] as string, table, existsSync, fromRoot);
+    if (s === null) continue;
+    if ("fix" in s) fixes.push(`${m[1]}: ${m[2]} → ${s.fix}  (${s.reading})`);
+    else ambiguous.push(`${m[1]}: ${m[2]} — ${s.ambiguous.map((a) => `${a.fix} (${a.reading})`).join(" or ")}`);
   }
   const suggested =
-    fixes.length === 0
+    (fixes.length === 0
       ? ""
-      : `\n\n   Suggested corrections for ${fixes.length} MISSING FILE link(s), each target found through this run's moves — most are\n` +
-        `   links a legacy _archive/ left one folder level short. Check each, then make it by hand; the run rewrites none:\n\n` +
-        indented(fixes.join("\n"));
+      : `\n\n   Suggested corrections for ${fixes.length} MISSING FILE link(s), each target found through this run's moves. Each names\n` +
+        `   its reading: moved (the target moved), one level short (a legacy _archive/ moved in by hand), from the root\n` +
+        `   (a link written from the project root), archived since (the target was archived after the link was\n` +
+        `   written). Check each, then make it by hand; the run rewrites none:\n\n` +
+        indented(fixes.join("\n"))) +
+    (ambiguous.length === 0
+      ? ""
+      : `\n\n   Ambiguous — two readings of each of these ${ambiguous.length} link(s) land on different documents, so none is suggested.\n` +
+        `   Pick the one you meant:\n\n` +
+        indented(ambiguous.join("\n")));
   fail(
     `\`pdocs check\` exits ${r.code} on the migrated tree: ${r.total} problem(s). ${newer}\n` +
       `\n   The moves STAY — every one is named above — and the version markers were NOT moved: this tree is not at\n` +
