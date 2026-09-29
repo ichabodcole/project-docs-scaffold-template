@@ -6,12 +6,13 @@ description:
   them, and run story-loom's migration to 9.0.1 on that release.
 tags: [migrations, story-loom]
 status: draft
-lifecycle: active
+lifecycle: closed
 started: 2026-09-27
 appetite:
   Until story-loom is on 9.0.1 with a clean check and a commit its hook accepts.
 after: []
 generated: { by: claude-opus-5-5, at: 2026-09-27 }
+closed: 2026-09-29
 ---
 
 # Story-loom migration
@@ -68,7 +69,47 @@ migration.
 
 ## Outcome
 
-_Written at close, not before — and for an `abandoned` cycle too._
+Story-loom migrated 8.0.0 → 9.2.0 on plugin project-docs 4.2.0 with no fix from
+upstream: 131 moves and 454 respelled links in a 1,100-file change, its canon
+and Slidev decks untouched, and its output passing its own Prettier check (231
+files failed at the start of the cycle). Phase 10 suggested fixes for 201 of its
+235 old archive breaks, every one checked against its history; the other 30 were
+story-loom's own renames and placeholders. Its branch was not yet merged at
+close, and Cole closed the cycle anyway: anything its finalization turns up is
+triaged into a later cycle.
+
+Sixteen items shipped in eight branches, released as scaffold 9.2.0 and plugin
+4.2.0. They grew from the five the readiness trial called for: each review found
+more, and #182 and #154 added their own. Beyond story-loom's needs, every
+project now gets:
+
+- an `update-project-docs` that names its upgrade case before acting;
+- migrations that refuse to set a tree back to an older release;
+- version markers set by the scripts, not the skill;
+- a pointer to the CLI;
+- the `NO OUTCOME` lint.
+
+Learned:
+
+- **Every fix generalises.** Mid-cycle, Cole made it a rule that story-loom is
+  evidence and a real-data check, never the design target. Adopter-facing text
+  naming story-loom was reworded.
+- **The pin always trails the template.** A plugin can pin only a scaffold tag
+  that exists. So every release re-pins the newest migration after the scaffold
+  release, and release-please now skips plugin-only commits, so the re-pin cuts
+  no empty scaffold release.
+- **Reviews that ran the code found what reading could not.** They reproduced a
+  data-loss bug already on develop (frontmatter written into excluded files), a
+  table re-pad that turned a table into a paragraph, and two dead ends that
+  would have stranded Spellbook's real tree. Each was fixed before landing.
+- **Branches that shared one script were batched.** Five small fixes went on one
+  branch with one review, and it worked.
+
+Cut or deferred to backlog: the lasting owned-file fix (a hash recorded at
+install), cycles in `_archive/`, the skill-scope and plugin-extraction research,
+and the smaller follow-ups each review filed. Story-loom's debrief added five
+triage items: an explicit report owner, `--respell` flagging code, clearer
+preflight messages, titles from the H1, and where a process report goes.
 
 ## Sessions
 
