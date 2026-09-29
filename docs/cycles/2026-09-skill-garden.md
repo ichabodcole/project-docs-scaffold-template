@@ -6,13 +6,14 @@ description:
   skill-garden, and remove them from this one.
 tags: [extraction, plugins]
 status: draft
-lifecycle: active
+lifecycle: closed
 started: 2026-09-29
 appetite:
   Until the five plugins install from skill-garden and this repository holds
   project-docs alone.
 after: []
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
+closed: 2026-09-29
 ---
 
 <!--
@@ -50,7 +51,7 @@ smaller project-docs.
 
 ## Scope
 
-- **[Bootstrap skill-garden](../items/skill-garden-bootstrap.md)**: the new
+- **[Bootstrap skill-garden](../items/skill-garden-bootstrap/item.md)**: the new
   repository exists from the 9.2.0 scaffold, holds the five plugins and its own
   marketplace, carries their live items, and Cole has installed from it.
 - **[Remove the extracted plugins](../items/remove-extracted-plugins/item.md)**:
@@ -64,9 +65,28 @@ skill-garden with its item).
 
 ## Outcome
 
-_Written at close, not before — and for an `abandoned` cycle too._
+The five plugins now ship from
+[skill-garden](https://github.com/ichabodcole/skill-garden), and this repository
+serves project-docs alone (4.3.0). skill-garden started from the 9.2.0 scaffold,
+with a fresh history naming its source commit. An install test and a strict
+validate passed before its first push, and `main` went first so it is the branch
+the marketplace serves. The removal here cut no scaffold release, because its
+commits are typed so release-please skips them.
+
+Cut: the openpackage `dist/` build for the moved plugins, whose future is
+skill-garden's distribution research item. agent-bridge wasn't reinstalled from
+skill-garden; it stays available there.
+
+Learned: a change split across commits by type, for release-please, must pass
+the gate commit by commit. The pre-commit hook lints the working tree, so it
+passed two commits whose fixes were still uncommitted, and the review caught it.
+Filed along the way:
+
+- in skill-garden: a license, quality gates, CI, per-plugin release-please and a
+  release-please recipe;
+- here: the migration tests' timeouts under load.
 
 ## Sessions
 
-- skill-garden bootstrap, in ~/Projects/skill-garden (open)
+- skill-garden bootstrap, in ~/Projects/skill-garden (landed 2026-09-29)
 - chore/remove-extracted-plugins (landed 2026-09-29)

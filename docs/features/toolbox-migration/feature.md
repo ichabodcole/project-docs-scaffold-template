@@ -5,7 +5,7 @@ description:
   Move hivemind, toolbox, operator, recipes and agent-bridge to a repository of
   their own, so this one holds project-docs and nothing else.
 status: stable
-lifecycle: active
+lifecycle: done
 generated: { by: unknown, at: 2026-05-27 }
 ---
 

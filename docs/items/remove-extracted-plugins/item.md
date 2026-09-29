@@ -21,8 +21,8 @@ blocked_by: [01a0ee6f-03d7-71b1-a716-431cd34d7aa4]
 
 Second half of the
 [plugin extraction](../../features/toolbox-migration/feature.md), after
-[skill-garden is bootstrapped](../skill-garden-bootstrap.md) and installed. It
-is a hard cut, by Cole's decision: the plugins leave this marketplace in one
+[skill-garden is bootstrapped](../skill-garden-bootstrap/item.md) and installed.
+It is a hard cut, by Cole's decision: the plugins leave this marketplace in one
 change.
 
 ## Definition of done
