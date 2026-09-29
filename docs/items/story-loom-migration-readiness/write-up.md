@@ -101,7 +101,7 @@ The "rewritten frontmatter" file fails on a table whose columns the run's link
 respelling misaligned, not on its frontmatter. The migration now writes the
 first two correctly
 ([the session](../migration-frontmatter-prettier-shape/sessions/2026-09-28-prettier-shaped-frontmatter.md));
-the table is [its own item](../link-respell-misaligns-tables.md).
+the table is [its own item](../link-respell-misaligns-tables/item.md).
 
 ## Live work the run marks wrongly
 
@@ -157,6 +157,9 @@ retype is done by the run too
 skip it. Pre-run step 9 shrinks: phase 10 now suggests 201 of the 235 archive
 breaks (was 93), so fix links after the run from its suggestions
 ([session](../phase-10-root-relative-and-archived-links/sessions/2026-09-28-root-and-archived-link-readings.md)).
+Pre-run step 3 is done by the run too, and the post-run `prettier --write`
+should find nothing to change: the run's output passes story-loom's own Prettier
+([session](../link-respell-misaligns-tables/sessions/2026-09-28-migration-polish-round.md)).
 
 **Pre-run (story-loom, committed before the run):**
 

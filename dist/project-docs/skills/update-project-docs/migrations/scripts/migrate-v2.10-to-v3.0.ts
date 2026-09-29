@@ -707,14 +707,16 @@ export function yamlScalar(s: string): string {
 }
 
 /**
- * The child that shapes frontmatter with the project's own Prettier: resolved
- * from the project root the way its own scripts resolve it. It runs under
+ * The child that formats text with the project's own Prettier: resolved from the
+ * project root the way its own scripts resolve it. It runs under
  * `bun --no-install`, so a project with no Prettier gets none: Bun would
  * otherwise auto-install a missing package from npm. Reads
- * `{ root, ignore, items: [{ path, fm }] }` on stdin and prints, as its last
- * line, `{ version, missing, error, out }`: one formatted block per item in
- * `out` (null where Prettier ignores the path or fails on it), and the first
- * failure in `error`.
+ * `{ root, ignore, ignores, items: [{ path, text }] }` on stdin (`ignore` the
+ * `.prettierignore` Prettier 2 reads; `ignores` the `.gitignore` and
+ * `.prettierignore` Prettier 3's CLI reads, whichever exist) and prints, as its last
+ * line, `{ version, missing, error, out }`: each text as Prettier prints it at
+ * its path in `out` (null where Prettier ignores the path, infers no Markdown
+ * parser, or fails on it), and the first failure in `error`.
  */
 const PRETTIER_CHILD = `
 const { createRequire } = require("node:module");
@@ -723,52 +725,161 @@ const result = { version: null, missing: false, error: null, out: input.items.ma
 let prettier = null;
 try { prettier = createRequire(input.root + "/package.json")("prettier"); }
 catch (e) { if (e && e.code === "MODULE_NOT_FOUND") result.missing = true; else result.error = String((e && e.message) || e).split("\\n")[0]; }
+// The ignore files the CLI reads by default: Prettier 3 reads .gitignore and .prettierignore,
+// Prettier 2 only .prettierignore (and its API takes one path).
+const major = prettier ? parseInt(String(prettier.version || "0"), 10) : 0;
+const ignorePath = major >= 3 ? (input.ignores.length ? input.ignores : null) : input.ignore;
 if (prettier) {
   result.version = prettier.version || null;
-  for (const [i, { path, fm }] of input.items.entries()) {
+  for (const [i, { path, text }] of input.items.entries()) {
     try {
-      const info = await prettier.getFileInfo(path, input.ignore ? { ignorePath: input.ignore } : {});
+      const info = await prettier.getFileInfo(path, ignorePath ? { ignorePath } : {});
       if (info.ignored || info.inferredParser !== "markdown") continue;
       const config = (await prettier.resolveConfig(path, { editorconfig: true })) || {};
-      result.out[i] = await prettier.format("---\\n" + fm + "\\n---\\n", { ...config, filepath: path });
+      result.out[i] = await prettier.format(text, { ...config, filepath: path });
     } catch (e) { if (!result.error) result.error = path + ": " + String((e && e.message) || e).split("\\n")[0]; }
   }
 }
 console.log(JSON.stringify(result));
 `;
 
+/** What the project's Prettier made of each text: see PRETTIER_CHILD. `failed` when the child itself could not run. */
+export interface PrettierResult {
+  version: string | null;
+  missing: boolean;
+  error: string | null;
+  out: Array<string | null>;
+  failed: string | null;
+}
+
+/**
+ * Each `text` formatted by the project's own Prettier as if it sat at `path`
+ * — its config, its overrides, its `.prettierignore` — and never a downloaded
+ * one: the child runs under `bun --no-install`. Writes nothing. The one door
+ * every Prettier pass of this run goes through.
+ */
+export function prettierFormat(root: string, items: Array<{ path: string; text: string }>): PrettierResult {
+  if (items.length === 0) return { version: null, missing: false, error: null, out: [], failed: null };
+  // Prettier 2's getFileInfo takes one path, .prettierignore; Prettier 3 takes the list its CLI reads.
+  const ignore = existsSync(join(root, ".prettierignore")) ? join(root, ".prettierignore") : null;
+  const ignores = [".gitignore", ".prettierignore"].map((f) => join(root, f)).filter((f) => existsSync(f));
+  const r = Bun.spawnSync([process.execPath, "--no-install", "-e", PRETTIER_CHILD], {
+    cwd: root,
+    stdin: Buffer.from(JSON.stringify({ root, ignore, ignores, items })),
+    stdout: "pipe",
+    stderr: "pipe",
+    env: gitEnv(),
+  });
+  let res: Omit<PrettierResult, "failed"> | null = null;
+  try {
+    res = r.exitCode === 0 ? JSON.parse(r.stdout.toString().trim().split("\n").pop() ?? "") : null;
+  } catch {}
+  if (res === null || !Array.isArray(res.out) || res.out.length !== items.length)
+    return { version: null, missing: false, error: null, out: items.map(() => null), failed: r.stderr.toString().trim().split("\n")[0] || `exit ${r.exitCode}` };
+  return { ...res, failed: null };
+}
+
 /**
  * Each frontmatter block, as the project's own Prettier prints it at that
- * document's path — its config, its overrides, its `.prettierignore`. A block
- * is `null` where Prettier leaves it to the run: an ignored path, a failure, or
- * no Prettier in the project. `note` says why, when any block fell back for a
- * reason other than an ignored path; null otherwise.
+ * document's path. A block is `null` where Prettier leaves it to the run: an
+ * ignored path, a failure, or no Prettier in the project. `note` says why, when
+ * any block fell back for a reason other than an ignored path; null otherwise.
  */
 export function prettierFrontmatter(root: string, items: Array<{ path: string; fm: string }>): { blocks: Array<string | null>; note: string | null } {
   if (items.length === 0) return { blocks: [], note: null };
   const shape = "the frontmatter this run writes is in the shape Prettier's defaults give it";
   const fallback = (why: string) => ({ blocks: items.map(() => null), note: `${why}: ${shape}` });
-  // One path, not a list: Prettier 2's getFileInfo takes only one.
-  const ignore = existsSync(join(root, ".prettierignore")) ? join(root, ".prettierignore") : null;
-  const r = Bun.spawnSync([process.execPath, "--no-install", "-e", PRETTIER_CHILD], {
-    cwd: root,
-    stdin: Buffer.from(JSON.stringify({ root, ignore, items })),
-    stdout: "pipe",
-    stderr: "pipe",
-    env: gitEnv(),
-  });
-  let res: { version: string | null; missing: boolean; error: string | null; out: Array<string | null> } | null = null;
-  try {
-    res = r.exitCode === 0 ? JSON.parse(r.stdout.toString().trim().split("\n").pop() ?? "") : null;
-  } catch {}
-  if (res === null || !Array.isArray(res.out) || res.out.length !== items.length)
-    return fallback(`your Prettier could not be run (${r.stderr.toString().trim().split("\n")[0] || `exit ${r.exitCode}`})`);
+  const res = prettierFormat(root, items.map(({ path, fm }) => ({ path, text: `---\n${fm}\n---\n` })));
+  if (res.failed !== null) return fallback(`your Prettier could not be run (${res.failed})`);
   if (res.missing) return fallback("no Prettier in this project");
   if (res.version === null) return fallback(`your Prettier could not be loaded (${res.error ?? "no version"})`);
   const blocks = res.out.map((t) => (typeof t === "string" ? splitFrontmatter(t).fm : null));
   if (!res.error) return { blocks, note: null };
   const failed = blocks.filter((b) => b === null).length;
   return { blocks, note: `your Prettier ${res.version} failed on a block (${res.error.replaceAll(`${root}/`, "")});${failed} of ${items.length} block(s) are in the shape Prettier's defaults give them` };
+}
+
+/** A Markdown table in a text: its lines' range and its text. */
+export interface TableBlock {
+  start: number;
+  end: number;
+  text: string;
+}
+
+const TABLE_DELIMITER = /^ {0,3}\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+
+/** Every pipe table in `text` outside code fences: a header row, a delimiter row, and the rows under them. PURE. */
+export function tableBlocks(text: string): TableBlock[] {
+  const lines = text.split("\n");
+  const bare = stripFences(text).split("\n");
+  const out: TableBlock[] = [];
+  // A table inside a blockquote or indented under a list item is found too, so that one the
+  // run edits can be named: its prefix is read off each line before it is tested.
+  const prefix = (l: string) => /^(?:[ \t]*>)+[ \t]?|^[ \t]+/.exec(l)?.[0] ?? "";
+  const row = (l: string) => l.slice(prefix(l).length);
+  for (let i = 0; i + 1 < bare.length; i++) {
+    const head = row(bare[i] as string);
+    const delim = row(bare[i + 1] as string);
+    if (!head.includes("|") || !TABLE_DELIMITER.test(delim) || !delim.includes("-")) continue;
+    let end = i + 2;
+    while (end < bare.length && row(bare[end] as string).includes("|") && row(bare[end] as string).trim() !== "") end++;
+    out.push({ start: i, end, text: lines.slice(i, end).join("\n") });
+    i = end - 1;
+  }
+  return out;
+}
+
+/** The tables of `after` whose text is not in `before`: the ones an edit changed. PURE. */
+export function editedTables(before: string, after: string): TableBlock[] {
+  return tableBlocks(after).filter((t) => !before.includes(t.text));
+}
+
+/** A table's rows split into cells, trimmed, as GFM splits them: on every unescaped pipe, a code span's included. */
+const tableRows = (table: string) =>
+  table
+    .trim()
+    .split("\n")
+    .map((row) => row.trim().replace(/^\|/, "").replace(/(?<!\\)\|$/, "").split(/(?<!\\)\|/).map((c) => c.trim()));
+
+/** A table's cells, row by row, the delimiter row left out; and every row's column count, the delimiter row's included. */
+const tableCells = (table: string) => tableRows(table).filter((_, i) => i !== 1);
+const tableShape = (table: string) => tableRows(table).map((r) => r.length);
+
+/**
+ * What a formatted form `out` of the table `block` may do: replace it (`lines`),
+ * or not, and why. Only a top-level table whose form is still the same table —
+ * as many lines, every row as many columns, the same cells — is replaced. A
+ * table in a blockquote or indented under a list item is never: formatted alone
+ * it would lose its prefix. PURE.
+ */
+export function repadVerdict(block: TableBlock, out: string | null | undefined): { lines: string[] } | { why: string } {
+  if (/^(?:[ \t]*>)/.test(block.text)) return { why: "in a blockquote" };
+  if (/^\s/.test(block.text)) return { why: "indented" };
+  const form = out?.replace(/\n+$/, "");
+  if (!form) return { why: "no formatted form" };
+  // Same header and delimiter width, same cells: a delimiter row Prettier widened under an
+  // unchanged header (a pipe inside a code span splits a body cell) is no longer a table.
+  if (
+    form.split("\n").length !== block.end - block.start ||
+    JSON.stringify(tableShape(form)) !== JSON.stringify(tableShape(block.text)) ||
+    JSON.stringify(tableCells(form)) !== JSON.stringify(tableCells(block.text))
+  )
+    return { why: "your Prettier would change more than its padding" };
+  return { lines: form.split("\n") };
+}
+
+/**
+ * `text` with each of `blocks` replaced by its formatted form in `outs` where
+ * `repadVerdict` allows it; every other block is left as it is. PURE.
+ */
+export function repadTables(text: string, blocks: TableBlock[], outs: Array<string | null>): string {
+  const lines = text.split("\n");
+  for (let b = blocks.length - 1; b >= 0; b--) {
+    const block = blocks[b] as TableBlock;
+    const v = repadVerdict(block, outs[b]);
+    if ("lines" in v) lines.splice(block.start, block.end - block.start, ...v.lines);
+  }
+  return lines.join("\n");
 }
 
 // =======================================================================================
@@ -853,6 +964,43 @@ function plainText(s: string): string {
     .trim();
 }
 
+/** A setext underline: `===` (H1) or `---` (H2), up to three spaces in. */
+const SETEXT_UNDERLINE = /^ {0,3}(=+|-+)[ \t]*$/;
+
+/**
+ * The text of a document's first H1, ATX (`# Title`) or setext (`Title` over a
+ * `===` line), whichever comes first; null when it has none. `md` is fence-free.
+ */
+export function firstH1(md: string): string | null {
+  const lines = md.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i] as string;
+    if (/^ {0,3}#\s+\S/.test(l)) return l.replace(/^ {0,3}#\s+/, "").replace(/\s+#+\s*$/, "");
+    const next = lines[i + 1];
+    if (next !== undefined && /^ {0,3}=+[ \t]*$/.test(next) && l.trim() !== "" && !/^ {0,3}([-*+>#|]|\d+\.)/.test(l)) {
+      // A setext heading's text is the whole paragraph above its underline.
+      let start = i;
+      while (start > 0 && (lines[start - 1] as string).trim() !== "") start--;
+      return lines.slice(start, i + 1).join(" ").trim();
+    }
+  }
+  return null;
+}
+
+/**
+ * A paragraph block with any setext heading in it removed: the lines up to and
+ * including the last underline that follows text. `Alpha\n===\nThe notes.`
+ * leaves `The notes.`; a block that is only a heading, or only a thematic break
+ * (`---`), leaves nothing.
+ */
+function withoutSetextHeadings(block: string): string {
+  const lines = block.split("\n");
+  let cut = -1;
+  for (let i = 0; i < lines.length; i++)
+    if (SETEXT_UNDERLINE.test(lines[i] as string) && (i === 0 || (lines[i - 1] as string).trim() !== "" || cut === i - 1)) cut = i;
+  return cut === -1 ? block : lines.slice(cut + 1).join("\n");
+}
+
 /**
  * Frontmatter for a document that has none — a legacy archive was never
  * linted. The type from its new position, the title from its H1 (or its file
@@ -866,14 +1014,15 @@ export function synthesizeFrontmatter(
   body: string,
   o: { date: string; extra?: Array<[string, string]> }
 ): string {
-  const lines = body.split("\n");
-  const h1 = lines.find((l) => /^#\s+\S/.test(l));
   const fromName = titleize(slugOf(basename(fileName), "backlog").slug);
-  const title = h1 ? plainText(h1.replace(/^#\s+/, "")) || fromName : fromName;
+  // Read with LF endings; the body is written back as it was, CRLF and all.
+  const lf = stripFences(body.replace(/\r\n?/g, "\n"));
+  const h1 = firstH1(lf);
+  const title = h1 !== null ? plainText(h1) || fromName : fromName;
   let description = "";
-  const prose = stripFences(body).split(/\n\s*\n/);
+  const prose = lf.split(/\n\s*\n/);
   for (const para of prose) {
-    const t = para.trim();
+    const t = withoutSetextHeadings(para).trim();
     if (t === "" || /^(#|[-*+] |\d+\. |\||>|<)/.test(t)) continue;
     if (/^\*\*[^*]+:\*\*/.test(t)) continue; // `**Date:** …` metadata lines
     const plain = plainText(t);
@@ -1082,23 +1231,63 @@ export interface LintKeys {
 }
 
 /**
- * A `lint.exclude` glob with every moved path respelled — only where the new
- * path is certain. `moves` are repository-relative `[from, to]` pairs, a folder
- * or a file: a glob naming one of them, or something under one, follows it.
- * Returns the glob unchanged when it names no retired folder, and `null` when
- * it names a retired folder but no single move: a wildcard where the entity
- * would be (`docs/projects/*` could now be `features/` or `items/`, and
- * `docs/backlog/**` respelled to `docs/items/**` would exclude every item), or
- * a path nothing moved. The caller leaves a `null` as written and names it.
+ * A `lint.exclude` glob with every moved path respelled, as the globs to write
+ * in its place — `Bun.Glob` globs, matched against the whole repository-relative
+ * path, which is how the lint reads them. `moves` are repository-relative
+ * `[from, to]` pairs, a folder or a file, every file under a moved folder listed
+ * too. PURE.
+ *
+ *   · a glob naming no retired folder is returned as it is;
+ *   · a path spelled out to (or into) something that moved follows it, longest
+ *     move first (`docs/projects/a/**` → `docs/features/a/**`);
+ *   · a wildcard where the entity would be, with something inside the entity
+ *     after it (`docs/projects/*∕artifacts/**∕*-slides.md`), goes CATEGORY-WIDE:
+ *     one glob per folder the retired one's entities go to (`features/` and
+ *     `items/` for `projects/`, `items/` for the rest), so an entity filed after
+ *     the run stays excluded. When the same glob one level down —
+ *     `docs/projects/_archive/*∕…` — matched an archived entity's file, the
+ *     `_archive/` forms are added too: the old lint skipped the archive, and
+ *     9.x lints it.
+ *
+ * Returns `null` — left as written, and named — for a whole retired folder or
+ * its files (`docs/backlog/*.md` as `docs/items/*.md` would exclude every item),
+ * a path nothing moved, or a category-wide respelling that would not reach
+ * every moved file the glob matched.
  */
-export function rewriteExcludeGlob(glob: string, moves: Array<[string, string]>, docsRootName: string): string | null {
+export function rewriteExcludeGlob(glob: string, moves: Array<[string, string]>, docsRootName: string): string[] | null {
   const sorted = [...moves].sort((a, b) => b[0].length - a[0].length);
   for (const [from, to] of sorted) {
-    if (glob === from) return to;
-    if (glob.startsWith(`${from}/`)) return to + glob.slice(from.length);
+    if (glob === from) return [to];
+    if (glob.startsWith(`${from}/`)) return [to + glob.slice(from.length)];
   }
-  if (LEGACY_FOLDERS.some((f) => glob === `${docsRootName}/${f}` || glob.startsWith(`${docsRootName}/${f}/`))) return null;
-  return glob;
+  const esc = docsRootName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = new RegExp(`^${esc}/(${LEGACY_FOLDERS.join("|")})(?:/(.*))?$`).exec(glob);
+  if (!m) {
+    // A retired folder named in a shape not respelled here — a negation (`!docs/projects/…`), a
+    // leading `./` or wildcard (`**/docs/projects/…`), a brace list (`docs/{projects,backlog}/…`):
+    // it would go stale silently, so it is named and left for a hand edit.
+    const legacy = LEGACY_FOLDERS.join("|");
+    const named = new RegExp(`(?:^[!./]*|/)${esc}/(?:\\{[^}]*\\b(?:${legacy})\\b[^}]*\\}|(?:${legacy}))(?:/|$)`);
+    return named.test(glob) ? null : [glob];
+  }
+  const folder = m[1] as string;
+  const rest = m[2] ?? "";
+  const segs = rest.split("/");
+  const archivedOnly = segs[0] === "_archive";
+  const entity = archivedOnly ? 1 : 0;
+  // A wildcard where the entity would be, and something inside the entity after it.
+  if (!GLOB_CHARS.test(segs[entity] ?? "") || segs.length <= entity + 1) return null;
+  const categories = folder === "projects" ? ["features", "items"] : [FOLDER_SUCCESSOR[folder] as string];
+  const out = categories.map((c) => `${docsRootName}/${c}/${rest}`);
+  const froms = moves.map(([f]) => f);
+  const leaves = moves.filter(([f]) => !froms.some((o) => o.startsWith(`${f}/`)));
+  const matches = (g: string, p: string) => new Bun.Glob(g).match(p);
+  const archived = `${docsRootName}/${folder}/_archive/${rest}`;
+  const reachesArchive = !archivedOnly && segs[0] !== "**" && leaves.some(([f]) => matches(archived, f));
+  if (reachesArchive) out.push(...categories.map((c) => `${docsRootName}/${c}/_archive/${rest}`));
+  const matched = leaves.filter(([f]) => matches(glob, f) || (reachesArchive && matches(archived, f)));
+  if (matched.some(([, t]) => !out.some((g) => matches(g, t)))) return null;
+  return out;
 }
 
 /**
@@ -1162,17 +1351,21 @@ export function patchLintArrays(
   }
 
   if (lint.exclude) {
-    const next = lint.exclude.map((g) => {
+    const each = lint.exclude.map((g) => {
       const r = rewriteExcludeGlob(g, f.moves, f.docsRootName);
       if (r === null)
-        notes.push(`lint.exclude: \`${g}\` names a retired folder, and what it matched now sits under features/ or items/ — left as written; respell it by hand`);
-      return r ?? g;
+        notes.push(
+          `lint.exclude: \`${g}\` names a retired folder, and no respelling of it is certain (a whole retired folder, a path nothing moved, ` +
+            `files it matched that a category-wide glob would miss, or a negation, brace list or leading wildcard) — left as written; respell it by hand`
+        );
+      return r ?? [g];
     });
-    const changed = next.filter((g, i) => g !== lint.exclude?.[i]);
-    if (changed.length) {
+    const next = each.flat();
+    if (each.some((r, i) => r.length !== 1 || r[0] !== lint.exclude?.[i])) {
       out.exclude = next;
       lint.exclude.forEach((g, i) => {
-        if (g !== next[i]) changes.push(`lint.exclude: ${g} → ${next[i]}`);
+        const r = each[i] as string[];
+        if (r.length !== 1 || r[0] !== g) changes.push(`lint.exclude: ${g} → ${r.join(", ")}`);
       });
     }
   }
@@ -2428,6 +2621,8 @@ interface Changes {
   keptLibrary: string[];
   /** Why the frontmatter this run writes is not all in the project's own Prettier's shape; null when it is, or not asked for. */
   shaping?: string | null;
+  /** Why a table whose links the run respells is left unpadded; null when every one was re-padded (or none was edited). */
+  tables?: string | null;
   /** Documents in `lint.exclude` (project-relative, where they end up): moved with their folder, never edited. */
   excludedKept?: string[];
 }
@@ -3149,11 +3344,47 @@ function computeChanges(ctx: Ctx): Changes {
     });
   }
 
+  // --- a table whose links the run respelled, re-padded by the project's own Prettier: a
+  // longer or shorter link leaves the padded columns out of line, which `prettier --check`
+  // rejects. Only those tables, never the rest of the document.
+  const tabled = writes.filter((w) => w.from !== null && w.links > 0);
+  const edited = tabled.map((w) => editedTables(readFileSync(w.from as string, "utf8"), w.text));
+  let tables: string | null = null;
+  const count = edited.reduce((n, t) => n + t.length, 0);
+  if (count > 0) {
+    /** Every edited table left as it is: its file, its first line, and why. */
+    const left: string[] = [];
+    const leave = (w: Write, t: TableBlock, why: string) => left.push(`${relative(ctx.root, w.to)}:${t.start + 1} (${why})`);
+    const res = ctx.skipFormat ? null : prettierFormat(ctx.root, tabled.flatMap((w, i) => (edited[i] as TableBlock[]).map((t) => ({ path: w.to, text: `${t.text}\n` }))));
+    const none = ctx.skipFormat
+      ? "--skip-format"
+      : res && (res.failed !== null || res.missing || res.version === null)
+        ? res.failed ?? (res.missing ? "no Prettier in this project" : res.error ?? "your Prettier did not load")
+        : null;
+    let k = 0;
+    tabled.forEach((w, i) => {
+      const blocks = edited[i] as TableBlock[];
+      const outs = blocks.map(() => (none === null ? res?.out[k++] ?? null : null));
+      blocks.forEach((t, j) => {
+        const v = repadVerdict(t, outs[j]);
+        if ("lines" in v) return;
+        // A path your Prettier ignores is not one its check will name.
+        if (none === null && v.why === "no formatted form" && !res?.error) return;
+        leave(w, t, none ?? v.why);
+      });
+      if (none === null) w.text = repadTables(w.text, blocks, outs);
+    });
+    if (left.length)
+      tables =
+        `${left.length} table(s) whose links this run respells are left as they are, their columns possibly out of line — ` +
+        `format them yourself: ${left.join(", ")}`;
+  }
+
   const repoMoves: Array<[string, string]> = [...fileMap.entries(), ...plan.ownTemplates, ...plan.moves.filter((m) => m.kind === "feature" || m.kind === "born-item").map((m) => [m.from, m.to] as [string, string])]
     .map(([f, t]) => [`${ctx.docsRootName}/${f}`, `${ctx.docsRootName}/${t}`]);
   const docsRel = (abs: string) => relative(d, abs).split(sep).join("/");
   const linkMoves = [...linkMap].map(([f, t]) => [docsRel(f), docsRel(t)] as [string, string]);
-  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, linkMoves, keptLibrary, shaping, excludedKept };
+  return { plan, templates, cycles, physical, writes: [...writes, ...created], repoMoves, linkMoves, keptLibrary, shaping, tables, excludedKept };
 }
 
 // =======================================================================================
@@ -3185,8 +3416,6 @@ function preflight(ctx: Ctx): void {
     fail("bun is not on PATH. This script is running under it, but the verify phase and the gate run `bun scripts/pdocs/cli.ts` — put bun on PATH first.");
   if (!ctx.scaffold && !have("cookiecutter"))
     fail("cookiecutter is not installed, and no --scaffold-dir <path> was given. Install it, or generate the scaffold yourself and pass its path.");
-  if (!ctx.skipFormat && !have("npx"))
-    fail("npx not found, and --skip-format was not given. What this run creates is formatted with your Prettier before its hash is recorded; install Node/npx, or pass --skip-format if this project does not use Prettier.");
 
   // THE PLAN, read-only. Built here so a judgment blocker stops the run before
   // the network is touched, and so the dirt check knows every file it writes.
@@ -3344,6 +3573,7 @@ function printPlan(ctx: Ctx): void {
         retyped.map((w) => `\n       ${relative(ctx.root, w.to)} — ${(w.fm as string).slice((w.fm as string).indexOf("dropped ") + 8)}`).join("")
     );
   if (c.shaping) note(c.shaping);
+  if (c.tables) note(c.tables);
   for (const [f, t] of c.templates.moves) note(`template: ${d(f)} → ${d(t)}, its seed record carried with it`);
   for (const r of c.templates.removals) note(`template: ${d(r)} removed — the form for a retired type, untouched since the scaffold recorded it`);
   const recordedNow = readManifest(ctx).files;
@@ -3424,12 +3654,34 @@ function refreshOwned(ctx: Ctx): void {
     ? /^docs_version:.*$/m.exec(readFileSync(join(ctx.docsRoot, "README.md"), "utf8"))?.[0] ?? null
     : null;
   let same = 0;
-  for (const rel of owned) {
-    const src = join(sDocs, rel);
-    const dst = join(ctx.docsRoot, rel);
-    let text = readFileSync(src, "utf8");
+  const texts = owned.map((rel) => {
+    const text = readFileSync(join(sDocs, rel), "utf8");
     // The version marker moves in phase 11, after the verify phase passes — not here.
-    if (rel === "README.md" && currentVersionLine) text = text.replace(/^docs_version:.*$/m, currentVersionLine);
+    return rel === "README.md" && currentVersionLine ? text.replace(/^docs_version:.*$/m, currentVersionLine) : text;
+  });
+  // Each as the project's own Prettier prints it at its path (never a downloaded one): the
+  // scaffold's bytes are formatted by the template repository's Prettier and config, and
+  // another version or config can reject them. Safe for every later migration: an owned
+  // file is compared by `proseKey`, which ignores what a formatter changes.
+  let shapedBy: string | null = null;
+  /** Owned files your Prettier would change beyond what `proseKey` ignores: left at the scaffold's bytes. */
+  const unshaped: string[] = [];
+  if (!ctx.skipFormat) {
+    const res = prettierFormat(ctx.root, owned.map((rel, i) => ({ path: join(ctx.docsRoot, rel), text: texts[i] as string })));
+    if (res.failed === null && !res.missing && res.version !== null) {
+      res.out.forEach((t, i) => {
+        if (typeof t !== "string") return;
+        // Only a change the owned-file comparison cannot see: a narrow print width that adds a
+        // trailing comma to a YAML list would read as an edit of yours to the next migration.
+        if (proseKey(t) === proseKey(texts[i] as string)) texts[i] = t;
+        else if (t !== texts[i]) unshaped.push(owned[i] as string);
+      });
+      shapedBy = res.version;
+    }
+  }
+  for (const [i, rel] of owned.entries()) {
+    const dst = join(ctx.docsRoot, rel);
+    const text = texts[i] as string;
     if (existsSync(dst) && readFileSync(dst, "utf8") === text) {
       same++;
       continue;
@@ -3442,7 +3694,14 @@ function refreshOwned(ctx: Ctx): void {
     const e = edited.get(rel);
     if (e) note(`  yours: ${editedOwnedLine(ctx, e)}`);
   }
-  if (same) ok(`${same} owned file(s) already identical to the scaffold's`);
+  if (same) ok(`${same} owned file(s) already identical to the scaffold's${shapedBy ? ", as your Prettier prints it" : ""}`);
+  if (shapedBy) note(`the owned files are written as your Prettier ${shapedBy} prints them: their words are the scaffold's, their wrapping is yours`);
+  if (unshaped.length)
+    note(
+      `left at the scaffold's bytes, because your Prettier would change more than wrapping (a trailing comma in a list, say), which the next ` +
+        `migration would read as an edit of yours: ${unshaped.map((r) => `${ctx.docsRootName}/${r}`).join(", ")}. Your \`prettier --check\` may name them; ` +
+        `formatting them is harmless, and a later migration shows what it compared with the \`git show\` it prints.`
+    );
   for (const rel of filesIn(sDocs).filter((r) => basename(r) === ".gitkeep")) {
     if (existsSync(join(ctx.docsRoot, rel))) continue;
     mkdirSync(dirname(join(ctx.docsRoot, rel)), { recursive: true });
@@ -3745,15 +4004,28 @@ function formatAndRecord(ctx: Ctx): void {
   if (rel.length === 0) note("nothing created or installed, so nothing to format");
   else if (ctx.skipFormat) note("formatting skipped (--skip-format)");
   else {
-    const r = run(["npx", "prettier", "--write", ...rel], ctx.root);
-    if (r.code !== 0)
+    // The project's own Prettier, never a downloaded one (prettierFormat).
+    const abs = rel.map((f) => join(ctx.root, f));
+    const res = prettierFormat(ctx.root, abs.map((path) => ({ path, text: readFileSync(path, "utf8") })));
+    const why = res.failed ?? (res.missing ? null : res.version === null ? res.error ?? "it did not load" : res.error);
+    if (res.missing) note(`no Prettier in this project, so the ${rel.length} file(s) this run created or installed are not formatted — none is downloaded`);
+    else if (why !== null)
       fail(
-        `prettier exited ${r.code} over the ${rel.length} file(s) this run created or installed. Recording their hashes now would\n` +
-          `   produce a record your own formatter invalidates. Fix the formatter, or pass --skip-format; re-running is safe.\n\n` +
-          indented(r.stderr || r.stdout)
+        `your Prettier failed over the ${rel.length} file(s) this run created or installed (${why.replaceAll(`${ctx.root}/`, "")}). Recording their\n` +
+          `   hashes now would produce a record your own formatter invalidates. Fix the formatter, or pass --skip-format; re-running is safe.`
       );
-    for (const f of rel) track(ctx, join(ctx.root, f));
-    ok(`formatted ${rel.length} file(s) this run created or installed — before recording, never after; no document of yours was formatted`);
+    else {
+      let changed = 0;
+      abs.forEach((path, i) => {
+        const out = res.out[i];
+        if (typeof out === "string" && out !== readFileSync(path, "utf8")) {
+          writeFileSync(path, out);
+          changed++;
+        }
+        track(ctx, path);
+      });
+      ok(`formatted ${rel.length} file(s) this run created or installed with your Prettier ${res.version} (${changed} changed) — before recording, never after; no document of yours was formatted`);
+    }
   }
   if (ctx.manifest === null) fail("no record to write — the seeds phase did not run.");
   const m = ctx.manifest as SeedManifest;

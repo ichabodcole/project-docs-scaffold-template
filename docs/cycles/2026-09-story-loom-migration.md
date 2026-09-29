@@ -47,7 +47,7 @@ those ship first.
   [the lint checks a closed cycle's Outcome](../items/lint-closed-cycle-without-outcome.md).
 - Added at triage, 2026-09-28, from the first branch's review, because
   story-loom's run would hit them:
-  [a respelled link misaligns its table](../items/link-respell-misaligns-tables.md),
+  [a respelled link misaligns its table](../items/link-respell-misaligns-tables/item.md),
   [installed owned files are Prettier-clean](../items/owned-files-installed-unformatted.md)
   and
   [the format phase never downloads Prettier](../items/migration-format-phase-downloads-prettier.md).
@@ -70,3 +70,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - fix/migration-respells-formatter-ignores (landed 2026-09-28)
 - fix/migration-retypes-positional-artifacts (landed 2026-09-28)
 - fix/phase-10-root-relative-and-archived-links (landed 2026-09-28)
+- fix/migration-polish-round (landed 2026-09-28)

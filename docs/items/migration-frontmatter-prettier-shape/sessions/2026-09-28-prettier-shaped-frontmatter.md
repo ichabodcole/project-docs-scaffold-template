@@ -121,7 +121,7 @@ Verdict: **Ready to merge: Yes**, with three cosmetic nits in the fallback note.
 Filed from this session, in `triage`:
 
 - [The format phase can download Prettier](../../migration-format-phase-downloads-prettier.md)
-- [Respelling a link inside a table misaligns the table](../../link-respell-misaligns-tables.md)
+- [Respelling a link inside a table misaligns the table](../../link-respell-misaligns-tables/item.md)
 - [Owned files the refresh installs are not Prettier-clean](../../owned-files-installed-unformatted.md)
 - [Polish the Prettier fallback note](../../prettier-fallback-note-polish.md)
 

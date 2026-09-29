@@ -6,7 +6,7 @@ description:
   Prettier that does not pass --skip-format gets the latest Prettier fetched and
   run.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0ea0f-39fd-73ba-bb40-9bc0fbdd8efc
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -28,5 +28,8 @@ off.
 
 ## Definition of done
 
-- [ ] Phase 9 never downloads Prettier: a project without it skips formatting
+- [x] Phase 9 never downloads Prettier: a project without it skips formatting
       and says so, and a test covers it.
+
+Landed with four other migration fixes; the record is
+[the migration polish round session](./link-respell-misaligns-tables/sessions/2026-09-28-migration-polish-round.md).

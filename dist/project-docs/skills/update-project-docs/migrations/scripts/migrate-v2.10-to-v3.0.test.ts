@@ -68,6 +68,7 @@ import {
   OWNER_SUBFOLDER,
   retypeAsArtifact,
   prettierFrontmatter,
+  prettierFormat,
   proseKey,
   scopeEntryPath,
   renameRecord,
@@ -86,6 +87,10 @@ import {
   slugOf,
   splitFrontmatter,
   stripCode,
+  tableBlocks,
+  editedTables,
+  repadTables,
+  repadVerdict,
   suggestLinkFix,
   suggestLinkFixes,
   archivedReading,
@@ -95,6 +100,7 @@ import {
   within,
   yamlScalar,
   type Verdict,
+  type TableBlock,
 } from "./migrate-v2.10-to-v3.0.ts";
 import * as seed from "../../../../../../scripts/pdocs/seed.ts";
 import * as uuid from "../../../../../../scripts/pdocs/uuid.ts";
@@ -702,10 +708,75 @@ describe("synthesizeFrontmatter — a legacy archive's document with none", () =
     expect(splitFrontmatter(out).body).toBe("");
   });
 
+  test("a setext heading is a heading: the H1 is the title, and the description comes from the first real paragraph", () => {
+    const fm = (body: string, name = "x.md") => splitFrontmatter(synthesizeFrontmatter("artifact", name, body, { date: "2026-01-01" })).fm as string;
+    const h1 = fm("Alpha\n=====\n\nThe alpha notes. More.\n");
+    expect([fmGet(h1, "title"), fmGet(h1, "description")]).toEqual(["Alpha", "The alpha notes."]);
+    // A setext H2 before the prose is skipped too, and so is a thematic break.
+    const h2 = fm("Alpha\n=====\n\nBackground\n----------\n\n---\n\nWhat happened first. Then more.\n");
+    expect([fmGet(h2, "title"), fmGet(h2, "description")]).toEqual(["Alpha", "What happened first."]);
+    // Text right under the underline, with no blank line, is the paragraph.
+    const tight = fm("Beta\n===\nThe beta notes.\n");
+    expect([fmGet(tight, "title"), fmGet(tight, "description")]).toEqual(["Beta", "The beta notes."]);
+    // An ATX H1 that comes first still wins; a setext H2 alone gives no title.
+    expect(fmGet(fm("# Gamma\n\nDelta\n=====\n\nBody.\n"), "title")).toBe("Gamma");
+    expect(fmGet(fm("Section\n-------\n\nBody here.\n", "2026-01-01-from-name.md"), "title")).toBe("From name");
+    // An underline inside a code fence is not one.
+    expect(fmGet(fm("```\nNot\n===\n```\n\nReal prose.\n", "code.md"), "description")).toBe("Real prose.");
+  });
+
+  test("CRLF line endings: a setext heading is still a heading, and the body keeps its CRLF", () => {
+    const body = "Title CR\r\n========\r\n\r\nBody text here. More.\r\n";
+    const out = synthesizeFrontmatter("artifact", "2026-01-01-from-name.md", body, { date: "2026-01-01" });
+    const fm = splitFrontmatter(out).fm as string;
+    expect([fmGet(fm, "title"), fmGet(fm, "description")]).toEqual(["Title CR", "Body text here."]);
+    expect(out.endsWith(body)).toBe(true);
+    const atx = splitFrontmatter(synthesizeFrontmatter("artifact", "x.md", "# Heading\r\n\r\nFirst line. Second.\r\n", { date: "2026-01-01" })).fm as string;
+    expect([fmGet(atx, "title"), fmGet(atx, "description")]).toEqual(["Heading", "First line."]);
+  });
+
   test("a value with a colon is quoted, so the lint reads it back whole", () => {
     const out = synthesizeFrontmatter("artifact", "x.md", "# A: b\n\nWhy: because.\n", { date: "2026-01-01" });
     expect(out).toContain('title: "A: b"');
     expect(fmGet(splitFrontmatter(out).fm as string, "description")).toBe("Why: because.");
+  });
+});
+
+describe("tables whose links the run respells — found, and re-padded only where still the same table", () => {
+  const before = "# T\n\n| Doc | Where |\n| --- | ----- |\n| A   | [a](../projects/alpha/proposal.md) |\n\n```\n| not | a table |\n| --- | --- |\n```\n\n| Other | x |\n| ----- | - |\n| y     | z |\n";
+  const after = before.replace("../projects/alpha/proposal.md", "../features/alpha/feature.md");
+
+  test("only the table the edit changed is found, and a fenced one never is", () => {
+    expect(tableBlocks(before).map((t) => t.start)).toEqual([2, 11]);
+    expect(editedTables(before, after).map((t) => t.text)).toEqual([after.split("\n").slice(2, 5).join("\n")]);
+  });
+
+  test("a table in a blockquote or under a list item is found, and never re-padded: the verdict says why", () => {
+    const text = "> | a | b |\n> | - | - |\n> | [x](y.md) | z |\n\n- item\n\n  | a | b |\n  | - | - |\n  | c | d |\n";
+    const blocks = tableBlocks(text);
+    expect(blocks.map((t) => t.start)).toEqual([0, 6]);
+    expect(repadVerdict(blocks[0] as TableBlock, "| a | b |\n| - | - |\n| [x](y.md) | z |\n")).toEqual({ why: "in a blockquote" });
+    expect(repadVerdict(blocks[1] as TableBlock, "| a | b |\n| - | - |\n| c | d |\n")).toEqual({ why: "indented" });
+    const em = { start: 0, end: 3, text: "| a | b |\n| - | - |\n| *em* | [x](y.md) |" };
+    expect(repadVerdict(em, "| a    | b        |\n| ---- | -------- |\n| _em_ | [x](y.md) |\n")).toEqual({ why: "your Prettier would change more than its padding" });
+  });
+
+  test("a formatted form whose header or delimiter row changed shape is rejected: a pipe in a code span splits a body cell", () => {
+    const table = "| Doc | Note |\n| --- | ---- |\n| `a|b` | [a](../x.md) |";
+    const block = { start: 0, end: 3, text: table };
+    // What Prettier prints for it: a three-column delimiter under a two-column header, which GFM no longer renders as a table.
+    const printed = "| Doc | Note |\n| --- | ---- | ------------ |\n| `a  | b`   | [a](../x.md) |\n";
+    expect(repadTables(table, [block], [printed])).toBe(table);
+  });
+
+  test("a formatted form replaces the block only when it is the same table, and never an indented one", () => {
+    const [t] = editedTables(before, after);
+    const good = "| Doc | Where                            |\n| --- | -------------------------------- |\n| A   | [a](../features/alpha/feature.md) |\n";
+    expect(repadTables(after, [t as TableBlock], [good])).toBe(after.replace((t as TableBlock).text, good.trimEnd()));
+    expect(repadTables(after, [t as TableBlock], ["| Doc | Where |\n| --- | --- |\n| B | changed |\n"])).toBe(after);
+    expect(repadTables(after, [t as TableBlock], [null])).toBe(after);
+    const indented = { start: 0, end: 3, text: "  | a | b |\n  | - | - |\n  | c | d |" };
+    expect(repadTables(indented.text, [indented], ["| a | b |\n| - | - |\n| c | d |\n"])).toBe(indented.text);
   });
 });
 
@@ -752,15 +823,21 @@ describe("patchLintArrays — keeps the adopter's entries and order", () => {
     expect(lint.durable).toEqual(["architecture", "mine", "specifications", "memories"]);
     expect(lint.types).toEqual({ memories: "memory" });
     expect(lint.skip).toEqual(["superpowers"]);
-    // A wildcard where the entity would be could mean features/ or items/: left as written, and named.
-    expect(lint.exclude).toEqual(["docs/features/deck/artifacts/*-prototype.md", "dist/**", "docs/projects/*/artifacts/*.md"]);
-    expect(changes.join("\n")).not.toContain("docs/projects/*/artifacts/*.md →");
+    // A wildcard where the entity would be goes category-wide, in the glob's own place.
+    expect(lint.exclude).toEqual(["docs/features/deck/artifacts/*-prototype.md", "dist/**", "docs/features/*/artifacts/*.md", "docs/items/*/artifacts/*.md"]);
+    expect(changes).toContain("lint.exclude: docs/projects/*/artifacts/*.md → docs/features/*/artifacts/*.md, docs/items/*/artifacts/*.md");
     expect(lint.scopes).toEqual([]);
     expect(lint.adopting).toBe(false);
     expect(changes).toContain("lint.skip: -_archive (the archive is linted now)");
-    expect(notes).toEqual([
-      "lint.exclude: `docs/projects/*/artifacts/*.md` names a retired folder, and what it matched now sits under features/ or items/ — left as written; respell it by hand",
-    ]);
+    expect(notes).toEqual([]);
+  });
+
+  test("a lint.exclude glob that still names a retired folder after respelling is named, and left as written", () => {
+    const lint = { workbench: ["projects", "backlog"], exclude: ["docs/{projects,backlog}/**/*.md", "**/docs/projects/**", "!docs/projects/alpha/**"] };
+    const { lint: out, notes } = patchLintArrays(lint, { moves: [["docs/projects/alpha", "docs/features/alpha"]], keptLibrary: [], docsRootName: "docs" });
+    expect(out.exclude ?? lint.exclude).toEqual(lint.exclude);
+    expect(notes).toHaveLength(3);
+    for (const g of lint.exclude) expect(notes.some((n) => n.includes(`\`${g}\``))).toBe(true);
   });
 
   test("already migrated: nothing changes", () => {
@@ -770,16 +847,49 @@ describe("patchLintArrays — keeps the adopter's entries and order", () => {
     expect(r.lint).toEqual(done);
   });
 
-  test("rewriteExcludeGlob respells moved paths, longest first, and leaves the rest", () => {
-    const moves: Array<[string, string]> = [["docs/projects/a", "docs/features/a"], ["docs/projects/a/x.md", "docs/features/a/feature.md"]];
-    expect(rewriteExcludeGlob("docs/projects/a/x.md", moves, "docs")).toBe("docs/features/a/feature.md");
-    expect(rewriteExcludeGlob("docs/projects/a/**", moves, "docs")).toBe("docs/features/a/**");
-    // Not unambiguous: items/ holds every kind of item now, and a guess would exclude all of them.
+  test("rewriteExcludeGlob: a spelled-out path follows its move; a wildcard at the entity goes category-wide; a whole retired folder is left", () => {
+    const moves: Array<[string, string]> = [
+      ["docs/projects/a", "docs/features/a"],
+      ["docs/projects/a/x.md", "docs/features/a/feature.md"],
+      ["docs/projects/a/artifacts/deck-slides.md", "docs/features/a/artifacts/deck-slides.md"],
+      ["docs/projects/b", "docs/items/b"],
+      ["docs/projects/b/artifacts/slides/talk-slides.md", "docs/items/b/artifacts/slides/talk-slides.md"],
+      ["docs/projects/_archive/g", "docs/features/_archive/g"],
+      ["docs/projects/_archive/g/artifacts/old-slides.md", "docs/features/_archive/g/artifacts/old-slides.md"],
+      ["docs/investigations/2026-01-01-q.md", "docs/items/q/write-up.md"],
+    ];
+    expect(rewriteExcludeGlob("docs/projects/a/x.md", moves, "docs")).toEqual(["docs/features/a/feature.md"]);
+    expect(rewriteExcludeGlob("docs/projects/a/**", moves, "docs")).toEqual(["docs/features/a/**"]);
+    expect(rewriteExcludeGlob("dist/**", moves, "docs")).toEqual(["dist/**"]);
+    // Category-wide, so an entity filed after the run is excluded too; the archive's forms
+    // because the same glob one level down matched an archived entity's file (the archive
+    // was skipped by the old lint and is linted now).
+    const slides = rewriteExcludeGlob("docs/projects/*/artifacts/**/*-slides.md", moves, "docs");
+    expect(slides).toEqual([
+      "docs/features/*/artifacts/**/*-slides.md",
+      "docs/items/*/artifacts/**/*-slides.md",
+      "docs/features/_archive/*/artifacts/**/*-slides.md",
+      "docs/items/_archive/*/artifacts/**/*-slides.md",
+    ]);
+    const excludes = (p: string) => (slides as string[]).some((g) => new Bun.Glob(g).match(p));
+    for (const p of ["docs/features/a/artifacts/deck-slides.md", "docs/items/b/artifacts/slides/talk-slides.md", "docs/features/_archive/g/artifacts/old-slides.md", "docs/items/later/artifacts/new-slides.md"])
+      expect([p, excludes(p)]).toEqual([p, true]);
+    expect(excludes("docs/items/b/item.md")).toBe(false);
+    // `**` where the entity would be already reaches the archive.
+    expect(rewriteExcludeGlob("docs/projects/**/*-slides.md", moves, "docs")).toEqual(["docs/features/**/*-slides.md", "docs/items/**/*-slides.md"]);
+    // A whole retired folder, or files in it: items/ holds every kind of item now, and would all be excluded.
     expect(rewriteExcludeGlob("docs/backlog/*.md", moves, "docs")).toBeNull();
     expect(rewriteExcludeGlob("docs/backlog/**", moves, "docs")).toBeNull();
-    expect(rewriteExcludeGlob("docs/projects/*/artifacts/*.md", moves, "docs")).toBeNull();
+    expect(rewriteExcludeGlob("docs/projects/*", moves, "docs")).toBeNull();
+    // A path nothing moved.
     expect(rewriteExcludeGlob("docs/projects/gone/**", moves, "docs")).toBeNull();
-    expect(rewriteExcludeGlob("dist/**", moves, "docs")).toBe("dist/**");
+    // Globs that name a retired folder in a shape this does not respell: named, never rewritten.
+    for (const g of ["docs/{projects,backlog}/**/*.md", "**/docs/projects/**", "!docs/projects/a/**", "./docs/projects/*/x/*.md"])
+      expect([g, rewriteExcludeGlob(g, moves, "docs")]).toEqual([g, null]);
+    // A folder that only shares a retired name, outside the docs root, is not ours.
+    expect(rewriteExcludeGlob("coverage/reports/**", moves, "docs")).toEqual(["coverage/reports/**"]);
+    // A moved file the category-wide glob would not reach: an investigation became items/<slug>/write-up.md.
+    expect(rewriteExcludeGlob("docs/investigations/*-q.md", moves, "docs")).toBeNull();
   });
 });
 
@@ -1770,34 +1880,153 @@ function stubCookiecutter(mode: "fail" | "copy", source: string = target()): str
   return `${dir}:${process.env.PATH}`;
 }
 
-function stubNpx(mode: "append" | "fail"): string {
+/** `npx` and `bunx` stand-ins that record every call to `log` and do nothing: nothing in the run may call them. */
+function recordingNpx(log: string): string {
   const dir = tmp("migrate-v30-stubnpx-");
-  writeFileSync(
-    join(dir, "npx"),
-    `#!/bin/sh\n[ "$1" = "prettier" ] && [ "$2" = "--write" ] || exit 4\nshift 2\ncase "${mode}" in\n  fail) echo "stub prettier: boom" >&2; exit 1 ;;\n  append) for f in "$@"; do printf '\\n<!-- formatted by the stub -->\\n' >> "$f"; done ;;\nesac\nexit 0\n`
-  );
-  chmodSync(join(dir, "npx"), 0o755);
-  return `${dir}:${process.env.PATH}`;
+  for (const name of ["npx", "bunx"]) {
+    writeFileSync(join(dir, name), `#!/bin/sh\necho "${name} $*" >> "${log}"\nexit 0\n`);
+    chmodSync(join(dir, name), 0o755);
+  }
+  return dir;
 }
 
-describe("format before record", () => {
-  test("what the run created is formatted before the record; a document of the adopter's is not", () => {
-    const root = fixtureO();
-    const r = migrate(root, [], { format: true, env: { PATH: stubNpx("append") } });
+describe("format before record — the project's own Prettier, never a downloaded one", () => {
+  test("what the run created is formatted with the project's Prettier before the record; a document of the adopter's is not", () => {
+    const messy = "docs/projects/alpha/artifacts/messy.md";
+    const messyText = doc(common("artifact", "Messy", "Not Prettier's shape."), "# Messy\n\n*   one\n*   two\n");
+    const root = withPrettier(fixtureO({ [messy]: messyText }));
+    // A config the scaffold's bytes do not already satisfy, so formatting has work to do.
+    const config = join(root, ".prettierrc");
+    writeFileSync(config, '{ "proseWrap": "always", "printWidth": 50 }\n');
+    commitAll(root, "a narrow print width");
+    const r = migrate(root, [], { format: true });
+    if (r.exitCode !== 0) console.log(r.out);
     expect(r.exitCode).toBe(0);
     expect(r.out).toContain("no document of yours was formatted");
-    expect(read(root, "docs/items/beta/item.md")).toContain("formatted by the stub");
-    expect(read(root, "docs/TEMPLATES/PLAN.template.md")).toContain("formatted by the stub");
+    expect(r.out).toMatch(/formatted \d+ file\(s\) this run created or installed with your Prettier 3\.[\d.]+ \([1-9]\d* changed\)/);
+    const created = ["docs/items/beta/item.md", "docs/TEMPLATES/PLAN.template.md"];
+    expect(prettierCheck(root, created, config).exitCode).toBe(0);
     expect(readJson(join(root, "docs/.pdocs-seed.json")).files["TEMPLATES/PLAN.template.md"]).toBe(hashOf(join(root, "docs/TEMPLATES/PLAN.template.md")));
-    expect(read(root, "docs/features/alpha/feature.md")).not.toContain("formatted by the stub");
+    expect(splitFrontmatter(read(root, "docs/features/alpha/artifacts/messy.md")).body).toBe(splitFrontmatter(messyText).body);
   });
 
-  test("a formatter that fails stops the run before the record", () => {
-    const root = fixtureO();
-    const r = migrate(root, [], { format: true, env: { PATH: stubNpx("fail") } });
+  test("the owned files the refresh installs pass the project's own `prettier --check`, and a re-run still reads them as unedited", () => {
+    const root = withPrettier(fixtureO());
+    const config = join(root, ".prettierrc");
+    // Not the scaffold's config: every wrapped paragraph of the scaffold's bytes fails this check.
+    writeFileSync(config, '{ "proseWrap": "never" }\n');
+    commitAll(root, "unwrapped prose");
+    const r = migrate(root, [], { format: true });
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const owned = ["SCHEMA.md", "README.md", "AGENTS.md", "features/README.md", "items/README.md", "playbooks/README.md", "cycles/README.md"].map((f) => `docs/${f}`);
+    const check = prettierCheck(root, owned, config);
+    if (check.exitCode !== 0) console.log(check.out);
+    expect(check.exitCode).toBe(0);
+    expect(r.out).toContain("the owned files are written as your Prettier");
+    commitAll(root, "migrated");
+    const before = treeDigest(join(root, "docs"));
+    const again = migrate(root, [], { format: true });
+    expect(again.exitCode).toBe(0);
+    expect(again.out).not.toContain("yours, in an owned file");
+    expect(again.out).toContain("owned file(s) already identical to the scaffold's, as your Prettier prints it");
+    expect(treeDigest(join(root, "docs"))).toEqual(before);
+  });
+
+  test("an owned file your Prettier would change beyond wrapping is left at the scaffold's bytes, and named", () => {
+    const root = withPrettier(fixtureO());
+    // At this width Prettier breaks a YAML list in SCHEMA.md and adds a trailing comma.
+    writeFileSync(join(root, ".prettierrc"), '{ "proseWrap": "always", "printWidth": 50 }\n');
+    commitAll(root, "a narrow print width");
+    const r = migrate(root, [], { format: true });
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toMatch(/left at the scaffold's bytes, because your Prettier would change more than wrapping[^\n]*docs\/SCHEMA\.md/);
+    expect(read(root, "docs/SCHEMA.md")).toBe(read(target(), "docs/SCHEMA.md"));
+  });
+
+  test("a table whose links the run respells still passes `prettier --check`; a table it did not edit is left as it was", () => {
+    const clean = "docs/projects/alpha/artifacts/table.md";
+    const mixed = "docs/projects/alpha/artifacts/mixed.md";
+    const table = "| Item | Where |\n| --- | --- |\n| Open | [open](../../../backlog/2026-01-01-open-item.md) |\n| Alpha | [plan](../plan.md) |\n";
+    const untouched = "| a | b |\n|---|---|\n| misaligned | on purpose |\n";
+    const root = withPrettier(
+      fixtureO({
+        [clean]: doc(common("artifact", "Table", "A table of links."), `# Table\n\n${table}`),
+        [mixed]: doc(common("artifact", "Mixed", "Two tables."), `# Mixed\n\n${table}\n${untouched}`),
+      })
+    );
+    // The adopter's file is Prettier-clean before the run (the second table in `mixed` aside, on purpose).
+    Bun.spawnSync([join(REPO_ROOT, "node_modules/.bin/prettier"), "--write", "--config", join(root, ".prettierrc"), clean], { cwd: root, stdout: "pipe", stderr: "pipe", env: childEnv() });
+    commitAll(root, "a table of links");
+    expect(prettierCheck(root, [clean], join(root, ".prettierrc")).exitCode).toBe(0);
+    const r = migrate(root, [], { format: true });
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const moved = "docs/features/alpha/artifacts/table.md";
+    expect(read(root, moved)).toContain("(../../../items/open-item.md)");
+    const check = prettierCheck(root, [moved], join(root, ".prettierrc"));
+    if (check.exitCode !== 0) console.log(check.out);
+    expect(check.exitCode).toBe(0);
+    const m = read(root, "docs/features/alpha/artifacts/mixed.md");
+    expect(m).toContain(untouched);
+    expect(m).not.toContain("| Open | [open](../../../items/open-item.md) |");
+  });
+
+  test("every edited table the run could not re-pad is named with why: one Prettier would change beyond padding, one in a blockquote, one under a list item", () => {
+    const f = "docs/projects/alpha/artifacts/three.md";
+    const link = "[open](../../../backlog/2026-01-01-open-item.md)";
+    const body = `# Three\n\n| Item | Note |\n| ---- | ---- |\n| ${link} | *em* |\n\n> | Item | Note |\n> | ---- | ---- |\n> | ${link} | x |\n\n- A list\n\n  | Item | Note |\n  | ---- | ---- |\n  | ${link} | y |\n`;
+    const root = withPrettier(fixtureO({ [f]: doc(common("artifact", "Three", "Three tables."), body) }));
+    const r = migrate(root, [], { format: true });
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    const moved = "docs/features/alpha/artifacts/three.md";
+    expect(r.out).toContain("3 table(s) whose links this run respells are left as they are");
+    expect(r.out).toMatch(new RegExp(`${moved}:\\d+ \\(your Prettier would change more than its padding\\)`));
+    expect(r.out).toMatch(new RegExp(`${moved}:\\d+ \\(in a blockquote\\)`));
+    expect(r.out).toMatch(new RegExp(`${moved}:\\d+ \\(indented\\)`));
+    expect(read(root, moved)).toContain("| [open](../../../items/open-item.md) | *em* |");
+  });
+
+  test("without Prettier, a respelled table is left as it is, and the plan says which file to format", () => {
+    const root = fixtureO({ "docs/projects/alpha/artifacts/table.md": doc(common("artifact", "Table", "A table of links."), "# Table\n\n| Item | Where |\n| ---- | ----- |\n| Open | [open](../../../backlog/2026-01-01-open-item.md) |\n") });
+    const r = migrate(root, [], { format: true });
+    expect(r.exitCode).toBe(0);
+    expect(read(root, "docs/features/alpha/artifacts/table.md")).toContain("| Open | [open](../../../items/open-item.md) |");
+    expect(r.out).toMatch(/1 table\(s\) whose links this run respells are left as they are, their columns possibly out of line — format them yourself: docs\/features\/alpha\/artifacts\/table\.md:\d+ \(no Prettier in this project\)/);
+  });
+
+  test("a Prettier that fails stops the run before the record", () => {
+    const root = withPrettier(fixtureO());
+    writeFileSync(join(root, ".prettierrc"), "{ not json\n");
+    commitAll(root, "a broken config");
+    const r = migrate(root, [], { format: true });
     expect(r.exitCode).toBe(1);
-    expect(r.out).toContain("STOPPED: prettier exited 1");
+    expect(r.out).toContain("STOPPED: your Prettier failed over the");
     expect(readJson(join(root, "docs/.pdocs-seed.json")).version).toBe("8.1.0");
+  });
+
+  test("a project with no Prettier: formatting is skipped and says so; nothing is downloaded, with empty caches and no npx needed", () => {
+    const root = fixtureO();
+    const log = join(tmp("migrate-v30-npxlog-"), "calls.log");
+    const bunCache = tmp("migrate-v30-bun-cache-");
+    const npmCache = tmp("migrate-v30-npm-cache-");
+    const r = migrate(root, [], {
+      format: true,
+      env: {
+        PATH: `${recordingNpx(log)}:${dirname(Bun.which("bun") as string)}:/usr/bin:/bin`,
+        BUN_INSTALL_CACHE_DIR: bunCache,
+        npm_config_cache: npmCache,
+      },
+    });
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(r.out).toContain("no Prettier in this project, so the");
+    expect(r.out).toContain("none is downloaded");
+    expect(existsSync(log)).toBe(false);
+    expect(readdirSync(bunCache)).toEqual([]);
+    expect(readdirSync(npmCache)).toEqual([]);
+    expect(existsSync(join(root, "node_modules"))).toBe(false);
   });
 });
 
@@ -1882,6 +2111,17 @@ describe("frontmatter the run writes is in Prettier's shape", () => {
 
 describe("prettierFrontmatter — the project's own Prettier, or none; never a downloaded one", () => {
   const block = `title: a\ndescription: 'The "delta" work needed a first sentence long enough that Prettier has to fold it.'`;
+
+  test("on Prettier 3, a path .gitignore names is ignored as the CLI ignores it, and so is one .prettierignore names", () => {
+    const root = tmp("migrate-v30-gitignored-");
+    mkdirSync(join(root, "node_modules"), { recursive: true });
+    symlinkSync(realpathSync(join(REPO_ROOT, "node_modules/prettier")), join(root, "node_modules/prettier"));
+    write(root, { ".gitignore": "node_modules/\nscratch/\n", ".prettierignore": "vendor/\n" });
+    const text = "*   one\n*   two\n";
+    const r = prettierFormat(root, ["scratch/a.md", "vendor/b.md", "docs/c.md"].map((p) => ({ path: join(root, p), text })));
+    expect(r.version).toStartWith("3.");
+    expect(r.out).toEqual([null, null, "- one\n- two\n"]);
+  });
 
   test("a project with no node_modules: every block falls back, it says so, and nothing is downloaded", () => {
     const root = tmp("migrate-v30-noprettier-");
@@ -2185,6 +2425,42 @@ describe("the run respells retired paths in the ignore files, so what was exclud
   });
 });
 
+describe("a lint.exclude glob with a wildcard at the entity is respelled category-wide", () => {
+  const DECK = "---\ntheme: default\nclass: text-center\n---\n\n# A deck\n\n[proposal](../../proposal.md)\n";
+  const decks = {
+    "docs/projects/alpha/artifacts/slides/intro-slides.md": DECK,
+    "docs/projects/beta/artifacts/beta-slides.md": DECK,
+  };
+  const deckGlob = "docs/projects/*/artifacts/**/*-slides.md";
+
+  test("the decks it excluded stay excluded — not edited, not linted — through a stop mid-move and its resume; a later entity's deck is excluded too; a re-run changes nothing", () => {
+    const root = withIgnored(fixtureO(decks), {}, [deckGlob]);
+    chmodSync(join(root, "docs/investigations/_archive"), 0o555);
+    const stopped = migrate(root);
+    chmodSync(join(root, "docs/investigations/_archive"), 0o755);
+    expect(stopped.exitCode).toBe(1);
+    const r = migrate(root);
+    if (r.exitCode !== 0) console.log(r.out);
+    expect(r.exitCode).toBe(0);
+    expect(read(root, "docs/features/alpha/artifacts/slides/intro-slides.md")).toBe(DECK);
+    expect(read(root, "docs/items/beta/artifacts/beta-slides.md")).toBe(DECK);
+    const exclude = readJson(join(root, ".project-docs.json")).lint.exclude as string[];
+    expect(exclude).toContain("docs/features/*/artifacts/**/*-slides.md");
+    expect(exclude).toContain("docs/items/*/artifacts/**/*-slides.md");
+    expect(exclude).not.toContain(deckGlob);
+    expect(stopped.out + r.out).toContain(`lint.exclude: ${deckGlob} → docs/features/*/artifacts/**/*-slides.md, docs/items/*/artifacts/**/*-slides.md`);
+    // An entity filed after the run, with a deck of its own: excluded by the respelled glob.
+    write(root, { "docs/items/later/artifacts/later-slides.md": DECK });
+    expect(pdocs(root, "check").exitCode).toBe(0);
+    rmSync(join(root, "docs/items/later"), { recursive: true });
+
+    commitAll(root, "migrated");
+    const before = treeDigest(root);
+    expect(migrate(root).exitCode).toBe(0);
+    expect(treeDigest(root)).toEqual(before);
+  });
+});
+
 describe("a document in lint.exclude moves with its folder, and nothing in it is rewritten", () => {
   test("a canon file with no frontmatter and links in it, excluded, is byte-identical after the run — and the run says so", () => {
     const bare = "Bare\n====\n\nSee [the proposal](../../proposal.md) and [the backlog](../../../../backlog/2026-01-01-open-item.md).\n";
@@ -2365,10 +2641,6 @@ describe("guards that must be able to fire", () => {
 
   test("preflight: cookiecutter missing with no --scaffold-dir", () => {
     stops(migrate(fixtureO(), [], { scaffold: null, env: { PATH: `${dirname(Bun.which("bun") as string)}:/usr/bin:/bin` } }), "STOPPED: cookiecutter is not installed");
-  });
-
-  test("preflight: npx missing without --skip-format", () => {
-    stops(migrate(fixtureO(), [], { format: true, env: { PATH: `${dirname(Bun.which("bun") as string)}:/usr/bin:/bin` } }), "STOPPED: npx not found");
   });
 
   test("scaffold: cookiecutter exiting non-zero", () => {

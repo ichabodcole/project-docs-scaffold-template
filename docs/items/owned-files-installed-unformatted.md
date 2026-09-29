@@ -7,7 +7,7 @@ description:
   (features/README.md in 9.0.1) fail prettier --check under another Prettier
   version or config.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0ea0f-3a93-7239-9703-d1301f006c7b
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -30,6 +30,9 @@ migration; nothing does it today.
 
 ## Definition of done
 
-- [ ] After a refresh, the owned files it installed pass the consumer's
+- [x] After a refresh, the owned files it installed pass the consumer's
       `prettier --check`, or the guide says plainly to format them and why that
       is safe.
+
+Landed with four other migration fixes; the record is
+[the migration polish round session](./link-respell-misaligns-tables/sessions/2026-09-28-migration-polish-round.md).

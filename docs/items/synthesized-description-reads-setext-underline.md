@@ -5,7 +5,7 @@ description:
   When a legacy document's H1 is a setext heading, synthesizeFrontmatter takes
   its ==== underline as the description.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0ea5f-1307-72bc-940f-e07d3884a946
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -25,5 +25,8 @@ that way gets a meaningless description.
 
 ## Definition of done
 
-- [ ] A setext H1 is read as the title, and the description comes from the first
+- [x] A setext H1 is read as the title, and the description comes from the first
       paragraph after it, with a test.
+
+Landed with four other migration fixes; the record is
+[the migration polish round session](./link-respell-misaligns-tables/sessions/2026-09-28-migration-polish-round.md).

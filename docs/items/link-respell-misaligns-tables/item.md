@@ -5,7 +5,7 @@ description:
   When the migration lengthens a link in a Markdown table cell the columns no
   longer line up, and a consumer's prettier --check rejects the file.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0ea0f-3a47-7667-a579-0ea1cbfbe1c8
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -26,6 +26,6 @@ row in story-loom's readiness write-up
 
 ## Definition of done
 
-- [ ] A table whose links the migration respells still passes
+- [x] A table whose links the migration respells still passes
       `prettier --check`, either because the run re-pads it or formats the file
       with the project's own Prettier, with a test.
