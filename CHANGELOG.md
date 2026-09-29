@@ -1,5 +1,22 @@
 # Changelog
 
+## [9.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.1.0...project-docs-scaffold-template-v9.2.0) (2026-09-29)
+
+
+### Features
+
+* **project-docs:** upgrades name their case, migrations never set a tree back, the CLI is pointed at, and a closed cycle's Outcome is checked ([c5bcd82](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c5bcd82b5db5e271b8c96e7f09c2d02cb2b59373))
+
+
+### Bug Fixes
+
+* **migrations:** five v3.0 migration fixes — setext headings, no downloads, clean owned files, re-padded tables, category-wide excludes ([61f3231](https://github.com/ichabodcole/project-docs-scaffold-template/commit/61f3231c8a06e8f4591c5c384ebb4506f101f9c3))
+* **migrations:** ignore files keep protecting moved files, and excluded documents are never edited ([cf55892](https://github.com/ichabodcole/project-docs-scaffold-template/commit/cf558924adaf5e3bb2bcc5eb4d61705b19c2a106))
+* **migrations:** phase 10 reads broken links from the project root and as archived since ([a5bdc8d](https://github.com/ichabodcole/project-docs-scaffold-template/commit/a5bdc8d5ad598529236b517e354f61f5ee5f61a5))
+* **migrations:** the v3.0 migration recognises owned files from every release up to its pin ([8582ed4](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8582ed43fa0b060d6e14725c72f205e46b57193e))
+* **migrations:** the v3.0 migration retypes documents whose new position says artifact ([45b5d82](https://github.com/ichabodcole/project-docs-scaffold-template/commit/45b5d829d500ec69b4b5d51f7981f26889158e70))
+* **migrations:** the v3.0 migration writes frontmatter in Prettier's shape ([5ff79e2](https://github.com/ichabodcole/project-docs-scaffold-template/commit/5ff79e266d0add45ba0bb46c0dafd5a434b18518))
+
 ## [9.1.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.0.1...project-docs-scaffold-template-v9.1.0) (2026-09-27)
 
 
