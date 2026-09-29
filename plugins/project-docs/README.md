@@ -279,6 +279,17 @@ fields, not folders. Projects still on the older layout (`projects/`,
 
 ## Version History
 
+### 4.3.0 (2026-09-29)
+
+**The other plugins moved to skill-garden.** recipes, toolbox, operator,
+agent-bridge and hivemind now ship from
+[skill-garden](https://github.com/ichabodcole/skill-garden). This marketplace
+serves project-docs alone.
+
+- `provide-feedback` files each piece of feedback on the repository that ships
+  the component: project-docs and the scaffold here, the moved plugins on
+  skill-garden.
+
 ### 4.2.0 (2026-09-29)
 
 **The story-loom migration cycle.** Every change alters what the migration or a

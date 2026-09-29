@@ -1,6 +1,0 @@
-name: operator
-version: 1.2.0
-description: "Operator Editor integration for the project-docs workflow — authenticate to the Operator MCP server (operator-setup) and triage Operator documents into the docs pipeline (operator-triage)"
-keywords: [agent-skills, documentation, ai-coding-agent]
-author: "Cole Reed"
-license: MIT
