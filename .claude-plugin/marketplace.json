@@ -21,42 +21,6 @@
         "reports",
         "workflow"
       ]
-    },
-    {
-      "name": "operator",
-      "source": "./plugins/operator",
-      "category": "documentation",
-      "tags": ["operator", "triage", "intake", "documentation"]
-    },
-    {
-      "name": "recipes",
-      "source": "./plugins/recipes",
-      "category": "documentation",
-      "tags": ["recipes", "scaffolding", "documentation"]
-    },
-    {
-      "name": "toolbox",
-      "source": "./plugins/toolbox",
-      "category": "development",
-      "tags": ["testing", "optimization", "prototyping", "utilities"]
-    },
-    {
-      "name": "agent-bridge",
-      "source": "./plugins/agent-bridge",
-      "category": "communication",
-      "tags": ["agent-bridge", "cross-project", "knowledge-sharing"]
-    },
-    {
-      "name": "hivemind",
-      "source": "./plugins/hivemind",
-      "category": "knowledge",
-      "tags": [
-        "hivemind",
-        "cross-project",
-        "knowledge-sharing",
-        "playbooks",
-        "feedback"
-      ]
     }
   ]
 }
