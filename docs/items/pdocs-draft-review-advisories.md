@@ -4,12 +4,14 @@ title: Prompt for document review at work-start touch points
 description:
   Warn about unreviewed work at start touch points, with an optional strict
   policy that requires reviewed item documents.
-status: draft
-lifecycle: backlog
+status: stable
+lifecycle: ready
 id: 01a0f8bb-50a6-7659-98ae-2fe01cfe16d4
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
 scope: pdocs
+cycle: 2026-10-pdocs-views
+blocked_by: [01a0f8bb-5027-77cd-b8e5-13948e071aa0]
 ---
 
 # Prompt for document review at work-start touch points
@@ -22,7 +24,7 @@ including the shipped Codex marketplace item. `pdocs check` reported the tree
 clean.
 
 The user agreed to advisory warnings at the following touch points, following
-our [board archive advisory](./pdocs-board-archive-advisory.md) pattern:
+our [archive advisory](./pdocs-board-archive-advisory.md) pattern:
 
 1. Starting a cycle: identify draft items already assigned to it.
 2. Adding an item to an active cycle: check it when it joins.
@@ -32,12 +34,12 @@ our [board archive advisory](./pdocs-board-archive-advisory.md) pattern:
 
 Use a shared rule and structured finding shape so mutation commands, views,
 checks, and calling workflows agree. Configure this check in
-`.project-docs.json` alongside the board archive threshold:
+`.project-docs.json` alongside the archive threshold:
 
 ```json
 {
   "checks": {
-    "boardArchive": {
+    "archive": {
       "threshold": 25
     },
     "workItemReview": {
@@ -122,4 +124,4 @@ reviewed in conversation.
 
 ## Related work
 
-- [Board archive advisory](./pdocs-board-archive-advisory.md)
+- [Archive advisory](./pdocs-board-archive-advisory.md)

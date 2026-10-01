@@ -5,13 +5,14 @@ description:
   NO OUTCOME matches only the project's current cycle template placeholder, so a
   closed cycle created from an older template, with its placeholder still in
   place, passes.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ec94-2723-71b3-8c47-74fd0b197420
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: pdocs
 from: items/repin-v3-migration-to-9.2.0/sessions/2026-09-29-repin-to-9.2.0.md
+cycle: 2026-10-pdocs-views
 ---
 
 # The Outcome lint misses a placeholder from an older cycle template

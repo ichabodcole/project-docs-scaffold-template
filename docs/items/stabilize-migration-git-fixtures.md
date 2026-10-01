@@ -4,12 +4,14 @@ title: Stabilize migration Git fixtures in CI
 description:
   Remove intermittent missing Git object directories when copying the migrated
   release fixture.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0f883-379a-71ea-9e4a-d7a08b520330
 kind: bug
 generated: { by: pdocs, at: 2026-10-01 }
 from: 01a0f880-d53a-76b4-a21d-be653c795179
+cycle: 2026-10-migration-test-stability
+scope: migrations
 ---
 
 # Stabilize migration Git fixtures in CI

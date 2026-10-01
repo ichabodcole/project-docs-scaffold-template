@@ -4,12 +4,13 @@ title: Accept cycle filenames in cycle lookup
 description:
   Let cycle lookup accept either the existing filename stem or the full filename
   with .md.
-status: draft
-lifecycle: backlog
+status: stable
+lifecycle: ready
 id: 01a0f8c4-33cb-7560-8185-1a7042f56393
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
 scope: pdocs
+cycle: 2026-10-pdocs-views
 ---
 
 # Accept cycle filenames in cycle lookup

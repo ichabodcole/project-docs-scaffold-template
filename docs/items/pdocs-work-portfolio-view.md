@@ -4,12 +4,13 @@ title: Add a portfolio view for cycles and features
 description:
   Show current cycles and features in one concise overview with progress counts
   and an option to include completed history.
-status: draft
-lifecycle: backlog
+status: stable
+lifecycle: ready
 id: 01a0f8c6-2e4e-72f3-bdce-6a3e96b77e66
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
 scope: pdocs
+cycle: 2026-10-pdocs-views
 ---
 
 # Add a portfolio view for cycles and features
