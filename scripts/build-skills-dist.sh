@@ -131,7 +131,8 @@ Then configure your tool's skills path:
 }
 \`\`\`
 
-**Codex**: Copy or symlink skills into \`~/.codex/skills/\`
+**Codex**: Use this repository's \`.agents/plugins/marketplace.json\` to install
+the skills-only plugin from \`dist/codex-project-docs/\`. See the root README.
 
 ### Claude Code (marketplace)
 
@@ -264,6 +265,52 @@ for plugin_dir in "$PLUGINS_DIR"/*/; do
     total_commands=$((total_commands + command_count))
     plugins_built=$((plugins_built + 1))
 done
+
+# Codex installs a skills-only plugin from the repo marketplace. Build it from
+# the same source skills as the Claude plugin so the two copies cannot drift.
+# These five workflows require Claude commands or named agent types; porting
+# them is separate work.
+header "Packaging: project-docs for Codex"
+codex_dest="$DIST_DIR/codex-project-docs"
+mkdir -p "$codex_dest/skills"
+codex_skill_count=0
+for skill_dir in "$PLUGINS_DIR/project-docs/skills"/*/; do
+    skill_name=$(basename "$skill_dir")
+    case "$skill_name" in
+        dev-discovery|dev-kickoff|finalize-branch|ground-in-project|review-docs)
+            continue
+            ;;
+    esac
+    cp -R "$skill_dir" "$codex_dest/skills/$skill_name"
+    codex_skill_count=$((codex_skill_count + 1))
+done
+
+cat > "$codex_dest/plugin.json" <<JSON
+{
+  "\$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "project-docs",
+  "version": "$(read_plugin_field "$PLUGINS_DIR/project-docs/.claude-plugin/plugin.json" version)",
+  "description": "Skills for structured project documentation, planning, and research",
+  "author": { "name": "Cole Reed" },
+  "homepage": "https://github.com/ichabodcole/project-docs-scaffold-template",
+  "repository": "https://github.com/ichabodcole/project-docs-scaffold-template",
+  "license": "MIT"
+}
+JSON
+
+cat > "$codex_dest/README.md" <<'MARKDOWN'
+# project-docs for Codex
+
+This is the skills-only Codex package generated from
+`plugins/project-docs/skills/`. Its version follows the Claude plugin manifest.
+Install it from this repository's `.agents/plugins/marketplace.json` through
+Codex's Plugins Directory. The package includes no Claude commands or agents.
+
+The `dev-discovery`, `dev-kickoff`, `finalize-branch`, `ground-in-project`, and
+`review-docs` skills are deferred because they rely on Claude command or agent
+workflows. See the repository README for installation steps.
+MARKDOWN
+info "Codex skills: $codex_skill_count"
 
 # ── Normalize ────────────────────────────────────────────────────────────────
 #

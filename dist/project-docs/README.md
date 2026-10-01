@@ -46,7 +46,8 @@ Then configure your tool's skills path:
 }
 ```
 
-**Codex**: Copy or symlink skills into `~/.codex/skills/`
+**Codex**: Use this repository's `.agents/plugins/marketplace.json` to install
+the skills-only plugin from `dist/codex-project-docs/`. See the root README.
 
 ### Claude Code (marketplace)
 

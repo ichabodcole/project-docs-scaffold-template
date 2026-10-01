@@ -5,7 +5,7 @@ description:
   Make the existing project-docs skills installable through a Codex marketplace.
 tags: [codex, plugins, documentation]
 status: draft
-lifecycle: planned
+lifecycle: active
 started: 2026-10-01
 appetite:
   Stop when the existing skills can be installed and exercised in Codex, with
@@ -24,7 +24,7 @@ Codex marketplace, with a narrow scope that can be installed and checked.
 
 ## Scope
 
-- **[item/add-codex-plugin-marketplace](../items/add-codex-plugin-marketplace.md)**
+- **[item/add-codex-plugin-marketplace](../items/add-codex-plugin-marketplace/item.md)**
   — Add the Codex marketplace and package the existing skills so a fresh local
   install can use them.
 
@@ -36,3 +36,5 @@ for them can be scoped in a future pass.
 _To be written when the cycle closes._
 
 ## Sessions
+
+- feature/add-codex-plugin-marketplace (landed 2026-10-01)

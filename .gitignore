@@ -46,7 +46,10 @@ tmp-template-test/
 .playwright-mcp/
 
 # Agent scratch dirs (Codex helper, agent-bridge, etc.)
-.agents/
+.agents/*
+!.agents/plugins/
+.agents/plugins/*
+!.agents/plugins/marketplace.json
 .codex/
 .scratch/
 

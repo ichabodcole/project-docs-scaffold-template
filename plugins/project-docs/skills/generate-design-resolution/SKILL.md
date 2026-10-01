@@ -78,14 +78,13 @@ the file exists.
    than you'd guess from the proposal alone.
 
 6. **Gate check:** If the proposal is already precise enough across the board,
-   tell the user. Suggest proceeding directly to
-   `/project-docs:generate-dev-plan` instead. Don't force design resolution on
-   work that doesn't need it.
+   tell the user. Suggest proceeding directly to the `generate-dev-plan` skill
+   instead. Don't force design resolution on work that doesn't need it.
 
 ### Phase 2: Structured Q&A
 
-Conduct multiple rounds of `AskUserQuestion`, organized around the template
-sections that need resolution.
+Conduct multiple rounds of questions with the user, organized around the
+template sections that need resolution.
 
 **Mechanics:**
 
@@ -207,7 +206,7 @@ This section is always worth visiting, even for simple projects. Good questions:
 4. Ask if any sections need revision or expansion
 5. Apply feedback and update as needed
 6. When the user accepts it, set its frontmatter `lifecycle: resolved`
-7. Suggest next step: `/project-docs:generate-dev-plan $1` to create the
+7. Suggest next step: use the `generate-dev-plan` skill on `$1` to create the
    development plan
 
 ## Output
@@ -218,7 +217,7 @@ Inform the user of:
 - The document location
 - Summary of key decisions resolved
 - Any items deferred to Boundaries or Open Questions
-- Suggested next step: `/project-docs:generate-dev-plan $1`
+- Suggested next step: use the `generate-dev-plan` skill on `$1`
 
 ## Important Guidelines
 

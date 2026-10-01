@@ -172,8 +172,8 @@ external dependencies" and move on.
    - Prerequisites that need human action
 3. Ask if any scenarios should be added, removed, or re-tiered
 4. Apply feedback
-5. Suggest next step: implementation (either directly or via
-   `/project-docs:dev-kickoff`)
+5. Suggest next step: implementation, using the project's branch and kickoff
+   workflow if it has one
 
 ## Output
 

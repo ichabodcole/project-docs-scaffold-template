@@ -44,8 +44,9 @@ The specification generation follows five phases:
 
 ## Phase 1: Explore the Codebase
 
-Launch parallel exploration agents (Explore type subagents) to analyze the
-project. Assign each agent a specific dimension to investigate:
+Use available exploration agents to analyze the project when delegation is
+supported and authorized. Otherwise, explore the codebase directly, covering
+each dimension below. Assign each agent a specific dimension when delegating:
 
 - **Data models and entities** - What data does the app store? What are the
   schemas, relationships, and constraints?
@@ -60,8 +61,8 @@ project. Assign each agent a specific dimension to investigate:
 ### Exploration Strategy
 
 Start broad, then go deep. First identify the project structure (directories,
-entry points, route definitions) to understand scope. Then dispatch focused
-exploration agents for each area of functionality.
+entry points, route definitions) to understand scope. Then investigate each area
+of functionality directly or through focused exploration agents.
 
 **Each exploration agent should report:**
 
@@ -84,7 +85,7 @@ exploration agents for each area of functionality.
 - State management (stores, reducers, context, reactive state)
 - Test files (reveal expected behaviors and edge cases)
 
-Synthesize findings from all agents before proceeding. Look for natural
+Synthesize the exploration findings before proceeding. Look for natural
 boundaries between concerns - these suggest domain groupings.
 
 ## Phase 2: Identify Domains
@@ -172,9 +173,10 @@ Before finalizing any spec, verify it passes these checks:
 
 ## Phase 4: Validate
 
-After writing all specs, launch validation agents to cross-reference each spec
-against the actual code. This is a critical quality step - specs that don't
-match the code will produce incorrect implementations.
+After writing all specs, cross-reference each spec against the actual code. Use
+validation agents when delegation is supported and authorized; otherwise,
+perform a separate validation pass directly. This is a critical quality step -
+specs that don't match the code will produce incorrect implementations.
 
 Each validation agent should:
 
@@ -192,8 +194,8 @@ Each validation agent should:
    - **Suggestions** - Improvements to make the spec more useful for
      implementation
 
-Launch validation agents in parallel, one per spec file or per related group of
-specs.
+When delegating, launch validation agents in parallel, one per spec file or per
+related group of specs.
 
 ### Common Validation Findings
 

@@ -5,7 +5,7 @@ description:
   Package the existing project-docs skills for Codex and list them in a
   repository-scoped Codex marketplace.
 status: draft
-lifecycle: ready
+lifecycle: done
 id: 01a0f620-402b-7110-839b-95279ac6df53
 kind: task
 generated: { by: codex, at: 2026-09-30 }
@@ -29,15 +29,15 @@ distribution question for other plugins lives in `skill-garden`.
 
 ## Definition of done
 
-- [ ] `.agents/plugins/marketplace.json` lists the Codex `project-docs` plugin
+- [x] `.agents/plugins/marketplace.json` lists the Codex `project-docs` plugin
       with a resolvable local source path and valid marketplace metadata.
-- [ ] The Codex plugin has a supported manifest and exposes the existing
+- [x] The Codex plugin has a supported manifest and exposes the existing
       `project-docs` skills intended for this pass. Claude-specific paths and
       tool assumptions in those skills are adapted or documented where needed.
-- [ ] Claude commands and agents are not included in the Codex plugin; the
+- [x] Claude commands and agents are not included in the Codex plugin; the
       documentation makes this scope clear without promising equivalents yet.
-- [ ] Repository documentation shows how to discover, install, and test the
+- [x] Repository documentation shows how to discover, install, and test the
       local plugin in Codex and explains how its source relates to the Claude
       plugin and `dist/`.
-- [ ] A fresh local install exposes the intended skills in Codex; repository
+- [x] A fresh local install exposes the intended skills in Codex; repository
       checks pass, including `check:dist` if shared plugin sources change.

@@ -47,8 +47,8 @@ conditional.
 
 **Don't use this skill for:**
 
-- Reviewing a single document for accuracy — that's the `docs-curator` agent,
-  which is read-only and recommends rather than acts
+- Reviewing a single document for accuracy — use a read-only documentation
+  review that recommends changes rather than acting
 - Deciding whether work _should_ be done — that's triage (`triage-items`) or a
   research item
 - Moving files around for organizational reasons unrelated to completion
@@ -231,9 +231,9 @@ gate exists to prevent. Work the user decides not to finish in this cycle is
 either set `dropped` or has its `cycle:` taken off
 (`pdocs set item/<slug> --unset cycle`) — the user's call, not yours.
 
-**4. If it is closable, close the cycle** — after asking, via `AskUserQuestion`.
-Show the reconciliation (each item and the state that settles it) and ask,
-rather than closing because the arithmetic came out. Closing writes:
+**4. If it is closable, close the cycle** — after asking the user. Show the
+reconciliation (each item and the state that settles it) and ask, rather than
+closing because the arithmetic came out. Closing writes:
 
 ```bash
 pdocs set cycle/<cycle-slug> --lifecycle closed --closed YYYY-MM-DD
@@ -573,9 +573,9 @@ Show the human two things together:
 2. For a terminal entity, what a move would touch: the links `pdocs archive`
    will rewrite, and the prose it will not.
 
-Then ask, via `AskUserQuestion`. Everything accounted for makes this an
-**archival candidate** — not an archived entity. Present archival as a choice,
-with the evidence, and let the human answer.
+Then ask the user. Everything accounted for makes this an **archival candidate**
+— not an archived entity. Present archival as a choice, with the evidence, and
+let the human answer.
 
 **The move is optional and the `lifecycle` is not.** A terminal `lifecycle` is
 what records that the work closed; moving it into `_archive/` is housekeeping on

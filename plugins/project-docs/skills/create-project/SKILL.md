@@ -95,7 +95,7 @@ Confirm the path the command printed, then tell the user what happens next:
 
 - Fill in `feature.md` — problem statement, proposed solution, scope
 - When the owner approves it, it moves to `ready` (Step 4)
-- `/project-docs:generate-dev-plan feature/<name>` generates the plan
+- The `generate-dev-plan` skill can generate the plan for `feature/<name>`
 
 ## Step 4: Approval — `backlog` to `ready`
 
