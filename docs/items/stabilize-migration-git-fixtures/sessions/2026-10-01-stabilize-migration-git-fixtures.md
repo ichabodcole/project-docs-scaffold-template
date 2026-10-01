@@ -136,7 +136,7 @@ The reviewer ran in two passes, and each listed the commands it ran:
   returns, the cause is outside the copied `.git` and this item reopens.
 - The v2.9→v2.10 suite's `afterAll` cleanup runs with Bun's default 5-second
   budget over every fixture root. That bears on
-  [migration-tests-time-out-under-load](../../migration-tests-time-out-under-load.md),
+  [migration-tests-time-out-under-load](../../migration-tests-time-out-under-load/item.md),
   the cycle's other item. So does the review's one unexplained full-file run (5
   failures at 110 s against a usual 77 s), which looks like load and is the
   first lead for that item.

@@ -30,7 +30,7 @@ doesn't say whether the change or the fixture is at fault.
 - **[item/stabilize-migration-git-fixtures](../items/stabilize-migration-git-fixtures/item.md)**
   — the release-marker tests no longer copy a mutable Git object database, and
   repeated targeted Linux runs pass.
-- **[item/migration-tests-time-out-under-load](../items/migration-tests-time-out-under-load.md)**
+- **[item/migration-tests-time-out-under-load](../items/migration-tests-time-out-under-load/item.md)**
   — first reproduce under the current four-worker suite
   (`run-source-tests-once`, landed in the Codex cycle). If it reproduces, fix
   it; if it doesn't, drop the item with the evidence.
@@ -48,3 +48,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 <!-- One line per branch, appended by init-branch: `- <type>/<slug> (open)`. -->
 
 - fix/stabilize-migration-git-fixtures (landed 2026-10-01)
+- fix/migration-tests-time-out-under-load (landed 2026-10-01)

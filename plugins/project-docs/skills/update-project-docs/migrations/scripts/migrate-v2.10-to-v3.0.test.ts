@@ -16,7 +16,7 @@
  * (`cycles/TEMPLATE.md`, `features/README.md`), and never this repository's
  * own docs.
  */
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
   cpSync,
@@ -120,6 +120,18 @@ const REPO_ROOT = resolve(import.meta.dir, "../../../../../..");
 const V210_TAG = "project-docs-scaffold-template-v8.1.0";
 /** The `Applies If` cell of the migrations table, verbatim. */
 const APPLIES_IF = "[ ! -d docs/items ] || [ -d docs/backlog ] || [ -d docs/projects ]";
+
+/**
+ * The budget for every test and hook in this file. Most tests here spawn git,
+ * cookiecutter and the migration itself, and the first to touch a generated
+ * fixture also builds it. The slowest without a budget of its own took 2.8 s
+ * alone and 5.7 s with the suite running twice at once beside ten CPU burners,
+ * against bun's five-second default, which failed the gate at random. Bun
+ * cannot interrupt a synchronous test, only kill a spawned child, so the tests
+ * that spawn nothing lose nothing by sharing it.
+ */
+const SPAWN_BUDGET = 30_000;
+setDefaultTimeout(SPAWN_BUDGET);
 
 const roots: string[] = [];
 afterAll(() => {
