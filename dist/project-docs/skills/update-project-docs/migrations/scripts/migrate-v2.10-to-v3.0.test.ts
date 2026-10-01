@@ -123,12 +123,14 @@ const APPLIES_IF = "[ ! -d docs/items ] || [ -d docs/backlog ] || [ -d docs/proj
 
 const roots: string[] = [];
 afterAll(() => {
+  // The recovery tests take write permission away. Restore it in one process:
+  // spawning chmod for every fixture makes cleanup exceed the runner's default
+  // five-second hook budget on Linux when test files run in parallel.
+  if (roots.length) Bun.spawnSync(["chmod", "-R", "u+w", ...roots], { env: childEnv() });
   for (const r of roots) {
-    // The recovery tests take write permission away; give it back so the tree can go.
-    Bun.spawnSync(["chmod", "-R", "u+w", r], { env: childEnv() });
     rmSync(r, { recursive: true, force: true });
   }
-});
+}, 30_000); // Removing the generated Git trees has its own cleanup budget.
 
 function tmp(prefix: string): string {
   const d = mkdtempSync(join(tmpdir(), prefix));
