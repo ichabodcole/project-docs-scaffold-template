@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.2.0...project-docs-scaffold-template-v9.3.0) (2026-10-01)
+
+
+### Features
+
+* add Codex project-docs skills marketplace ([#184](https://github.com/ichabodcole/project-docs-scaffold-template/issues/184)) ([4e50e65](https://github.com/ichabodcole/project-docs-scaffold-template/commit/4e50e651f2cf2e50ddaddaff602ed7864990389d))
+
 ## [9.2.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.1.0...project-docs-scaffold-template-v9.2.0) (2026-09-29)
 
 
