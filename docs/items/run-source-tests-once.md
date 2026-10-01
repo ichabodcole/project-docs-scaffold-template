@@ -63,3 +63,19 @@ resolve that defect.
 Do not remove unique regression assertions or replace the authoritative gate
 with changed-file discovery. Some tests read history tags, markdown, and scripts
 through dynamic filesystem access that an import graph cannot fully capture.
+
+## Parallel CI cleanup adjustment
+
+The final documentation revision's
+[push run](https://github.com/ichabodcole/project-docs-scaffold-template/actions/runs/36902463807)
+passed all 1,412 test bodies but failed with an unnamed 5.211-second
+cleanup-hook timeout in the v3.0 migration file; its
+[PR run](https://github.com/ichabodcole/project-docs-scaffold-template/actions/runs/36902480908)
+passed. The file's `afterAll` spawned `chmod` separately for each temporary
+fixture before recursively deleting generated Git trees.
+
+Cleanup now restores fixture permissions in one batched subprocess and receives
+an explicit 30-second hook budget. Individual tests retain their existing
+timeouts and assertions. Generated test copies are rebuilt to preserve artifact
+byte identity. The earlier missing-object-directory bug remains separate from
+this hook timeout.
