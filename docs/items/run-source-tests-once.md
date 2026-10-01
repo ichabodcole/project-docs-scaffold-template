@@ -5,11 +5,12 @@ description:
   Exclude generated dist suites from test discovery and adopt measured parallel
   execution while retaining artifact checks.
 status: draft
-lifecycle: review
+lifecycle: done
 id: 01a0f883-3715-767b-900f-6ad94ee815ea
 kind: chore
 generated: { by: pdocs, at: 2026-10-01 }
 from: 01a0f880-d53a-76b4-a21d-be653c795179
+released_in: 9.3.0
 ---
 
 # Run source tests once and measure file parallelism
@@ -79,3 +80,16 @@ an explicit 30-second hook budget. Individual tests retain their existing
 timeouts and assertions. Generated test copies are rebuilt to preserve artifact
 byte identity. The earlier missing-object-directory bug remains separate from
 this hook timeout.
+
+## Final CI and release
+
+Both checks on the final cleanup revision passed:
+
+- [PR run](https://github.com/ichabodcole/project-docs-scaffold-template/actions/runs/36903565079):
+  1,412 tests, zero failures, 67.99 seconds; check job 1m55s.
+- [Branch run](https://github.com/ichabodcole/project-docs-scaffold-template/actions/runs/36903557156):
+  1,412 tests, zero failures, 70.71 seconds; check job 2m2s.
+
+PR #185 merged into develop on October 1, 2026, and shipped to main through PR
+#184 in
+[v9.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/releases/tag/project-docs-scaffold-template-v9.3.0).

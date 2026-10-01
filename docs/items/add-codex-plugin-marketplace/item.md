@@ -10,6 +10,7 @@ id: 01a0f620-402b-7110-839b-95279ac6df53
 kind: task
 generated: { by: codex, at: 2026-09-30 }
 cycle: 2026-10-codex-project-docs
+released_in: 9.3.0
 ---
 
 # Add a Codex plugin marketplace for project-docs
