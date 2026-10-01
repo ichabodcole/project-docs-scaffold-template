@@ -48,6 +48,18 @@ Raw local logs are in `/private/tmp/project-docs-landing-commit.log`,
 evidence for this investigation, not durable repository artifacts; the
 measurements above are the retained record.
 
+## Implementation follow-through
+
+The user authorized implementation after this investigation. `npm test` now uses
+source-only discovery with four workers, and the full local gate passed with
+tests at 79.31 seconds.
+[Linux CI](https://github.com/ichabodcole/project-docs-scaffold-template/actions/runs/36901538729)
+passed all 1,412 tests in 68.36 seconds, with the complete job at 111 seconds.
+See the [implementation item](../run-source-tests-once.md) for the gate
+comparison and packaging scope. The recommendation below records the
+investigation's original ordering; the first execution changes are now
+implemented.
+
 ## Where the time goes
 
 ### Generated packages repeat the migration suite
