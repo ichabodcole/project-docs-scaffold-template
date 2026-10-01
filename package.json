@@ -13,7 +13,7 @@
     "docs:graph": "bun scripts/pdocs/cli.ts graph --format json",
     "docs:report": "bun scripts/pdocs/cli.ts report --format text",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test --path-ignore-patterns 'dist/**' --parallel=4",
     "check": "npm run format:check && npm run docs:lint && npm run check:version && npm run check:mirror && npm run check:dist && npm run test",
     "prepare": "husky",
     "prune-branches": "git branch --merged | grep -vE '^[*]|main$|develop$' | xargs -r git branch -d",

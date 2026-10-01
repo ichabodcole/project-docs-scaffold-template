@@ -183,7 +183,7 @@ npm run docs:lint     # Frontmatter, links, anchors and the document graph
 npm run docs:graph    # Types, tags and edges across both tiers, as JSON
 npm run docs:report   # Worklist of documents missing required fields
 npm run typecheck     # tsc --noEmit over scripts/*.ts and plugins/*.ts
-npm test              # bun test
+npm test              # Source suites once, with four isolated file workers
 ```
 
 ### Documentation CLI
@@ -209,6 +209,12 @@ install over. Bun is used only to _run_ `.ts` files, never to install.
 
 `npm run check` is the single entry point for both the pre-commit hook and CI,
 so there is one definition of "checked".
+
+`npm test` excludes `dist/**` from discovery and runs source test files with
+`--parallel=4`. The generated distributions contain copies of the migration
+tests; replaying those copies adds no unique cases. `check:dist` still verifies
+every shipped file against a fresh build. Use `npm test` for the complete source
+suite; bare `bun test` also discovers the generated copies.
 
 ### Git Workflow
 
