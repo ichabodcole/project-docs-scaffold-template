@@ -56,8 +56,8 @@ approximately 74% less test time and 65% less job time; machine load may vary.
 
 Four workers performed well in both environments. The intermittent Git-fixture
 failure remains tracked in
-[its own item](./stabilize-migration-git-fixtures.md). A passing run does not
-resolve that defect.
+[its own item](./stabilize-migration-git-fixtures/item.md). A passing run does
+not resolve that defect.
 
 ## Constraints
 

@@ -1051,8 +1051,11 @@ function generatedScaffolds(): Scaffolds {
   return scaffolds;
 }
 
+// Automatic maintenance is off: a commit would otherwise spawn a detached
+// `git maintenance run --auto` that can rewrite `.git` while a test copies or
+// removes the fixture.
 function git(root: string, ...args: string[]): string {
-  return sh(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", ...args], root);
+  return sh(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", "-c", "maintenance.auto=false", "-c", "gc.auto=0", ...args], root);
 }
 
 function commitAll(root: string, message: string): void {
@@ -2911,10 +2914,20 @@ describe("a tree past the release the run installs is refused, not set back", ()
     atPin = root;
     return root;
   };
-  /** A copy of that tree with its markers set, committed. */
+  /**
+   * A copy of that tree's working files with its markers set, committed to a
+   * repository of its own. The cached tree's `.git` is not copied because it
+   * is not immutable. CI saw `.git/objects/<xx>` directories vanish mid-copy
+   * (ENOENT, in fan-out order), and what removed them is unconfirmed: at this
+   * fixture's size, default auto-maintenance does nothing. Leaving `.git` out
+   * removes the only part of the copy source that changes after it is built.
+   * These tests read the snapshot, not its history (two commits this run made
+   * moments ago), so one fresh commit is all they need.
+   */
   const markedAt = (readme: string, config: string): string => {
     const root = tmp("migrate-v30-marked-");
-    cpSync(migratedAtPin(), root, { recursive: true });
+    const src = migratedAtPin();
+    cpSync(src, root, { recursive: true, filter: (from) => from !== join(src, ".git") });
     write(root, { "docs/README.md": read(root, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${readme}"`) });
     write(root, { ".project-docs.json": read(root, ".project-docs.json").replace(/"version":\s*"[^"]*"/, `"version": "${config}"`) });
     commitAll(root, `markers at ${readme} / ${config}`);

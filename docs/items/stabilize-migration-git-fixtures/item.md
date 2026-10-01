@@ -5,7 +5,7 @@ description:
   Remove intermittent missing Git object directories when copying the migrated
   release fixture.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a0f883-379a-71ea-9e4a-d7a08b520330
 kind: bug
 generated: { by: pdocs, at: 2026-10-01 }
@@ -29,20 +29,25 @@ The marketplace PR's
 passed on the same head SHA. This is intermittent fixture construction failure;
 the logs do not establish what removes or misreports the object directories.
 
-See the [research write-up](./test-performance/write-up.md).
+See the [research write-up](../test-performance/write-up.md).
 
 ## Definition of done
 
-- [ ] Reproduce or instrument repeated copying on pinned Bun 1.4.0/Linux;
+- [x] Reproduce or instrument repeated copying on pinned Bun 1.4.0/Linux;
       compare filesystem contents and Node copying to distinguish Git activity
-      from a Bun copying defect.
-- [ ] Make marker-test fixtures independent of a copied mutable Git object
+      from a Bun copying defect. Instrumented on Linux (Bun 1.4.0, Git 2.55):
+      the failure did not occur on its own, but a forced background prune during
+      the copy reproduced the CI error exactly. Bun versus Node was settled by
+      reading Bun's copy (a port of Node's), not by a side-by-side run. The
+      cause stays unconfirmed; see the
+      [session](./sessions/2026-10-01-stabilize-migration-git-fixtures.md).
+- [x] Make marker-test fixtures independent of a copied mutable Git object
       database. Candidate: copy the working tree without `.git`, initialize a
       fresh repository, and commit the snapshot; first confirm these tests need
       no earlier history.
-- [ ] Preserve all ahead-of-pin, equal-pin, custom-scaffold, refusal, and
+- [x] Preserve all ahead-of-pin, equal-pin, custom-scaffold, refusal, and
       no-write assertions.
-- [ ] Repeated targeted Linux runs pass, followed by the full source suite and
+- [x] Repeated targeted Linux runs pass, followed by the full source suite and
       artifact gate.
 
 Do not treat a successful retry as a fix or hide this failure with unconditional

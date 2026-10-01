@@ -50,8 +50,8 @@ cleanup is batched and has a dedicated timeout budget.
 
 Tooling friction and measurements are retained in the
 [research write-up](../items/test-performance/write-up.md). The pre-existing
-[Git fixture-copy failure](../items/stabilize-migration-git-fixtures.md) remains
-separate follow-up work; its cause was not resolved by this cycle.
+[Git fixture-copy failure](../items/stabilize-migration-git-fixtures/item.md)
+remains separate follow-up work; its cause was not resolved by this cycle.
 
 ## Sessions
 

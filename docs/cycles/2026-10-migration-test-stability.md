@@ -27,7 +27,7 @@ doesn't say whether the change or the fixture is at fault.
 
 ## Scope
 
-- **[item/stabilize-migration-git-fixtures](../items/stabilize-migration-git-fixtures.md)**
+- **[item/stabilize-migration-git-fixtures](../items/stabilize-migration-git-fixtures/item.md)**
   — the release-marker tests no longer copy a mutable Git object database, and
   repeated targeted Linux runs pass.
 - **[item/migration-tests-time-out-under-load](../items/migration-tests-time-out-under-load.md)**
@@ -46,3 +46,5 @@ _Written at close, not before — and for an `abandoned` cycle too._
 ## Sessions
 
 <!-- One line per branch, appended by init-branch: `- <type>/<slug> (open)`. -->
+
+- fix/stabilize-migration-git-fixtures (landed 2026-10-01)
