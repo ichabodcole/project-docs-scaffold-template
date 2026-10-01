@@ -136,14 +136,13 @@ vague to check, is not `ready`: propose `backlog`, or write a definition of done
 into the proposal for the user to approve with the rest.
 
 Present the whole proposal at once — the groupings, the parallelism matrix, and
-one row per item — and ask the user, via `AskUserQuestion`, to approve it,
-change it, or reject parts of it. If `AskUserQuestion` is not available, put the
-same proposal and question in your reply and **end your turn there**; the user's
-next message is the answer. **Apply nothing before they answer.** An item the
-user skips stays in `triage`. Apply exactly what the answer approves: when it
-names a state for an item but is silent on a field you proposed (a `parent`, a
-`blocked_by`), ask, or leave that field off and list it in the summary as not
-applied.
+one row per item — and ask the user to approve it, change it, or reject parts of
+it. Use the available question tool, or put the same proposal and question in
+your reply and **end your turn there**; the user's next message is the answer.
+**Apply nothing before they answer.** An item the user skips stays in `triage`.
+Apply exactly what the answer approves: when it names a state for an item but is
+silent on a field you proposed (a `parent`, a `blocked_by`), ask, or leave that
+field off and list it in the summary as not applied.
 
 ## Step 4: Apply What the User Approved
 

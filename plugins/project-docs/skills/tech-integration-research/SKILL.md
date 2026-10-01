@@ -235,5 +235,5 @@ C?"):
 - Stop when you have clear recommendations with trade-offs explained
 
 **Too complex?** If you've checked 15+ sources and still need more depth, or the
-question involves architectural decisions beyond simple integration, consider
-using the investigator agent instead.
+question involves architectural decisions beyond simple integration, use a
+research item and its write-up to investigate it in depth.

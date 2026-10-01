@@ -80,7 +80,32 @@ which provides commands and skills for managing your documentation structure:
 See [plugins/project-docs/README.md](plugins/project-docs/README.md) for
 detailed documentation on each command.
 
-## Cross-Agent Skills (OpenCode, Codex, Crush, Cursor, etc.)
+## Codex Plugin
+
+The Codex marketplace at
+[`.agents/plugins/marketplace.json`](.agents/plugins/marketplace.json) offers a
+skills-only `project-docs` plugin built from the same sources as the Claude
+plugin. Run `npm run build:dist` after changing a source skill, then in the
+Codex CLI:
+
+```bash
+codex plugin marketplace add .
+codex plugin list --available --marketplace project-docs-local
+codex plugin add project-docs@project-docs-local
+```
+
+In the ChatGPT desktop app, restart the app, open the Plugins Directory, select
+the **Project Docs** local source, and install `project-docs`. Start a new chat
+to use the installed skills. Refresh the local CLI install after a rebuild by
+running `codex plugin add project-docs@project-docs-local` again. In the desktop
+app, reinstall it from the Plugins Directory and start a new chat.
+
+This package contains 22 skills. `dev-discovery`, `dev-kickoff`,
+`finalize-branch`, `ground-in-project`, and `review-docs` are deferred because
+they depend on Claude commands or named agents. The Codex package contains no
+commands or agents.
+
+## Cross-Agent Skills (OpenCode, Crush, Cursor, etc.)
 
 The skills from this project follow the [Agent Skills](https://agentskills.io)
 open standard and work with any tool that supports SKILL.md files. Pre-built
@@ -103,7 +128,7 @@ dist README for tool-specific configuration examples.
 
 | Package                                   | Skills | Description                   |
 | ----------------------------------------- | ------ | ----------------------------- |
-| [`dist/project-docs`](dist/project-docs/) | 22     | Documentation workflow skills |
+| [`dist/project-docs`](dist/project-docs/) | 27     | Documentation workflow skills |
 
 > **Note:** Agents and commands are Claude Code-specific. Other tools will load
 > only the skills. The recipes, toolbox, operator, agent-bridge and hivemind
