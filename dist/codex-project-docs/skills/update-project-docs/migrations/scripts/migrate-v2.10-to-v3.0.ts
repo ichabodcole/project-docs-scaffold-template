@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * v2.10 → v3.0 (scaffold 9.2.0, the 9.0.0 layout). The migration, not a description of one.
+ * v2.10 → v3.0 (scaffold 9.4.0, the 9.0.0 layout). The migration, not a description of one.
  *
  * WHY THIS IS A SCRIPT. It generates a scaffold and reads a version from it,
  * every later phase consumes the move map an earlier one built, several checks
@@ -10,7 +10,7 @@
  *   1  preflight  — a v2.10 tree, the tools, git, the baseline `pdocs check`,
  *                   and every JUDGMENT BLOCKER (briefs, reports without one
  *                   owner, edited retired templates, files it cannot place)
- *   2  scaffold   — the template at SCAFFOLD_TAG (9.2.0), its own tag (D16), verified
+ *   2  scaffold   — the template at SCAFFOLD_TAG (9.4.0), its own tag (D16), verified
  *   3  plan       — the move map, every frontmatter rewrite (each block as the
  *                   project's own Prettier prints it), every config key;
  *                   `--dry-run` prints it and stops here
@@ -98,13 +98,13 @@ import {
 
 const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
 /**
- * The scaffold release this migration installs (plan D16): 9.2.0, which has the
+ * The scaffold release this migration installs (plan D16): 9.4.0, which has the
  * 9.0.0 layout the script was written against and the cycle template and
  * features README that shipped after it. As the newest migration it is re-pinned
  * at every scaffold release (the writing-migrations playbook), so re-running it
  * refreshes a tree to the release being adopted.
  */
-export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.2.0";
+export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.4.0";
 /** SCAFFOLD_TAG's release number, for the messages that name it. */
 export const SCAFFOLD_RELEASE = SCAFFOLD_TAG.slice(SCAFFOLD_TAG.lastIndexOf("-v") + 2);
 const MANIFEST_NAME = ".pdocs-seed.json";
@@ -206,17 +206,17 @@ export function proseKey(text: string): string {
  * file: re-pinning `SCAFFOLD_TAG` fails that test until this is regenerated.
  */
 export const OWNED_RELEASES: Record<string, string[]> = {
-  "SCHEMA.md": ["6a7f72fdb958b0b7", "6f56fbcf5ec845de", "8d64c7f2babd9b5f", "901d5b55b7d48422", "bcf64b0b7e5f20ea", "ed4c7ff0666db6f1"],
-  "README.md": ["1be5adeeeb3eda24", "2dfa4eca342cb5c5", "3fd655241d87344f", "7b9204982f2451be", "8b94b8d4f8c3e2de", "f2bf59dce2c8c345", "fe573ebb6c6ea6b7", "feac07aacbdf0615"],
-  "AGENTS.md": ["28870996acb9be93", "3510f2c1d02a4463", "37d349a023908d4d", "4e85093fe9f42c12", "833f44053c166134", "dbf3ee4501c58069", "fc5ac2d9fdf95b05"],
+  "SCHEMA.md": ["6a4ce2204a9b20ee", "6a7f72fdb958b0b7", "6f56fbcf5ec845de", "8d64c7f2babd9b5f", "901d5b55b7d48422", "bcf64b0b7e5f20ea", "ed4c7ff0666db6f1"],
+  "README.md": ["1be5adeeeb3eda24", "2dfa4eca342cb5c5", "3fd655241d87344f", "7b9204982f2451be", "8b94b8d4f8c3e2de", "cca8b12d9e6ed3aa", "f2bf59dce2c8c345", "fe573ebb6c6ea6b7", "feac07aacbdf0615"],
+  "AGENTS.md": ["28870996acb9be93", "3510f2c1d02a4463", "37d349a023908d4d", "4e85093fe9f42c12", "681903bdee562d9f", "833f44053c166134", "dbf3ee4501c58069", "fc5ac2d9fdf95b05"],
   "CLAUDE.md": ["2292934d5083c5d4", "b5cdedb2e6025309"],
   "architecture/README.md": ["570a3828bbc218f8", "6835d0616e2ae255", "d84ef4267ad8ac4f"],
   "specifications/README.md": ["06db0a77fae2f7b8", "b2ffc15d87181a74", "c6b221810fe8a474"],
   "interaction-design/README.md": ["003475650142948a", "46040d4e8fc8d55b", "4efdc4a3ca453eb7"],
   "playbooks/README.md": ["21d3c4d5ed2e0f53", "60a25bd0073e27a9", "e89e2ebd733d3e25"],
-  "cycles/README.md": ["7a4c39296dc16c50", "c3c1cbf60ce2e388"],
-  "features/README.md": ["a1f78ad4d0d8a864", "b6fe554241e35cac"],
-  "items/README.md": ["1c636f9c85bc3a2f"],
+  "cycles/README.md": ["7a4c39296dc16c50", "7a6bfd695c73220a", "c3c1cbf60ce2e388"],
+  "features/README.md": ["7b5b98b56b3d97b0", "a1f78ad4d0d8a864", "b6fe554241e35cac"],
+  "items/README.md": ["1c636f9c85bc3a2f", "21fffadb470953a3"],
   "backlog/README.md": ["90ca6ce56a72d3df", "aca2f560332d6c77"],
   "briefs/README.md": ["20bc4cbaf98abaf7"],
   "fragments/README.md": ["47be902ce910b87d"],

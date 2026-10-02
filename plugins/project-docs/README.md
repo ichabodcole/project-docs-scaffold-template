@@ -280,6 +280,41 @@ fields, not folders. Projects still on the older layout (`projects/`,
 
 ## Version History
 
+### 4.4.0 (2026-10-02)
+
+**The pdocs views cycle and the cold-read fixes.** Every change alters what a
+skill does.
+
+- **Started work needs a reviewed item.** `init-branch`, `finalize-branch`,
+  `dev-kickoff`, `create-investigation`, the `investigator`, `generate-dev-plan`
+  and `triage-items` mark an item `status: stable` only when the user approved
+  its description and definition of done as shown. An earlier approval of that
+  content counts; the `investigator`, which cannot ask, counts it only when its
+  prompt shows it. General assent ("looks good", "land it"), a code-review
+  approval, a plan's item list or a triage disposition does not. One decline
+  rule holds under `warn` and `strict`: a declined item does not move, and
+  `finalize-branch` closes it `done` with its cycle; under `strict`, a started
+  draft is approved or moved back with `--lifecycle ready --unset cycle`.
+- **`sweep-project`** gains the Advisory Path (archive the finished work a
+  view's archive advisory names, from a concrete selection) and the Audit Path
+  (mark reviewed the `done` items `pdocs view unreviewed` lists, only as the
+  user approves). It closes a cycle and archives it to `cycles/_archive/`.
+- **`update-project-docs`** checks for a commit gate that runs `pdocs check`,
+  following script chains, and recommends one when there is none.
+- **`finalize-branch`** deletes the template's `OWNERSHIP` header comment from
+  the documents it writes.
+- **The pdocs reference** covers `view portfolio`, `view unreviewed`, the
+  `archive`, `work-item-review` and `template-header` advisories, the closed
+  `checks` section set, and cycles named by filename.
+- **`provide-feedback`** labels an issue `documentation`, not `docs` (which
+  neither repository has, so `gh issue create` failed), and routes feedback on
+  `html-mockup-prototyping`, which both project-docs and toolbox ship, by the
+  plugin the user invoked.
+- Skills name other skills and delegation in host-neutral words, for the Codex
+  marketplace.
+- **The v2.10 → v3.0 migration installs scaffold 9.4.0**
+  (`project-docs-scaffold-template-v9.4.0`); the migrated tree is at 9.4.0.
+
 ### 4.3.0 (2026-09-29)
 
 **The other plugins moved to skill-garden.** recipes, toolbox, operator,
