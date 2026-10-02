@@ -359,7 +359,7 @@ Every field has a named writer. A field nobody writes goes stale.
 | `priority`    | item          | no       | `urgent` · `high` · `medium` · `low`                  | triage                                                                                  |
 | `assignee`    | item          | no       | any string: an agent, a seat or a name                | triage, when the item is routed to a particular agent or seat                           |
 | `blocked_by`  | item          | no       | a list of item ids                                    | shaping — whoever writes the definition of done                                         |
-| `cycle`       | item          | no       | a cycle's slug                                        | `init-branch`, when a cycle is active                                                   |
+| `cycle`       | item          | no       | a cycle's slug: its filename without `.md`            | `init-branch`, when a cycle is active                                                   |
 | `released_in` | feature, item | no       | the version that first shipped it                     | `sweep-project`, at release. Never checked: `pdocs view unreleased` lists what lacks it |
 
 `title`, `description`, `status` and `generated` are required on every document,
@@ -470,17 +470,17 @@ A fresh project declares none, so any `scope` is `BAD SCOPE` until you add it.
 Backlogs, boards and roadmaps are **derived**, never written. `pdocs view`
 computes them from the fields:
 
-| View                                         | Shows                                                                                            |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `pdocs view backlog`                         | unstarted items (`triage`, `backlog`, `ready`), by priority                                      |
-| `pdocs view board [--features] [--all]`      | live items (and features) grouped by state group                                                 |
-| `pdocs view ready`                           | `ready` items whose blockers are all `done` — what an agent can start                            |
-| `pdocs view feature <slug>`                  | a feature and the items whose `parent` names it                                                  |
-| `pdocs view cycle <slug>`                    | the items naming a cycle (`<slug>` is its file name, `2026-09-auth`), and whether it is closable |
-| `pdocs view scope <name> [--all]`            | live features and items in one scope                                                             |
-| `pdocs view unreleased [--since YYYY-MM-DD]` | `done` features and items with no `released_in`                                                  |
-| `pdocs view released <version>`              | what shipped in a version                                                                        |
-| `pdocs view portfolio [--all]`               | current cycles and features, each with its items counted by state group                          |
+| View                                         | Shows                                                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `pdocs view backlog`                         | unstarted items (`triage`, `backlog`, `ready`), by priority                                         |
+| `pdocs view board [--features] [--all]`      | live items (and features) grouped by state group                                                    |
+| `pdocs view ready`                           | `ready` items whose blockers are all `done` — what an agent can start                               |
+| `pdocs view feature <slug>`                  | a feature and the items whose `parent` names it                                                     |
+| `pdocs view cycle <filename>`                | the items naming a cycle (its filename, `.md` optional: `2026-09-auth`), and whether it is closable |
+| `pdocs view scope <name> [--all]`            | live features and items in one scope                                                                |
+| `pdocs view unreleased [--since YYYY-MM-DD]` | `done` features and items with no `released_in`                                                     |
+| `pdocs view released <version>`              | what shipped in a version                                                                           |
+| `pdocs view portfolio [--all]`               | current cycles and features, each with its items counted by state group                             |
 
 `view portfolio` counts a cycle's items by their `cycle` and a feature's by
 their `parent`, archived items included. A cycle is current when it is `planned`
@@ -501,10 +501,10 @@ history. One flag, a meaning per view: on `board` and `scope` it adds the
 archive, on `portfolio` the past, and any other view refuses it. `backlog` and
 `ready` list only unstarted items, which the archive never holds. Three views
 are not live and show archived records as they always have: `feature <slug>` and
-`cycle <slug>` are the record of one entity (a cycle's `closable` needs every
-member), `unreleased` is release accounting (archived is not released), and
-`released` is history. `pdocs find` is a query, not a view: it returns archived
-records and never advises.
+`cycle <filename>` are the record of one entity (a cycle's `closable` needs
+every member), `unreleased` is release accounting (archived is not released),
+and `released` is history. `pdocs find` is a query, not a view: it returns
+archived records and never advises.
 
 ### The archive advisory
 
@@ -587,8 +587,8 @@ stay short to scan.
   `abandoned`. It moves the file or folder and rewrites every link to and from
   it. References by id, and an item's `cycle:` slug, are untouched: an archived
   cycle keeps its slug, so the items that name it still resolve and
-  `pdocs view cycle <slug>` still finds it. Do not move files into `_archive/`
-  by hand.
+  `pdocs view cycle <filename>` still finds it. Do not move files into
+  `_archive/` by hand.
 - Archiving is optional. A finished item, or a closed cycle, may stay where it
   is.
 - Live views leave archived work out unless `--all` asks for it, and suggest
@@ -610,14 +610,15 @@ play.
   `pdocs new` refuse a second. Two active cycles mean the answer to "what are we
   doing" is a list, which is the state a cycle exists to prevent.
 - **Membership lives on the items.** An item joins a cycle by naming it in
-  `cycle:`. The cycle file lists nothing; `pdocs view cycle <slug>` derives its
-  scope. The `scope:` key on a cycle is retired: `scope` now names the part of
-  the project a feature or item touches. A cycle carrying `scope:` is reported
-  `UNKNOWN FIELD`; the `v2.10-to-v3.0` migration moves it onto the items.
+  `cycle:`. The cycle file lists nothing; `pdocs view cycle <filename>` derives
+  its scope. The `scope:` key on a cycle is retired: `scope` now names the part
+  of the project a feature or item touches. A cycle carrying `scope:` is
+  reported `UNKNOWN FIELD`; the `v2.10-to-v3.0` migration moves it onto the
+  items.
 - **An index, never a container.** Plans, sessions and artifacts stay with the
   feature or item that owns them, which outlives every cycle that touched it.
 - **Closable** when it has at least one item and every item is `done` or
-  `dropped`. `pdocs view cycle <slug>` says so.
+  `dropped`. `pdocs view cycle <filename>` says so.
 
 Frontmatter beyond the common fields: `appetite`, `started`, `closed` (at close)
 and `after` (cycles or features it waits on). Body: **Why now** · **Scope**

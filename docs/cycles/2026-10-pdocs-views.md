@@ -29,7 +29,7 @@ for advisories and one archive rule across items, features and cycles.
 
 ## Scope
 
-- **[item/pdocs-cycle-filename-lookup](../items/pdocs-cycle-filename-lookup.md)**
+- **[item/pdocs-cycle-filename-lookup](../items/pdocs-cycle-filename-lookup/item.md)**
   — `view cycle` accepts the filename with or without `.md`.
 - **[item/archive-closed-cycles](../items/archive-closed-cycles/item.md)** —
   closed cycles can move to `cycles/_archive/`, and live views hide them by
@@ -73,4 +73,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - fix/pdocs-small-fixes (landed 2026-10-01)
 - feature/pdocs-board-archive-advisory (landed 2026-10-01)
 - feature/pdocs-work-portfolio-view (landed 2026-10-02)
-- feature/pdocs-cycle-filename-lookup (open)
+- feature/pdocs-cycle-filename-lookup (landed 2026-10-02)

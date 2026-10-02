@@ -34,7 +34,10 @@ bun scripts/pdocs/cli.ts set cycle/2026-09-auth --lifecycle active
 ```
 
 `new cycle auth` writes `cycles/2026-09-auth.md`: the month it opened, then the
-slug. That file name without `.md` is the cycle's slug everywhere else. The
+slug. That filename is the cycle's identity — there is no `slug` field. Every
+command that names a cycle takes it with or without `.md` (`2026-09-auth` or
+`2026-09-auth.md`, live or in `_archive/`), and `cycle:` on an item stores it
+without. The
 month is when work started, not a deadline; a cycle that runs into the next
 month keeps its name.
 
@@ -48,7 +51,7 @@ A feature has no `cycle` field. Its items join cycles, one by one.
 
 ## When to close one
 
-`pdocs view cycle <slug>` reports `closable: yes` when the cycle has at least
+`pdocs view cycle <filename>` reports `closable: yes` when the cycle has at least
 one item and every item is `done` or `dropped`. Then write the **Outcome**
 section — what shipped, what was cut and why, what was learned — while you still
 remember, and close it:

@@ -202,12 +202,17 @@ they do not take, with exit 2 and the valid set in `choices`.
 
 **References.** The work verbs (`view`, `set`, `promote`, `archive`, and
 `new --owner`) take a reference to a feature, an item or a cycle:
-`feature/<slug>`, `item/<slug>`, `cycle/<slug>`, a full item id, or a unique id
-prefix of 8 or more characters. An ambiguous prefix exits 2 and lists the
-candidates. In text output an id is **printed** as its shortest prefix no other
-id in the tree shares, never fewer than 12 characters — ids filed in the same
-instant share their whole 12-character timestamp. JSON always carries the full
-id, and frontmatter always stores it.
+`feature/<slug>`, `item/<slug>`, `cycle/<filename>`, a full item id, or a unique
+id prefix of 8 or more characters. An ambiguous prefix exits 2 and lists the
+candidates. A cycle is named by its **filename**, with or without `.md`
+(`cycle/2026-09-auth` and `cycle/2026-09-auth.md` are the same cycle, live or in
+`cycles/_archive/`); the filename is its identity, and there is no `slug` field
+to look for. A name that matches no cycle file, or more than one, exits 2 saying
+which file it looked for or which files it found. In text output an id is
+**printed** as its shortest prefix no other id in the tree shares, never fewer
+than 12 characters — ids filed in the same instant share their whole
+12-character timestamp. JSON always carries the full id, and frontmatter always
+stores it.
 
 ### `check` — the gate
 
@@ -295,20 +300,21 @@ comparing the array itself against an integer fails silently.
 bun scripts/pdocs/cli.ts find [--type <t>] [--lifecycle <l>] [--status <s>] \
                               [--tag <t>] [--since <YYYY-MM-DD>] \
                               [--kind <k>] [--parent feature/<slug>] \
-                              [--cycle <slug>] [--scope <name>] [--id <prefix>]
+                              [--cycle <filename>] [--scope <name>] [--id <prefix>]
 ```
 
 Filters are ANDed and all are optional, so a bare `find` lists everything. The
 last five filter work: `--kind` (`task`, `bug`, `chore`, `research`),
-`--parent`, `--cycle`, `--scope`, and `--id`, which matches an item whose id
-starts with the prefix.
+`--parent`, `--cycle` (the cycle's filename, `.md` optional), `--scope`, and
+`--id`, which matches an item whose id starts with the prefix.
 
 `data`: `matches[]` — each
 `{ path, slug, tier, type, title, description, status, lifecycle, tags[], date }`,
 plus `id`, `kind`, `parent`, `cycle` and `scope` on a feature or item — and
 `count`. `slug` is what a reference is built from: `item/<slug>`,
-`feature/<slug>`, `cycle/<slug>`. `id` is the full id: this is where a skill
-reads one to write into a commit trailer.
+`feature/<slug>`, `cycle/<slug>` (a cycle's `slug` is its filename without
+`.md`). `id` is the full id: this is where a skill reads one to write into a
+commit trailer.
 
 **An empty result exits 0.** "Nothing matches" is an answer. Read `count`, never
 the status, to tell an empty corpus from a failure. A `--since` that is not a
@@ -357,17 +363,17 @@ bun scripts/pdocs/cli.ts view <backlog|board|ready|feature|cycle|scope|unrelease
 
 Every view is computed from frontmatter; none is a file anyone writes.
 
-| View                 | What it lists                                                                                                                            |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `backlog`            | Items in the unstarted group (`triage`, `backlog`, `ready`), by priority (urgent first, none last), then age                             |
-| `board`              | Items grouped by state group (unstarted, started, completed, cancelled); `--features` adds features. Live only; `--all` adds the archive |
-| `ready`              | `ready` items whose every `blocked_by` item is `done` — what can start now                                                               |
-| `feature <slug>`     | The feature and the items whose `parent` names it                                                                                        |
-| `cycle <slug>`       | The items whose `cycle` names it, and `closable`: at least one item, and every one `done` or `dropped`                                   |
-| `scope <name>`       | Live features and items in that scope; `--all` adds the archive                                                                          |
-| `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                                                   |
-| `released <version>` | Features and items with that `released_in`                                                                                               |
-| `portfolio`          | Current cycles and features, each with its items counted by state group; `--all` adds history                                            |
+| View                 | What it lists                                                                                                                                                              |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `backlog`            | Items in the unstarted group (`triage`, `backlog`, `ready`), by priority (urgent first, none last), then age                                                               |
+| `board`              | Items grouped by state group (unstarted, started, completed, cancelled); `--features` adds features. Live only; `--all` adds the archive                                   |
+| `ready`              | `ready` items whose every `blocked_by` item is `done` — what can start now                                                                                                 |
+| `feature <slug>`     | The feature and the items whose `parent` names it                                                                                                                          |
+| `cycle <filename>`   | The cycle named by its filename (`.md` optional, live or archived), the items whose `cycle` names it, and `closable`: at least one item, and every one `done` or `dropped` |
+| `scope <name>`       | Live features and items in that scope; `--all` adds the archive                                                                                                            |
+| `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                                                                                     |
+| `released <version>` | Features and items with that `released_in`                                                                                                                                 |
+| `portfolio`          | Current cycles and features, each with its items counted by state group; `--all` adds history                                                                              |
 
 `portfolio` counts a cycle's items by `cycle` and a feature's by `parent`,
 archived items included, and counts the live items in neither. A cycle is
@@ -424,7 +430,7 @@ remove the threshold to silence it.
 ### `set` — change a feature's, an item's or a cycle's fields
 
 ```bash
-bun scripts/pdocs/cli.ts set <ref> [--lifecycle <l>] [--cycle <slug>] [--<field> <value> …] \
+bun scripts/pdocs/cli.ts set <ref> [--lifecycle <l>] [--cycle <filename>] [--<field> <value> …] \
                              [--unset <key,key>]
 ```
 
@@ -476,9 +482,10 @@ and from the moved files in every document under the docs root and every tracked
 Markdown file outside it. **It refuses a feature or item that is not `done` or
 `dropped`, and a cycle that is not `closed` or `abandoned`** (exit 2, naming its
 state). Ids and slugs are untouched, so `blocked_by`, `from:` and an item's
-`cycle:` keep resolving, and `pdocs view cycle <slug>` still finds an archived
-cycle. Archiving something already archived is a no-op, exit 0. It is the only
-way into `_archive/`; the lint reports anything there that is not terminal.
+`cycle:` keep resolving, and `pdocs view cycle <filename>` still finds an
+archived cycle. Archiving something already archived is a no-op, exit 0. It is
+the only way into `_archive/`; the lint reports anything there that is not
+terminal.
 
 `data`: `from`, `to`, `moved`, `rewritten[]`, `links`.
 
@@ -595,10 +602,12 @@ bun scripts/pdocs/cli.ts new playbook "rollback a release"
 
 A name that **already** carries the prefix or suffix is honoured as written, so
 `bun scripts/pdocs/cli.ts new cycle 2026-10-tooling` names next month's cycle
-rather than this month's. Names are slugified — `"Auth Stuff!! v2"` becomes
-`auth-stuff-v2` — and a name with no letters or digits in it is a usage error,
-including one made only of dots or dashes (`".."`, `"..."`). A name that would
-put the document outside the docs root is refused rather than written.
+rather than this month's. A cycle name may end in `.md` — it is dropped — and
+`new cycle` refuses a name any cycle already holds, live or archived, with or
+without `.md`. Names are slugified — `"Auth Stuff!! v2"` becomes `auth-stuff-v2`
+— and a name with no letters or digits in it is a usage error, including one
+made only of dots or dashes (`".."`, `"..."`). A name that would put the
+document outside the docs root is refused rather than written.
 
 `NN-` numbering (`specification` only) takes the highest number already in the
 folder plus one, zero-padded to two.
@@ -642,8 +651,8 @@ writes into `feature.md`'s Related section:
 ```
 
 **On an item**, `--from` also takes a reference — an item id, `item/<slug>`,
-`feature/<slug>`, `cycle/<slug>` — and writes it to the item's `from:` field as
-well as linking it. A review writes the session's path here.
+`feature/<slug>`, `cycle/<filename>` — and writes it to the item's `from:` field
+as well as linking it. A review writes the session's path here.
 
 The link text is the source's frontmatter `title`, falling back to its filename.
 The href is computed relative to the new document. The path is resolved against

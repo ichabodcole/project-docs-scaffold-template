@@ -137,7 +137,7 @@ export function workProblems(
 
     if (e.cycle && !cycleSlugs.has(e.cycle))
       problems.push(
-        `BAD CYCLE  ${rel}: "${e.cycle}"  (no cycle file by that slug)`
+        `BAD CYCLE  ${rel}: "${e.cycle}"  (no cycle has that slug — a cycle's slug is its filename without \`.md\`, in cycles/ or cycles/_archive/)`
       );
 
     for (const blocker of e.blockedBy)

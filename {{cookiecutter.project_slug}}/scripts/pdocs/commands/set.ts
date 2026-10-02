@@ -26,7 +26,7 @@ import {
 } from "../lint/registry.ts";
 import { OKF_STATUS, documentProblems, workbenchDocuments } from "../lint/rules.ts";
 import { workProblems } from "../lint/work.ts";
-import { collectWork, modelIds, resolveRef, scalar as unquote, shortenIds } from "../work.ts";
+import { CYCLE_FLAG_NOTE, collectWork, modelIds, resolveRef, scalar as unquote, shortenIds } from "../work.ts";
 import { existingDocuments, flagFor, rewriteFrontmatter, scalar } from "./new.ts";
 
 export interface SetChange {
@@ -94,8 +94,8 @@ const OPTIONS: Option[] = [
   })),
   ...EXTRA_KEYS.map((key) => ({
     flag: flagFor(key),
-    metavar: key === "blocked_by" ? "<ref,ref>" : "<value>",
-    summary: `\`${key}:\` — only on a type that declares it.`,
+    metavar: key === "blocked_by" ? "<ref,ref>" : key === "cycle" ? "<filename>" : "<value>",
+    summary: `\`${key}:\` — only on a type that declares it.${key === "cycle" ? ` ${CYCLE_FLAG_NOTE}` : ""}`,
   })),
   {
     flag: "--unset",
@@ -107,7 +107,7 @@ const OPTIONS: Option[] = [
 export const set: Command = {
   name: "set",
   summary: "Change a feature's, an item's or a cycle's fields, validated like the lint.",
-  usage: "pdocs set <ref> [--lifecycle <l>] [--cycle <slug>] [--<field> <value> …] [--unset <keys>]",
+  usage: "pdocs set <ref> [--lifecycle <l>] [--cycle <filename>] [--<field> <value> …] [--unset <keys>]",
   positionals: [{ name: "ref", required: true }],
   options: OPTIONS,
 

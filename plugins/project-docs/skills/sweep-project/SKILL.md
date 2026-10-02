@@ -145,11 +145,11 @@ Before starting, verify:
 ### Step 0: Resolve the Target and Check Its State
 
 Accept an explicit target — `feature/<slug>`, `item/<slug>` (or an item id, 8+
-characters), `cycle/<slug>`, or an **advisory selection**: references taken from
-a `pdocs view` archive advisory's `refs`, which the user has agreed to (or asked
-you to propose from). The target may come from the user directly, or be passed
-in by a calling skill (e.g. `finalize-branch` Step 6). If no target is given,
-**ask**.
+characters), `cycle/<filename>` (`.md` optional), or an **advisory selection**:
+references taken from a `pdocs view` archive advisory's `refs`, which the user
+has agreed to (or asked you to propose from). The target may come from the user
+directly, or be passed in by a calling skill (e.g. `finalize-branch` Step 6). If
+no target is given, **ask**.
 
 A caller may hand you a path rather than a reference —
 `docs/features/foo/plan.md` instead of `feature/foo`, or
@@ -172,7 +172,7 @@ The `view` commands take the bare slug — `pdocs view feature widget-export`, n
 pdocs view feature <slug>                      # a feature, and its items
 pdocs find --type item --format json           # find an item by slug or id
 pdocs find --id <prefix> --format json         # an item by id
-pdocs view cycle <slug>                        # a cycle, its items, closable
+pdocs view cycle <filename>                    # a cycle, its items, closable
 ```
 
 | State                                             | Action                                                                                                                                                                                                         |
@@ -208,7 +208,7 @@ closed cycle into `docs/cycles/_archive/`.
 cycle when its `cycle:` names it. The cycle file lists nothing in frontmatter.
 
 ```bash
-pdocs view cycle <cycle-slug>
+pdocs view cycle <cycle-filename>
 ```
 
 It lists each item with its state, and reports `closable: yes` when the cycle
@@ -245,7 +245,7 @@ reconciliation (each item and the state that settles it) and ask, rather than
 closing because the arithmetic came out. Closing writes:
 
 ```bash
-pdocs set cycle/<cycle-slug> --lifecycle closed --closed YYYY-MM-DD
+pdocs set cycle/<cycle-filename> --lifecycle closed --closed YYYY-MM-DD
 ```
 
 — or `--lifecycle abandoned` if the cycle was dropped rather than finished; say
@@ -288,15 +288,15 @@ archived one, and it does not need to be: `lifecycle: closed` is the record, as
 clean, ask; on a yes, run:
 
 ```bash
-pdocs archive cycle/<cycle-slug>
+pdocs archive cycle/<cycle-filename>
 ```
 
 It moves the file to `docs/cycles/_archive/` and rewrites every link to and from
-it. It refuses a `planned` or `active` cycle. The slug does not change, so the
-items whose `cycle:` names it still resolve and `pdocs view cycle <cycle-slug>`
-still finds it. Never `git mv` a cycle by hand. A cycle already closed by an
-earlier run can be archived the same way — closing and archiving are separate
-steps, and each needs its own yes.
+it. It refuses a `planned` or `active` cycle. The filename does not change, so
+the items whose `cycle:` names it still resolve and
+`pdocs view cycle <cycle-filename>` still finds it. Never `git mv` a cycle by
+hand. A cycle already closed by an earlier run can be archived the same way —
+closing and archiving are separate steps, and each needs its own yes.
 
 ### The Advisory Path — archive finished work a view has outgrown
 

@@ -74,6 +74,8 @@ import {
   type WorkEntity,
   type WorkModel,
   collectWork,
+  CYCLE_FLAG_NOTE,
+  cyclesNamed,
   entitiesBySlug,
   refFor,
   resolveRef,
@@ -955,14 +957,15 @@ export const newCommand: Command = {
       metavar: "<path-or-ref>",
       summary:
         "What this came out of, linked from its Related section: a document's path, or — on an " +
-        "item — a reference (an item id, item/<slug>, feature/<slug>, cycle/<slug>), also written to `from:`.",
+        "item — a reference (an item id, item/<slug>, feature/<slug>, cycle/<filename>), also written to `from:`.",
     },
     ...EXTRA_FLAGS.map((key) => ({
       flag: flagFor(key),
-      metavar: "<value>",
+      metavar: key === "cycle" ? "<filename>" : "<value>",
       summary:
         `\`${key}:\` — only on a type that declares it.` +
-        (key === "kind" ? ` Required for an \`item\`: ${KINDS.join(" | ")}.` : ""),
+        (key === "kind" ? ` Required for an \`item\`: ${KINDS.join(" | ")}.` : "") +
+        (key === "cycle" ? ` ${CYCLE_FLAG_NOTE}` : ""),
     })),
   ],
 
@@ -980,7 +983,12 @@ export const newCommand: Command = {
     const placement = resolveDirectory(ctx, row, nameArg, flagValue(flags, "--owner"), model);
     const { dir } = placement;
     // A row that names its scope takes its name as the folder, not the slug.
-    const slug = namesScope ? undefined : nameArg;
+    // A cycle is named by its filename, so `2026-10-x.md` means `2026-10-x`.
+    const slug = namesScope
+      ? undefined
+      : row.type === "cycle" && nameArg !== undefined
+        ? nameArg.replace(/\.md$/i, "")
+        : nameArg;
     const scopeName = namesScope ? slugify(nameArg as string) : undefined;
 
     const date = today();
@@ -1005,12 +1013,18 @@ export const newCommand: Command = {
       [FEATURES_FOLDER, ITEMS_FOLDER].some((o) => ENTITY_FILE[o]!.type === row.type)
     ) {
       const wanted = scopeName ?? basename(target, ".md");
+      // A cycle name is read with or without `.md`, so `x` is also taken when
+      // `x.md.md` exists: `x.md` would then name both.
       const holders =
-        entitiesBySlug(model(), row.type as "feature" | "item" | "cycle").get(wanted) ?? [];
+        row.type === "cycle"
+          ? [...new Set([...cyclesNamed(model(), wanted), ...cyclesNamed(model(), `${wanted}.md`)])]
+          : (entitiesBySlug(model(), row.type as "feature" | "item").get(wanted) ?? []);
       if (holders.length)
         throw new ConflictError(
           `\`${row.type}/${wanted}\` is taken by ${holders.map((h) => h.path).join(", ")} — ` +
-            `a slug names one ${row.type}, archived or not. Choose another name.`
+            (row.type === "cycle"
+              ? "a cycle's filename names one cycle, archived or not, with or without `.md`. Choose another name."
+              : `a slug names one ${row.type}, archived or not. Choose another name.`)
         );
     }
 

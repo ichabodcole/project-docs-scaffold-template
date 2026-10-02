@@ -5,7 +5,7 @@ description:
   Let cycle lookup accept either the existing filename stem or the full filename
   with .md.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0f8c4-33cb-7560-8185-1a7042f56393
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
@@ -34,17 +34,17 @@ needed to make the filename form unambiguous.
 
 ## Definition of done
 
-- [ ] `view cycle` resolves a stem and the same stem with `.md` to the same
+- [x] `view cycle` resolves a stem and the same stem with `.md` to the same
       cycle; existing unambiguous behavior remains unchanged.
-- [ ] Missing and ambiguous names produce actionable errors using the filename
+- [x] Missing and ambiguous names produce actionable errors using the filename
       terminology.
-- [ ] Help, CLI documentation, cycle documentation, and relevant agent
+- [x] Help, CLI documentation, cycle documentation, and relevant agent
       instructions describe the argument as the filename (with or without
       `.md`).
-- [ ] No duplicate cycle identity is added to frontmatter.
-- [ ] Tests cover both spellings, an unknown filename, and any ambiguity the
+- [x] No duplicate cycle identity is added to frontmatter.
+- [x] Tests cover both spellings, an unknown filename, and any ambiguity the
       accepted forms can produce.
-- [ ] The pdocs test suite and documentation checks pass.
+- [x] The pdocs test suite and documentation checks pass.
 
 ## Context
 

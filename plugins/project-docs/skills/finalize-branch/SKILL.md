@@ -384,12 +384,12 @@ branch type: `fix` → `bug`; `chore` and `docs` → `chore`; `feature` and
 `refactor` → `task`. Find the active cycle first, so the item is born in it:
 
 ```bash
-pdocs find --type cycle --lifecycle active   # at most one; note its slug
+pdocs find --type cycle --lifecycle active   # at most one; note its filename
 pdocs new item <slug> --kind <task|bug|chore|research> \
   --title "<what this branch did, as a short imperative>" \
   --description "<one sentence: the problem, and what landed>" \
   --by "<your model or name>" --lifecycle review \
-  [--parent feature/<slug>] [--cycle <active-cycle-slug>]
+  [--parent feature/<slug>] [--cycle <active-cycle-filename>]
 ```
 
 It skips `triage` because the work is already built and the user asked for it to
@@ -419,7 +419,7 @@ the branch belongs to it, and the item's `cycle:` does not name it yet, set it
 now:
 
 ```bash
-pdocs set item/<slug> --cycle <active-cycle-slug>
+pdocs set item/<slug> --cycle <active-cycle-filename>
 ```
 
 Then create the session in the owner's `sessions/` folder:
@@ -465,7 +465,7 @@ workbench. Link the cycle in the body instead — when the item is in the cycle
 link the lint checks. From `items/<slug>/sessions/` and from
 `features/<slug>/sessions/` that path is `../../../cycles/<slug>.md` — or
 `cycles/_archive/<slug>.md` for a cycle already archived;
-`pdocs view cycle <slug>` prints its path.
+`pdocs view cycle <filename>` prints its path.
 
 A session carries **no `lifecycle`** — writing one is a lint error. See
 `docs/SCHEMA.md` for why frozen records don't have a pipeline state.
@@ -654,7 +654,7 @@ action to perform, not a recommendation to offer. Do them without asking.
      can close:
 
      ```bash
-     pdocs view cycle <cycle-slug>
+     pdocs view cycle <cycle-filename>
      ```
 
      A cycle's work is the items that name it (`cycle: <slug>`); nothing lists
@@ -665,11 +665,11 @@ action to perform, not a recommendation to offer. Do them without asking.
      If it reports `closable: no`, say which items are holding it and stop
      there.
 
-     When it is closable, offer to invoke `sweep-project` with `cycle/<slug>` as
-     its target — it routes to its Cycle Path. Closing a cycle means writing its
-     `## Outcome`, setting `lifecycle: closed` and `closed: <date>`, and moving
-     any remaining `(open)` session lines; that belongs where the rest of the
-     closing logic lives, not inlined here.
+     When it is closable, offer to invoke `sweep-project` with
+     `cycle/<filename>` as its target — it routes to its Cycle Path. Closing a
+     cycle means writing its `## Outcome`, setting `lifecycle: closed` and
+     `closed: <date>`, and moving any remaining `(open)` session lines; that
+     belongs where the rest of the closing logic lives, not inlined here.
 
   **The cycle question is not the feature question.** A cycle usually spans
   several features and a feature usually spans several cycles, so answering one

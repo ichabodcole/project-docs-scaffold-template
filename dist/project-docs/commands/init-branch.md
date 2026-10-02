@@ -135,13 +135,14 @@ Projects on an older scaffold have no cycles; skip this part silently.
 active cycle:
 
 ```bash
-pdocs set item/<slug> --lifecycle active --cycle <cycle-slug>
+pdocs set item/<slug> --lifecycle active --cycle <cycle-filename>
 ```
 
-Otherwise `pdocs set item/<slug> --lifecycle active`. The cycle's slug is its
-file name without `.md` (`2026-09-auth`). `pdocs set` refuses a value the lint
-would reject and names the valid ones. Membership lives on the item: never add a
-`scope:` list to the cycle file.
+Otherwise `pdocs set item/<slug> --lifecycle active`. A cycle is named by its
+filename, with or without `.md` (`2026-09-auth` or `2026-09-auth.md`); there is
+no `slug` field to look for. `pdocs set` refuses a value the lint would reject
+and names the valid ones. Membership lives on the item: never add a `scope:`
+list to the cycle file.
 
 These changes — the item's fields and the cycle's Sessions line — stay
 uncommitted; they go in with the branch's first commit and land with it.

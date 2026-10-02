@@ -250,7 +250,55 @@ export const shortenIds = (text: string, ids: Iterable<string> = []): string => 
 };
 
 const FORMS =
-  "a full item id, a unique id prefix of 8+ characters, `item/<slug>`, `feature/<slug>` or `cycle/<slug>`";
+  "a full item id, a unique id prefix of 8+ characters, `item/<slug>`, `feature/<slug>` or `cycle/<filename>`";
+
+/**
+ * The cycles a NAME given on the command line names. A cycle is named by its
+ * filename; its slug is that filename without `.md` (there is no `slug`
+ * field). The name is the filename with or without `.md`: `2026-10-auth` and `2026-10-auth.md` both name
+ * `cycles/2026-10-auth.md`, live or under `cycles/_archive/`. Both readings are
+ * tried, so a cycle literally named `2026-10-auth.md.md` makes `2026-10-auth.md`
+ * ambiguous rather than silently picking one.
+ */
+export function cyclesNamed(model: WorkModel, name: string): WorkEntity[] {
+  const found = [...(model.cyclesBySlug.get(name) ?? [])];
+  if (name.endsWith(".md"))
+    for (const e of model.cyclesBySlug.get(name.slice(0, -".md".length)) ?? [])
+      if (!found.includes(e)) found.push(e);
+  return found.sort(byPath);
+}
+
+/** What `--cycle` takes and writes, for `new` and `set` help. */
+export const CYCLE_FLAG_NOTE =
+  "Takes the cycle's filename, with or without `.md`, and writes its slug — the filename without `.md`.";
+
+/** The refusal when a cycle name matches no cycle file. */
+export function noCycleNamed(name: string, token: string): UsageError {
+  const file = name.endsWith(".md") ? name : `${name}.md`;
+  return new UsageError(
+    `no cycle file is named \`${file}\` — looked in ${CYCLES_FOLDER}/ and ${CYCLES_FOLDER}/${ARCHIVE}/. ` +
+      "A cycle is named by its filename, with or without `.md`; `pdocs find --type cycle` lists them.",
+    { token }
+  );
+}
+
+/**
+ * The refusal when a cycle name matches more than one cycle file. Two files
+ * with one name (live and archived) can only be renamed; `x.md` naming both
+ * `x.md` and `x.md.md` has a spelling for each — `x` and `x.md.md`.
+ */
+export function ambiguousCycle(name: string, found: readonly WorkEntity[], token: string): UsageError {
+  const fix =
+    new Set(found.map((e) => e.slug)).size === found.length
+      ? `Name one unambiguously: ${found
+          .map((e) => `\`${e.slug === name ? `${name}.md` : e.slug}\` (${e.path})`)
+          .join(" or ")}.`
+      : `A cycle's filename must be unique across ${CYCLES_FOLDER}/ and ${CYCLES_FOLDER}/${ARCHIVE}/ — rename one.`;
+  return new UsageError(
+    `cycle \`${name}\` is ambiguous — it names ${found.length} cycle files: ${found.map((e) => e.path).join(", ")}. ${fix}`,
+    { token, choices: found.map((e) => e.path) }
+  );
+}
 
 /**
  * The entity a reference names, in any form D6 accepts as INPUT:
@@ -259,7 +307,8 @@ const FORMS =
  * - a unique prefix of at least 8 characters of one;
  * - `item/<slug>` (a file or a folder, live or archived), or `item/<id-or-prefix>`;
  * - `feature/<slug>`;
- * - `cycle/<slug>`.
+ * - `cycle/<filename>`, the cycle file's name with or without `.md`
+ *   (`cyclesNamed`).
  *
  * `kinds` narrows what the reference may name (`--parent` takes a feature
  * only). Anything that names nothing, or names more than one, is a
@@ -310,7 +359,12 @@ export function resolveRef(
   if (m) {
     const [, kind, name] = m as unknown as [string, WorkEntity["entity"], string];
     if (kind === "feature") return one(model.featuresBySlug.get(name) ?? [], "feature");
-    if (kind === "cycle") return one(model.cyclesBySlug.get(name) ?? [], "cycle");
+    if (kind === "cycle") {
+      const found = cyclesNamed(model, name);
+      if (found.length === 0) throw noCycleNamed(name, ref);
+      if (found.length > 1) throw ambiguousCycle(name, found, ref);
+      return one(found, "cycle");
+    }
     const bySlug = model.itemsBySlug.get(name);
     if (bySlug) return one(bySlug, "item");
     const ids = /^[0-9a-f-]+$/i.test(name) ? byId(name) : null;

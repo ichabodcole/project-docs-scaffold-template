@@ -89,7 +89,7 @@ export const VIEWS: ReadonlyArray<{ name: string; arg?: string; summary: string 
   { name: "board", summary: "live items by state group (--features adds features, --all the archive)" },
   { name: "ready", summary: "`ready` items whose blockers are all done" },
   { name: "feature", arg: "slug", summary: "a feature and its items" },
-  { name: "cycle", arg: "slug", summary: "the items naming a cycle, and whether it can close" },
+  { name: "cycle", arg: "filename", summary: "the items naming a cycle, and whether it can close" },
   { name: "scope", arg: "name", summary: "the live features and items in a scope (--all adds the archive)" },
   { name: "unreleased", summary: "done, with no released_in (--since YYYY-MM-DD)" },
   { name: "released", arg: "version", summary: "what a version released" },

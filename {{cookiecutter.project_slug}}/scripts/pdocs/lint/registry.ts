@@ -500,11 +500,10 @@ const CREATION: Record<string, Creation> = {
  * every answer in one place.
  */
 const VALIDATION: Record<string, Validator> = {
-  // A work item's references resolve, and are written in their full form
-  // (D6): `--parent` a feature, `--cycle` a cycle's slug, `--blocked-by` item
-  // ids. `scope` names one value `lint.scopes` declares. The same resolution
-  // the lint runs over the tree afterwards, so nothing `new` writes is a
-  // finding on the next `pdocs check`.
+  // A work item's references resolve as the lint resolves them, and are
+  // written in their stored form (D6): `parent` as `feature/<slug>`, `cycle`
+  // as the cycle's slug (its filename without `.md`; either is accepted),
+  // `blocked_by` as full ids. `scope` must be one of `lint.scopes`.
   item: ({ fields, resolve, scopes, set }) => {
     const problems: ValidationProblem[] = [];
     const value = (key: string) =>
