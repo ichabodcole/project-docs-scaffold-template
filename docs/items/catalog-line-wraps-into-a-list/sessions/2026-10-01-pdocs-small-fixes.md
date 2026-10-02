@@ -12,7 +12,7 @@ generated: { by: claude-opus-5-5, at: 2026-10-01 }
 # pdocs small fixes — 2026-10-01
 
 Part of
-[pdocs work views and advisories](../../../cycles/2026-10-pdocs-views.md)
+[pdocs work views and advisories](../../../cycles/_archive/2026-10-pdocs-views.md)
 
 ## Context
 

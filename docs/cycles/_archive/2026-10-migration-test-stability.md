@@ -38,7 +38,7 @@ doesn't say whether the change or the fixture is at fault.
 
 Out of scope, deliberately: any change to what the scaffold ships. This cycle
 touches the test harness only, so it needs no scaffold release. The pdocs work
-waits for [2026-10-pdocs-views](../2026-10-pdocs-views.md).
+waits for [2026-10-pdocs-views](2026-10-pdocs-views.md).
 
 ## Outcome
 
@@ -46,7 +46,7 @@ Both items shipped on 2026-10-01, and the gate is reliable again. Under the same
 concurrent load, `develop` before this cycle timed out in both review rounds and
 after it passed 1,412/1,412 in both. Neither change touches what the scaffold
 ships, so no release was cut; the fixes ride along with the
-[pdocs views cycle](../2026-10-pdocs-views.md)'s release.
+[pdocs views cycle](2026-10-pdocs-views.md)'s release.
 
 - **The fixture copy failure is closed, not explained.** The release-marker
   fixtures no longer copy the cached repository's `.git`, and fixture commits
