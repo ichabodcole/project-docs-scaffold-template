@@ -375,13 +375,18 @@ Then **re-run this step, and Step 6**. Step 6 ran before the CLI existed, so its
 `Documentation CLI pointer` row was skipped by its own precondition and root
 `AGENTS.md` has not been looked at.
 
+#### The commit gate
+
 **Last, when you tell the user what to do next, check for a commit gate.** Does
-anything already run `pdocs check` before a commit or in CI? A hook often runs
-it through a `package.json` script (`npm run check` → `docs:lint` →
-`pdocs check`), so the check follows `npm|pnpm|yarn|bun run <script>`, and the
-shorthand `pnpm|yarn|bun <script>`, through `package.json`. The hooks directory
-comes from git, because `.git` is a file in a worktree and `core.hooksPath` may
-point elsewhere:
+anything already run `pdocs check` before a commit or in CI? Either counts as a
+gate. A hook often runs it through a `package.json` script (`npm run check` →
+`docs:lint` → `pdocs check`), so the check follows
+`npm|pnpm|yarn|bun run <script>`, and the shorthand `pnpm|yarn|bun <script>`,
+through `package.json`. It looks for the command itself — `pdocs check` or
+`cli.ts check` — and skips `#` comment lines, so a path filter such as
+`scripts/pdocs/**` or a comment that mentions pdocs is not a gate. The hooks
+directory comes from git, because `.git` is a file in a worktree and
+`core.hooksPath` may point elsewhere:
 
 ```bash
 bun -e '
@@ -389,9 +394,10 @@ bun -e '
   const read = (f) => { try { return fs.readFileSync(f, "utf8"); } catch { return null; } };
   const ls = (d) => { try { return fs.readdirSync(d).map((n) => `${d}/${n}`); } catch { return []; } };
   const scripts = JSON.parse(read("package.json") ?? "{}").scripts ?? {};
-  const runs = (text, seen = new Set()) => /pdocs|cli\.ts check/.test(text) ||
+  const runs = (text, seen = new Set()) => (text = text.replace(/^\s*#.*$/gm, ""),
+    /(?:\bpdocs|cli\.ts)\s+check\b/.test(text) ||
     [...text.matchAll(/(?:(?:npm|pnpm|yarn|bun) run|pnpm|yarn|bun) ([\w:.-]+)/g)].some(([, s]) =>
-      !seen.has(s) && seen.add(s) && scripts[s] !== undefined && runs(scripts[s], seen));
+      !seen.has(s) && seen.add(s) && scripts[s] !== undefined && runs(scripts[s], seen)));
   const [hooks] = process.argv.slice(1);
   const files = [`${hooks}/pre-commit`, ".husky/pre-commit", "lefthook.yml", ".lefthook.yml",
     "lefthook.yaml", ".pre-commit-config.yaml", ...ls(".github/workflows")];
@@ -399,13 +405,22 @@ bun -e '
 ' "$(git config core.hooksPath || git rev-parse --git-path hooks)"
 ```
 
-Each `gate:` line names a hook or workflow that runs the check. If there is one,
-say nothing. If there is none, recommend adding one: a pre-commit hook through
-whatever the project already uses (husky, lefthook, pre-commit, or a plain hook
-in the hooks directory), CI, or both, that runs
-`bun scripts/pdocs/cli.ts check`. It catches frontmatter edited by hand instead
-of through `pdocs set`: for example, an agent edits `lifecycle: active` into an
-item that was never reviewed. What the gate does about that depends on
+Each `gate:` line names a hook or workflow that runs the check; the snippet has
+already followed any `package.json` script chain to it.
+
+- **A gate exists:** say nothing about gates, and nothing about `strict`, under
+  either policy. Keep the next steps quiet. The one exception is a CI-only gate:
+  add one line saying that a pre-commit hook would catch the same problems
+  before they are pushed.
+- **No gate:** recommend adding one: a pre-commit hook through whatever the
+  project already uses (husky, lefthook, pre-commit, or a plain hook in the
+  hooks directory), CI, or both, that runs `bun scripts/pdocs/cli.ts check`. A
+  hook catches problems before they are pushed; CI catches them where a hook can
+  be skipped.
+
+A gate catches frontmatter edited by hand instead of through `pdocs set`: for
+example, an agent edits `lifecycle: active` into an item that was never
+reviewed. When you recommend one, say what it does about that, which depends on
 `checks.workItemReview.mode`:
 
 - **`warn`** (the default): `check` prints the advisory and exits 0, so the

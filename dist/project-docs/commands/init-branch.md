@@ -132,36 +132,51 @@ It prints the cycle's path; read the file's `title` from its frontmatter.
 Projects on an older scaffold have no cycles; skip this part silently.
 
 **2. Check the item has been reviewed** (when Step 4 picked one). Read its
-`status`. If it is not `stable`, show the user its description and definition of
-done and ask them to approve that content before work starts. If they approved
-it earlier in this conversation, that counts; don't ask again. Once they
-approve, add `--status stable` to the `set` below. If they want changes, make
-them first. Never add `--status stable` for content the user has not seen.
+`status`: the `status` field of `pdocs find --id <prefix> --format json`, or the
+tag Step 4's `pdocs view ready --format text` printed after it — an item that is
+not `stable` ends with `[draft]`, `[deprecated]` or `[no status]`.
 
-**3. Start the item.** If the branch belongs to the active cycle:
+If it is not `stable`, show the user the content they are approving: its
+**description** (the `description` field in its frontmatter) and its
+**definition of done** (the list under `## Definition of done` in its body). Ask
+them to approve that content before work starts. **Approval means approving that
+description and definition of done as you showed them.** "Looks good", "go
+ahead" or "start the branch" said about the work in general is not approval of
+the item. If they approved this content earlier in this conversation, that
+counts; don't ask again. If they want changes now, make them first, then show
+the result. Once they approve, add `--status stable` to the `set` in 3. Never
+add `--status stable` for content the user has not seen.
+
+**If they decline, skip 3 entirely**, under either policy
+(`checks.workItemReview.mode` in `.project-docs.json`; absent means `warn`).
+Declining covers "no", "not now", and "I want to edit it, but not now": anything
+short of approving the content as it stands. An item whose content the user
+declines to approve does not move: don't start it, and don't run
+`pdocs set item/<slug> --cycle …` on its own either. Under `strict` both would
+be refused (exit 6, nothing written); under `warn` nothing would refuse them,
+and that is not permission to run them.
+
+Tell the user the item stays unstarted, in its current state, and carry on with
+the branch. It is still named after the item (Step 5), so `finalize-branch`
+finds the item again, recognises it as this branch's, and closes it with its
+cycle when the branch lands. Don't ask for the review again unless they bring it
+up; if they approve later on the branch, run 3 then, with `--status stable`. If
+the branch belongs to the active cycle, still record it in the cycle's Sessions
+list (4): that line records the branch, not the item.
+
+**3. Start the item** (when Step 4 picked one, and 2 did not skip this). If the
+branch belongs to the active cycle:
 
 ```bash
 pdocs set item/<slug> --lifecycle active --cycle <cycle-filename>
 ```
 
-Otherwise `pdocs set item/<slug> --lifecycle active`. A cycle is named by its
-filename, with or without `.md` (`2026-09-auth` or `2026-09-auth.md`); there is
-no `slug` field to look for. `pdocs set` refuses a value the lint would reject
-and names the valid ones. Membership lives on the item: never add a `scope:`
-list to the cycle file.
-
-If the user declined to review it in 2, what happens depends on
-`checks.workItemReview.mode` in `.project-docs.json` (absent means `warn`):
-
-- **`warn`** (the default): start it anyway. The output ends with an
-  `advisory (work-item-review)`, which is expected here. Tell the user that the
-  item is still `draft`.
-- **`strict`**: don't run the start; it would exit 6 and write nothing. Tell the
-  user the item stays unstarted until they approve it, leave it as it is, and
-  carry on with the branch, with no started item. Don't ask for the review again
-  unless they bring it up. If the branch belongs to the active cycle, still
-  record it in the cycle's Sessions list (4): that line records the branch, not
-  the item.
+Otherwise `pdocs set item/<slug> --lifecycle active`. Add `--status stable` when
+the user approved the item's content in 2. A cycle is named by its filename,
+with or without `.md` (`2026-09-auth` or `2026-09-auth.md`); there is no `slug`
+field to look for. `pdocs set` refuses a value the lint would reject and names
+the valid ones. Membership lives on the item: never add a `scope:` list to the
+cycle file.
 
 These changes — the item's fields and the cycle's Sessions line — stay
 uncommitted; they go in with the branch's first commit and land with it.
@@ -198,9 +213,11 @@ Confirm to user:
 
 - Branch created and checked out
 - Base commit (latest develop)
-- The work item it started (`item/<slug>`, now `active`), or that it started
-  none
-- The cycle it was attached to, or that there is no active cycle
+- The work item it started (`item/<slug>`, now `active`), that it started none,
+  or that it left the branch's item unstarted because the user declined to
+  approve its content
+- The cycle the branch was recorded in, and whether the item joined it, or that
+  there is no active cycle
 - Any stashed changes they should remember
 - Ready to begin work
 

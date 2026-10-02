@@ -45,6 +45,27 @@ an older scaffold has no work items, and those steps are skipped silently. The
 docs root is `docsRoot` in `.project-docs.json` at the repo root, default
 `docs/`.
 
+**The review policy** is `checks.workItemReview.mode` in `.project-docs.json`:
+`warn`, the default when it is absent, or `strict`. An item's `status` is
+`draft` until the user approves its content, then `stable`. **Approval means the
+user approved the item's description (frontmatter) and definition of done (the
+body's `## Definition of done`) as you showed them.** "Looks good", "land it",
+or approving the code review is not approval of the item. Under `warn`, starting
+or moving an unapproved item prints an `advisory (work-item-review)` and goes
+ahead. Under `strict`, a start or a join to the active cycle that leaves an item
+unapproved is refused (exit 6, nothing written), and `pdocs check` fails
+(`UNREVIEWED`, exit 9) on an unapproved item that is started or in the active
+cycle.
+
+**The decline rule, under either policy:** an item whose content the user
+declines to approve does not move. A new item stays in `triage`; an unstarted
+item stays `backlog` or `ready`; neither moves to `review` or joins the cycle.
+Step 6 closes it straight to `done`, adding `--cycle` when the branch belongs to
+the active cycle. A `done` item is never refused and is not a finding. Under
+`warn` nothing would have refused the move; that is not permission to make it.
+The one exception is an item already started without approval, because it has
+already moved: Step 2 item 5 says what to do with it.
+
 ## Workflow
 
 ### Step 0: Determine the Base Branch
@@ -97,8 +118,8 @@ examples below use `<base>` as a placeholder. Replace it with the actual base
 branch name (e.g., `develop`, `main`, `trunk`) for execution.
 
 **Then resolve the branch's work item** — the item whose state this run moves.
-`init-branch` names the branch after the item it started (`<type>/<item-slug>`)
-and sets that item `active`, so look in this order:
+`init-branch` names the branch after the item it picked (`<type>/<item-slug>`)
+and usually sets that item `active`, so look in this order:
 
 1. The branch's description matches an item's slug. List the items with
    `pdocs find --type item --format json`; an item's slug is its file name
@@ -108,12 +129,17 @@ and sets that item `active`, so look in this order:
    Ask the user to confirm it is this branch's.
 3. The user names one; `pdocs find --id <prefix>` resolves an id they paste.
 
-**Check the match's state.** The branch's item should be `active` —
-`init-branch` started it. A match in `triage`, `backlog` or `ready` did not come
-from `init-branch`: ask the user whether this branch is that item's work.
-**Never move a `triage` item on your own judgement** — a yes from the user is
-their decision to take it on; a no means none was found. A match already `done`
-or `dropped` is not this branch's; treat it as none found.
+**Check the match's state.** The branch's item is usually `active`:
+`init-branch` started it. If the user declined there to approve its content,
+`init-branch` left it unstarted, so a step-1 match in `backlog` or `ready` is
+also this branch's item; tell the user it is unstarted, and the decline rule
+above applies to it.
+
+Any other unstarted match did not come from `init-branch`: ask the user whether
+this branch is that item's work. **Never move a `triage` item on your own
+judgement** — a yes from the user is their decision to take it on. A no means
+this branch has no item: leave that item as it is. A match already `done` or
+`dropped` is not this branch's. In both cases, carry on as below for none found.
 
 **None found is allowed** — work often runs before anyone files an item. Say so,
 and Step 4 creates one for it. Keep the item's reference (`item/<slug>`) and its
@@ -280,20 +306,25 @@ not to skip.
    review sends you back to fix things on the branch, it stays `review` while
    you do; re-review what changed.
 
-   If the item's `status` is not `stable`, this prints an
-   `advisory (work-item-review)`. Under `checks.workItemReview.mode: strict` it
-   is refused instead (exit 6) only if the item was not already started. Either
-   way, show the user the item's description and definition of done alongside
-   your review dispatch. Once they approve that content, run
-   `pdocs set item/<slug> --status stable`, or add it to the
-   `--lifecycle review` command if that was refused. Approval given earlier in
-   this conversation counts. Never set it for content the user has not seen.
+   **If the item's `status` is not `stable`**, don't run that move yet. Show the
+   user its description and definition of done, and ask them to approve that
+   content. Dispatch the reviewer without waiting for the answer and without
+   moving the item: the code review does not depend on it. Approval given
+   earlier in this conversation counts, and so does a decline: don't ask again,
+   apply the decline rule. Never set `stable` for content the user has not seen.
+   Declining covers "no", "not now", and "I want to edit it, but not now".
 
-   Under strict mode, a started `draft` item also fails `pdocs check` (exit 9)
-   as `UNREVIEWED`. While it sits in `review` unapproved, Step 3's hard gate
-   fails on it. So does any commit of review fixes, where a pre-commit hook or
-   CI runs the check. Step 7's session commit is not blocked by it: Step 6 has
-   moved the item to `done` by then, and a `done` item is not a finding.
+   Once they approve, move it:
+   `pdocs set item/<slug> --status stable --lifecycle review`. If they decline:
+   - **An unstarted item** (Step 0's declined case, or a `triage`, `backlog` or
+     `ready` match the user confirmed) follows the decline rule: it doesn't
+     move, and doesn't join the cycle in Step 4. Step 6 closes it `done`.
+   - **A started item** (`active` without approval) stays `active`, and Step 6
+     closes it `done`. Under `warn` nothing fails. Under `strict` it is
+     `UNREVIEWED`, so Step 3's gate fails: ask the user to approve it after all,
+     or to move it back with
+     `pdocs set item/<slug> --lifecycle ready --unset cycle` (Step 6 re-adds the
+     cycle). If they choose neither, stop and say so.
 
 6. Wait for the subagent's findings (or both, for dual review) before
    proceeding.
@@ -354,16 +385,17 @@ pnpm run test
 above, don't guess. Run the code gate the project names — a check command in
 root `AGENTS.md`, `CLAUDE.md` or `README.md`, or the docs root's `AGENTS.md` and
 `CLAUDE.md` (for example `make check`, `cargo test`) — and hold it to the same
-hard gate. The documentation lint below is not that gate, even where a generated
-`docs/AGENTS.md` calls `check` "the gate". If the project names no code gate,
-say plainly which quality tools you looked for and did not find ("No
-`package.json` and no gate named in AGENTS.md or README — format, lint, type and
-test checks not run.") and continue with the documentation lint below. An
-announced absence, not a silent skip.
+hard gate. The documentation lint below is part of this step's gate as well,
+never a substitute for the code gate, even where a generated `docs/AGENTS.md`
+calls `check` "the gate". If the project names no code gate, say plainly which
+quality tools you looked for and did not find ("No `package.json` and no gate
+named in AGENTS.md or README — format, lint, type and test checks not run.") and
+continue with the documentation lint below. An announced absence, not a silent
+skip.
 
 **If the project has a documentation lint** — `scripts/pdocs/cli.ts` exists at
 the repo root (the docs root is `docsRoot` in `.project-docs.json`, default
-`docs/`) — run it too, and treat it as part of the same gate:
+`docs/`) — run it too, and hold it to the same hard gate as the code checks:
 
 ```bash
 bun scripts/pdocs/cli.ts check
@@ -381,7 +413,9 @@ Two things it reports are not failures to fix here:
   output quieter; it turns off when the backfill finishes.
 - **Pre-existing problems in documents this branch never touched.** Report them
   and carry on. A branch is not obliged to fix a tree it didn't break — but say
-  so out loud, rather than letting a red gate read as this branch's fault.
+  so out loud, rather than letting a red gate read as this branch's fault. An
+  `UNREVIEWED` finding on this branch's own item is not one of these: resolve it
+  as Step 2 item 5 says.
 
 ### Step 4: Create Session Document
 
@@ -397,8 +431,8 @@ item now — the work ran first, and this is its record. Take its slug from the
 branch's description (`fix/empty-name` → `empty-name`), and its kind from the
 branch type: `fix` → `bug`; `chore` and `docs` → `chore`; `feature` and
 `refactor` → `task`. Find the active cycle first and note its filename. The item
-is created without one, and gets it from the `set` that starts it below, or from
-Step 6:
+is created without one, and gets it from the `set` that moves it to `review`
+below, or from Step 6:
 
 ```bash
 pdocs find --type cycle --lifecycle active   # at most one; note its filename
@@ -429,39 +463,41 @@ the template's leading HTML comment, the block that starts
 `OWNERSHIP (of this template file`, which the CLI copies in; `pdocs check`
 reports one left in place as a `template-header` advisory.
 
-**Then start it.** Show the user the item's description and definition of done
-as you wrote them. If they want changes, make them first. When they approve that
-content, start it in one command:
+**Whether the branch belongs to the active cycle**, here and in Step 6: it does
+when the cycle file's `## Sessions` list names the branch (`init-branch`
+recorded it there). If the list does not name it, ask the user. A cycle being
+active does not by itself make the branch part of it.
+
+**Then move it to `review`.** Show the user the item's description and
+definition of done as you wrote them, and ask them to approve that content. If
+they want changes, make them first. When they approve, move it in one command:
 
 ```bash
 pdocs set item/<slug> --status stable --lifecycle review [--cycle <active-cycle-filename>]
 ```
 
-It skips `triage` because the work is already built and the user asked for it to
-land. It moves to `done` in Step 6, so it lands born done. Pass `--cycle`
-whenever a cycle is active and the branch belongs to it (init-branch recorded
-the branch in that cycle's Sessions list).
+It leaves `triage` without a separate triage step: the work is already built,
+and the user approving its content is their decision to take it on. Asking for
+the branch to land is not that approval. It moves to `done` in Step 6. An item
+like this is **born done**: created and closed by the same run, never waiting
+unstarted. Pass `--cycle` when the branch belongs to the active cycle.
 
-If the user declines to review it, it stays `draft`. Under the default policy,
-run the same `set` without `--status stable`; it prints an
-`advisory (work-item-review)`, which is expected. Under
-`checks.workItemReview.mode: strict` that `set` is refused (exit 6), so leave
-the item in `triage` with no cycle and tell the user. Step 6 then closes it
-straight to `done`, adding `--cycle` there. A `done` item is never refused for
-review.
+If the user declines — "no", "not now", or edits deferred — the decline rule
+applies: run no `set`. The item stays `draft` in `triage` with no cycle; tell
+the user. Step 6 closes it straight to `done`, adding `--cycle` there.
 
 **Attach an item from Step 0 to the active cycle.** An item created above gets
-its cycle from the `set` that started it, or, if that was refused, from Step 6.
-For an item Step 0 found: if a cycle is active, the branch belongs to it, and
-the item's `cycle:` does not name it yet, set it now:
+its cycle from the `set` that moved it to `review`, or from Step 6. For an item
+Step 0 found that is `stable` (or that the user approved in Step 2: add
+`--status stable`), if the branch belongs to the active cycle and the item's
+`cycle:` does not name it yet, set it now:
 
 ```bash
 pdocs set item/<slug> --cycle <active-cycle-filename>
 ```
 
-If that item is not `stable`, the join prints an `advisory (work-item-review)`,
-or, under strict mode, is refused (exit 6). Handle it as in Step 2's review
-dispatch: show the content, and add `--status stable` once the user approves it.
+An unapproved item does not join (the decline rule); Step 6 adds `--cycle` to
+its `done` move instead.
 
 Then create the session in the owner's `sessions/` folder:
 
@@ -502,7 +538,8 @@ not judge the body's prompts. Those are on you. For the frontmatter:
 **Don't write `related:`.** `docs/SCHEMA.md` resolves those edges against
 library pages only, and a session, an item, a feature and a cycle are all
 workbench. Link the cycle in the body instead — when the item is in the cycle
-(its `cycle:` names it, as set above) — a line under the session's own heading,
+(its `cycle:` names it, as set above) or joins it with Step 6's `done` move — a
+line under the session's own heading,
 `Part of [<cycle title>](<relative path>/cycles/<slug>.md)`, which is a real
 link the lint checks. From `items/<slug>/sessions/` and from
 `features/<slug>/sessions/` that path is `../../../cycles/<slug>.md` — or
@@ -570,10 +607,11 @@ action to perform, not a recommendation to offer. Do them without asking.
   pdocs set item/<slug> --lifecycle done
   ```
 
-  If Step 4 left a new item in `triage` because its start was refused under
-  strict mode, add `--cycle <active-cycle-filename>` here when the branch
-  belongs to the active cycle. The `done` move is allowed, and the item stays
-  `draft` for the review audit (`pdocs view unreviewed`).
+  If the item does not name the active cycle yet because the user declined to
+  approve it, add `--cycle <active-cycle-filename>` here when the branch belongs
+  to the active cycle (Step 4 says how to tell). The `done` move is never
+  refused, and the item stays `draft` for the review audit
+  (`pdocs view unreviewed`).
 
   **Then unblock what waited on it.** A shaped item whose `blocked_by` names
   this one sits in `backlog` until every item it waits on is `done`. Find them:
@@ -694,9 +732,10 @@ action to perform, not a recommendation to offer. Do them without asking.
      that line as `- <type>/<description> (landed YYYY-MM-DD)`, using today's
      date. Change the marker in place — the section reads chronologically, so
      don't relocate the line. If it isn't there at all (the branch predates the
-     cycle, or was created some other way), append it in the landed form rather
-     than pretending it was tracked all along. This is an edit to perform, not a
-     recommendation to offer.
+     cycle, or was created some other way) and the branch belongs to the cycle
+     (Step 4), append it in the landed form rather than pretending it was
+     tracked all along. This is an edit to perform, not a recommendation to
+     offer.
   2. **Ask whether the cycle is done**, but only when the cycle's view says it
      can close:
 
@@ -1151,7 +1190,8 @@ At completion, summarize:
   inferred from its tool list. Say it even when the answer is flattering
 - Quality check results
 - The work item and its moves (`review`, then `done`) — or the item Step 4
-  created, born done
+  created, born done — and its `status`: `stable`, or still `draft` because the
+  user declined review
 - Documentation created/updated, with the session's path
 - **The Reflect outcome** — "nothing this time", or the playbook appended to,
   quoting the `pdocs find` line you chose it from

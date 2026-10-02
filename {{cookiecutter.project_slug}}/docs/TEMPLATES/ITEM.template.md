@@ -33,16 +33,23 @@ value the lint would reject.
   status                     OKF's document-trust marker: `draft` until
                              the user reviews this item's description and
                              definition of done, `stable` once they approve
-                             it (`pdocs set <ref> --status stable`). Needed
-                             before it starts or joins the active cycle;
-                             nothing moves it on its own
+                             it (`pdocs set <ref> --status stable`). Wanted
+                             before it starts or joins the active cycle:
+                             under `checks.workItemReview.mode: warn`, the
+                             default, a move without it is reported; under
+                             `strict` it is refused. Nothing moves it on its
+                             own. An item whose content the user declines to
+                             approve does not move, under either mode
   lifecycle                  `triage` when an agent files it. The user decides
                              at triage (the triage-items skill proposes):
                              `backlog`, `ready`, or `dropped`. Shaping sets
-                             `ready`; init-branch sets `active`;
-                             finalize-branch sets `review` when its review
-                             starts and `done` when it lands. An agent
-                             never moves an item out of `triage` itself.
+                             `ready`; init-branch sets `active`, and so do
+                             create-investigation and the investigator
+                             agent, for research the user asked for, once
+                             they approve its content; finalize-branch sets
+                             `review` when its review starts and `done` when
+                             it lands. An agent never moves an item out of
+                             `triage` itself.
 
   Optional:
   parent: feature/<slug>     whoever files it, or triage
@@ -54,7 +61,8 @@ value the lint would reject.
   priority: urgent | high | medium | low       triage
   assignee: <agent, seat or name>              triage, when it is routed
   blocked_by: [<item id>, ...]                 shaping
-  cycle: <cycle file slug, e.g. 2026-09-auth>  init-branch, when one is active
+  cycle: <cycle file slug, e.g. 2026-09-auth>  init-branch, when one is active;
+                             finalize-branch, for an item it files or closes
   released_in: <version>     sweep-project, at release. Never checked.
 
 docs/items/README.md has the states, the kinds and the rules.

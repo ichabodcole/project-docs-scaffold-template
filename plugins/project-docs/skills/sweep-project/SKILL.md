@@ -14,7 +14,8 @@ description: >
   project looks finished". Also sweeps a cycle: "close this cycle", "is the
   cycle done", "sweep the cycle". Also acts on a `pdocs view` archive advisory
   (`archive-threshold`): "the board says to archive", "archive the finished
-  items".
+  items". Also audits finished items never marked reviewed: "audit unreviewed
+  items", "review the unreviewed items".
 allowed_tools:
   ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "AskUserQuestion"]
 ---
@@ -147,11 +148,12 @@ Before starting, verify:
 ### Step 0: Resolve the Target and Check Its State
 
 Accept an explicit target — `feature/<slug>`, `item/<slug>` (or an item id, 8+
-characters), `cycle/<filename>` (`.md` optional), or an **advisory selection**:
+characters), `cycle/<filename>` (`.md` optional), an **advisory selection**:
 references taken from a `pdocs view` archive advisory's `refs`, which the user
-has agreed to (or asked you to propose from). The target may come from the user
-directly, or be passed in by a calling skill (e.g. `finalize-branch` Step 6). If
-no target is given, **ask**.
+has agreed to (or asked you to propose from), or an **audit request**: "audit
+unreviewed items", optionally narrowed ("the unreviewed items of cycle
+`<filename>`"). The target may come from the user directly, or be passed in by a
+calling skill (e.g. `finalize-branch` Step 6). If no target is given, **ask**.
 
 A caller may hand you a path rather than a reference —
 `docs/features/foo/plan.md` instead of `feature/foo`, or
@@ -177,16 +179,16 @@ pdocs find --id <prefix> --format json         # an item by id
 pdocs view cycle <filename>                    # a cycle, its items, closable
 ```
 
-| State                                             | Action                                                                                                                                                                                                         |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.                                               |
-| Already under `_archive/`                         | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped`, an archived cycle `closed` or `abandoned` (`ARCHIVED NOT TERMINAL`). |
-| An archive advisory's candidates                  | Take **The Advisory Path** below — the work is already finished; there is nothing to reconcile, only a selection to agree on.                                                                                  |
-| `pdocs view unreviewed`'s finished drafts         | Take **The Audit Path** below — nothing moves; the only change is a reviewed `status`, for what the user approves.                                                                                             |
-| A cycle                                           | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                                                              |
-| A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                                                                 |
-| An item that is a single file (`items/<slug>.md`) | Reconcile from that one file, which is its own definition of done and record.                                                                                                                                  |
-| An item that is a folder (`items/<slug>/item.md`) | Normal path: its `plan.md`, `write-up.md` and `sessions/`, if present, are the sources.                                                                                                                        |
+| State                                             | Action                                                                                                                                                               |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.     |
+| A feature or item already under `_archive/`       | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped` (`ARCHIVED NOT TERMINAL`).  |
+| An archive advisory's candidates                  | Take **The Advisory Path** below — the work is already finished, so reconciling is a sampled check rather than a full pass, and the rest is a selection to agree on. |
+| An audit request (`pdocs view unreviewed`)        | Take **The Audit Path** below — nothing moves; the only change is a reviewed `status`, for what the user approves.                                                   |
+| A cycle, archived or not                          | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                    |
+| A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                       |
+| An item that is a single file (`items/<slug>.md`) | Reconcile from that one file, which is its own definition of done and record.                                                                                        |
+| An item that is a folder (`items/<slug>/item.md`) | Normal path: its `plan.md`, `write-up.md` and `sessions/`, if present, are the sources.                                                                              |
 
 **"Narrative mode" is a property of the content, not of which files exist.** A
 document is in narrative mode when it has nothing item-shaped to update — no
@@ -206,6 +208,12 @@ A cycle is an index over work in play. It owns nothing, so there is no plan to
 reconcile. Sweeping one means asking whether everything in it has finished, and
 if so, writing down what happened — and then, if the person wants it, moving the
 closed cycle into `docs/cycles/_archive/`.
+
+**First, read the cycle's own state:** `data.cycle.lifecycle` in
+`pdocs view cycle <cycle-filename> --format json`. `closable` counts only the
+items, so a cycle that is already `closed` or `abandoned` still reports
+`closable: yes`. Don't close it again: only offer the archive (the last step
+below) if it is not archived yet, then rejoin at Step 6.
 
 **1. Read the cycle's work.** Membership lives on the items: an item is in the
 cycle when its `cycle:` names it. The cycle file lists nothing in frontmatter.
@@ -245,7 +253,9 @@ either set `dropped` or has its `cycle:` taken off
 
 **4. If it is closable, close the cycle** — after asking the user. Show the
 reconciliation (each item and the state that settles it) and ask, rather than
-closing because the arithmetic came out. Closing writes:
+closing because the arithmetic came out. If they decline, leave it as it is and
+rejoin at Step 6: report that it is closable and was left open by their choice.
+Closing writes:
 
 ```bash
 pdocs set cycle/<cycle-filename> --lifecycle closed --closed YYYY-MM-DD
@@ -303,25 +313,46 @@ closing and archiving are separate steps, and each needs its own yes.
 
 ### The Advisory Path — archive finished work a view has outgrown
 
-A live view such as `pdocs view board` (items, and features with `--features`)
-ends with an advisory when one type's unarchived finished work — `done` or
-`dropped` items and features, `closed` or `abandoned` cycles — is greater than
-`checks.archive.threshold` in `.project-docs.json` (default 25). The advisory
-reports; it is not permission. pdocs never archives on its own, and neither do
-you.
+A live view ends with an archive advisory when one type's unarchived finished
+work — `done` or `dropped` items and features, `closed` or `abandoned` cycles —
+is greater than `checks.archive.threshold` in `.project-docs.json` (default 25).
+`pdocs view board` advises on items, and on features with `--features`;
+`pdocs view portfolio` advises on features and cycles. The advisory reports; it
+is not permission. pdocs never archives on its own, and neither do you.
 
-1. **Read the candidates.** Rerun the view with `--format json`. Each entry of
-   `advisories[]` whose `id` is `archive-threshold` has `refs`, every reference
-   `pdocs archive` takes, and `types[]`: per type the `count`, the `threshold`,
-   and that type's `candidates`, oldest first. Its `lifecycle` is already
-   terminal, so there is nothing to reconcile.
-2. **Offer a concrete selection.** Propose specific references, not "archive
-   them all?": for example, every finished item older than the active cycle, or
-   the oldest `count - threshold`, and the entities that should stay visible
-   (work a current item still points at, say). List what you propose in the
-   message, so the user approves a list rather than a rule. A selection the user
-   already authorized in this conversation counts; do not ask again.
-3. **Scan the selection for prose, in one pass.** `pdocs archive` rewrites
+**Read the advisory as JSON.** `pdocs` prints JSON whenever its output is not a
+terminal, which is how an agent runs it, so the text form — the
+`advisory (archive-threshold): …` line and its `next:` line — never reaches you.
+In JSON it is an entry of the view's `data.advisories[]` with
+`id: "archive-threshold"`: its `message` and `action` carry the same text, and
+its `types[]` the detail.
+
+1. **Read the candidates.** Each `types[]` entry has the type's `count`, the
+   `threshold`, and its `candidates`: bare references (`item/<slug>`), oldest
+   first by `generated.at`, the date each was **created**, not the date it
+   finished. Their `date`, `cycle` and `status` are on the view's own entries:
+   for `view board`, `data.groups.completed[]` and `data.groups.cancelled[]`,
+   matched by `slug`.
+
+2. **Build the selection.** Pick specific references by a rule that works with
+   or without an active cycle — the oldest `count - threshold`, or everything
+   created before a date — or by cycle: the items of a `closed` cycle
+   (`pdocs find --cycle <filename>`).
+
+3. **Flag its unreviewed drafts.** Archiving a finished item whose `status` is
+   not `stable` takes it out of `pdocs view unreviewed`, the review audit's
+   list; only `--all` brings it back. Mark those items in the selection, and
+   when you propose it, offer to run **The Audit Path** on them first.
+
+4. **Check a sample at rung 1.** A terminal `lifecycle` is a claim, and
+   **reconcile always** applies here too, in proportion. As Step 2a does with
+   completion marks, sample **three** entities from the selection — prefer the
+   largest — and confirm each at rung 1: the thing its definition of done names
+   exists. All three hold → accept the rest. Any one fails → take it out, and
+   let the user choose between checking every other entity and narrowing the
+   selection to what you checked.
+
+5. **Scan the selection for prose, in one pass.** `pdocs archive` rewrites
    links, not paths written in sentences — Step 3's concern, batched. Build one
    alternation from the selection (`items/<slug>`, `features/<slug>`,
    `cycles/<slug>` per reference) and grep once:
@@ -335,21 +366,27 @@ you.
    Substitute the real slugs — `<` and `>` are shell redirections. Drop hits
    whose every match is inside a link target or a path-valued `from:` (both are
    rewritten by the move), and the selected entities' own files, then classify
-   the rest with Step 3's table: report examples as a count, list historical
-   ones as deliberately left, and **show every live claim with the selection**
-   before anything moves, so the user agrees to both together. Take an entity
-   out of the selection if they would rather fix its live claims first.
+   the rest with Step 3's table.
 
-4. **Archive what was agreed, one reference at a time:**
+6. **Propose it.** Show the selection as a list of references — for a long one,
+   a summary that pins the list exactly: the count, the rule, and every
+   exception by name — with the flagged drafts, the sample's result, and every
+   live claim from the scan, so the user agrees to all of it together. A
+   selection the user already authorized in this conversation needs no second
+   approval, but what steps 3–5 found is new: show it either way. If they
+   decline all of it, nothing moves: rejoin at Step 6.
+
+7. **Archive what was agreed, one reference at a time:**
 
    ```bash
    pdocs archive <type>/<slug>
    ```
 
-   Each run moves the entity and rewrites every link to and from it. Then run
-   `pdocs check`; it should be clean.
+   Each run moves the entity and rewrites every link to and from it. Run
+   `pdocs check` before the first and after the last; fix anything new it
+   reports, since this run caused it.
 
-5. **Rejoin at Step 6** and report what moved, what you left and why, and the
+8. **Rejoin at Step 6** and report what moved, what you left and why, and the
    prose hits by kind.
 
 An invalid threshold, or a misspelt key in `checks.archive`, puts a `bad-config`
@@ -361,20 +398,39 @@ advisory.
 ### The Audit Path — finished items never marked reviewed
 
 An item's `status` is `stable` once the user has approved its description and
-definition of done. Work that finished before that rule existed is often still
-`draft`. `pdocs check` does not list it; the audit is a separate pass the user
-asks for.
+definition of done. Many finished items are still `draft`: some finished before
+that rule existed, and others finished without the user approving them, which
+`warn` mode allows. `pdocs check` does not list them; the audit is a separate
+pass the user asks for. It covers `done` items only: a `dropped` draft is tagged
+`[draft]` too, but is not audited. **The user approves the document** — the
+description and definition of done — not the fact that the work shipped; the
+evidence below is context for that judgement.
 
 1. **List them.** `pdocs view unreviewed --format json` gives the live `done`
-   items whose `status` is not `stable`; `--all` adds the archived ones.
-2. **Offer a concrete batch.** For example, this cycle's, or the ten most
-   recent. For each item, show its description and definition of done, and what
-   shipped (its sessions, or `released_in`).
-3. **Mark only what the user approves:** `pdocs set item/<slug> --status stable`
+   items whose `status` is not `stable`; `--all` adds the archived ones. The
+   text output is sorted by priority, not by date. Each JSON entry carries
+   `date` (its `generated.at`: when it was created) and `cycle`; sort and filter
+   on those.
+2. **Offer a concrete batch.** For example, one cycle's items (their `cycle`
+   names it), or the ten newest by `date`. Leave out every `deprecated` item:
+   `deprecated` means its content was superseded, so it is never set `stable`.
+   List those as left, and why.
+3. **Show each item's content and evidence.** The JSON does not carry the
+   description or the definition of done: open the item's file (its `path`).
+   Show the user its `description` (frontmatter) and its definition of done
+   (`## Definition of done`, or an equivalent such as `## Done when`), and what
+   shipped: its `sessions/`, when it is a folder that has them, and
+   `released_in`, when it is set. When it has neither — a single-file item, or a
+   release nobody recorded — check its definition of done at rung 1 (the thing
+   it names exists) and show that. Say which evidence you used. An item with no
+   definition of done stays `draft`: don't write one after the fact to approve
+   it.
+4. **Mark only what the user approves:** `pdocs set item/<slug> --status stable`
    for each one. If they approved a record earlier in this conversation, that
-   counts. Leave the rest `draft`. A record nobody can vouch for now is
-   accurately `draft`, and that is fine.
-4. **Rejoin at Step 6** and report what was marked and what was left.
+   counts. If they say the definition of done is wrong, leave it `draft`, or fix
+   the body and approve the fixed text. Leave the rest `draft`. A record nobody
+   can vouch for now is accurately `draft`, and that is fine.
+5. **Rejoin at Step 6** and report what was marked and what was left.
 
 Never mark a batch reviewed by rule ("all done items"), and never change
 `lifecycle` on this path.
@@ -742,7 +798,12 @@ State plainly:
 - The prose left (historical, examples: a count is enough) and the prose flagged
   for the human, with what they decided
 - For a cycle: whether it closed, whether it was archived, and the items that
-  held it open if not
+  held it open if not — or that it was closable and the user kept it open
+- For an advisory run: the sample checked and its result, and the unreviewed
+  drafts flagged and whether the audit ran on them first
+- For an audit run: each item whose `status` changed (`draft` → `stable`), the
+  evidence shown for it, and each item left — declined, `deprecated`, or its
+  definition of done disputed — with the reason
 
 **"Nothing needed doing" is a real outcome.** A second run against an
 already-reconciled entity should say so explicitly rather than producing a
@@ -759,7 +820,8 @@ silent no-op that reads like a failure.
 - [ ] `pdocs check` exits 0 after the run (or reports only problems that were
       already there)
 
-**Feature and item runs** (an advisory run uses its own block below instead):
+**Feature and item runs** (advisory and audit runs use their own blocks below
+instead):
 
 - [ ] `lifecycle` on disk matches what the reconciliation concluded
 - [ ] A feature marked `done` has no item still open
@@ -774,6 +836,18 @@ silent no-op that reads like a failure.
 - [ ] One batched prose scan covered the whole selection; its live hits were
       shown with the selection, before anything moved
 - [ ] Only agreed references were archived, each with `pdocs archive`
+- [ ] Three entities of the selection were checked at rung 1 before anything
+      moved
+- [ ] Unreviewed drafts among the candidates were flagged, and the audit offered
+      for them first
+
+**Audit runs:**
+
+- [ ] Every `status` set to `stable` was for content the user saw and approved:
+      the description and definition of done, from the item's file
+- [ ] No `deprecated` item was set `stable`, and no `lifecycle` changed
+- [ ] Each item was shown with its evidence: sessions, `released_in`, or a
+      rung-1 check
 
 **Cycle runs:**
 
@@ -845,4 +919,5 @@ At completion, summarize:
 - The `lifecycle` written, and `released_in` if supplied
 - Whether anything moved, and where, with `pdocs archive`'s link count
 - Prose: left / flagged, with counts and the reasoning for the left ones
+- For an audit run: the items set `stable`, and those left `draft` with why
 - Follow-up items, if any
