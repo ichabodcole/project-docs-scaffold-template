@@ -5,7 +5,7 @@ description:
   Warn about unreviewed work at start touch points, with an optional strict
   policy that requires reviewed item documents.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0f8bb-50a6-7659-98ae-2fe01cfe16d4
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }

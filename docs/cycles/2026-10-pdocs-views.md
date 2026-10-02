@@ -74,3 +74,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - feature/pdocs-board-archive-advisory (landed 2026-10-01)
 - feature/pdocs-work-portfolio-view (landed 2026-10-02)
 - feature/pdocs-cycle-filename-lookup (landed 2026-10-02)
+- feature/pdocs-draft-review-advisories (open)
