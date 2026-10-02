@@ -44,7 +44,8 @@ The list below is what it walks; keep them in step and the check stays quiet.
 - `docs/SCHEMA.md` — the frontmatter contract
 - `docs/STYLE.md` — the prose contract. **Seeded**, so its bytes are recorded:
   copy the formatted file across rather than letting the two copies wrap
-  differently
+  differently, and refresh its hash in this repo's `docs/.pdocs-seed.json` (see
+  below)
 - All files in `docs/TEMPLATES/` — the work templates (feature, item, and every
   owned document)
 - Category READMEs: `docs/architecture/README.md`, `docs/cycles/README.md`,
@@ -120,14 +121,26 @@ prefix and silently skipped `YYYY-MM-DD-TEMPLATE-investigation.md` and
 `YYYY-MM-DD-TEMPLATE-report.md`, recording 17 of 19 while its own comment
 claimed shape matching meant nothing could be forgotten.
 
-**Adding a template?** Nothing to do beyond the usual mirroring, as long as its
-name contains `TEMPLATE` or ends `.template.md` and the registry declares it —
-`seeded-coverage` fails loudly if the registry and the predicate disagree.
+**Adding a template?** Nothing to do beyond the usual mirroring and a seed
+record entry, as long as its name contains `TEMPLATE` or ends `.template.md` and
+the registry declares it — `seeded-coverage` fails loudly if the registry and
+the predicate disagree. **Editing one?** Refresh its hash in
+`docs/.pdocs-seed.json`; `check:mirror` names it if you forget.
 
-**`docs/.pdocs-seed.json` is generated, never authored.** The post-gen hook
-writes it at install time from the files actually installed. Do **not** add a
-copy to the payload: a committed manifest would need its own gate to stay
-honest, which is the reason it is generated instead.
+**In the payload, `docs/.pdocs-seed.json` is generated, never authored.** The
+post-gen hook writes it at install time from the files actually installed. Do
+**not** add a copy to the payload: a committed manifest would need its own gate
+to stay honest, which is the reason it is generated instead.
+
+**This repository's own `docs/.pdocs-seed.json` is committed, and gated.** It
+records the seeded files as this repo's migrations would see them, so editing a
+template or `docs/STYLE.md` here means refreshing its hash in the same commit.
+`check:mirror` fails with `STALE SEED <path>` when a recorded hash is not the
+file's, and prints the one-line refresh command (`hashOf`, `loadManifest` and
+`writeManifest` from `scripts/pdocs/seed.ts`). Before this check existed,
+`ITEM.template.md`'s hash went stale in one landing and no gate noticed; a stale
+hash makes this repo's own template read as adopter-edited to the next
+migration.
 
 **Structurally mirrored but content differs** — these two are exempted by name
 in `scripts/check-mirror.sh`, so nothing checks them. Adding a third is a
@@ -192,7 +205,9 @@ subsection leaves the two disagreeing. See
    false, the fixture and a real consuming project are the validation.
 
 4. Run Prettier on changed files to prevent line-wrapping drift
-5. `npm run check:mirror` — it should say `mirror: clean`
+5. `npm run check:mirror` — it should say `mirror: clean`. It also holds this
+   repo's `docs/.pdocs-seed.json` to the seeded files; a `STALE SEED` line
+   prints the refresh command
 
 **"Cookiecutter is the source of truth" is about structure, not about which copy
 is newer.** Work that lands here first — a template gaining a frontmatter block,
@@ -429,6 +444,9 @@ patch-only changes.
 - [ ] Add version history entry in `plugins/<plugin>/README.md`
 - [ ] Do NOT duplicate version in `.claude-plugin/marketplace.json` —
       marketplace is discovery-only (name, source, category, tags)
+- [ ] Rebuild `dist/` — the Codex plugin's `dist/codex-project-docs/plugin.json`
+      takes its version from the Claude manifest at build time, so never edit it
+      by hand
 
 ### Updating Pipeline or Lifecycle
 
