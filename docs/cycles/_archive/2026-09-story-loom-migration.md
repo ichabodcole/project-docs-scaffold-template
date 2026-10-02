@@ -22,45 +22,45 @@ closed: 2026-09-29
 Story-loom is the last active consumer still on the 8.x layout, and its
 migration was deferred while work was in flight there. A trial run on a clone of
 its `develop`
-([readiness write-up](../items/story-loom-migration-readiness/write-up.md))
+([readiness write-up](../../items/story-loom-migration-readiness/write-up.md))
 showed the run completes. It also showed that five gaps in the migration would
 make story-loom's commit hook refuse the result or risk its canon files, so
 those ship first.
 
 ## Scope
 
-- [Prettier-shaped frontmatter](../items/migration-frontmatter-prettier-shape/item.md)
+- [Prettier-shaped frontmatter](../../items/migration-frontmatter-prettier-shape/item.md)
   — a migrated tree passes a `prettier --check` hook.
-- [Root-relative and since-archived link suggestions](../items/phase-10-root-relative-and-archived-links/item.md)
+- [Root-relative and since-archived link suggestions](../../items/phase-10-root-relative-and-archived-links/item.md)
   — phase 10 suggests fixes for most of story-loom's 235 old archive breaks.
-- [Retype positional artifacts](../items/migration-retypes-positional-artifacts/item.md)
+- [Retype positional artifacts](../../items/migration-retypes-positional-artifacts/item.md)
   — nested workstream plans and sessions come out as `artifact`.
-- [Respell `lint.exclude` globs](../items/migration-respells-lint-exclude-globs.md)
+- [Respell `lint.exclude` globs](../../items/migration-respells-lint-exclude-globs.md)
   — no hand edit, no forced re-run.
-- [Respell formatter ignore files](../items/migration-respells-formatter-ignores/item.md)
+- [Respell formatter ignore files](../../items/migration-respells-formatter-ignores/item.md)
   — story-loom's byte-exact canon files stay protected.
 - Added at triage, 2026-09-28, from issues #182 and #154, because each touches
   the migration or the release this cycle cuts:
-  [the v3.0 migration knows the 9.x releases](../items/migration-recognises-9x-releases/item.md),
-  [the skill names the upgrade case it is in](../items/document-patch-refresh-of-a-v3-tree/item.md),
-  [adoption prompts a root CLI pointer](../items/prompt-root-agent-file-cli-pointer.md)
+  [the v3.0 migration knows the 9.x releases](../../items/migration-recognises-9x-releases/item.md),
+  [the skill names the upgrade case it is in](../../items/document-patch-refresh-of-a-v3-tree/item.md),
+  [adoption prompts a root CLI pointer](../../items/prompt-root-agent-file-cli-pointer.md)
   and
-  [the lint checks a closed cycle's Outcome](../items/lint-closed-cycle-without-outcome.md).
+  [the lint checks a closed cycle's Outcome](../../items/lint-closed-cycle-without-outcome.md).
 - Added at triage, 2026-09-28, from the first branch's review, because
   story-loom's run would hit them:
-  [a respelled link misaligns its table](../items/link-respell-misaligns-tables/item.md),
-  [installed owned files are Prettier-clean](../items/owned-files-installed-unformatted.md)
+  [a respelled link misaligns its table](../../items/link-respell-misaligns-tables/item.md),
+  [installed owned files are Prettier-clean](../../items/owned-files-installed-unformatted.md)
   and
-  [the format phase never downloads Prettier](../items/migration-format-phase-downloads-prettier.md).
+  [the format phase never downloads Prettier](../../items/migration-format-phase-downloads-prettier.md).
 - Added at triage, 2026-09-28, from the second branch's review, because
   story-loom's 212 synthesized documents would hit it:
-  [a setext heading's underline becomes the description](../items/synthesized-description-reads-setext-underline.md).
+  [a setext heading's underline becomes the description](../../items/synthesized-description-reads-setext-underline.md).
 - Added at triage, 2026-09-28, from the owned-releases review, because it is the
   other half of #182 and belongs with the upgrade-case guidance:
-  [the migration refuses a tree newer than its pin](../items/migration-refuses-newer-tree.md).
+  [the migration refuses a tree newer than its pin](../../items/migration-refuses-newer-tree.md).
 - Added 2026-09-28, with Cole's decision that every scaffold release re-pins the
   newest migration and the scripts set the markers:
-  [Step 5 checks the markers rather than writing them](../items/update-skill-step-5-rewrites-markers.md).
+  [Step 5 checks the markers rather than writing them](../../items/update-skill-step-5-rewrites-markers.md).
 - Then a release, and story-loom's own run, following the write-up's sequence.
 
 Out of scope, deliberately: migration changes 6–9 in the write-up (story-loom

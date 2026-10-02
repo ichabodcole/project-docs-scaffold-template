@@ -36,11 +36,11 @@ layer has been used for a while than it is now.
 
 ## Scope
 
-- **[project/okf-frontmatter-layer](../features/okf-frontmatter-layer/feature.md)**
+- **[project/okf-frontmatter-layer](../../features/okf-frontmatter-layer/feature.md)**
   — OKF frontmatter on every document, a two-tier lint that gates commits and
   CI, per-type `lifecycle` vocabularies, the `cycle` type, and all of it
   shipping in the cookiecutter payload and the project-docs skills.
-- **[backlog/2026-09-02-sweep-project-archive-internal-link-exception](../items/sweep-project-archive-internal-link-exception.md)**
+- **[backlog/2026-09-02-sweep-project-archive-internal-link-exception](../../items/sweep-project-archive-internal-link-exception.md)**
   — pulled in because the lint's first run proved it: most of the 32 broken
   links it found are inbound references to projects that were archived, which is
   exactly the failure that item describes. Fixing the links without fixing

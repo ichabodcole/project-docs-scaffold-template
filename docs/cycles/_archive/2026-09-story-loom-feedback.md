@@ -30,16 +30,16 @@ that is the second branch this cycle exists to hold.
 
 ## Scope
 
-- [Story-loom feedback, round 1: nine fixes](../items/story-loom-feedback-round-1.md)
+- [Story-loom feedback, round 1: nine fixes](../../items/story-loom-feedback-round-1.md)
   — one branch, one commit per issue, minor plugin bump.
-- [v2.9 → v2.10: refresh the owned files](../items/v2.9-to-v2.10-refresh-the-owned-files.md)
+- [v2.9 → v2.10: refresh the owned files](../../items/v2.9-to-v2.10-refresh-the-owned-files.md)
   — the migration that carries the fixes to a consumer, and the first real use
   of seeded-template reconciliation.
-- [Spellbook feedback, round 1: twelve items](../items/spellbook-feedback-round-1.md)
+- [Spellbook feedback, round 1: twelve items](../../items/spellbook-feedback-round-1.md)
   — added 2026-09-15: the second consumer's round, worked as one branch under
   the same cycle because it is the same kind of work and the release that closes
   it is the one this cycle was already waiting for.
-- [pdocs check inherits git's hook variables](../items/check-inherits-git-hook-variables.md)
+- [pdocs check inherits git's hook variables](../../items/check-inherits-git-hook-variables.md)
   — added 2026-09-22: what the Spellbook branch's re-review found on `develop`,
   worked here so the release this cycle waits for carries it.
 
@@ -55,7 +55,7 @@ v3.0 migration, which carried their pre-release state forward; they were set
 `done` at close.
 
 Carried over: nothing unfinished. The feedback from the first 9.0.0 consumers
-opens [v9 rollout feedback](./2026-09-v9-rollout-feedback.md), and story-loom's
+opens [v9 rollout feedback](2026-09-v9-rollout-feedback.md), and story-loom's
 migration becomes its check.
 
 ## Sessions

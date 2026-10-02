@@ -14,10 +14,10 @@ generated: { by: claude-opus-5-5, at: 2026-09-24 }
 # Work Taxonomy Phase 3, templates and prose — 2026-09-24
 
 Part of
-[Work Taxonomy release](../../../cycles/2026-09-work-taxonomy-release.md). Plan:
-[Phase 3](../plan.md). Branch `feature/work-taxonomy-p3-templates-prose`. The
-coordinator ran this from the main thread; an implementer sub-agent wrote the
-prose and code, a cold-reader sub-agent tested the docs, and two reviewer
+[Work Taxonomy release](../../../cycles/_archive/2026-09-work-taxonomy-release.md).
+Plan: [Phase 3](../plan.md). Branch `feature/work-taxonomy-p3-templates-prose`.
+The coordinator ran this from the main thread; an implementer sub-agent wrote
+the prose and code, a cold-reader sub-agent tested the docs, and two reviewer
 sub-agents checked the branch.
 
 ## What landed

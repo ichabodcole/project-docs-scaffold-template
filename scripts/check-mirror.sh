@@ -136,6 +136,33 @@ done < <(cd "$PAYLOAD" && { find docs -type f -ipath '*template*'; echo docs/STY
 # `docs/STYLE.md` is the one seeded file that is not a template (`SEEDED_PAGES`
 # in scripts/pdocs/seed.ts); its hash is recorded all the same.
 
+# THE SEED RECORD MATCHES THE FILES IT NAMES. `docs/.pdocs-seed.json` holds the
+# hash of every seeded file as this repository ships it. A template edited
+# without refreshing its hash leaves the record describing bytes nobody has,
+# and nothing else notices: `ITEM.template.md` went a release stale that way.
+# Hashed with `seed.ts`'s own `hashOf`, so this agrees with what a migration
+# compares. It lives here because the seeded files are already compared byte
+# for byte above; this is the same question asked of the record.
+if ! bun -e '
+  import { hashOf, loadManifest } from "./scripts/pdocs/seed.ts";
+  const m = loadManifest("docs");
+  let stale = 0;
+  for (const [rel, hash] of Object.entries(m.files)) {
+    const now = hashOf(`docs/${rel}`);
+    if (now === hash) continue;
+    stale++;
+    console.log(`STALE SEED     docs/${rel}  (${now === null ? "recorded, but not on disk" : "recorded hash is not the file\x27s"})`);
+  }
+  if (stale) {
+    console.log("");
+    console.log("Refresh each from the file as it now stands:");
+    console.log("  bun -e \x27import {hashOf,loadManifest,writeManifest} from \"./scripts/pdocs/seed.ts\"; const m=loadManifest(\"docs\"); for (const k of Object.keys(m.files)) { const h=hashOf(`docs/${k}`); if (h) m.files[k]=h; } writeManifest(\"docs\", m)\x27");
+    process.exit(1);
+  }
+'; then
+  fail=1
+fi
+
 # Cookiecutter renders EVERY payload file through Jinja, code included. A
 # mirrored source file that happens to contain `{{` or `{%` is therefore
 # rewritten on generation — silently, and only in the generated project, where

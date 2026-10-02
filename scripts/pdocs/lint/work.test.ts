@@ -322,6 +322,60 @@ describe("workProblems — entity folders and the archive", () => {
   });
 });
 
+describe("cycles/_archive/ — a closed or abandoned cycle may leave the live list", () => {
+  const ended = (lifecycle: string) => cycle.replace("lifecycle: active", `lifecycle: ${lifecycle}`);
+
+  test("an archived cycle that is not closed or abandoned is ARCHIVED NOT TERMINAL", () => {
+    const ctx = fixture({
+      "docs/cycles/_archive/2026-07-a.md": ended("active"),
+      "docs/cycles/_archive/2026-07-b.md": ended("planned"),
+      "docs/cycles/_archive/2026-07-c.md": ended("closed"),
+      "docs/cycles/_archive/2026-07-d.md": ended("abandoned"),
+    });
+    const rows = only(ctx, "ARCHIVED NOT TERMINAL");
+    expect(rows).toHaveLength(2);
+    expect(rows.some((r) => r.includes("docs/cycles/_archive/2026-07-a.md"))).toBe(true);
+    expect(rows.some((r) => r.includes("docs/cycles/_archive/2026-07-b.md"))).toBe(true);
+    expect(rows.every((r) => r.includes("closed or abandoned cycle"))).toBe(true);
+  });
+
+  test("a live closed cycle is not a finding: archiving is optional", () => {
+    const ctx = fixture({ "docs/cycles/2026-07-c.md": ended("closed") });
+    expect(only(ctx, "ARCHIVED NOT TERMINAL")).toEqual([]);
+  });
+
+  test("an item whose `cycle:` names an archived cycle resolves", () => {
+    const ctx = fixture({
+      "docs/cycles/_archive/2026-07-c.md": ended("closed"),
+      "docs/items/a.md": item(A, { cycle: "2026-07-c", from: "cycle/2026-07-c" }),
+    });
+    expect(only(ctx, "BAD CYCLE")).toEqual([]);
+    expect(only(ctx, "BAD FROM")).toEqual([]);
+  });
+
+  test("a cycle slug both live and archived is DUPLICATE SLUG", () => {
+    const ctx = fixture({
+      "docs/cycles/2026-07-c.md": ended("planned"),
+      "docs/cycles/_archive/2026-07-c.md": ended("closed"),
+    });
+    const rows = only(ctx, "DUPLICATE SLUG");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain("cycle/2026-07-c");
+  });
+
+  test("cycles/_archive/ is read even when lint.skip names _archive", () => {
+    const ctx = fixture(
+      {
+        "docs/cycles/_archive/2026-07-a.md": ended("active"),
+        "docs/items/a.md": item(A, { cycle: "2026-07-a" }),
+      },
+      { skip: ["_archive"] }
+    );
+    expect(only(ctx, "ARCHIVED NOT TERMINAL")).toHaveLength(1);
+    expect(only(ctx, "BAD CYCLE")).toEqual([]);
+  });
+});
+
 describe("NO OUTCOME — a closed or abandoned cycle records what happened", () => {
   // The cycle template this repository ships, byte for byte: the placeholder is
   // read from it, never written into the rule.
@@ -355,7 +409,7 @@ describe("NO OUTCOME — a closed or abandoned cycle records what happened", () 
     });
     expect(rows(ctx).sort()).toEqual([
       "NO OUTCOME  docs/cycles/2026-06-empty.md: closed, but has an empty `## Outcome`  (write what shipped, what was cut and what was learned)",
-      "NO OUTCOME  docs/cycles/2026-07-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-07-placeholder.md: closed, but still has a cycle template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
       "NO OUTCOME  docs/cycles/2026-08-missing.md: abandoned, but has no `## Outcome` section  (write what shipped, what was cut and what was learned)",
     ]);
   });
@@ -381,16 +435,69 @@ describe("NO OUTCOME — a closed or abandoned cycle records what happened", () 
     expect(rows(ctx)).toEqual([]);
   });
 
-  test("the placeholder is the project's own template's: an edited one counts, and the stock prompt is then prose", () => {
+  test("an edited template's placeholder counts, and a released template's stock prompt still does", () => {
     const edited = TEMPLATE.replace(tplOutcome, "\n[Fill in at close.]\n\n");
     const ctx = fixture({
       "docs/cycles/TEMPLATE.md": edited,
       "docs/cycles/2026-07-theirs.md": cycleAt("closed", "## Outcome\n\n[Fill in at close.]\n\n## Sessions\n"),
       "docs/cycles/2026-08-stock.md": cycleAt("closed", `## Outcome\n${tplOutcome}\n## Sessions\n`),
     });
-    expect(rows(ctx)).toEqual([
-      "NO OUTCOME  docs/cycles/2026-07-theirs.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+    expect(rows(ctx).sort()).toEqual([
+      "NO OUTCOME  docs/cycles/2026-07-theirs.md: closed, but still has a cycle template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-08-stock.md: closed, but still has a cycle template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
     ]);
+  });
+
+  // The Outcome every released cycle template up to 9.0.0 shipped (tags
+  // v7.0.0 … v9.0.0). A migration replaces the template, not the cycles
+  // created from it: story-loom's Hollowbrook kept this after 9.2.0.
+  const OLD_OUTCOME =
+    "\n_Written at close, not before._\n\n[What shipped. What was cut, and why. What was learned that will change how the\nnext cycle is scoped. Two paragraphs is usually enough; the point is that a\nreader six months from now can tell what happened without reading every\nsession.]\n\n";
+
+  test("a placeholder from an older released template, or a lone `_Written at close…_` line, is reported", () => {
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": TEMPLATE,
+      "docs/cycles/2026-05-old.md": cycleAt("closed", `## Outcome\n${OLD_OUTCOME}## Sessions\n`),
+      "docs/cycles/2026-06-old-italic.md": cycleAt("abandoned", "## Outcome\n\n_Written at close, not before._\n\n## Sessions\n"),
+      "docs/cycles/2026-07-new-italic.md": cycleAt(
+        "closed",
+        "## Outcome\n\n_Written at close, not before — and for an `abandoned` cycle too._\n\n## Sessions\n"
+      ),
+      "docs/cycles/2026-08-short-italic.md": cycleAt("closed", "## Outcome\n\n_Written at close._\n"),
+    });
+    expect(rows(ctx).sort()).toEqual(
+      ["2026-05-old", "2026-06-old-italic", "2026-07-new-italic", "2026-08-short-italic"].map(
+        (slug) =>
+          `NO OUTCOME  docs/cycles/${slug}.md: ${slug === "2026-06-old-italic" ? "abandoned" : "closed"}, but still has a cycle template's placeholder under \`## Outcome\`  (write what shipped, what was cut and what was learned)`
+      )
+    );
+  });
+
+  // Fails the day the shipped template's Outcome changes without its new
+  // paragraphs joining the released list: once a project migrates past it,
+  // nothing else would recognise them.
+  test("the shipped template's Outcome is a released placeholder, with no template on disk to read it from", () => {
+    const ctx = fixture({
+      "docs/cycles/2026-07-current.md": cycleAt("closed", `## Outcome\n${tplOutcome}\n## Sessions\n`),
+    });
+    expect(rows(ctx)).toHaveLength(1);
+  });
+
+  test("an older template's prompt left above a written Outcome is clean", () => {
+    const ctx = fixture({
+      "docs/cycles/TEMPLATE.md": TEMPLATE,
+      "docs/cycles/2026-05-old-kept.md": cycleAt(
+        "closed",
+        "## Outcome\n\n_Written at close, not before._\n\nBoth items shipped; the flag was cut.\n"
+      ),
+      // The prompt and the Outcome on one line: an italic word later in the
+      // prose does not make the whole paragraph the prompt.
+      "docs/cycles/2026-06-same-line.md": cycleAt(
+        "closed",
+        "## Outcome\n\n_Written at close, not before._ We shipped A; B was _cut_\n"
+      ),
+    });
+    expect(rows(ctx)).toEqual([]);
   });
 
   test("an Outcome heading with text after it, and `## Outcomes`, are the section", () => {
@@ -403,7 +510,7 @@ describe("NO OUTCOME — a closed or abandoned cycle records what happened", () 
     });
     expect(rows(ctx).sort()).toEqual([
       "NO OUTCOME  docs/cycles/2026-05-outcomes-based.md: closed, but has no `## Outcome` section  (write what shipped, what was cut and what was learned)",
-      "NO OUTCOME  docs/cycles/2026-06-dash-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-06-dash-placeholder.md: closed, but still has a cycle template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
     ]);
   });
 
@@ -415,7 +522,7 @@ describe("NO OUTCOME — a closed or abandoned cycle records what happened", () 
       "docs/cycles/2026-08-fenced-only.md": cycleAt("abandoned", `${fenced}~~~\n## Outcome\n\nAlso an example.\n~~~\n`),
     });
     expect(rows(ctx).sort()).toEqual([
-      "NO OUTCOME  docs/cycles/2026-07-fenced-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
+      "NO OUTCOME  docs/cycles/2026-07-fenced-placeholder.md: closed, but still has a cycle template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)",
       "NO OUTCOME  docs/cycles/2026-08-fenced-only.md: abandoned, but has no `## Outcome` section  (write what shipped, what was cut and what was learned)",
     ]);
   });
@@ -434,7 +541,7 @@ describe("NO OUTCOME — a closed or abandoned cycle records what happened", () 
     const messages = (JSON.parse(r.stdout.toString()).data.problems as Array<{ message: string }>).map((p) => p.message);
     expect(r.exitCode).toBe(9);
     expect(messages).toContain(
-      "NO OUTCOME  handbook/cycles/2026-07-placeholder.md: closed, but still has the template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)"
+      "NO OUTCOME  handbook/cycles/2026-07-placeholder.md: closed, but still has a cycle template's placeholder under `## Outcome`  (write what shipped, what was cut and what was learned)"
     );
   });
 });

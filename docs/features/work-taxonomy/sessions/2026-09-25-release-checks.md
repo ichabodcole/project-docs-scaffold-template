@@ -14,11 +14,11 @@ generated: { by: claude-opus-5-5, at: 2026-09-25 }
 # Work Taxonomy release checks — 2026-09-25
 
 Part of
-[Work Taxonomy release](../../../cycles/2026-09-work-taxonomy-release.md). Plan:
-[Phase 6](../plan.md). Branch `chore/work-taxonomy-p6-release-checks`. The first
-step of Phase 6 — everything short of cutting the release. The coordinator ran
-it from the main thread; a checks sub-agent executed the test plan and made the
-fixes, fresh sub-agents walked the edited skills, and one reviewer sub-agent
+[Work Taxonomy release](../../../cycles/_archive/2026-09-work-taxonomy-release.md).
+Plan: [Phase 6](../plan.md). Branch `chore/work-taxonomy-p6-release-checks`. The
+first step of Phase 6 — everything short of cutting the release. The coordinator
+ran it from the main thread; a checks sub-agent executed the test plan and made
+the fixes, fresh sub-agents walked the edited skills, and one reviewer sub-agent
 checked the branch.
 
 ## What landed

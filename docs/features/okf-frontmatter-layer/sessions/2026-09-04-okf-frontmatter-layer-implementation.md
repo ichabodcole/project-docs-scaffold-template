@@ -12,7 +12,7 @@ generated: { by: claude-opus-5, at: 2026-09-04 }
 # OKF frontmatter layer — implementation — 2026-09-04
 
 Part of
-[the 2026-09 OKF frontmatter layer cycle](../../../cycles/2026-09-okf-frontmatter-layer.md).
+[the 2026-09 OKF frontmatter layer cycle](../../../cycles/_archive/2026-09-okf-frontmatter-layer.md).
 
 ## What shipped
 
@@ -114,4 +114,4 @@ reader's. `docs/index.md` and `SCHEMA.md` now say what to do with the
 ## Docs
 
 [Proposal](../feature.md) · [Plan](../plan.md) ·
-[Cycle](../../../cycles/2026-09-okf-frontmatter-layer.md)
+[Cycle](../../../cycles/_archive/2026-09-okf-frontmatter-layer.md)

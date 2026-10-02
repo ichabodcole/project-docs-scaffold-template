@@ -68,8 +68,8 @@ Or use Glob to find specific patterns:
 - `docs/architecture/*.md` - All architecture docs
 - `docs/specifications/*.md` - All specifications
 
-`features/_archive/` and `items/_archive/` hold finished work; skip them unless
-the user asks.
+`features/_archive/`, `items/_archive/` and `cycles/_archive/` hold finished
+work; skip them unless the user asks.
 
 ### Step 2: Categorize by Document Type
 

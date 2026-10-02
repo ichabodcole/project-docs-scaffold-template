@@ -14,7 +14,7 @@ generated: { by: claude-opus-5-5, at: 2026-09-22 }
 # pdocs check inherits git's hook variables — 2026-09-22
 
 Part of
-[Story-loom feedback, round 1](../../../cycles/2026-09-story-loom-feedback.md).
+[Story-loom feedback, round 1](../../../cycles/_archive/2026-09-story-loom-feedback.md).
 Work order: [the backlog item](../../check-inherits-git-hook-variables.md).
 Branch `fix/check-inherits-git-hook-variables`. No plugin change; the owned
 layer and its payload mirror only.

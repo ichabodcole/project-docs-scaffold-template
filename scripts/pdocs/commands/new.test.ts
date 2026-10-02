@@ -26,6 +26,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import * as prettier from "prettier";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
 import { parseFrontmatter, stripCode } from "../docs-lint/index.ts";
 import { ExitCode } from "../envelope.ts";
@@ -1130,6 +1131,57 @@ describe("insertCatalogEntry", () => {
     );
     expect(lines[1]).toStartWith("  — A description");
     for (const line of lines.slice(1)) expect(line.startsWith("  ")).toBe(true);
+  });
+
+  // This repository's Prettier and `.prettierrc`: the formatter a catalog
+  // entry has to survive, rather than a guess at it.
+  const prettierCheck = async (lines: string[]) => {
+    const text = `${lines.join("\n")}\n`;
+    const config = await prettier.resolveConfig(join(REPO_ROOT, "docs/index.md"));
+    return { text, formatted: await prettier.format(text, { ...config, parser: "markdown" }) };
+  };
+
+  // Each pads the description so the marker word lands exactly where the
+  // 80-column line breaks: a continuation line opening with it would be a
+  // nested list (or, for `1.`, an ordered one) to Prettier.
+  test.each(["-", "+", "1.", "2)", "#", ">"])(
+    "a `%s` at the wrap point does not open a continuation line, and `prettier --check` leaves the entry alone",
+    async (marker) => {
+      for (let pad = 50; pad <= 70; pad++) {
+        const lines = catalogEntry(
+          "T",
+          "./playbooks/t.md",
+          `${"x".repeat(pad)} ${marker} the rest of the description runs on`
+        );
+        for (const line of lines.slice(1))
+          expect(line.trimStart().startsWith(`${marker} `)).toBe(false);
+        const { text, formatted } = await prettierCheck(lines);
+        expect(formatted).toBe(text);
+      }
+    }
+  );
+
+  test("fuzzed against Prettier: titles, links and descriptions full of list markers come out unchanged", async () => {
+    // A small deterministic generator, so a failure names a reproducible case.
+    let seed = 20261001;
+    const rand = (n: number) => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed % n;
+    };
+    const vocab = ["-", "+", "1.", "2)", "10.", "#", "##", ">", "—", "a-b", "+1", "1.5", "and", "the"];
+    const word = () =>
+      rand(3) === 0
+        ? (vocab[rand(vocab.length)] as string)
+        : "abcdefghijklmnop".slice(0, 1 + rand(12));
+    for (let i = 0; i < 300; i++) {
+      const title = Array.from({ length: 1 + rand(5) }, () => "Word".slice(0, 1 + rand(4))).join(" ");
+      const target = `./playbooks/${"p".repeat(1 + rand(30))}.md`;
+      const description = Array.from({ length: 4 + rand(30) }, word).join(" ");
+      const lines = catalogEntry(title, target, description);
+      const { text, formatted } = await prettierCheck(lines);
+      if (formatted !== text) console.log({ title, target, description });
+      expect(formatted).toBe(text);
+    }
   });
 });
 

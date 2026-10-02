@@ -240,7 +240,7 @@ Ranked by the problems each one removes on story-loom.
 ## Decisions (Cole, 2026-09-27)
 
 - **Build migration changes 1–5 before story-loom migrates**, in
-  [the story-loom migration cycle](../../cycles/2026-09-story-loom-migration.md).
+  [the story-loom migration cycle](../../cycles/_archive/2026-09-story-loom-migration.md).
   Changes 6–9 stay as story-loom's own pre- and post-run steps in the sequence
   above.
 - **storyline-engine becomes a feature, `active`.** Before the run, rename

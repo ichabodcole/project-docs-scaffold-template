@@ -5,12 +5,13 @@ description:
   Twice on 2026-09-28 and 29 the pre-commit gate failed on migration tests
   exceeding bun's 5-second default, in a test and a beforeEach hook, and passed
   unchanged on retry.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: done
 id: 01a0eebf-8c73-76b0-b803-da561d5d8590
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: migrations
+cycle: 2026-10-migration-test-stability
 ---
 
 # Migration tests time out at their 5-second budget under load
@@ -26,6 +27,6 @@ trains people to retry or skip it.
 
 ## Definition of done
 
-- [ ] The slow migration tests and their hooks have a timeout that fits what
+- [x] The slow migration tests and their hooks have a timeout that fits what
       they do (or are made faster), and the gate passes repeatedly under the
       pre-commit hook's load.

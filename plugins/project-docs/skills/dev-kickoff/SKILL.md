@@ -110,9 +110,11 @@ Ask the user:
 3. **Start the work, in the worktree** — the script created the branch, so run
    the rest of `init-branch` there, not its branch-creation steps: its **Step
    4** (pick the work item this branch starts, from `pdocs view ready`) and its
-   **Step 6**
-   (`pdocs set item/<slug> --lifecycle active --cycle <active cycle>`, and the
-   cycle's Sessions line). Then move the feature:
+   **Step 6**: the item's review check (if its `status` is not `stable`, show
+   the user its description and definition of done, and add `--status stable`
+   once they approve it), then
+   `pdocs set item/<slug> --lifecycle active --cycle <active cycle>` and the
+   cycle's Sessions line. Then move the feature:
 
    ```bash
    pdocs set feature/<slug> --lifecycle active

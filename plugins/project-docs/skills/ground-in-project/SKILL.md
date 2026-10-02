@@ -85,7 +85,9 @@ unless something specifically demands it.
 
 - `bun scripts/pdocs/cli.ts view board --features` — the work in play, grouped
   by state: what is started (`active`, `review`), what is waiting (`triage`,
-  `backlog`, `ready`). It is derived from frontmatter, so it is current.
+  `backlog`, `ready`). It is derived from frontmatter, so it is current. If it
+  ends with an archive advisory, mention it in one line of the orientation;
+  acting on it is `sweep-project`'s job, with the user's say-so.
 - For each started feature, read just the first ~30 lines of its `feature.md` to
   learn its purpose. Cap at 5; if more, sample the most recently modified.
 - Glance at 1–2 most recent session notes:

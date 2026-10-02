@@ -14,11 +14,11 @@ generated: { by: claude-opus-5-5, at: 2026-09-25 }
 # Work Taxonomy Phase 4, skills and touch points — 2026-09-25
 
 Part of
-[Work Taxonomy release](../../../cycles/2026-09-work-taxonomy-release.md). Plan:
-[Phase 4](../plan.md). Branch `feature/work-taxonomy-p4-skills`. The coordinator
-ran this from the main thread; an implementer sub-agent audited and rewrote the
-skills, fresh sub-agents walked them in generated projects, and two reviewer
-sub-agents checked the branch.
+[Work Taxonomy release](../../../cycles/_archive/2026-09-work-taxonomy-release.md).
+Plan: [Phase 4](../plan.md). Branch `feature/work-taxonomy-p4-skills`. The
+coordinator ran this from the main thread; an implementer sub-agent audited and
+rewrote the skills, fresh sub-agents walked them in generated projects, and two
+reviewer sub-agents checked the branch.
 
 ## The audit first
 

@@ -10,7 +10,7 @@
 // repositories. A file in there that imports this repository's CLI is a file
 // those repositories cannot take.
 
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -96,6 +96,18 @@ const DEFAULT_CONFIG = {
     ],
   },
 };
+
+/**
+ * The budget for every test and hook in this file. Most tests here spawn git,
+ * cookiecutter and the migration itself, and the first to touch a generated
+ * fixture also builds it. The slowest took 1.4 s alone and 5.7 s with the suite
+ * running twice at once beside ten CPU burners, against bun's five-second
+ * default, which failed the gate at random. Bun cannot interrupt a synchronous
+ * test, only kill a spawned child, so the tests that spawn nothing lose nothing
+ * by sharing it.
+ */
+const SPAWN_BUDGET = 30_000;
+setDefaultTimeout(SPAWN_BUDGET);
 
 const roots: string[] = [];
 afterAll(() => {

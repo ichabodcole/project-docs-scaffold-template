@@ -16,7 +16,7 @@
  * (`cycles/TEMPLATE.md`, `features/README.md`), and never this repository's
  * own docs.
  */
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import {
   chmodSync,
   cpSync,
@@ -120,6 +120,18 @@ const REPO_ROOT = resolve(import.meta.dir, "../../../../../..");
 const V210_TAG = "project-docs-scaffold-template-v8.1.0";
 /** The `Applies If` cell of the migrations table, verbatim. */
 const APPLIES_IF = "[ ! -d docs/items ] || [ -d docs/backlog ] || [ -d docs/projects ]";
+
+/**
+ * The budget for every test and hook in this file. Most tests here spawn git,
+ * cookiecutter and the migration itself, and the first to touch a generated
+ * fixture also builds it. The slowest without a budget of its own took 2.8 s
+ * alone and 5.7 s with the suite running twice at once beside ten CPU burners,
+ * against bun's five-second default, which failed the gate at random. Bun
+ * cannot interrupt a synchronous test, only kill a spawned child, so the tests
+ * that spawn nothing lose nothing by sharing it.
+ */
+const SPAWN_BUDGET = 30_000;
+setDefaultTimeout(SPAWN_BUDGET);
 
 const roots: string[] = [];
 afterAll(() => {
@@ -1051,8 +1063,11 @@ function generatedScaffolds(): Scaffolds {
   return scaffolds;
 }
 
+// Automatic maintenance is off: a commit would otherwise spawn a detached
+// `git maintenance run --auto` that can rewrite `.git` while a test copies or
+// removes the fixture.
 function git(root: string, ...args: string[]): string {
-  return sh(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", ...args], root);
+  return sh(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", "-c", "maintenance.auto=false", "-c", "gc.auto=0", ...args], root);
 }
 
 function commitAll(root: string, message: string): void {
@@ -2911,10 +2926,20 @@ describe("a tree past the release the run installs is refused, not set back", ()
     atPin = root;
     return root;
   };
-  /** A copy of that tree with its markers set, committed. */
+  /**
+   * A copy of that tree's working files with its markers set, committed to a
+   * repository of its own. The cached tree's `.git` is not copied because it
+   * is not immutable. CI saw `.git/objects/<xx>` directories vanish mid-copy
+   * (ENOENT, in fan-out order), and what removed them is unconfirmed: at this
+   * fixture's size, default auto-maintenance does nothing. Leaving `.git` out
+   * removes the only part of the copy source that changes after it is built.
+   * These tests read the snapshot, not its history (two commits this run made
+   * moments ago), so one fresh commit is all they need.
+   */
   const markedAt = (readme: string, config: string): string => {
     const root = tmp("migrate-v30-marked-");
-    cpSync(migratedAtPin(), root, { recursive: true });
+    const src = migratedAtPin();
+    cpSync(src, root, { recursive: true, filter: (from) => from !== join(src, ".git") });
     write(root, { "docs/README.md": read(root, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${readme}"`) });
     write(root, { ".project-docs.json": read(root, ".project-docs.json").replace(/"version":\s*"[^"]*"/, `"version": "${config}"`) });
     commitAll(root, `markers at ${readme} / ${config}`);

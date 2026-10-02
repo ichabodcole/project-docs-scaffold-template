@@ -13,8 +13,8 @@ generated: { by: claude-opus-5-5, at: 2026-09-25 }
 # Work Taxonomy Phase 5, the dogfood migration and retirement — 2026-09-25
 
 Part of
-[Work Taxonomy release](../../../cycles/2026-09-work-taxonomy-release.md). Plan:
-[Phase 5](../plan.md), "Dogfood on this repository" and step 6. Branch
+[Work Taxonomy release](../../../cycles/_archive/2026-09-work-taxonomy-release.md).
+Plan: [Phase 5](../plan.md), "Dogfood on this repository" and step 6. Branch
 `feature/work-taxonomy-p5-migration`. The script and its guide were built and
 reviewed earlier on this branch (part one); this record is the run.
 

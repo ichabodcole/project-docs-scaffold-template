@@ -13,7 +13,7 @@ generated: { by: claude-fable-5-1, at: 2026-09-14 }
 # Story-loom feedback, round 1: nine fixes — 2026-09-14
 
 Part of
-[Story-loom feedback, round 1](../../../cycles/2026-09-story-loom-feedback.md).
+[Story-loom feedback, round 1](../../../cycles/_archive/2026-09-story-loom-feedback.md).
 Branch `fix/story-loom-feedback-round-1`, base `develop`. Spec: the
 [backlog item](../../story-loom-feedback-round-1.md). This folder holds only
 sessions; the work was backlog-shaped.

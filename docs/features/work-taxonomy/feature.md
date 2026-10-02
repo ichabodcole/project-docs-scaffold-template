@@ -347,11 +347,11 @@ board. States that are enforced rather than asserted by hand. No silent deletion
 
 - **A large breaking change lands mid-migration for consumers.** Story-loom is
   still on 8.0.0 and has not yet run the v2.10 migration its
-  [feedback cycle](../../cycles/2026-09-story-loom-feedback.md) is waiting on. A
-  major bump that retires `backlog`, `fragment` and `brief` while a consumer is
-  already behind compounds the gap. Mitigation: dogfood first, ship the
-  migration script and guide together, and treat the second-consumer run as the
-  gate before wider rollout.
+  [feedback cycle](../../cycles/_archive/2026-09-story-loom-feedback.md) is
+  waiting on. A major bump that retires `backlog`, `fragment` and `brief` while
+  a consumer is already behind compounds the gap. Mitigation: dogfood first,
+  ship the migration script and guide together, and treat the second-consumer
+  run as the gate before wider rollout.
 - **Fields go stale without a writer.** The investigation's own finding — six
   live documents held a state their evidence contradicted — is the exact failure
   mode a field-based model reproduces if a touch point is skipped. Mitigation:
@@ -416,5 +416,5 @@ board. States that are enforced rather than asserted by hand. No silent deletion
 - [Cadence at agent pace report](../../items/work-taxonomy-for-agent-first-development/reports/2026-09-22-cadence-at-agent-pace-report.md)
 - [Plans, discovery and fields report](../../items/work-taxonomy-for-agent-first-development/reports/2026-09-22-plans-discovery-and-fields-report.md)
 - [How work flows here report](../../items/work-taxonomy-for-agent-first-development/reports/2026-09-22-how-work-flows-report.md)
-- [Story-loom feedback cycle](../../cycles/2026-09-story-loom-feedback.md) —
-  evidence for the mid-migration consumer risk
+- [Story-loom feedback cycle](../../cycles/_archive/2026-09-story-loom-feedback.md)
+  — evidence for the mid-migration consumer risk

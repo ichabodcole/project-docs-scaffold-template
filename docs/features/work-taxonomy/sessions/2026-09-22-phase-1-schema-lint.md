@@ -13,8 +13,8 @@ generated: { by: claude-opus-5-5, at: 2026-09-22 }
 # Work Taxonomy Phase 1, schema and lint — 2026-09-22
 
 Part of
-[Work Taxonomy release](../../../cycles/2026-09-work-taxonomy-release.md). Plan:
-[Phase 1](../plan.md). Branch `feature/work-taxonomy-p1-schema-lint`. The
+[Work Taxonomy release](../../../cycles/_archive/2026-09-work-taxonomy-release.md).
+Plan: [Phase 1](../plan.md). Branch `feature/work-taxonomy-p1-schema-lint`. The
 coordinator ran this session from the main thread; an implementer sub-agent
 wrote the code, and two reviewer sub-agents checked it.
 

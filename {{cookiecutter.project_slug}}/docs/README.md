@@ -22,11 +22,13 @@ boundaries.
 To see what is happening, run:
 
 ```bash
-bun scripts/pdocs/cli.ts view board    # every live item, by state group
-bun scripts/pdocs/cli.ts view ready    # what can be started now
+bun scripts/pdocs/cli.ts view board      # every live item, by state group
+bun scripts/pdocs/cli.ts view ready      # what can be started now
+bun scripts/pdocs/cli.ts view portfolio  # current cycles and features, with counts
 ```
 
-The active cycle, if there is one, is in [cycles/](./cycles/README.md).
+The active cycle, if there is one, is in [cycles/](./cycles/README.md);
+`view portfolio` says when there is none.
 
 ## Structure
 

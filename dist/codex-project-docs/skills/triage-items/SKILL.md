@@ -63,6 +63,10 @@ pdocs view board --format text            # the items, by state group
 pdocs view backlog --format text          # everything unstarted, triage included
 ```
 
+If the board ends with an archive advisory (`archive-threshold`), finish the
+triage first, then mention it once and offer the `sweep-project` advisory path.
+Never archive as part of triage.
+
 An item that duplicates one already on the board is a drop candidate. So is one
 that duplicates a phase in a feature's `plan.md`, when the feature has one
 (`pdocs new feature` creates only `feature.md`, so a feature not yet shaped has
@@ -172,6 +176,12 @@ proposal rather than its body, edit the item's body too: append the drop reason
 of done. An item whose body already held the definition of done the user
 approved needs no body edit. `pdocs set` changes frontmatter only, and a reason
 left in chat is lost.
+
+Add `--status stable` to an accepted item's `set` only if the user approved its
+definition of done as written, whether shown in your proposal or read from its
+body. Approving a disposition or a priority is not a review of the content.
+Otherwise the item stays `draft`, and `init-branch` asks for that review before
+it starts.
 
 `pdocs set` refuses a value the lint would reject — an unknown priority, a
 `parent` that isn't a feature, a `blocked_by` that doesn't resolve — and names

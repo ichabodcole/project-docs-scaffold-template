@@ -12,7 +12,8 @@ generated: { by: claude-opus-5-5, at: 2026-09-27 }
 
 # v3 migration, Spellbook round 2 — 2026-09-27
 
-Part of [v9 rollout feedback](../../../cycles/2026-09-v9-rollout-feedback.md).
+Part of
+[v9 rollout feedback](../../../cycles/_archive/2026-09-v9-rollout-feedback.md).
 Branch `fix/v3-migration-spellbook-round-2`. Implements the eight rows of
 [this item](../item.md) (its Verdicts section records each one) and
 [a born item takes its description from what it owns](../../born-items-take-description-from-owned-docs.md).

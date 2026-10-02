@@ -34,7 +34,7 @@ its first commit naming the project-docs commit it was copied from. It is
 generated from the project-docs scaffold at 9.2.0, and the live items about
 these plugins move with them. It has no openpackage `dist/` build for now. The
 cut is hard, with no release where the plugins ship from both repositories. The
-work is the [skill garden cycle](../../cycles/2026-09-skill-garden.md).
+work is the [skill garden cycle](../../cycles/_archive/2026-09-skill-garden.md).
 
 Open alongside the move:
 [how skills reach runtimes other than Claude Code](https://github.com/ichabodcole/skill-garden/blob/main/docs/items/skill-distribution-beyond-claude-plugins.md),

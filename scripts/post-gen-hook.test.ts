@@ -10,13 +10,22 @@
 // literals, so it imports without cookiecutter rendering it. `main()` is behind
 // an `__main__` guard, so importing does not run the new-folder branch.
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { childEnv } from "./pdocs/test-env.ts";
+
+/**
+ * The budget for every test in this file. Each spawns python3 to import the
+ * hook, and beside the migration suites one spawn can take seconds. The slowest
+ * took 1.6 s alone and 3.7 s with the suite running twice at once beside ten
+ * CPU burners, and one hit bun's five-second default and failed a loaded run.
+ */
+const SPAWN_BUDGET = 30_000;
+setDefaultTimeout(SPAWN_BUDGET);
 
 const HOOK = join(import.meta.dir, "..", "hooks", "post_gen_project.py");
 

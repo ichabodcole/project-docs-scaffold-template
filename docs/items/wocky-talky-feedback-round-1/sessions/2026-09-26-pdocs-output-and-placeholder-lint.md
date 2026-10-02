@@ -12,7 +12,8 @@ generated: { by: claude-opus-5-5, at: 2026-09-26 }
 
 # pdocs output and the placeholder lint — 2026-09-26
 
-Part of [v9 rollout feedback](../../../cycles/2026-09-v9-rollout-feedback.md).
+Part of
+[v9 rollout feedback](../../../cycles/_archive/2026-09-v9-rollout-feedback.md).
 Branch `fix/pdocs-output-and-placeholder-lint`. Implements rows 4 and 5 of
 [this item](../item.md); rows 1–3 (finalize-branch) are a later branch. Also
 finishes four items in the same files:
@@ -80,7 +81,7 @@ and is reported, and `new cycle` fails without `--appetite` and passes with it;
 20 stripper edge cases; four new fixes neutered, each failing its test.
 
 **Follow-up items:** filed in `triage` from this session:
-[the catalog line can wrap into a nested list](../../catalog-line-wraps-into-a-list.md),
+[the catalog line can wrap into a nested list](../../catalog-line-wraps-into-a-list/item.md),
 [placeholder-lint wording polish](../../placeholder-lint-wording-polish.md). Two
 finalize-branch wording points from the re-review (the session `tags` bullet and
 the handoff step not suggesting `--title`/`--description`) go with rows 1–3 of

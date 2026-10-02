@@ -157,7 +157,7 @@ before changing construction. Do not hide the defect with blanket retries.
    [parallel execution](https://bun.com/docs/test/parallel) runs files in
    isolated processes; within-file concurrency only overlaps async waits.
    Blanket `--concurrent` will not accelerate synchronous subprocess calls.
-3. [Stabilize Git fixtures](../stabilize-migration-git-fixtures.md). Faster
+3. [Stabilize Git fixtures](../stabilize-migration-git-fixtures/item.md). Faster
    execution reduces retry cost, but does not fix the intermittent failure.
 4. Profile the largest migration file before restructuring it. Consider
    splitting pure planning tests from independent integration groups, reusing
@@ -191,4 +191,4 @@ release tags make it unsuitable as the sole authoritative gate.
 
 - [Research item](./item.md)
 - [Source test execution follow-up](../run-source-tests-once.md)
-- [Fixture reliability follow-up](../stabilize-migration-git-fixtures.md)
+- [Fixture reliability follow-up](../stabilize-migration-git-fixtures/item.md)

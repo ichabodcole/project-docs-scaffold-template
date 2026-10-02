@@ -14,7 +14,7 @@ generated: { by: claude-fable-5-1, at: 2026-09-17 }
 # Spellbook feedback, round 1 — 2026-09-17
 
 Part of
-[Story-loom feedback, round 1](../../../cycles/2026-09-story-loom-feedback.md).
+[Story-loom feedback, round 1](../../../cycles/_archive/2026-09-story-loom-feedback.md).
 Work order: [the backlog item](../../spellbook-feedback-round-1.md). Branch
 `feature/spellbook-feedback-round-1`, plugin 3.13.0.
 

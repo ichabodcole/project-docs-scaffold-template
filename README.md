@@ -206,6 +206,7 @@ docs/
 ├── items/
 │   └── _archive/
 ├── cycles/
+│   └── _archive/
 ├── TEMPLATES/
 ├── README.md
 ├── SCHEMA.md
@@ -242,8 +243,8 @@ Living documents that evolve over time — not tied to a specific body of work.
   `triage`
 - **`/docs/cycles`** — What is in play right now; items join a cycle through
   their `cycle:` field
-- **`features/_archive/`, `items/_archive/`** — Done or dropped work, moved by
-  `pdocs archive`
+- **`features/_archive/`, `items/_archive/`, `cycles/_archive/`** — Done or
+  dropped work, and closed or abandoned cycles, moved by `pdocs archive`
 
 Backlogs and boards are not documents: `bun scripts/pdocs/cli.ts view board`
 derives them from the items' fields.

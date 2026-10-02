@@ -11,7 +11,9 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -265,16 +267,232 @@ describe("pdocs archive", () => {
     expect(r.stdout).not.toContain("ITEM DELETED");
     expect(r.stdout).toContain("docs-lint: clean");
   });
+});
 
-  test("a cycle is not archived", () => {
+// Cycles follow the same rule (2026-10-01): a `closed` or `abandoned` cycle may
+// move to `cycles/_archive/`; a `planned` or `active` one may not. The slug is
+// the file name, so an item's `cycle:` still names it after the move.
+describe("pdocs archive cycle/<slug>", () => {
+  const cycle = (lifecycle: string, body: string) =>
+    doc(
+      {
+        type: "cycle",
+        title: "Cycle",
+        description: "A cycle.",
+        tags: "[test, cycles]",
+        status: "draft",
+        lifecycle,
+        appetite: "When the work lands.",
+        started: "2026-09-01",
+        generated: GENERATED,
+      },
+      body
+    );
+  const OUTCOME = "## Outcome\n\nShipped the done item; cut nothing; learned the archive works.";
+  const MEMBER = "0190f501-0000-7000-8000-00000000000f";
+
+  function cycleTree(): string {
     const root = tree();
-    writeFileSync(
-      join(root, "docs/cycles/2026-09-x.md"),
-      doc(
-        { type: "cycle", title: "C", description: "A cycle.", status: "draft", lifecycle: "closed", generated: GENERATED },
-        "# C"
+    const write = (rel: string, body: string) => {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), body);
+    };
+    write(
+      "docs/cycles/2026-09-old.md",
+      cycle(
+        "closed",
+        `# Old\n\n## Scope\n\n- [Done](../items/done-one.md) and [b](../features/b/feature.md#b).\n\n${OUTCOME}`
       )
     );
-    expect(archive(root, "cycle/2026-09-x").code).toBe(ExitCode.Usage);
+    write(
+      "docs/cycles/2026-09-gave-up.md",
+      cycle("abandoned", `# Gave up\n\nAfter [the old cycle](./2026-09-old.md).\n\n${OUTCOME}`)
+    );
+    write("docs/cycles/2026-10-now.md", cycle("active", "# Now\n\nFollows [old](./2026-09-old.md)."));
+    write("docs/cycles/2026-11-next.md", cycle("planned", "# Next"));
+    write(
+      "docs/items/member.md",
+      item(MEMBER, "done", "# Member\n\nRan in [the old cycle](../cycles/2026-09-old.md).", {
+        cycle: "2026-09-old",
+        from: "cycle/2026-09-old",
+      })
+    );
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "cycles");
+    return root;
+  }
+
+  test("the cycle fixture is clean", () => clean(cycleTree()));
+
+  test("a closed cycle moves to cycles/_archive/, links to and from it rewritten", () => {
+    const root = cycleTree();
+    const r = archive(root, "cycle/2026-09-old");
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(ExitCode.Success);
+    const data = JSON.parse(r.stdout).data;
+    expect(data.from).toBe("docs/cycles/2026-09-old.md");
+    expect(data.to).toBe("docs/cycles/_archive/2026-09-old.md");
+    expect(data.moved).toBe(true);
+    expect(existsSync(join(root, "docs/cycles/2026-09-old.md"))).toBe(false);
+    // Outbound: one level deeper now.
+    expect(read(root, "docs/cycles/_archive/2026-09-old.md")).toContain(
+      "[Done](../../items/done-one.md) and [b](../../features/b/feature.md#b)"
+    );
+    // Inbound, from a sibling cycle and from an item.
+    expect(read(root, "docs/cycles/2026-10-now.md")).toContain("[old](./_archive/2026-09-old.md)");
+    expect(read(root, "docs/items/member.md")).toContain(
+      "[the old cycle](../cycles/_archive/2026-09-old.md)"
+    );
+    // The moved file's own two links, and one inbound link from each of three files.
+    expect(data.rewritten).toEqual([
+      "docs/cycles/2026-09-gave-up.md",
+      "docs/cycles/2026-10-now.md",
+      "docs/cycles/_archive/2026-09-old.md",
+      "docs/items/member.md",
+    ]);
+    expect(data.links).toBe(5);
+    clean(root);
+  });
+
+  test("an abandoned cycle moves too", () => {
+    const root = cycleTree();
+    expect(archive(root, "cycle/2026-09-gave-up").code).toBe(ExitCode.Success);
+    expect(existsSync(join(root, "docs/cycles/_archive/2026-09-gave-up.md"))).toBe(true);
+    clean(root);
+  });
+
+  test("two archived cycles that link each other keep a working link", () => {
+    const root = cycleTree();
+    archive(root, "cycle/2026-09-old");
+    archive(root, "cycle/2026-09-gave-up");
+    expect(read(root, "docs/cycles/_archive/2026-09-gave-up.md")).toContain(
+      "[the old cycle](./2026-09-old.md)"
+    );
+    clean(root);
+  });
+
+  test("a planned or active cycle exits 2, names its state, and nothing moves", () => {
+    const root = cycleTree();
+    for (const [ref, state] of [
+      ["cycle/2026-10-now", "active"],
+      ["cycle/2026-11-next", "planned"],
+    ] as const) {
+      const r = archive(root, ref);
+      expect(r.code).toBe(ExitCode.Usage);
+      expect(r.stderr).toContain(state);
+      expect(r.stderr).toContain("closed or abandoned");
+      expect(r.stderr).toContain("--lifecycle closed");
+      expect(r.stderr).toContain("--lifecycle abandoned");
+    }
+    expect(existsSync(join(root, "docs/cycles/2026-10-now.md"))).toBe(true);
+    expect(existsSync(join(root, "docs/cycles/2026-11-next.md"))).toBe(true);
+    expect(existsSync(join(root, "docs/cycles/_archive/2026-10-now.md"))).toBe(false);
+  });
+
+  test("an item's `cycle:` and `from: cycle/<slug>` still resolve; no frontmatter changed", () => {
+    const root = cycleTree();
+    const fm = (t: string) => /^---\n[\s\S]*?\n---/.exec(t)![0];
+    const before = fm(read(root, "docs/items/member.md"));
+    const cycleBefore = fm(read(root, "docs/cycles/2026-09-old.md"));
+    archive(root, "cycle/2026-09-old");
+    expect(fm(read(root, "docs/items/member.md"))).toBe(before);
+    expect(fm(read(root, "docs/cycles/_archive/2026-09-old.md"))).toBe(cycleBefore);
+    // `pdocs check` would report BAD CYCLE or BAD FROM if either stopped resolving.
+    clean(root);
+    const found = run(["find", "--cycle", "2026-09-old", "--root", root, "--format", "json"]);
+    expect(JSON.parse(found.stdout).data.matches.map((m: { path: string }) => m.path)).toEqual([
+      "docs/items/member.md",
+    ]);
+  });
+
+  test("`view cycle` still finds an archived cycle by its slug, and says it is archived", () => {
+    const root = cycleTree();
+    archive(root, "cycle/2026-09-old");
+    const r = run(["view", "cycle", "2026-09-old", "--root", root, "--format", "json"]);
+    expect(r.code).toBe(ExitCode.Success);
+    const data = JSON.parse(r.stdout).data;
+    expect(data.cycle.path).toBe("docs/cycles/_archive/2026-09-old.md");
+    expect(data.cycle.archived).toBe(true);
+    expect(data.items.map((e: { path: string }) => e.path)).toEqual(["docs/items/member.md"]);
+    expect(data.closable).toBe(true);
+  });
+
+  test("`find --type cycle` still returns an archived cycle", () => {
+    const root = cycleTree();
+    archive(root, "cycle/2026-09-old");
+    const r = run(["find", "--type", "cycle", "--root", root, "--format", "json"]);
+    const paths = JSON.parse(r.stdout).data.matches.map((m: { path: string }) => m.path);
+    expect(paths).toContain("docs/cycles/_archive/2026-09-old.md");
+    expect(paths).toContain("docs/cycles/2026-10-now.md");
+  });
+
+  test("archiving an archived cycle is a no-op and exits 0", () => {
+    const root = cycleTree();
+    archive(root, "cycle/2026-09-old");
+    const r = archive(root, "cycle/2026-09-old");
+    expect(r.code).toBe(ExitCode.Success);
+    expect(JSON.parse(r.stdout).data.moved).toBe(false);
+  });
+
+  test("text output names the move and the link count", () => {
+    const root = cycleTree();
+    const r = run(["archive", "cycle/2026-09-old", "--root", root, "--format", "text"]);
+    expect(r.code).toBe(ExitCode.Success);
+    expect(r.stdout).toContain("docs/cycles/2026-09-old.md -> docs/cycles/_archive/2026-09-old.md");
+    expect(r.stdout).toContain("rewrote 5 link(s) in 4 file(s)");
+  });
+
+  test("a new cycle may not reuse an archived cycle's slug", () => {
+    const root = cycleTree();
+    archive(root, "cycle/2026-09-old");
+    const r = run(["new", "cycle", "2026-09-old", "--root", root, "--format", "json"]);
+    expect(r.code).toBe(ExitCode.Conflict);
+    expect(r.stderr).toContain("cycle/2026-09-old");
+    expect(r.stderr).toContain("archived or not");
+    expect(existsSync(join(root, "docs/cycles/2026-09-old.md"))).toBe(false);
+  });
+
+  test("a rewritten link that pushes a line past 80 columns is reflowed by the project's Prettier", () => {
+    const root = cycleTree();
+    // The project's own Prettier, as a project that formats its Markdown has it.
+    mkdirSync(join(root, "node_modules"), { recursive: true });
+    symlinkSync(
+      realpathSync(join(REPO_ROOT, "node_modules/prettier")),
+      join(root, "node_modules/prettier")
+    );
+    copyFileSync(join(REPO_ROOT, ".prettierrc"), join(root, ".prettierrc"));
+    writeFileSync(join(root, ".gitignore"), "node_modules/\n");
+    // 76 columns before the move; inserting `_archive/` makes it 85.
+    const LINE = "Ran in [the old cycle](../cycles/2026-09-old.md), which closed in Sept 2026.";
+    expect(LINE.length).toBeLessThanOrEqual(80);
+    expect(LINE.replace("cycles/", "cycles/_archive/").length).toBeGreaterThan(80);
+    writeFileSync(
+      join(root, "docs/items/long-line.md"),
+      item("0190f502-0000-7000-8000-000000000010", "done", `# Long line\n\n${LINE}`)
+    );
+    git(root, "add", "-A");
+    git(root, "commit", "-qm", "long line");
+
+    const files = [
+      "docs/cycles/2026-09-gave-up.md",
+      "docs/cycles/2026-10-now.md",
+      "docs/items/member.md",
+      "docs/items/long-line.md",
+    ];
+    const prettierCheck = (paths: string[]) =>
+      Bun.spawnSync([join(REPO_ROOT, "node_modules/.bin/prettier"), "--check", ...paths], {
+        cwd: root,
+        env: childEnv(),
+      });
+    // Precondition: every file the move will rewrite is Prettier-clean before it.
+    expect(prettierCheck([...files, "docs/cycles/2026-09-old.md"]).exitCode).toBe(0);
+
+    expect(archive(root, "cycle/2026-09-old").code).toBe(ExitCode.Success);
+    expect(read(root, "docs/items/long-line.md")).toContain(
+      "[the old cycle](../cycles/_archive/2026-09-old.md)"
+    );
+    const p = prettierCheck([...files, "docs/cycles/_archive/2026-09-old.md"]);
+    expect(p.stderr.toString() + p.stdout.toString()).not.toContain("[warn]");
+    expect(p.exitCode).toBe(0);
   });
 });

@@ -124,12 +124,14 @@ describe("the payload ships the work-taxonomy layout", () => {
     ).toEqual([]);
   });
 
-  test("features/ and items/ ship with their contract page and an archive", () => {
+  test("features/, items/ and cycles/ ship with their contract page and an archive", () => {
     for (const path of [
       "docs/features/README.md",
       "docs/items/README.md",
       "docs/features/_archive/.gitkeep",
       "docs/items/_archive/.gitkeep",
+      "docs/cycles/README.md",
+      "docs/cycles/_archive/.gitkeep",
       "docs/TEMPLATES/FEATURE.template.md",
       "docs/TEMPLATES/ITEM.template.md",
     ])
@@ -138,6 +140,7 @@ describe("the payload ships the work-taxonomy layout", () => {
         shipped: true,
       });
     expect(classify("docs/features/_archive/.gitkeep")).toBe("structural");
+    expect(classify("docs/cycles/_archive/.gitkeep")).toBe("structural");
     expect(classify("docs/items/README.md")).toBe("owned");
   });
 

@@ -9,7 +9,7 @@
  *   - A GUARD MUST BE ABLE TO FIRE. Every failure path below asserts a non-zero
  *     exit, because the previous shape's checks echoed text and returned 0.
  */
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -28,6 +28,18 @@ import { childEnv } from "../../../../../../scripts/pdocs/test-env.ts";
 import { laterThan, manifestMatchesDisk } from "./migrate-v2.8-to-v2.9.ts";
 
 const SCRIPT = join(import.meta.dir, "migrate-v2.8-to-v2.9.ts");
+/**
+ * The budget for every test and hook in this file. Most tests here spawn git,
+ * cookiecutter and the migration itself, and the first to touch a generated
+ * fixture also builds it. The slowest took 1.6 s alone and 5.4 s with the suite
+ * running twice at once beside ten CPU burners, against bun's five-second
+ * default, which failed the gate at random. Bun cannot interrupt a synchronous
+ * test, only kill a spawned child, so the tests that spawn nothing lose nothing
+ * by sharing it.
+ */
+const SPAWN_BUDGET = 30_000;
+setDefaultTimeout(SPAWN_BUDGET);
+
 const roots: string[] = [];
 afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });

@@ -22,7 +22,7 @@ closed: 2026-09-26
 
 The work vocabulary grew ad hoc and no longer composes: backlog is a state with
 a folder, the project folder does three jobs, and nothing closes. The
-[investigation](../items/work-taxonomy-for-agent-first-development/write-up.md)
+[investigation](../../items/work-taxonomy-for-agent-first-development/write-up.md)
 settled the model, and Guidance Lifecycle retires types from the same schema, so
 the two ship together as one breaking release rather than two.
 
@@ -33,12 +33,13 @@ v2.10. Branches are listed below by hand until this cycle becomes active.
 
 ## Scope
 
-- **[project/work-taxonomy](../features/work-taxonomy/feature.md)** — the six
-  phases of [the plan](../features/work-taxonomy/plan.md) landed, this
+- **[project/work-taxonomy](../../features/work-taxonomy/feature.md)** — the six
+  phases of [the plan](../../features/work-taxonomy/plan.md) landed, this
   repository migrated and the old types retired, the
-  [test plan](../features/work-taxonomy/test-plan.md)'s Tier 1 and Tier 2 green.
-- **[project/guidance-lifecycle](../features/guidance-lifecycle/feature.md)** —
-  its success criteria hold (test plan T2-11), landed through the same phases.
+  [test plan](../../features/work-taxonomy/test-plan.md)'s Tier 1 and Tier 2
+  green.
+- **[project/guidance-lifecycle](../../features/guidance-lifecycle/feature.md)**
+  — its success criteria hold (test plan T2-11), landed through the same phases.
 
 Out of scope, deliberately: a UI over the new files; deriving `released_in` from
 commit trailers; the skill-set changes the Phase 4 audit finds that the taxonomy
@@ -57,8 +58,8 @@ findings and wocky-talky's became
 [v9 rollout feedback](./2026-09-v9-rollout-feedback.md); story-loom's run is
 carried by [Story-loom migration](./2026-09-story-loom-migration.md). The Phase
 4 audit's findings went to
-[skill surface cleanup](../features/skill-surface-cleanup/feature.md), as Scope
-said they would.
+[skill surface cleanup](../../features/skill-surface-cleanup/feature.md), as
+Scope said they would.
 
 Learned: this cycle was never `active`. The one-active rule held the slot for
 story-loom feedback round 1 throughout, so the largest cycle to date was

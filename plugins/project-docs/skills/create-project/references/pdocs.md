@@ -180,14 +180,14 @@ adding the file is one line the day you point acc at `pdocs`.
 - **124+ — reserved**, never allocated by `pdocs`, so a delegating CLI can pass
   a child's status through.
 
-| Code | Meaning                                                                                      |
-| ---- | -------------------------------------------------------------------------------------------- |
-| 0    | Clean — or dirty under `lint.adopting: true`                                                 |
-| 1    | An unexpected fault inside `pdocs` itself                                                    |
-| 2    | Bad invocation: unknown command, unknown flag, missing value, bad `--root`, uncreatable type |
-| 5    | Not found: no docs root, no `.project-docs.json`, no such document, no `--from` file         |
-| 6    | Conflict: the document already exists, or the tree refuses it                                |
-| 9    | Outcome: it ran fine, and the documents are dirty                                            |
+| Code | Meaning                                                                                                           |
+| ---- | ----------------------------------------------------------------------------------------------------------------- |
+| 0    | Clean — or dirty under `lint.adopting: true`                                                                      |
+| 1    | An unexpected fault inside `pdocs` itself                                                                         |
+| 2    | Bad invocation: unknown command, unknown flag, missing value, bad `--root`, uncreatable type                      |
+| 5    | Not found: no docs root, no `.project-docs.json`, no such document, no `--from` file                              |
+| 6    | Conflict: the document already exists, or the tree refuses it — a second active cycle, or a strict review refusal |
+| 9    | Outcome: it ran fine, and the documents are dirty                                                                 |
 
 Codes 3, 4, 7 and 8 are deliberately unallocated — they belong to
 `agent-cli-conformance`'s bands (auth, permission, rate limit, confirmation) and
@@ -202,12 +202,17 @@ they do not take, with exit 2 and the valid set in `choices`.
 
 **References.** The work verbs (`view`, `set`, `promote`, `archive`, and
 `new --owner`) take a reference to a feature, an item or a cycle:
-`feature/<slug>`, `item/<slug>`, `cycle/<slug>`, a full item id, or a unique id
-prefix of 8 or more characters. An ambiguous prefix exits 2 and lists the
-candidates. In text output an id is **printed** as its shortest prefix no other
-id in the tree shares, never fewer than 12 characters — ids filed in the same
-instant share their whole 12-character timestamp. JSON always carries the full
-id, and frontmatter always stores it.
+`feature/<slug>`, `item/<slug>`, `cycle/<filename>`, a full item id, or a unique
+id prefix of 8 or more characters. An ambiguous prefix exits 2 and lists the
+candidates. A cycle is named by its **filename**, with or without `.md`
+(`cycle/2026-09-auth` and `cycle/2026-09-auth.md` are the same cycle, live or in
+`cycles/_archive/`); the filename is its identity, and there is no `slug` field
+to look for. A name that matches no cycle file, or more than one, exits 2 saying
+which file it looked for or which files it found. In text output an id is
+**printed** as its shortest prefix no other id in the tree shares, never fewer
+than 12 characters — ids filed in the same instant share their whole
+12-character timestamp. JSON always carries the full id, and frontmatter always
+stores it.
 
 ### `check` — the gate
 
@@ -216,8 +221,20 @@ bun scripts/pdocs/cli.ts check [--root <path>] [--format text|json] [--against <
 ```
 
 `data`: `clean` (bool), `adopting` (bool), `total` (int), `problems[]` — each
-`{ tier, message }` where `tier` is `library` or `workbench` — `outside` (int)
-and `templates[]`.
+`{ tier, message }` where `tier` is `library` or `workbench` — `outside` (int),
+`templates[]` and `advisories[]`.
+
+`advisories[]` holds what the gate reports without failing on it, printed in
+text after the verdict: the review advisory (`work-item-review`, see `set`
+below) and the **template-header advisory** (`id` `template-header`). The second
+names every document under the docs root, templates aside, that still holds a
+template's header comment — the block `pdocs new` copies in, opening `<!--` then
+`OWNERSHIP (of this template file`, outside code. A document that quotes the
+line in prose or in code (a fenced or indented block, an inline span) is not
+reported, nor is a `lint.exclude`d file or a `lint.skip` directory. Its `refs`
+are the documents' repo-relative paths; the message names five, then
+`and N more`. Delete that whole comment block from each, and nothing else.
+Neither advisory changes the exit code.
 
 `outside` is how many tracked Markdown files **outside the docs root** were read
 — `README.md`, `AGENTS.md`, anything `git ls-files '*.md'` lists — for links and
@@ -295,20 +312,21 @@ comparing the array itself against an integer fails silently.
 bun scripts/pdocs/cli.ts find [--type <t>] [--lifecycle <l>] [--status <s>] \
                               [--tag <t>] [--since <YYYY-MM-DD>] \
                               [--kind <k>] [--parent feature/<slug>] \
-                              [--cycle <slug>] [--scope <name>] [--id <prefix>]
+                              [--cycle <filename>] [--scope <name>] [--id <prefix>]
 ```
 
 Filters are ANDed and all are optional, so a bare `find` lists everything. The
 last five filter work: `--kind` (`task`, `bug`, `chore`, `research`),
-`--parent`, `--cycle`, `--scope`, and `--id`, which matches an item whose id
-starts with the prefix.
+`--parent`, `--cycle` (the cycle's filename, `.md` optional), `--scope`, and
+`--id`, which matches an item whose id starts with the prefix.
 
 `data`: `matches[]` — each
 `{ path, slug, tier, type, title, description, status, lifecycle, tags[], date }`,
 plus `id`, `kind`, `parent`, `cycle` and `scope` on a feature or item — and
 `count`. `slug` is what a reference is built from: `item/<slug>`,
-`feature/<slug>`, `cycle/<slug>`. `id` is the full id: this is where a skill
-reads one to write into a commit trailer.
+`feature/<slug>`, `cycle/<slug>` (a cycle's `slug` is its filename without
+`.md`). `id` is the full id: this is where a skill reads one to write into a
+commit trailer.
 
 **An empty result exits 0.** "Nothing matches" is an answer. Read `count`, never
 the status, to tell an empty corpus from a failure. A `--since` that is not a
@@ -351,29 +369,102 @@ See below.
 ### `view` — derived views of the work
 
 ```bash
-bun scripts/pdocs/cli.ts view <backlog|board|ready|feature|cycle|scope|unreleased|released> [<arg>] \
-                              [--features] [--since <YYYY-MM-DD>]
+bun scripts/pdocs/cli.ts view <backlog|board|ready|feature|cycle|scope|unreleased|released|portfolio> [<arg>] \
+                              [--features] [--all] [--since <YYYY-MM-DD>]
 ```
 
 Every view is computed from frontmatter; none is a file anyone writes.
 
-| View                 | What it lists                                                                                                  |
-| -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `backlog`            | Items in the unstarted group (`triage`, `backlog`, `ready`), by priority (urgent first, none last), then age   |
-| `board`              | Items grouped by state group (unstarted, started, completed, cancelled); `--features` adds features. Live only |
-| `ready`              | `ready` items whose every `blocked_by` item is `done` — what can start now                                     |
-| `feature <slug>`     | The feature and the items whose `parent` names it                                                              |
-| `cycle <slug>`       | The items whose `cycle` names it, and `closable`: at least one item, and every one `done` or `dropped`         |
-| `scope <name>`       | Features and items in that scope                                                                               |
-| `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                         |
-| `released <version>` | Features and items with that `released_in`                                                                     |
+| View                 | What it lists                                                                                                                                                              |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `backlog`            | Items in the unstarted group (`triage`, `backlog`, `ready`), by priority (urgent first, none last), then age                                                               |
+| `board`              | Items grouped by state group (unstarted, started, completed, cancelled); `--features` adds features. Live only; `--all` adds the archive                                   |
+| `ready`              | `ready` items whose every `blocked_by` item is `done` — what can start now                                                                                                 |
+| `feature <slug>`     | The feature and the items whose `parent` names it                                                                                                                          |
+| `cycle <filename>`   | The cycle named by its filename (`.md` optional, live or archived), the items whose `cycle` names it, and `closable`: at least one item, and every one `done` or `dropped` |
+| `scope <name>`       | Live features and items in that scope; `--all` adds the archive                                                                                                            |
+| `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                                                                                     |
+| `released <version>` | Features and items with that `released_in`                                                                                                                                 |
+| `portfolio`          | Current cycles and features, each with its items counted by state group; `--all` adds history                                                                              |
+| `unreviewed`         | `done` items whose `status` is not `stable` — the review audit; `--all` adds the archive                                                                                   |
+
+`portfolio` counts a cycle's items by `cycle` and a feature's by `parent`,
+archived items included, and counts the live items in neither. A cycle is
+current when it is `planned` or `active` and not archived; a feature when it is
+not archived, `done` or `dropped`. An item whose `cycle` or `parent` names
+nothing in the tree is counted nowhere; `pdocs check` reports it as `BAD CYCLE`
+or `BAD PARENT`. It says when no cycle is `active`. Its `--all` adds the
+history: `closed` and `abandoned` cycles and `done` and `dropped` features,
+archived or not. In text it prints a zero count as `·` and folds past features
+with no items into one line per lifecycle; JSON keeps every entry (`entity`,
+`path`, `slug`, `title`, `lifecycle`, `archived`, `current`, and `counts` by
+group plus `ungrouped` and `total`) and the top-level `activeCycle` and
+`unattached`.
 
 An unknown view exits 2 and lists the views. Output is deterministic.
+
+**Live views hide archived work** unless `--all` asks for it. One flag, a
+meaning per view: on `board`, `scope` and `unreviewed` it adds archived records;
+on `portfolio`, which lists only current cycles and features, it adds the
+history — finished ones, archived or not. Any other view refuses it. `feature`,
+`cycle`, `unreleased` and `released` show archived records, as the record of one
+entity, release accounting and history. `find` is a query, not a view: it
+returns archived records and never advises.
+
+**Advisories.** Every view's JSON `data` carries `advisories`, empty when there
+is nothing to say. Each has a stable `id`, a `message` and an `action`, plus
+`refs` — the `<type>/<slug>` references a caller can act on — when it is about
+particular entities. A live view that lists a type across the tree — `board` for
+items, and features with `--features`; `portfolio` for features and cycles —
+counts that type's unarchived finished work (`done`/`dropped` items and
+features, `closed`/`abandoned` cycles) against `checks.archive.threshold` in
+`.project-docs.json` (default 25). A type whose count is **greater than** the
+threshold puts it in one advisory: `id` `archive-threshold`, the `threshold`,
+`refs` (every type's candidates), and per type the `count`, `lifecycles`,
+`remediation` and `candidates` (the references `pdocs archive` takes, oldest
+first). Text output ends with the same message and its next step, two lines,
+never one per entity. The view still exits 0 and lists exactly what it would
+without it. Because `portfolio` already leaves finished work out, its message
+says archiving moves them out of the live folders, not that it shortens the
+view.
+
+**Acting on one.** The advisory is not permission to archive. Offer the user a
+concrete selection from `refs` — say, every finished item older than the current
+cycle — and run `pdocs archive <ref>` only for what they agree to. A selection
+they already authorized in this conversation counts; don't ask twice.
+
+**A bad setting never takes a view down.** An invalid
+`checks.archive.threshold`, or an unknown key in `checks.archive`, makes `check`
+report `BAD CONFIG` and exit 9. A view still lists as usual and carries a
+`bad-config` advisory in place of the archive advice, whose `issues` give each
+setting's `key`, `value` and what is `expected`. Fix the file; don't raise or
+remove the threshold to silence it. A section under `checks` that this version
+does not take (`archive` and `workItemReview` are the two) is `BAD CONFIG` as
+well, with a "did you mean" when one is close. It is a typo or a version
+mismatch, since an upgrade moves pdocs and its config together. The known
+sections are still read.
+
+**The review advisory** (`id` `work-item-review`). An item whose `status` is not
+`stable` needs review when it is started (`active`, `review`), or unstarted and
+a member of the `active` cycle. `view board` reports every such item;
+`view cycle` reports its members, and `view ready` reports the items it lists.
+Both of those also report unreviewed items before they start, as
+`reason: "on-start"` (`view cycle` does this for a `planned` cycle). `set`,
+`new` and `check` report it too (below). Its JSON has `setting`, `mode`, `refs`
+and `items[]`: `{ ref, path, status, lifecycle, cycle, reason }`. `board`,
+`cycle` and `ready` carry `reviewMode`. Every view entry carries `status`, and
+text tags an item that is not `stable` as `[draft]`, `[deprecated]` or
+`[no status]`.
+
+To act on one, show the user the item's description and definition of done, and
+run `pdocs set item/<slug> --status stable` once they approve that content.
+Approval already given in the conversation counts. Never mark an item reviewed
+because work started.
 
 ### `set` — change a feature's, an item's or a cycle's fields
 
 ```bash
-bun scripts/pdocs/cli.ts set <ref> [--lifecycle <l>] [--cycle <slug>] [--<field> <value> …] \
+bun scripts/pdocs/cli.ts set <ref> [--lifecycle <l>] [--cycle <filename>] [--<field> <value> …] \
                              [--unset <key,key>]
 ```
 
@@ -387,7 +478,29 @@ requires. `--released-in` is accepted unchecked.
 A key that already holds the value is reported as already set (`changed: false`)
 and its line is not rewritten; when nothing changes, the file is not written.
 
-`data`: `path`, and `changes[]` — each `{ key, before, after, changed }`.
+`data`: `path`, `changes[]` — each `{ key, before, after, changed }` — and
+`advisories`.
+
+**Starting unreviewed work is reported, and can be refused.** When the change
+leaves an item that needs review (see the review advisory above), `set` reports
+it as a `work-item-review` advisory. Such a change is starting an item, starting
+a cycle (its members), or joining the active cycle. Text prints the advisory
+last. `new item` does the same for an item filed with
+`--lifecycle active|review` or `--cycle <active>`.
+
+`checks.workItemReview.mode` in `.project-docs.json` decides what happens. It is
+`warn` by default, which writes the change. `strict` refuses a change that
+introduces a finding: exit 6 (`conflict`), nothing written, and the advisory in
+the error's `details.advisory`. The check runs on the proposed state, so
+`set item/<slug> --status stable --lifecycle active` succeeds. Repairs, and
+edits to an item that already needed review, are never refused; starting an item
+the active cycle already flagged is a start, and is. A refused `new` wrote
+nothing, so run the same `new` again with `--status stable` once the content is
+approved. An invalid mode is `BAD CONFIG`; meanwhile the policy is `warn`, and
+the review advice is still given, beside a `bad-config` advisory. Under
+`strict`, `check` reports each finding as `UNREVIEWED` and exits 9. In either
+mode, `check`'s `data.advisories` carries the advisory, printed after the
+verdict.
 
 **`set` does not check who is calling.** Moving an item out of `triage` is the
 user's decision, taken at a triage step they have seen (the `triage-items`
@@ -404,22 +517,31 @@ Moves `items/<slug>.md` to `items/<slug>/item.md` and rewrites every link to and
 from it. `new <type> --owner item/<slug>` does this for you when an item gains
 its first owned document. An item that is already a folder is a no-op, exit 0.
 
+A respelled link changes a line's length. When the project has its own Prettier
+(resolved from the repository, never downloaded), every file whose links
+changed, and that Prettier already left unchanged, is printed through it again,
+so `prettier --check` still passes. `archive` does the same. A file Prettier
+would have changed anyway keeps every byte but its links.
+
 `data`: `from`, `to`, `moved`, `rewritten[]` (the files whose links changed),
 `links` (the count).
 
 ### `archive` — move a finished entity into `_archive/`
 
 ```bash
-bun scripts/pdocs/cli.ts archive <feature-or-item-ref>
+bun scripts/pdocs/cli.ts archive <feature-item-or-cycle-ref>
 ```
 
-Moves a feature to `features/_archive/<slug>/`, or an item (file or folder) to
-`items/_archive/`, and rewrites every link to and from the moved files in every
-document under the docs root and every tracked Markdown file outside it. **It
-refuses an entity that is not `done` or `dropped`** (exit 2, naming its state)
-and a cycle. Ids are untouched, so `blocked_by` and `from:` keep resolving.
-Archiving something already archived is a no-op, exit 0. It is the only way into
-`_archive/`; the lint reports anything there that is not terminal.
+Moves a feature to `features/_archive/<slug>/`, an item (file or folder) to
+`items/_archive/`, or a cycle to `cycles/_archive/`, and rewrites every link to
+and from the moved files in every document under the docs root and every tracked
+Markdown file outside it. **It refuses a feature or item that is not `done` or
+`dropped`, and a cycle that is not `closed` or `abandoned`** (exit 2, naming its
+state). Ids and slugs are untouched, so `blocked_by`, `from:` and an item's
+`cycle:` keep resolving, and `pdocs view cycle <filename>` still finds an
+archived cycle. Archiving something already archived is a no-op, exit 0. It is
+the only way into `_archive/`; the lint reports anything there that is not
+terminal.
 
 `data`: `from`, `to`, `moved`, `rewritten[]`, `links`.
 
@@ -462,7 +584,10 @@ What it writes: the template, with `type`, `title`, `generated`, and the flags
 filled in; a date the template leaves as `YYYY-MM-DD` (a cycle's `started`) set
 to today unless its flag is passed; and none of the template's inline `# …`
 guidance comments in the frontmatter. `--title` also fills the template's H1;
-without it the H1 is left as the template's, for you to write.
+without it the H1 is left as the template's, for you to write. The body keeps
+the template's header comment (`OWNERSHIP (of this template file …`) as guidance
+for filling it: delete that whole block once the document is written, or
+`pdocs check` reports it as a `template-header` advisory.
 
 JSON `data`: `path` (the document), `type` (the resolved registry type),
 `created[]` — every file written or modified, document first — `promoted` (the
@@ -536,27 +661,29 @@ bun scripts/pdocs/cli.ts new playbook "rollback a release"
 
 A name that **already** carries the prefix or suffix is honoured as written, so
 `bun scripts/pdocs/cli.ts new cycle 2026-10-tooling` names next month's cycle
-rather than this month's. Names are slugified — `"Auth Stuff!! v2"` becomes
-`auth-stuff-v2` — and a name with no letters or digits in it is a usage error,
-including one made only of dots or dashes (`".."`, `"..."`). A name that would
-put the document outside the docs root is refused rather than written.
+rather than this month's. A cycle name may end in `.md` — it is dropped — and
+`new cycle` refuses a name any cycle already holds, live or archived, with or
+without `.md`. Names are slugified — `"Auth Stuff!! v2"` becomes `auth-stuff-v2`
+— and a name with no letters or digits in it is a usage error, including one
+made only of dots or dashes (`".."`, `"..."`). A name that would put the
+document outside the docs root is refused rather than written.
 
 `NN-` numbering (`specification` only) takes the highest number already in the
 folder plus one, zero-padded to two.
 
 ### Flags
 
-| Flag                   | Notes                                                                                                                                                                                                       |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--title <text>`       | Fills `title` and the template's H1. Without it, `title` defaults to the slug, title-cased, and the H1 is left as the template's — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`). **Pass it.** |
-| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                                               |
-| `--tags <a,b>`         | Comma-separated kebab-case. Written as a list, `[a, b]`, whatever the template has.                                                                                                                         |
-| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                                                         |
-| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff`, `session` and `write-up` — exits 2.                                     |
-| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                                                          |
-| `--owner <ref>`        | Required for an owned type: `feature/<slug>` or `item/<slug-or-id>`. A single-file item is promoted first. An owner that does not resolve exits 2, naming what was expected.                                |
-| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                                                  |
-| `--from <path>`        | See below.                                                                                                                                                                                                  |
+| Flag                   | Notes                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--title <text>`       | Fills `title` and the template's H1. Without it, `title` defaults to the slug, title-cased — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`) — and the H1 is left as the template's. **Pass it.** |
+| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                                                |
+| `--tags <a,b>`         | Comma-separated kebab-case. Written as a list, `[a, b]`, whatever the template has.                                                                                                                          |
+| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                                                          |
+| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff`, `session` and `write-up` — exits 2.                                      |
+| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                                                           |
+| `--owner <ref>`        | Required for an owned type: `feature/<slug>` or `item/<slug-or-id>`. A single-file item is promoted first. An owner that does not resolve exits 2, naming what was expected.                                 |
+| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                                                   |
+| `--from <path>`        | See below.                                                                                                                                                                                                   |
 
 Plus the fields a type declares, as kebab-case flags: on an item `--kind`,
 `--parent`, `--scope`, `--cycle`, `--blocked-by`, `--source`, `--priority`,
@@ -583,8 +710,8 @@ writes into `feature.md`'s Related section:
 ```
 
 **On an item**, `--from` also takes a reference — an item id, `item/<slug>`,
-`feature/<slug>`, `cycle/<slug>` — and writes it to the item's `from:` field as
-well as linking it. A review writes the session's path here.
+`feature/<slug>`, `cycle/<filename>` — and writes it to the item's `from:` field
+as well as linking it. A review writes the session's path here.
 
 The link text is the source's frontmatter `title`, falling back to its filename.
 The href is computed relative to the new document. The path is resolved against

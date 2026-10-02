@@ -13,7 +13,7 @@
  * repository's own history at the 8.0.0 release tag, the current scaffold from
  * the working tree, both through cookiecutter pointed at a local directory.
  */
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -63,6 +63,18 @@ const V80_TAG = "project-docs-scaffold-template-v8.0.0";
 const OWN_TAG = "project-docs-scaffold-template-v8.1.0";
 /** The `Applies If` cell of the migrations table, verbatim. */
 const APPLIES_IF = "! grep -q isSeeded scripts/pdocs/lint/rules.ts";
+
+/**
+ * The budget for every test and hook in this file. Most tests here spawn git,
+ * cookiecutter and the migration itself, and the first to touch a generated
+ * fixture also builds it. The slowest took 2.1 s alone and 5.5 s with the suite
+ * running twice at once beside ten CPU burners, against bun's five-second
+ * default, which failed the gate at random. Bun cannot interrupt a synchronous
+ * test, only kill a spawned child, so the tests that spawn nothing lose nothing
+ * by sharing it.
+ */
+const SPAWN_BUDGET = 30_000;
+setDefaultTimeout(SPAWN_BUDGET);
 
 const roots: string[] = [];
 afterAll(() => {
