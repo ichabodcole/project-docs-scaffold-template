@@ -246,6 +246,7 @@ docs/
 ├── items/             # Work items: one file each, or a folder once it owns documents
 │   └── _archive/      # Items that are done or dropped
 ├── cycles/            # What is in play now; membership lives on the items
+│   └── _archive/      # Cycles that are closed or abandoned
 ├── TEMPLATES/         # The work templates: feature, item, plan, session, …
 ├── playbooks/         # Imperative guides per kind of work: Goal · Steps · Verification
 ├── architecture/      # System design documentation

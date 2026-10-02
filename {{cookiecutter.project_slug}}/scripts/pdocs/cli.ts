@@ -11,7 +11,7 @@
 //   bun scripts/pdocs/cli.ts new       create a document of a declared type
 //   bun scripts/pdocs/cli.ts set       change a work entity's fields
 //   bun scripts/pdocs/cli.ts promote   turn a single-file item into a folder
-//   bun scripts/pdocs/cli.ts archive   move a finished feature or item to _archive/
+//   bun scripts/pdocs/cli.ts archive   move a finished feature, item or cycle to _archive/
 //   bun scripts/pdocs/cli.ts schema    this CLI's own surface, as a declaration
 //
 // Hand-rolled dispatch, and ZERO DEPENDENCIES on purpose. The recipe for this

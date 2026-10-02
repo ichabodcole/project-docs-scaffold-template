@@ -17,7 +17,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { CONFIG_FILENAME } from "../docs-lint/config.ts";
 import { join, relative } from "node:path";
 import { parseFrontmatter } from "../docs-lint/index.ts";
-import { ENTITY_FILE, ITEMS_FOLDER, registryIndex } from "./registry.ts";
+import { CYCLE_ENDS, ENTITY_FILE, ITEMS_FOLDER, registryIndex } from "./registry.ts";
 import {
   type Ctx,
   type WorkbenchDocument,
@@ -71,6 +71,7 @@ export function workProblems(
   for (const [kind, bySlug] of [
     ["item", model.itemsBySlug],
     ["feature", model.featuresBySlug],
+    ["cycle", model.cyclesBySlug],
   ] as const)
     for (const [slug, holders] of bySlug)
       if (holders.length > 1)
@@ -84,6 +85,14 @@ export function workProblems(
     if (e.group !== "completed" && e.group !== "cancelled")
       problems.push(
         `ARCHIVED NOT TERMINAL  ${e.path}: "${e.lifecycle ?? ""}"  (only done or dropped may sit in ${ARCHIVE}/; \`lifecycle\` is the source of truth)`
+      );
+  }
+  // A cycle's archive holds only a cycle that ended: `closed` or `abandoned`.
+  for (const c of model.cycles) {
+    if (!c.archived) continue;
+    if (c.lifecycle === null || !CYCLE_ENDED.has(c.lifecycle))
+      problems.push(
+        `ARCHIVED NOT TERMINAL  ${c.path}: "${c.lifecycle ?? ""}"  (only a closed or abandoned cycle may sit in ${ARCHIVE}/; \`lifecycle\` is the source of truth)`
       );
   }
 
@@ -149,7 +158,7 @@ export function workProblems(
 }
 
 /** The states a cycle ends in, each of which owes an Outcome. */
-const CYCLE_ENDS = new Set(["closed", "abandoned"]);
+const CYCLE_ENDED = new Set(CYCLE_ENDS);
 
 /** An Outcome heading: `## Outcome` or `## Outcomes`, with anything after it. */
 const OUTCOME_HEADING = /^##\s+outcomes?(?![\w-])/i;
@@ -224,7 +233,7 @@ const WRITTEN_AT_CLOSE = /^_Written at close\b[^_]*_$/;
  * Outcome is written at close.
  */
 export function cycleOutcomeProblems(ctx: Ctx, cycles: readonly WorkEntity[]): string[] {
-  const ended = cycles.filter((c) => c.lifecycle !== null && CYCLE_ENDS.has(c.lifecycle));
+  const ended = cycles.filter((c) => c.lifecycle !== null && CYCLE_ENDED.has(c.lifecycle));
   if (ended.length === 0) return [];
   const template = [registryIndex(ctx.config).get("cycle")?.template ?? []].flat()[0];
   const tplPath = template ? join(ctx.repoRoot, template) : null;

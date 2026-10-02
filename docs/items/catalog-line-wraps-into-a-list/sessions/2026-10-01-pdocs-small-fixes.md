@@ -23,7 +23,7 @@ Three small pdocs items landed as one branch:
 - [placeholder-lint-wording-polish](../../placeholder-lint-wording-polish.md).
 
 The branch ran in a git worktree beside the
-[archive-closed-cycles](../../archive-closed-cycles.md) branch.
+[archive-closed-cycles](../../archive-closed-cycles/item.md) branch.
 
 ## What Happened
 

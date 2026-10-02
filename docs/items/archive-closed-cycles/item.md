@@ -6,7 +6,7 @@ description:
   cycle; give cycles an _archive/ folder like items and features, so a closed or
   abandoned cycle can leave the live list.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0e98e-f381-748e-8bb4-0042aa4c6034
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -36,21 +36,25 @@ stays a separate, confirmed step after closing, and links are rewritten by
 Cole's call (2026-10-01): cycles follow the same rules as items and features
 everywhere, not only on disk. Live views hide archived cycles unless an explicit
 flag asks for them, and the shared archive threshold
-([archive advisory](./pdocs-board-archive-advisory.md)) prompts archiving once
+([archive advisory](../pdocs-board-archive-advisory.md)) prompts archiving once
 too many closed cycles remain unarchived.
 
 ## Definition of done
 
-- [ ] `pdocs archive cycle/<slug>` moves a `closed` or `abandoned` cycle to
+- [x] `pdocs archive cycle/<slug>` moves a `closed` or `abandoned` cycle to
       `cycles/_archive/` and rewrites every link to and from it; it still
       refuses a `planned` or `active` one.
-- [ ] Items whose `cycle:` names an archived cycle still resolve, and
+- [x] Items whose `cycle:` names an archived cycle still resolve, and
       `pdocs view cycle` still finds it.
-- [ ] Live views (the portfolio view, and any view that lists cycles) hide
-      archived cycles by default and show them only on an explicit flag, as they
-      do archived items and features; `find --type cycle` still returns them.
-- [ ] The archive advisory counts unarchived `closed` and `abandoned` cycles
-      against the shared threshold.
-- [ ] `SCHEMA.md`, the cycles README and `sweep-project` say closed cycles may
+- [x] `find --type cycle` still returns archived cycles.
+- [x] `SCHEMA.md`, the cycles README and `sweep-project` say closed cycles may
       be archived, in this repository and the payload.
-- [ ] A new project ships `cycles/_archive/`, as it does `items/_archive/`.
+- [x] A new project ships `cycles/_archive/`, as it does `items/_archive/`.
+
+Two parts of Cole's 2026-10-01 rule belong to
+[pdocs-board-archive-advisory](../pdocs-board-archive-advisory.md), not to this
+item: live views (the portfolio view, and any view that lists cycles) hiding
+archived cycles unless an explicit flag asks for them, and the archive advisory
+counting unarchived `closed` and `abandoned` cycles against the shared
+threshold. No view lists cycles yet, so there was nothing here to hide them
+from.

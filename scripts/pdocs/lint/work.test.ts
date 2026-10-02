@@ -322,6 +322,60 @@ describe("workProblems — entity folders and the archive", () => {
   });
 });
 
+describe("cycles/_archive/ — a closed or abandoned cycle may leave the live list", () => {
+  const ended = (lifecycle: string) => cycle.replace("lifecycle: active", `lifecycle: ${lifecycle}`);
+
+  test("an archived cycle that is not closed or abandoned is ARCHIVED NOT TERMINAL", () => {
+    const ctx = fixture({
+      "docs/cycles/_archive/2026-07-a.md": ended("active"),
+      "docs/cycles/_archive/2026-07-b.md": ended("planned"),
+      "docs/cycles/_archive/2026-07-c.md": ended("closed"),
+      "docs/cycles/_archive/2026-07-d.md": ended("abandoned"),
+    });
+    const rows = only(ctx, "ARCHIVED NOT TERMINAL");
+    expect(rows).toHaveLength(2);
+    expect(rows.some((r) => r.includes("docs/cycles/_archive/2026-07-a.md"))).toBe(true);
+    expect(rows.some((r) => r.includes("docs/cycles/_archive/2026-07-b.md"))).toBe(true);
+    expect(rows.every((r) => r.includes("closed or abandoned cycle"))).toBe(true);
+  });
+
+  test("a live closed cycle is not a finding: archiving is optional", () => {
+    const ctx = fixture({ "docs/cycles/2026-07-c.md": ended("closed") });
+    expect(only(ctx, "ARCHIVED NOT TERMINAL")).toEqual([]);
+  });
+
+  test("an item whose `cycle:` names an archived cycle resolves", () => {
+    const ctx = fixture({
+      "docs/cycles/_archive/2026-07-c.md": ended("closed"),
+      "docs/items/a.md": item(A, { cycle: "2026-07-c", from: "cycle/2026-07-c" }),
+    });
+    expect(only(ctx, "BAD CYCLE")).toEqual([]);
+    expect(only(ctx, "BAD FROM")).toEqual([]);
+  });
+
+  test("a cycle slug both live and archived is DUPLICATE SLUG", () => {
+    const ctx = fixture({
+      "docs/cycles/2026-07-c.md": ended("planned"),
+      "docs/cycles/_archive/2026-07-c.md": ended("closed"),
+    });
+    const rows = only(ctx, "DUPLICATE SLUG");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toContain("cycle/2026-07-c");
+  });
+
+  test("cycles/_archive/ is read even when lint.skip names _archive", () => {
+    const ctx = fixture(
+      {
+        "docs/cycles/_archive/2026-07-a.md": ended("active"),
+        "docs/items/a.md": item(A, { cycle: "2026-07-a" }),
+      },
+      { skip: ["_archive"] }
+    );
+    expect(only(ctx, "ARCHIVED NOT TERMINAL")).toHaveLength(1);
+    expect(only(ctx, "BAD CYCLE")).toEqual([]);
+  });
+});
+
 describe("NO OUTCOME — a closed or abandoned cycle records what happened", () => {
   // The cycle template this repository ships, byte for byte: the placeholder is
   // read from it, never written into the rule.

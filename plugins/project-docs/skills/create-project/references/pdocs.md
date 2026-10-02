@@ -416,16 +416,18 @@ would have changed anyway keeps every byte but its links.
 ### `archive` — move a finished entity into `_archive/`
 
 ```bash
-bun scripts/pdocs/cli.ts archive <feature-or-item-ref>
+bun scripts/pdocs/cli.ts archive <feature-item-or-cycle-ref>
 ```
 
-Moves a feature to `features/_archive/<slug>/`, or an item (file or folder) to
-`items/_archive/`, and rewrites every link to and from the moved files in every
-document under the docs root and every tracked Markdown file outside it. **It
-refuses an entity that is not `done` or `dropped`** (exit 2, naming its state)
-and a cycle. Ids are untouched, so `blocked_by` and `from:` keep resolving.
-Archiving something already archived is a no-op, exit 0. It is the only way into
-`_archive/`; the lint reports anything there that is not terminal.
+Moves a feature to `features/_archive/<slug>/`, an item (file or folder) to
+`items/_archive/`, or a cycle to `cycles/_archive/`, and rewrites every link to
+and from the moved files in every document under the docs root and every tracked
+Markdown file outside it. **It refuses a feature or item that is not `done` or
+`dropped`, and a cycle that is not `closed` or `abandoned`** (exit 2, naming its
+state). Ids and slugs are untouched, so `blocked_by`, `from:` and an item's
+`cycle:` keep resolving, and `pdocs view cycle <slug>` still finds an archived
+cycle. Archiving something already archived is a no-op, exit 0. It is the only
+way into `_archive/`; the lint reports anything there that is not terminal.
 
 `data`: `from`, `to`, `moved`, `rewritten[]`, `links`.
 

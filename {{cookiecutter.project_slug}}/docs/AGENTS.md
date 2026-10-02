@@ -39,8 +39,8 @@ its frontmatter. `bun scripts/pdocs/cli.ts --help` says what else it does.
   file, or a folder once it owns documents
 - **cycles/** - What is in play right now; items join a cycle through their
   `cycle:` field
-- **features/\_archive/**, **items/\_archive/** - done or dropped work, moved
-  there by `pdocs archive`
+- **features/\_archive/**, **items/\_archive/**, **cycles/\_archive/** - done or
+  dropped work, and closed or abandoned cycles, moved there by `pdocs archive`
 
 ### How work moves
 

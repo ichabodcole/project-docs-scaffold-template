@@ -60,8 +60,24 @@ bun scripts/pdocs/cli.ts set cycle/2026-09-auth --lifecycle closed --closed 2026
 You may also close a cycle whose remaining work you decide is not worth doing:
 drop those items, or take their `cycle:` off, first. A cycle abandoned rather
 than finished gets `lifecycle: abandoned` and an Outcome that says so; that is a
-real result and worth the two sentences. A closed cycle stays in `cycles/`; it
-is never moved to an archive.
+real result and worth the two sentences.
+
+## Archiving a closed one
+
+A `closed` or `abandoned` cycle may move to `cycles/_archive/`, as finished
+items and features do, so the live list shows what is in play rather than every
+cycle the project ever ran. `lifecycle` stays the record; the move is optional
+housekeeping, a separate step after closing that a person confirms:
+
+```bash
+bun scripts/pdocs/cli.ts archive cycle/2026-09-auth
+```
+
+`pdocs archive` refuses a `planned` or `active` cycle, moves the file, and
+rewrites every link to and from it. Never move a cycle by hand. The slug does
+not change, so items whose `cycle:` names it still resolve,
+`pdocs view cycle 2026-09-auth` still finds it, and `pdocs find --type cycle`
+still lists it.
 
 ## Shape
 

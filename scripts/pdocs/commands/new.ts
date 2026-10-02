@@ -996,12 +996,17 @@ export const newCommand: Command = {
     if (existsSync(target))
       throw new ConflictError(`${rel} already exists — pdocs will not overwrite it.`);
 
-    // An entity's slug names it (`item/<slug>`, `feature/<slug>`), live or
-    // archived, file or folder — so a slug already held anywhere is taken,
-    // even where the exact target path is free (review 3).
-    if ([FEATURES_FOLDER, ITEMS_FOLDER].some((o) => ENTITY_FILE[o]!.type === row.type)) {
+    // An entity's slug names it (`item/<slug>`, `feature/<slug>`,
+    // `cycle/<slug>`), live or archived, file or folder — so a slug already
+    // held anywhere is taken, even where the exact target path is free
+    // (review 3).
+    if (
+      row.type === "cycle" ||
+      [FEATURES_FOLDER, ITEMS_FOLDER].some((o) => ENTITY_FILE[o]!.type === row.type)
+    ) {
       const wanted = scopeName ?? basename(target, ".md");
-      const holders = entitiesBySlug(model(), row.type as "feature" | "item").get(wanted) ?? [];
+      const holders =
+        entitiesBySlug(model(), row.type as "feature" | "item" | "cycle").get(wanted) ?? [];
       if (holders.length)
         throw new ConflictError(
           `\`${row.type}/${wanted}\` is taken by ${holders.map((h) => h.path).join(", ")} — ` +

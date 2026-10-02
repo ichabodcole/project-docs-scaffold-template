@@ -19,14 +19,14 @@ The template is organized with these key directories:
 - `{{cookiecutter.project_slug}}/docs/` - Contains the documentation scaffold
   that gets generated, with READMEs explaining each subdirectory's purpose.
   Organized into the library (architecture, specifications, interaction-design,
-  playbooks), kept current, and the workbench (features, items, cycles, each of
-  `features/` and `items/` with an `_archive/`), which tracks work and holds the
-  documents it owns. `docs/TEMPLATES/` holds the work templates. Also carries
-  the frontmatter layer: `docs/SCHEMA.md` (the contract), `docs/STYLE.md` (the
-  prose contract, seeded), and `docs/index.md` (the catalog, seeded empty). No
-  TypeScript: the gate lives in `scripts/pdocs/`. This repository's own `docs/`
-  still uses the pre-9.0.0 folders (`projects/`, `backlog/`, `memories/`, …)
-  until it runs the 9.0.0 migration
+  playbooks), kept current, and the workbench (features, items, cycles, each
+  with an `_archive/`), which tracks work and holds the documents it owns.
+  `docs/TEMPLATES/` holds the work templates. Also carries the frontmatter
+  layer: `docs/SCHEMA.md` (the contract), `docs/STYLE.md` (the prose contract,
+  seeded), and `docs/index.md` (the catalog, seeded empty). No TypeScript: the
+  gate lives in `scripts/pdocs/`. This repository's own `docs/` still uses the
+  pre-9.0.0 folders (`projects/`, `backlog/`, `memories/`, …) until it runs the
+  9.0.0 migration
 - `{{cookiecutter.project_slug}}/scripts/pdocs/` - The `pdocs` CLI: `cli.ts`
   (dispatch), `envelope.ts` (format, envelope, exit codes), `commands/`, and
   `lint/` (this schema's rules and the assembly that runs them). Zero

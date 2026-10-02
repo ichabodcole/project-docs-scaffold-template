@@ -463,7 +463,9 @@ workbench. Link the cycle in the body instead — when the item is in the cycle
 (its `cycle:` names it, as set above) — a line under the session's own heading,
 `Part of [<cycle title>](<relative path>/cycles/<slug>.md)`, which is a real
 link the lint checks. From `items/<slug>/sessions/` and from
-`features/<slug>/sessions/` that path is `../../../cycles/<slug>.md`.
+`features/<slug>/sessions/` that path is `../../../cycles/<slug>.md` — or
+`cycles/_archive/<slug>.md` for a cycle already archived;
+`pdocs view cycle <slug>` prints its path.
 
 A session carries **no `lifecycle`** — writing one is a lint error. See
 `docs/SCHEMA.md` for why frozen records don't have a pipeline state.

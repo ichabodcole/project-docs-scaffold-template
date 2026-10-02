@@ -16,6 +16,7 @@ import { basename, isAbsolute, join, relative, sep } from "node:path";
 import { parseGenerated, yamlList } from "./docs-lint/index.ts";
 import { UsageError } from "./envelope.ts";
 import {
+  CYCLES_FOLDER,
   ENTITY_FILE,
   FEATURES_FOLDER,
   ITEMS_FOLDER,
@@ -123,6 +124,10 @@ function entityOf(ctx: Ctx, doc: WorkbenchDocument): WorkEntity | null {
   if (doc.type === "cycle") {
     entity = "cycle";
     slug = basename(doc.rel, ".md");
+    // `cycles/_archive/<slug>.md`: a closed or abandoned cycle, moved out of
+    // the live list. Its slug is unchanged, so `cycle:` still names it.
+    const segs = docsPath.split("/");
+    archived = segs.length === 3 && segs[0] === CYCLES_FOLDER && segs[1] === ARCHIVE;
   } else if (doc.type === "feature" || doc.type === "item") {
     const pos = ownerPosition(ctx, doc.rel);
     if (!pos) return null;

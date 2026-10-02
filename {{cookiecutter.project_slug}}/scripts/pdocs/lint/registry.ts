@@ -287,6 +287,13 @@ export const FEATURES_FOLDER = "features";
  *  once the item owns documents. */
 export const ITEMS_FOLDER = "items";
 
+/** The folder that holds cycles: `cycles/<slug>.md`, or `cycles/_archive/<slug>.md`
+ *  once a closed or abandoned cycle is archived. */
+export const CYCLES_FOLDER = "cycles";
+
+/** The `lifecycle` values a cycle ends in: the only ones `cycles/_archive/` holds. */
+export const CYCLE_ENDS: readonly string[] = ["closed", "abandoned"];
+
 /**
  * An owner folder's entry file, named after the entity (D2). A tool finds the
  * entry file by the folder's kind alone.

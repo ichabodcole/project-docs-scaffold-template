@@ -141,9 +141,9 @@ decision, not a convenience:
 **Not mirrored (project-specific):**
 
 - `docs/features/*`, `docs/items/*` (their READMEs and `_archive/.gitkeep`
-  excepted, which are mirrored), `docs/cycles/*` (its README and template
-  excepted) and `docs/playbooks/*` (its README and template excepted) — this
-  repository's own work and guidance
+  excepted, which are mirrored), `docs/cycles/*` (its README, template and
+  `_archive/.gitkeep` excepted) and `docs/playbooks/*` (its README and template
+  excepted) — this repository's own work and guidance
 - `AGENTS.md` and `CLAUDE.md` at project root (different from cookiecutter
   versions)
 

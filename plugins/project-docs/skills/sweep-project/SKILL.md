@@ -6,12 +6,13 @@ description: >
   archive`, which rewrites every link to it. Use when a feature or item might be
   finished, when a plan has drifted from what was actually implemented, or when
   sweeping already-completed work that was never closed. Also closes a cycle
-  whose items are all done, and records `released_in` when a person supplies the
-  version. Triggers when the user says "is this project done", "is this feature
-  done", "archive this project", "sweep this project", "reconcile the plan",
-  "check if we can archive this", "clean up completed projects", "did we ever
-  archive that", or "this project looks finished". Also sweeps a cycle: "close
-  this cycle", "is the cycle done", "sweep the cycle".
+  whose items are all done and, on confirmation, archives a closed one, and
+  records `released_in` when a person supplies the version. Triggers when the
+  user says "is this project done", "is this feature done", "archive this
+  project", "sweep this project", "reconcile the plan", "check if we can archive
+  this", "clean up completed projects", "did we ever archive that", or "this
+  project looks finished". Also sweeps a cycle: "close this cycle", "is the
+  cycle done", "sweep the cycle".
 allowed_tools:
   ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "AskUserQuestion"]
 ---
@@ -168,14 +169,14 @@ pdocs find --id <prefix> --format json         # an item by id
 pdocs view cycle <slug>                        # a cycle, its items, closable
 ```
 
-| State                                             | Action                                                                                                                                                              |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.    |
-| Already under `_archive/`                         | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped` (`ARCHIVED NOT TERMINAL`). |
-| A cycle                                           | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                   |
-| A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                      |
-| An item that is a single file (`items/<slug>.md`) | Reconcile from that one file, which is its own definition of done and record.                                                                                       |
-| An item that is a folder (`items/<slug>/item.md`) | Normal path: its `plan.md`, `write-up.md` and `sessions/`, if present, are the sources.                                                                             |
+| State                                             | Action                                                                                                                                                                                                         |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.                                               |
+| Already under `_archive/`                         | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped`, an archived cycle `closed` or `abandoned` (`ARCHIVED NOT TERMINAL`). |
+| A cycle                                           | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                                                              |
+| A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                                                                 |
+| An item that is a single file (`items/<slug>.md`) | Reconcile from that one file, which is its own definition of done and record.                                                                                                                                  |
+| An item that is a folder (`items/<slug>/item.md`) | Normal path: its `plan.md`, `write-up.md` and `sessions/`, if present, are the sources.                                                                                                                        |
 
 **"Narrative mode" is a property of the content, not of which files exist.** A
 document is in narrative mode when it has nothing item-shaped to update — no
@@ -192,8 +193,9 @@ and you rejoin at Step 6 to report. It is unnumbered on purpose — the file's
 neither.
 
 A cycle is an index over work in play. It owns nothing, so there is no plan to
-reconcile and nothing to archive. Sweeping one means asking whether everything
-in it has finished, and if so, writing down what happened.
+reconcile. Sweeping one means asking whether everything in it has finished, and
+if so, writing down what happened — and then, if the person wants it, moving the
+closed cycle into `docs/cycles/_archive/`.
 
 **1. Read the cycle's work.** Membership lives on the items: an item is in the
 cycle when its `cycle:` names it. The cycle file lists nothing in frontmatter.
@@ -260,7 +262,7 @@ were the result is the failure mode here. The test: the Outcome must name at
 least one thing that was cut, or learned, that appears nowhere in `## Scope`. If
 it cannot, you have summarised the plan.
 
-**5. Verify, then rejoin at Step 6.**
+**5. Verify.**
 
 ```bash
 pdocs check && echo "cycle accepted"
@@ -272,9 +274,22 @@ second command should now name at most one cycle: **at most one cycle may be
 `active`**, `docs/SCHEMA.md` states it and the lint enforces it, and closing one
 is exactly when someone opens the next.
 
-**A closed cycle is not an archived one.** Cycles stay in `docs/cycles/`
-permanently; the folder is the project's record of what was in play when. There
-is no `docs/cycles/_archive/`, and `pdocs archive` refuses a cycle.
+**Last, offer to archive it — then rejoin at Step 6.** A closed cycle is not an
+archived one, and it does not need to be: `lifecycle: closed` is the record, as
+`done` is for an item. Archiving only takes it out of the live list in
+`docs/cycles/`. Once the cycle is `closed` or `abandoned` and `pdocs check` is
+clean, ask; on a yes, run:
+
+```bash
+pdocs archive cycle/<cycle-slug>
+```
+
+It moves the file to `docs/cycles/_archive/` and rewrites every link to and from
+it. It refuses a `planned` or `active` cycle. The slug does not change, so the
+items whose `cycle:` names it still resolve and `pdocs view cycle <cycle-slug>`
+still finds it. Never `git mv` a cycle by hand. A cycle already closed by an
+earlier run can be archived the same way — closing and archiving are separate
+steps, and each needs its own yes.
 
 ### Step 1: Gather Reconciliation Sources
 
@@ -637,7 +652,8 @@ State plainly:
   nothing moved, whether that was the human's choice or unfinished work
 - The prose left (historical, examples: a count is enough) and the prose flagged
   for the human, with what they decided
-- For a cycle: whether it closed, and the items that held it open if not
+- For a cycle: whether it closed, whether it was archived, and the items that
+  held it open if not
 
 **"Nothing needed doing" is a real outcome.** A second run against an
 already-reconciled entity should say so explicitly rather than producing a
@@ -667,7 +683,7 @@ silent no-op that reads like a failure.
 - [ ] The cycle's items were read from `pdocs view cycle`, and any claim of
       `done` was checked against rung 1
 - [ ] `## Sessions` has no `(open)` line for a branch that landed
-- [ ] No cycle was closed without explicit confirmation
+- [ ] No cycle was closed, or archived, without explicit confirmation
 - [ ] A closed cycle's `## Outcome` names at least one thing cut or learned that
       appears nowhere in its `## Scope`
 - [ ] At most one cycle is `lifecycle: active`

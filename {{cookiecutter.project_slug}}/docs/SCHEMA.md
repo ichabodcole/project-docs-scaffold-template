@@ -118,6 +118,7 @@ docs/
                          `lint.skip` and no tier walks it
   features/_archive/   ← done or dropped features; linted, moved by `pdocs archive`
   items/_archive/      ← done or dropped items; the same
+  cycles/_archive/     ← closed or abandoned cycles; the same
 ```
 
 Not every row is present in every project. `PROJECT-SUMMARY.md` and the
@@ -143,8 +144,8 @@ the owner folder, not from a folder of its own:
 | anything else, usually under `artifacts/`         | `artifact`          |
 
 A `feature.md` under `items/`, or an `item.md` under `features/`, is
-`MISPLACED ENTITY`. `_archive/` is recognised only directly under `features/` or
-`items/`, and an archived entity is typed exactly like a live one.
+`MISPLACED ENTITY`. `_archive/` is recognised only directly under `features/`,
+`items/` or `cycles/`, and an archived entity is typed exactly like a live one.
 
 `README.md`, `AGENTS.md`, `CLAUDE.md` and `STYLE.md` are **contract pages**:
 meta-documents about the tree rather than entries in its type system. They carry
@@ -189,8 +190,8 @@ escaped as `\{`.
 depth, and prunes whole subtrees during the walk. `exclude` filters **individual
 files** by path. Reach for `skip` when a whole tree is not yours, and `exclude`
 when a particular file is not a document. Do not put `_archive` in `skip`:
-`features/_archive/` and `items/_archive/` are read whatever `skip` says,
-because the lint checks that only finished work sits there.
+`features/_archive/`, `items/_archive/` and `cycles/_archive/` are read whatever
+`skip` says, because the lint checks that only finished work sits there.
 
 ## Frontmatter — every page
 
@@ -435,10 +436,10 @@ the full id.
 | `BAD PARENT`, `BAD CYCLE`, `BAD BLOCKED_BY`, `BAD FROM` | a reference that resolves to nothing, or to the wrong kind of thing                                                                                                                                 |
 | `BLOCKED CYCLE`                                         | `blocked_by` loops, or an item blocks itself                                                                                                                                                        |
 | `BAD SCOPE`                                             | a `scope` not declared in `lint.scopes`, or more than one value                                                                                                                                     |
-| `DUPLICATE ID`, `DUPLICATE SLUG`                        | two items share an id, or one slug exists both live and archived                                                                                                                                    |
+| `DUPLICATE ID`, `DUPLICATE SLUG`                        | two items share an id, or one slug (item, feature or cycle) exists both live and archived                                                                                                           |
 | `MISSING ENTITY FILE`                                   | a folder in `features/` or `items/` with no `feature.md` or `item.md`                                                                                                                               |
 | `MISPLACED ENTITY`                                      | a `feature.md` under `items/`, or an `item.md` under `features/`                                                                                                                                    |
-| `ARCHIVED NOT TERMINAL`                                 | something in `_archive/` that is not `done` or `dropped`                                                                                                                                            |
+| `ARCHIVED NOT TERMINAL`                                 | something in `_archive/` that is not `done` or `dropped`; a cycle there that is not `closed` or `abandoned`                                                                                         |
 | `ITEM DELETED`                                          | an item left the tree without reaching `dropped`                                                                                                                                                    |
 | `NO OUTCOME`                                            | a `closed` or `abandoned` cycle whose `## Outcome` is missing, empty or still only placeholder: the project's cycle template's, any released cycle template's, or a lone `_Written at close…_` line |
 
@@ -503,16 +504,23 @@ grouping it enforces disagrees. A feature never takes `triage`.
 `lifecycle` is the source of truth; `_archive/` mirrors it so the live folders
 stay short to scan.
 
-- Only `items/_archive/` and `features/_archive/` exist, and only an entity in
-  `done` or `dropped` may sit there. The lint checks it
+- Three archives exist: `items/_archive/` and `features/_archive/`, which hold
+  only an entity in `done` or `dropped`, and `cycles/_archive/`, which holds
+  only a cycle in `closed` or `abandoned`. The lint checks it
   (`ARCHIVED NOT TERMINAL`).
-- **`pdocs archive <ref>` is the only way in.** It refuses an entity that is not
-  `done` or `dropped`, moves the file or folder, and rewrites every link to and
-  from it. References by id are untouched. Do not move files into `_archive/` by
-  hand.
-- Archiving is optional. A finished item may stay where it is.
-- Cycles and owned documents are not archived. A cycle's `lifecycle: closed` is
-  its archive.
+- **`pdocs archive <ref>` is the only way in.** It refuses a feature or item
+  that is not `done` or `dropped`, and a cycle that is not `closed` or
+  `abandoned`. It moves the file or folder and rewrites every link to and from
+  it. References by id, and an item's `cycle:` slug, are untouched: an archived
+  cycle keeps its slug, so the items that name it still resolve and
+  `pdocs view cycle <slug>` still finds it. Do not move files into `_archive/`
+  by hand.
+- Archiving is optional. A finished item, or a closed cycle, may stay where it
+  is.
+- `pdocs view board` leaves archived items and features out. `pdocs find` is a
+  query, not a live view: it returns archived records, cycles included.
+- Owned documents are not archived on their own; they move with the feature or
+  item that owns them.
 
 ## The cycle
 

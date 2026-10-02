@@ -22,7 +22,7 @@ done, and six dropped items. The archive already provides a way to shorten that
 output; the missing touch point is a hint that it is time to use it.
 
 The same holds for features and, once
-[cycles can be archived](./archive-closed-cycles.md), for cycles. One rule
+[cycles can be archived](./archive-closed-cycles/item.md), for cycles. One rule
 governs all three types:
 
 - **Live views hide archived work** unless a deliberate flag asks for it
@@ -102,9 +102,9 @@ for moves and link updates.
 
 ## Related work
 
-- [Archive closed cycles](./archive-closed-cycles.md) supplies the cycle archive
-  this rule counts against. Land it first, or have this item count cycles once
-  it does.
+- [Archive closed cycles](./archive-closed-cycles/item.md) supplies the cycle
+  archive this rule counts against. Land it first, or have this item count
+  cycles once it does.
 - [Portfolio view](./pdocs-work-portfolio-view.md) is where feature and cycle
   advisories appear.
 - [Draft review advisories](./pdocs-draft-review-advisories.md) use the same
