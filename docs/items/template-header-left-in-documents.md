@@ -6,7 +6,7 @@ description:
   document, and agents often leave it in afterwards; pdocs check should warn on
   it, and the header should say to remove it.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0f942-cb7e-7456-a2c3-b115102b17dc
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-01 }

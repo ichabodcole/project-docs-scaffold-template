@@ -75,3 +75,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - feature/pdocs-work-portfolio-view (landed 2026-10-02)
 - feature/pdocs-cycle-filename-lookup (landed 2026-10-02)
 - feature/pdocs-draft-review-advisories (landed 2026-10-02)
+- feature/template-header-left-in-documents (open)
