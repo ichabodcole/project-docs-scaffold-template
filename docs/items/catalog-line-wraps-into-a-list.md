@@ -6,7 +6,7 @@ description:
   can start a continuation line with it, and Prettier then reads a nested list
   and rewrites the entry.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0e03f-d229-74d5-a5ba-1a68fde61ec7
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-26 }

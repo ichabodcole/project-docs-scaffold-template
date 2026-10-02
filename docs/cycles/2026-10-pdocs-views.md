@@ -67,3 +67,6 @@ _Written at close, not before — and for an `abandoned` cycle too._
 ## Sessions
 
 <!-- One line per branch, appended by init-branch: `- <type>/<slug> (open)`. -->
+
+- feature/archive-closed-cycles (open)
+- fix/pdocs-small-fixes (open)

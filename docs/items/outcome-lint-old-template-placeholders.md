@@ -6,7 +6,7 @@ description:
   closed cycle created from an older template, with its placeholder still in
   place, passes.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0ec94-2723-71b3-8c47-74fd0b197420
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-29 }

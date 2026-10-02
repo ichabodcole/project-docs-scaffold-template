@@ -6,7 +6,7 @@ description:
   cycle; give cycles an _archive/ folder like items and features, so a closed or
   abandoned cycle can leave the live list.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0e98e-f381-748e-8bb4-0042aa4c6034
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
