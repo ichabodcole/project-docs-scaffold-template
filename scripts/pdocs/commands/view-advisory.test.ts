@@ -63,7 +63,9 @@ const itemDoc = (slug: string, lifecycle: string, at = "2026-09-01") =>
     type: "item",
     title: slug,
     description: "An item.",
-    status: "draft",
+    // Reviewed, so open items here say nothing about review: these cases
+    // are about archiving alone.
+    status: "stable",
     lifecycle,
     id: nextId(),
     kind: "task",
@@ -207,7 +209,7 @@ describe("the archive threshold setting", () => {
     expect(loadConfig(root).issues.map((i) => i.key)).toEqual(["checks.archive"]);
   });
 
-  test("an unknown key inside checks.archive is an issue; an unknown section beside it is not", () => {
+  test("an unknown key inside checks.archive is an issue; so is an unknown section beside it, which stops nothing", () => {
     const root = tree({});
     setChecks(root, { archive: { treshold: 3 } });
     let cfg = loadConfig(root);
@@ -215,14 +217,12 @@ describe("the archive threshold setting", () => {
       { key: "checks.archive.treshold", value: 3, expected: "no such key; checks.archive takes threshold" },
     ]);
     expect(cfg.checks.archive.threshold).toBe(25);
-    // A section this version does not know yet is left alone, and does not
-    // stop `archive` from being read.
+    // A section this version does not know is an issue too — a typo or a
+    // version mismatch — and does not stop `archive` from being read.
     setChecks(root, { futureCheck: { mode: "strict" }, archive: { threshold: 7 } });
     cfg = loadConfig(root);
-    expect(cfg.issues).toEqual([]);
+    expect(cfg.issues.map((i) => i.key)).toEqual(["checks.futureCheck"]);
     expect(cfg.checks.archive.threshold).toBe(7);
-    setChecks(root, { futureCheck: { mode: "strict" } });
-    expect(loadConfig(root).issues).toEqual([]);
   });
 
   test("an invalid value never takes the view down: a bad-config advisory replaces the archive advice", () => {
@@ -634,16 +634,16 @@ describe("--all: one option, a meaning per view", () => {
     const r = run(tree({}), ["view", "--help", "--format", "text"]);
     const lines = r.stdout.split("\n").filter((l) => l.trimStart().startsWith("--all"));
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toContain("board, scope: include archived work");
+    expect(lines[0]).toContain("board, scope, unreviewed: include archived work");
     expect(lines[0]).toContain("portfolio: add past cycles and features");
   });
 
-  test("board, scope and portfolio take it; any other view refuses it, naming the three", () => {
+  test("board, scope, unreviewed and portfolio take it; any other view refuses it, naming them", () => {
     const root = tree({ features: { active: 1 } });
     const cfg = JSON.parse(readFileSync(join(root, ".project-docs.json"), "utf8"));
     cfg.lint.scopes = ["cli"];
     writeFileSync(join(root, ".project-docs.json"), JSON.stringify(cfg, null, 2));
-    for (const v of [["board"], ["scope", "cli"], ["portfolio"]])
+    for (const v of [["board"], ["scope", "cli"], ["unreviewed"], ["portfolio"]])
       expect([v, run(root, ["view", ...v, "--all", "--format", "json"]).code]).toEqual([
         v,
         ExitCode.Success,
@@ -652,7 +652,7 @@ describe("--all: one option, a meaning per view", () => {
       const r = run(root, ["view", ...v, "--all", "--format", "json"]);
       expect(r.code).toBe(ExitCode.Usage);
       expect(JSON.parse(r.stderr).error.message).toBe(
-        "--all applies to `view board`, `view scope` and `view portfolio` only."
+        "--all applies to `view board`, `view scope`, `view unreviewed` and `view portfolio` only."
       );
     }
   });

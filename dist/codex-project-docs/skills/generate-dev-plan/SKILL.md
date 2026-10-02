@@ -237,6 +237,13 @@ no `--lifecycle` so they wait in `triage`.
    pdocs set item/<slug> --lifecycle ready
    ```
 
+4. **Mark reviewed only what the user reviewed.** Approving the list approves
+   which items exist, not what each one says. An item's `status` stays `draft`
+   until the user has seen its definition of done. If you showed them each
+   item's definition of done as written, and they approved it, run
+   `pdocs set item/<slug> --status stable` for those items. Otherwise leave them
+   `draft`: `init-branch` asks for that review before the item starts.
+
 Leave alone any item already in `triage`: that is the user's call, through
 `triage-items`. Show the user `pdocs view feature <slug> --format text` and
 `pdocs view ready --format text` when you are done — the second shows which

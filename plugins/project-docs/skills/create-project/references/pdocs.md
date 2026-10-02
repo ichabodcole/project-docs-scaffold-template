@@ -180,14 +180,14 @@ adding the file is one line the day you point acc at `pdocs`.
 - **124+ — reserved**, never allocated by `pdocs`, so a delegating CLI can pass
   a child's status through.
 
-| Code | Meaning                                                                                      |
-| ---- | -------------------------------------------------------------------------------------------- |
-| 0    | Clean — or dirty under `lint.adopting: true`                                                 |
-| 1    | An unexpected fault inside `pdocs` itself                                                    |
-| 2    | Bad invocation: unknown command, unknown flag, missing value, bad `--root`, uncreatable type |
-| 5    | Not found: no docs root, no `.project-docs.json`, no such document, no `--from` file         |
-| 6    | Conflict: the document already exists, or the tree refuses it                                |
-| 9    | Outcome: it ran fine, and the documents are dirty                                            |
+| Code | Meaning                                                                                                           |
+| ---- | ----------------------------------------------------------------------------------------------------------------- |
+| 0    | Clean — or dirty under `lint.adopting: true`                                                                      |
+| 1    | An unexpected fault inside `pdocs` itself                                                                         |
+| 2    | Bad invocation: unknown command, unknown flag, missing value, bad `--root`, uncreatable type                      |
+| 5    | Not found: no docs root, no `.project-docs.json`, no such document, no `--from` file                              |
+| 6    | Conflict: the document already exists, or the tree refuses it — a second active cycle, or a strict review refusal |
+| 9    | Outcome: it ran fine, and the documents are dirty                                                                 |
 
 Codes 3, 4, 7 and 8 are deliberately unallocated — they belong to
 `agent-cli-conformance`'s bands (auth, permission, rate limit, confirmation) and
@@ -374,6 +374,7 @@ Every view is computed from frontmatter; none is a file anyone writes.
 | `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                                                                                     |
 | `released <version>` | Features and items with that `released_in`                                                                                                                                 |
 | `portfolio`          | Current cycles and features, each with its items counted by state group; `--all` adds history                                                                              |
+| `unreviewed`         | `done` items whose `status` is not `stable` — the review audit; `--all` adds the archive                                                                                   |
 
 `portfolio` counts a cycle's items by `cycle` and a feature's by `parent`,
 archived items included, and counts the live items in neither. A cycle is
@@ -391,12 +392,12 @@ group plus `ungrouped` and `total`) and the top-level `activeCycle` and
 An unknown view exits 2 and lists the views. Output is deterministic.
 
 **Live views hide archived work** unless `--all` asks for it. One flag, a
-meaning per view: on `board` and `scope` it adds archived records; on
-`portfolio`, which lists only current cycles and features, it adds the history —
-finished ones, archived or not. Any other view refuses it. `feature`, `cycle`,
-`unreleased` and `released` show archived records, as the record of one entity,
-release accounting and history. `find` is a query, not a view: it returns
-archived records and never advises.
+meaning per view: on `board`, `scope` and `unreviewed` it adds archived records;
+on `portfolio`, which lists only current cycles and features, it adds the
+history — finished ones, archived or not. Any other view refuses it. `feature`,
+`cycle`, `unreleased` and `released` show archived records, as the record of one
+entity, release accounting and history. `find` is a query, not a view: it
+returns archived records and never advises.
 
 **Advisories.** Every view's JSON `data` carries `advisories`, empty when there
 is nothing to say. Each has a stable `id`, a `message` and an `action`, plus
@@ -425,7 +426,28 @@ they already authorized in this conversation counts; don't ask twice.
 report `BAD CONFIG` and exit 9. A view still lists as usual and carries a
 `bad-config` advisory in place of the archive advice, whose `issues` give each
 setting's `key`, `value` and what is `expected`. Fix the file; don't raise or
-remove the threshold to silence it.
+remove the threshold to silence it. A section under `checks` that this version
+does not take (`archive` and `workItemReview` are the two) is `BAD CONFIG` as
+well, with a "did you mean" when one is close. It is a typo or a version
+mismatch, since an upgrade moves pdocs and its config together. The known
+sections are still read.
+
+**The review advisory** (`id` `work-item-review`). An item whose `status` is not
+`stable` needs review when it is started (`active`, `review`), or unstarted and
+a member of the `active` cycle. `view board` reports every such item;
+`view cycle` reports its members, and `view ready` reports the items it lists.
+Both of those also report unreviewed items before they start, as
+`reason: "on-start"` (`view cycle` does this for a `planned` cycle). `set`,
+`new` and `check` report it too (below). Its JSON has `setting`, `mode`, `refs`
+and `items[]`: `{ ref, path, status, lifecycle, cycle, reason }`. `board`,
+`cycle` and `ready` carry `reviewMode`. Every view entry carries `status`, and
+text tags an item that is not `stable` as `[draft]`, `[deprecated]` or
+`[no status]`.
+
+To act on one, show the user the item's description and definition of done, and
+run `pdocs set item/<slug> --status stable` once they approve that content.
+Approval already given in the conversation counts. Never mark an item reviewed
+because work started.
 
 ### `set` — change a feature's, an item's or a cycle's fields
 
@@ -444,7 +466,29 @@ requires. `--released-in` is accepted unchecked.
 A key that already holds the value is reported as already set (`changed: false`)
 and its line is not rewritten; when nothing changes, the file is not written.
 
-`data`: `path`, and `changes[]` — each `{ key, before, after, changed }`.
+`data`: `path`, `changes[]` — each `{ key, before, after, changed }` — and
+`advisories`.
+
+**Starting unreviewed work is reported, and can be refused.** When the change
+leaves an item that needs review (see the review advisory above), `set` reports
+it as a `work-item-review` advisory. Such a change is starting an item, starting
+a cycle (its members), or joining the active cycle. Text prints the advisory
+last. `new item` does the same for an item filed with
+`--lifecycle active|review` or `--cycle <active>`.
+
+`checks.workItemReview.mode` in `.project-docs.json` decides what happens. It is
+`warn` by default, which writes the change. `strict` refuses a change that
+introduces a finding: exit 6 (`conflict`), nothing written, and the advisory in
+the error's `details.advisory`. The check runs on the proposed state, so
+`set item/<slug> --status stable --lifecycle active` succeeds. Repairs, and
+edits to an item that already needed review, are never refused; starting an item
+the active cycle already flagged is a start, and is. A refused `new` wrote
+nothing, so run the same `new` again with `--status stable` once the content is
+approved. An invalid mode is `BAD CONFIG`; meanwhile the policy is `warn`, and
+the review advice is still given, beside a `bad-config` advisory. Under
+`strict`, `check` reports each finding as `UNREVIEWED` and exits 9. In either
+mode, `check`'s `data.advisories` carries the advisory, printed after the
+verdict.
 
 **`set` does not check who is calling.** Moving an item out of `triage` is the
 user's decision, taken at a triage step they have seen (the `triage-items`

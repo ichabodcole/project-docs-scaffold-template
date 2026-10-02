@@ -79,12 +79,12 @@ Evidence gathered on the way — an audit, a benchmark — goes in the item's
    - Choose a slug: kebab-case, 2–4 words naming the question, no date
      (`ai-composable-duplication`). The CLI dates what needs dating.
    - Create the item. **The user asked for this investigation**, so it is
-     accepted work, not an agent's filing: start it `ready`, or `active` when
-     you are about to work on it now. (Items an agent files on its own start in
-     `triage`; this is not that.)
+     accepted work, not an agent's filing: create it `ready`. It moves to
+     `active` once the user has approved its content (below). Items an agent
+     files on its own start in `triage`; this is not that.
 
      ```bash
-     pdocs new item <slug> --kind research --lifecycle active \
+     pdocs new item <slug> --kind research --lifecycle ready \
        --title "<the question, as a title>" \
        --description "<one sentence: the question this sets out to answer>" \
        --by "<your model or name>"
@@ -92,6 +92,25 @@ Evidence gathered on the way — an audit, a benchmark — goes in the item's
 
    - Fill the item's body: the question and why it matters, and its **Definition
      of done** — the decision the answer must support.
+   - Show the user the question and the definition of done. Once they approve
+     that content, mark it reviewed, and start it if you are working on it now:
+
+     ```bash
+     pdocs set item/<slug> --status stable --lifecycle active
+     ```
+
+     If they approved this exact question and definition of done earlier in the
+     conversation, that counts; don't ask again. If they want changes, make them
+     first.
+
+     If they decline to review it, do the research anyway with the item left
+     `ready` and `draft`, and close it `done` at the end without it ever being
+     `active`. That is deliberate. The research the user asked for still
+     happens, and the item never claims a review it did not get. Starting a
+     `draft` would print an `advisory (work-item-review)`, and under
+     `checks.workItemReview.mode: strict` it is refused (exit 6). The finished
+     item shows up in `pdocs view unreviewed` for a later review.
+
    - Create the write-up it owns. The CLI promotes the item to a folder and
      links the write-up back to it:
 

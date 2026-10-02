@@ -14,6 +14,7 @@
 // `from:` path names a file, which is a stat, not a walk.
 
 import { existsSync, readFileSync } from "node:fs";
+import { type ReviewItem, REVIEW_SETTING, reviewViolations } from "../advisories.ts";
 import { CONFIG_FILENAME, describeIssue } from "../docs-lint/config.ts";
 import { join, relative } from "node:path";
 import { parseFrontmatter } from "../docs-lint/index.ts";
@@ -429,10 +430,11 @@ export function deletedItems(
  *   `[]` for it, as it does for every array; without this row the only symptom
  *   is every `scope:` in the tree reporting "declare it in lint.scopes" — about
  *   a key the project did declare.
- * - Every `checks` issue `loadConfig` recorded (`checks.archive.threshold`
- *   that is not a nonnegative integer, or an unknown key in `checks.archive`).
- *   A view that reads such a setting still runs and carries a `bad-config`
- *   advisory; this row is what makes the gate fail on it.
+ * - Every `checks` issue `loadConfig` recorded: a setting outside its
+ *   vocabulary, an unknown key inside a section, a section that is not an
+ *   object, a section this version does not take, or a `checks` that is not
+ *   an object. A view that reads `checks` still runs and carries a
+ *   `bad-config` advisory; this row is what makes the gate fail on it.
  */
 export function configProblems(ctx: Ctx): string[] {
   const issues = ctx.config.issues.map(
@@ -452,4 +454,34 @@ export function configProblems(ctx: Ctx): string[] {
     `BAD CONFIG  ${CONFIG_FILENAME}: lint.scopes is ${JSON.stringify(scopes)}  (expected a list of strings; until it is one, no scope is declared)`,
     ...issues,
   ];
+}
+
+// ---------------------------------------------------------------------------------------
+// Work item review
+// ---------------------------------------------------------------------------------------
+
+/**
+ * Every item the review rule finds (`reviewViolations`) — started work, or
+ * unstarted work in the active cycle, whose own document is not `stable`.
+ * `pdocs check` reports them as an advisory in either mode; under
+ * `checks.workItemReview.mode: strict` it also fails on each, through
+ * `reviewProblems`.
+ */
+export function reviewFindings(
+  ctx: Ctx,
+  documents: readonly WorkbenchDocument[] = workbenchDocuments(ctx)
+): ReviewItem[] {
+  return reviewViolations(workModel(ctx, documents));
+}
+
+/** One `UNREVIEWED` row per finding. Only `collect` calls this, and only in strict mode. */
+export function reviewProblems(findings: readonly ReviewItem[]): string[] {
+  return findings.map((f) => {
+    const where =
+      f.reason === "active-cycle"
+        ? `lifecycle ${f.lifecycle ?? "none"} in active cycle ${f.cycle}`
+        : `lifecycle ${f.lifecycle ?? "none"}`;
+    const what = f.reason === "active-cycle" ? "an active cycle's work" : "started work";
+    return `UNREVIEWED  ${f.path}: status ${f.status ?? "missing"}, ${where}  (${what} needs \`status: stable\` — ${REVIEW_SETTING} is strict)`;
+  });
 }

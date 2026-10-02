@@ -53,6 +53,8 @@ export interface WorkEntity {
   folder: string | null;
   fields: ReadonlyMap<string, string>;
   title: string | null;
+  /** OKF `status`, as written (quotes removed): `draft`, `stable`, `deprecated`. */
+  status: string | null;
   lifecycle: string | null;
   /** `STATE_GROUP[lifecycle]`, or `null` for a state outside the vocabulary. */
   group: StateGroup | null;
@@ -111,7 +113,12 @@ function opt(fields: ReadonlyMap<string, string>, key: string): string | null {
   return v === "" ? null : v;
 }
 
-function entityOf(ctx: Ctx, doc: WorkbenchDocument): WorkEntity | null {
+/**
+ * One document as the model reads it, or `null` when it is not a feature, an
+ * item or a cycle in its place. Exported for a writer that needs a document
+ * it has not written yet as an entity (`pdocs new`'s review check).
+ */
+export function entityOf(ctx: Ctx, doc: WorkbenchDocument): WorkEntity | null {
   if (doc.misplaced) return null;
   const docsPath = relative(ctx.docsRoot, join(ctx.repoRoot, doc.rel))
     .split(sep)
@@ -151,6 +158,7 @@ function entityOf(ctx: Ctx, doc: WorkbenchDocument): WorkEntity | null {
     folder,
     fields: f,
     title: opt(f, "title"),
+    status: opt(f, "status"),
     lifecycle,
     group: (lifecycle && STATE_GROUP[lifecycle]) || null,
     id: opt(f, "id"),
@@ -541,6 +549,20 @@ export function viewUnreleased(model: WorkModel, since?: string): WorkEntity[] {
         e.lifecycle === "done" &&
         e.releasedIn === null &&
         (since === undefined || (e.date !== null && e.date >= since))
+    )
+  );
+}
+
+/**
+ * `unreviewed`: the audit of finished work. `done` items whose own document
+ * was never marked reviewed — `status` anything but `stable`. Live only unless
+ * `archived` asks for the archive too. Not a finding: the review rule covers
+ * started work, and finished drafts are reviewed here, by choice, in batches.
+ */
+export function viewUnreviewed(model: WorkModel, opts: { archived?: boolean } = {}): WorkEntity[] {
+  return ordered(
+    model.items.filter(
+      (e) => e.lifecycle === "done" && e.status !== "stable" && (opts.archived || !e.archived)
     )
   );
 }

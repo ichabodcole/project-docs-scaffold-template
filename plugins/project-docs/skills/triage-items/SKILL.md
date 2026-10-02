@@ -172,6 +172,12 @@ of done. An item whose body already held the definition of done the user
 approved needs no body edit. `pdocs set` changes frontmatter only, and a reason
 left in chat is lost.
 
+Add `--status stable` to an accepted item's `set` only if the user approved its
+definition of done as written, whether shown in your proposal or read from its
+body. Approving a disposition or a priority is not a review of the content.
+Otherwise the item stays `draft`, and `init-branch` asks for that review before
+it starts.
+
 `pdocs set` refuses a value the lint would reject — an unknown priority, a
 `parent` that isn't a feature, a `blocked_by` that doesn't resolve — and names
 the valid ones. It accepts an 8+ character id prefix or `item/<slug>` and writes

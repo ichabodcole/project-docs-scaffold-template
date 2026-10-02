@@ -5,7 +5,16 @@
 // `work.ts`. This file only presents them.
 
 import type { Command, Invocation } from "../cli.ts";
-import { ARCHIVE_WHY_HIDDEN, type Advisory, adviseArchive, advisoryLines } from "../advisories.ts";
+import {
+  ARCHIVE_WHY_HIDDEN,
+  type Advisory,
+  adviseArchive,
+  adviseReview,
+  advisoryLines,
+  combineAdvisories,
+  reviewItems,
+  reviewViolations,
+} from "../advisories.ts";
 import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import {
   GROUPS,
@@ -26,6 +35,7 @@ import {
   viewReleased,
   viewScope,
   viewUnreleased,
+  viewUnreviewed,
 } from "../work.ts";
 
 /** One entity as a view lists it. */
@@ -35,6 +45,8 @@ export interface ViewEntry {
   slug: string;
   id: string | null;
   title: string | null;
+  /** OKF `status` as written: `draft`, `stable`, `deprecated`; `null` when missing. */
+  status: string | null;
   kind: string | null;
   lifecycle: string | null;
   group: string | null;
@@ -55,6 +67,7 @@ const entry = (e: WorkEntity): ViewEntry => ({
   slug: e.slug,
   id: e.id,
   title: e.title,
+  status: e.status,
   kind: e.kind,
   lifecycle: e.lifecycle,
   group: e.group,
@@ -74,7 +87,7 @@ const entry = (e: WorkEntity): ViewEntry => ({
  * unless `--all` asks for them. `backlog` and `ready` are live too, but list
  * only unstarted items, which the archive never holds.
  */
-const WITH_ARCHIVE = ["board", "scope"];
+const WITH_ARCHIVE = ["board", "scope", "unreviewed"];
 
 /**
  * The views that take `--all`. On a live view it adds the archive; on
@@ -94,6 +107,7 @@ export const VIEWS: ReadonlyArray<{ name: string; arg?: string; summary: string 
   { name: "unreleased", summary: "done, with no released_in (--since YYYY-MM-DD)" },
   { name: "released", arg: "version", summary: "what a version released" },
   { name: "portfolio", summary: "current cycles and features with item counts (--all adds history)" },
+  { name: "unreviewed", summary: "done items whose document is not `stable`: the review audit (--all adds the archive)" },
 ];
 
 /** A cycle or feature as `view portfolio` lists it. Stable JSON fields. */
@@ -223,12 +237,22 @@ function line(e: ViewEntry, ids: readonly string[], width: number): string {
   const id = (e.id ? shortId(e.id, ids) : "-").padEnd(width);
   return `  ${id}  ${(e.lifecycle ?? "-").padEnd(8)}  ${(e.priority ?? "-").padEnd(6)}  ${e.path}${
     e.title ? `  — ${e.title}` : ""
-  }`;
+  }${statusTag(e)}`;
+}
+
+/**
+ * An item's status, as text shows it: nothing when it is `stable`, the norm a
+ * reader need not be told; ` [draft]`, ` [deprecated]`, or ` [no status]`
+ * otherwise. JSON carries `status` on every entry.
+ */
+export function statusTag(e: Pick<ViewEntry, "entity" | "status">): string {
+  if (e.entity !== "item" || e.status === "stable") return "";
+  return ` [${e.status ?? "no status"}]`;
 }
 
 export const view: Command = {
   name: "view",
-  summary: "Derived views: backlog, board, ready, feature, cycle, scope, unreleased, released, portfolio.",
+  summary: "Derived views: backlog, board, ready, feature, cycle, scope, unreleased, released, portfolio, unreviewed.",
   usage: `pdocs view <${VIEWS.map((v) => v.name).join("|")}> [<arg>] [--features] [--all] [--since <YYYY-MM-DD>]`,
   positionals: [
     { name: "view", required: true },
@@ -239,7 +263,7 @@ export const view: Command = {
     {
       flag: "--all",
       summary:
-        "board, scope: include archived work, which a live view leaves out. " +
+        "board, scope, unreviewed: include archived work, which a live view leaves out. " +
         "portfolio: add past cycles and features — closed or abandoned, done or dropped, archived or not.",
     },
     {
@@ -286,15 +310,24 @@ export const view: Command = {
       case "backlog":
         data = list(viewBacklog(model));
         break;
-      case "ready":
-        data = list(viewReady(model));
+      case "ready": {
+        const ready = viewReady(model);
+        // What an agent picks from next: an unreviewed one is reported before
+        // it starts (`on-start`), not after.
+        advisories = adviseReview(ctx, reviewItems(model, ready, { prospective: true }));
+        data = { ...list(ready), reviewMode: ctx.config.checks.workItemReview.mode };
         break;
+      }
       case "board": {
         const features = flags["--features"] === true;
         const board = viewBoard(model, { features, archived: all });
-        advisories = adviseArchive(ctx, model, features ? ["item", "feature"] : ["item"]);
+        advisories = combineAdvisories(
+          adviseArchive(ctx, model, features ? ["item", "feature"] : ["item"]),
+          adviseReview(ctx, reviewViolations(model))
+        );
         data = {
           view: "board",
+          reviewMode: ctx.config.checks.workItemReview.mode,
           groups: Object.fromEntries(GROUPS.map((g) => [g, board[g].map(entry)])),
         };
         break;
@@ -306,7 +339,19 @@ export const view: Command = {
       }
       case "cycle": {
         const v = viewCycle(model, resolveRef(model, `cycle/${arg}`, ["cycle"]));
-        data = { view: "cycle", cycle: entry(v.cycle), items: v.items.map(entry), closable: v.closable };
+        // A planned cycle's unreviewed work is reported before the cycle
+        // starts; an active one's is a violation.
+        advisories = adviseReview(
+          ctx,
+          reviewItems(model, v.items, { prospective: v.cycle.lifecycle === "planned" })
+        );
+        data = {
+          view: "cycle",
+          cycle: entry(v.cycle),
+          items: v.items.map(entry),
+          closable: v.closable,
+          reviewMode: ctx.config.checks.workItemReview.mode,
+        };
         break;
       }
       case "scope":
@@ -314,6 +359,9 @@ export const view: Command = {
         break;
       case "unreleased":
         data = list(viewUnreleased(model, since));
+        break;
+      case "unreviewed":
+        data = list(viewUnreviewed(model, { archived: all }));
         break;
       case "portfolio": {
         const p = viewPortfolio(model, { all });

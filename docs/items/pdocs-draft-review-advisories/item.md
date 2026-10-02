@@ -5,7 +5,7 @@ description:
   Warn about unreviewed work at start touch points, with an optional strict
   policy that requires reviewed item documents.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0f8bb-50a6-7659-98ae-2fe01cfe16d4
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
@@ -24,7 +24,7 @@ including the shipped Codex marketplace item. `pdocs check` reported the tree
 clean.
 
 The user agreed to advisory warnings at the following touch points, following
-our [archive advisory](./pdocs-board-archive-advisory/item.md) pattern:
+our [archive advisory](../pdocs-board-archive-advisory/item.md) pattern:
 
 1. Starting a cycle: identify draft items already assigned to it.
 2. Adding an item to an active cycle: check it when it joins.
@@ -83,36 +83,36 @@ replace the current rule that workflow steps never move status.
 
 ## Definition of done
 
-- [ ] Define and document which work states trigger the review advisory,
+- [x] Define and document which work states trigger the review advisory,
       including unfinished members of active cycles and items started without a
       cycle. The required reviewed status is `stable`; deprecated documents
       cannot satisfy it.
-- [ ] `.project-docs.json` supports `checks.workItemReview.mode` with validated
+- [x] `.project-docs.json` supports `checks.workItemReview.mode` with validated
       `warn`/`strict` values and a backward-compatible default of `warn`.
-- [ ] The five touch points report consistent, actionable draft-review
+- [x] The five touch points report consistent, actionable draft-review
       advisories, including items added after cycle activation and direct file
       edits.
-- [ ] Board/cycle/ready presentation exposes enough status information to locate
+- [x] Board/cycle/ready presentation exposes enough status information to locate
       affected items; JSON includes stable advisory identifiers and affected
       references.
-- [ ] Warn mode preserves successful exit semantics for advisory-only checks and
+- [x] Warn mode preserves successful exit semantics for advisory-only checks and
       mutations. Strict mode refuses violating starts/cycle joins before writing
       and gives a failing check outcome for matching active-work violations.
       Existing validation errors continue to fail normally.
-- [ ] Read-only views remain usable in either mode and expose the effective
+- [x] Read-only views remain usable in either mode and expose the effective
       policy; a combined approved status/start update and repairs remain
       possible.
-- [ ] Calling workflows act on the advisory by presenting concrete content and
+- [x] Calling workflows act on the advisory by presenting concrete content and
       recording approved review with `status: stable`; they honor prior
       approval.
-- [ ] Draft creation and planned-cycle preparation remain supported; there is no
+- [x] Draft creation and planned-cycle preparation remain supported; there is no
       automatic status promotion or blanket historical backfill.
-- [ ] Historical closed cycles do not generate an unbounded warning list on
+- [x] Historical closed cycles do not generate an unbounded warning list on
       every check. Specify a separate audit path for old completed drafts.
-- [ ] Meaningful tests cover each trigger, both modes, defaults/invalid config,
+- [x] Meaningful tests cover each trigger, both modes, defaults/invalid config,
       non-trigger states, later cycle joins, work outside cycles, text/JSON
       parity, exit behavior, and no writes on rejected transitions.
-- [ ] Schema, workflow, payload, and dist copies are synchronized; the full gate
+- [x] Schema, workflow, payload, and dist copies are synchronized; the full gate
       passes.
 
 ## Rollout policy
@@ -124,4 +124,4 @@ reviewed in conversation.
 
 ## Related work
 
-- [Archive advisory](./pdocs-board-archive-advisory/item.md)
+- [Archive advisory](../pdocs-board-archive-advisory/item.md)

@@ -278,6 +278,21 @@ not to skip.
    review sends you back to fix things on the branch, it stays `review` while
    you do; re-review what changed.
 
+   If the item's `status` is not `stable`, this prints an
+   `advisory (work-item-review)`. Under `checks.workItemReview.mode: strict` it
+   is refused instead (exit 6) only if the item was not already started. Either
+   way, show the user the item's description and definition of done alongside
+   your review dispatch. Once they approve that content, run
+   `pdocs set item/<slug> --status stable`, or add it to the
+   `--lifecycle review` command if that was refused. Approval given earlier in
+   this conversation counts. Never set it for content the user has not seen.
+
+   Under strict mode, a started `draft` item also fails `pdocs check` (exit 9)
+   as `UNREVIEWED`. While it sits in `review` unapproved, Step 3's hard gate
+   fails on it. So does any commit of review fixes, where a pre-commit hook or
+   CI runs the check. Step 7's session commit is not blocked by it: Step 6 has
+   moved the item to `done` by then, and a `done` item is not a finding.
+
 6. Wait for the subagent's findings (or both, for dual review) before
    proceeding.
 
@@ -379,22 +394,21 @@ else to go on.
 item now — the work ran first, and this is its record. Take its slug from the
 branch's description (`fix/empty-name` → `empty-name`), and its kind from the
 branch type: `fix` → `bug`; `chore` and `docs` → `chore`; `feature` and
-`refactor` → `task`. Find the active cycle first, so the item is born in it:
+`refactor` → `task`. Find the active cycle first and note its filename. The item
+is created without one, and gets it from the `set` that starts it below, or from
+Step 6:
 
 ```bash
 pdocs find --type cycle --lifecycle active   # at most one; note its filename
 pdocs new item <slug> --kind <task|bug|chore|research> \
   --title "<what this branch did, as a short imperative>" \
   --description "<one sentence: the problem, and what landed>" \
-  --by "<your model or name>" --lifecycle review \
-  [--parent feature/<slug>] [--cycle <active-cycle-filename>]
+  --by "<your model or name>" [--parent feature/<slug>]
 ```
 
-It skips `triage` because the work is already built and the user asked for it to
-land; it moves to `done` in Step 6, so it lands born done. Give it `--parent`
-when the branch built part of a feature, and `--cycle` whenever a cycle is
-active and the branch belongs to it (init-branch recorded the branch in that
-cycle's Sessions list).
+Give it `--parent` when the branch built part of a feature. It is created as a
+`draft` in `triage`, with no cycle, only so that you can write its body before
+anyone is asked to approve it.
 
 **Then fill the item's body from the work** — `pdocs new` fills the frontmatter
 and, from `--title`, the H1; the body's prompts are yours. Replace the
@@ -411,14 +425,39 @@ None of those three bracketed prompts may remain in an item this step created.
 The `- [x]` ticks you write are not prompts, and the template's leading HTML
 comment, which the CLI copies in, stays as it is.
 
-**Attach an item from Step 0 to the active cycle.** An item created above
-already has it, from `--cycle`. For an item Step 0 found: if a cycle is active,
-the branch belongs to it, and the item's `cycle:` does not name it yet, set it
-now:
+**Then start it.** Show the user the item's description and definition of done
+as you wrote them. If they want changes, make them first. When they approve that
+content, start it in one command:
+
+```bash
+pdocs set item/<slug> --status stable --lifecycle review [--cycle <active-cycle-filename>]
+```
+
+It skips `triage` because the work is already built and the user asked for it to
+land. It moves to `done` in Step 6, so it lands born done. Pass `--cycle`
+whenever a cycle is active and the branch belongs to it (init-branch recorded
+the branch in that cycle's Sessions list).
+
+If the user declines to review it, it stays `draft`. Under the default policy,
+run the same `set` without `--status stable`; it prints an
+`advisory (work-item-review)`, which is expected. Under
+`checks.workItemReview.mode: strict` that `set` is refused (exit 6), so leave
+the item in `triage` with no cycle and tell the user. Step 6 then closes it
+straight to `done`, adding `--cycle` there. A `done` item is never refused for
+review.
+
+**Attach an item from Step 0 to the active cycle.** An item created above gets
+its cycle from the `set` that started it, or, if that was refused, from Step 6.
+For an item Step 0 found: if a cycle is active, the branch belongs to it, and
+the item's `cycle:` does not name it yet, set it now:
 
 ```bash
 pdocs set item/<slug> --cycle <active-cycle-filename>
 ```
+
+If that item is not `stable`, the join prints an `advisory (work-item-review)`,
+or, under strict mode, is refused (exit 6). Handle it as in Step 2's review
+dispatch: show the content, and add `--status stable` once the user approves it.
 
 Then create the session in the owner's `sessions/` folder:
 
@@ -525,6 +564,11 @@ action to perform, not a recommendation to offer. Do them without asking.
   ```bash
   pdocs set item/<slug> --lifecycle done
   ```
+
+  If Step 4 left a new item in `triage` because its start was refused under
+  strict mode, add `--cycle <active-cycle-filename>` here when the branch
+  belongs to the active cycle. The `done` move is allowed, and the item stays
+  `draft` for the review audit (`pdocs view unreviewed`).
 
   **Then unblock what waited on it.** A shaped item whose `blocked_by` names
   this one sits in `backlog` until every item it waits on is `done`. Find them:

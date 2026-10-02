@@ -115,14 +115,26 @@ Regardless of mode, follow this general process:
 
 Produce a formal investigation as the **write-up of a research work item**, in
 `docs/items/<slug>/write-up.md`. When you were given the item, write its
-write-up. When you weren't, create both. Pass `--lifecycle active` **only when
-the user asked for this research** — they have approved it, and you are doing it
-now. When you are filing it on your own, or for another skill or agent (for
-example from `tech-integration-research`), leave `--lifecycle` off: the item
-starts in `triage`, and the user decides at triage whether to pursue it.
+write-up. When you weren't, create both. Which flags the item gets depends on
+who asked for the research and on what your prompt says the user approved:
+
+| Situation                                                                                                        | Flags                                |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| You are filing it on your own, or for another skill or agent (e.g. `tech-integration-research`)                  | none: it starts in `triage`          |
+| The user asked for this research, and your prompt does not say they approved its question and definition of done | `--lifecycle ready`                  |
+| The user asked for it, and your prompt says they approved its question and definition of done                    | `--status stable --lifecycle active` |
+
+You cannot ask the user from inside an agent, so an approval you were not told
+about did not happen. An item in `triage` waits for the user's triage. A `ready`
+item is researched as it stands, and you close it `done` at the end without it
+ever being `active`. That is deliberate: starting a `draft` item would print an
+`advisory (work-item-review)`, and under `checks.workItemReview.mode: strict` it
+is refused (exit 6). In either case, end your report by saying the item's
+question and definition of done still need the user's review, and give the
+command for after they approve it: `pdocs set item/<slug> --status stable`.
 
 ```bash
-bun scripts/pdocs/cli.ts new item <slug> --kind research [--lifecycle active] \
+bun scripts/pdocs/cli.ts new item <slug> --kind research [--lifecycle ready | --status stable --lifecycle active] \
   --title "…" --description "<the question>" --by "<your model>"
 bun scripts/pdocs/cli.ts new write-up --owner item/<slug> \
   --title "…" --description "<what it finds>" --by "<your model>"

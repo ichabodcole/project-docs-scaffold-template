@@ -232,6 +232,7 @@ describe("pdocs view", () => {
       "unreleased",
       "released",
       "portfolio",
+      "unreviewed",
     ]);
   });
 

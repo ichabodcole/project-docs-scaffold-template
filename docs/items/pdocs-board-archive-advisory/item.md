@@ -107,8 +107,9 @@ for moves and link updates.
   cycles once it does.
 - [Portfolio view](../pdocs-work-portfolio-view/item.md) is where feature and
   cycle advisories appear.
-- [Draft review advisories](../pdocs-draft-review-advisories.md) use the same
-  report-condition, prompt-for-action pattern and the same `checks` section.
+- [Draft review advisories](../pdocs-draft-review-advisories/item.md) use the
+  same report-condition, prompt-for-action pattern and the same `checks`
+  section.
 
 Open-only defaults, recent completion dates, automatic archiving, and bulk
 archive API changes are separate work.

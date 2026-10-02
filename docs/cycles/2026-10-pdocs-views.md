@@ -40,7 +40,7 @@ for advisories and one archive rule across items, features and cycles.
 - **[item/pdocs-work-portfolio-view](../items/pdocs-work-portfolio-view/item.md)**
   — `view portfolio` shows current cycles and features with counts. Its display
   is iterated on real output with Cole before tests pin it.
-- **[item/pdocs-draft-review-advisories](../items/pdocs-draft-review-advisories.md)**
+- **[item/pdocs-draft-review-advisories](../items/pdocs-draft-review-advisories/item.md)**
   — warn (or, in `strict`, refuse) when unreviewed work starts. Adds the
   advisory tier to `pdocs check`. After the archive advisory.
 - **[item/template-header-left-in-documents](../items/template-header-left-in-documents.md)**
@@ -74,4 +74,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - feature/pdocs-board-archive-advisory (landed 2026-10-01)
 - feature/pdocs-work-portfolio-view (landed 2026-10-02)
 - feature/pdocs-cycle-filename-lookup (landed 2026-10-02)
-- feature/pdocs-draft-review-advisories (open)
+- feature/pdocs-draft-review-advisories (landed 2026-10-02)

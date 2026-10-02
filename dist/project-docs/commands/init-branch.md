@@ -131,8 +131,14 @@ It prints the cycle's path; read the file's `title` from its frontmatter.
 
 Projects on an older scaffold have no cycles; skip this part silently.
 
-**2. Start the item** (when Step 4 picked one). If the branch belongs to the
-active cycle:
+**2. Check the item has been reviewed** (when Step 4 picked one). Read its
+`status`. If it is not `stable`, show the user its description and definition of
+done and ask them to approve that content before work starts. If they approved
+it earlier in this conversation, that counts; don't ask again. Once they
+approve, add `--status stable` to the `set` below. If they want changes, make
+them first. Never add `--status stable` for content the user has not seen.
+
+**3. Start the item.** If the branch belongs to the active cycle:
 
 ```bash
 pdocs set item/<slug> --lifecycle active --cycle <cycle-filename>
@@ -144,10 +150,23 @@ no `slug` field to look for. `pdocs set` refuses a value the lint would reject
 and names the valid ones. Membership lives on the item: never add a `scope:`
 list to the cycle file.
 
+If the user declined to review it in 2, what happens depends on
+`checks.workItemReview.mode` in `.project-docs.json` (absent means `warn`):
+
+- **`warn`** (the default): start it anyway. The output ends with an
+  `advisory (work-item-review)`, which is expected here. Tell the user that the
+  item is still `draft`.
+- **`strict`**: don't run the start; it would exit 6 and write nothing. Tell the
+  user the item stays unstarted until they approve it, leave it as it is, and
+  carry on with the branch, with no started item. Don't ask for the review again
+  unless they bring it up. If the branch belongs to the active cycle, still
+  record it in the cycle's Sessions list (4): that line records the branch, not
+  the item.
+
 These changes — the item's fields and the cycle's Sessions line — stay
 uncommitted; they go in with the branch's first commit and land with it.
 
-**3. Record the branch in the cycle** (when it belongs to one): append a line to
+**4. Record the branch in the cycle** (when it belongs to one): append a line to
 the cycle file's `## Sessions` section:
 
 ```markdown

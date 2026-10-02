@@ -375,6 +375,46 @@ Then **re-run this step, and Step 6**. Step 6 ran before the CLI existed, so its
 `Documentation CLI pointer` row was skipped by its own precondition and root
 `AGENTS.md` has not been looked at.
 
+**Last, when you tell the user what to do next, check for a commit gate.** Does
+anything already run `pdocs check` before a commit or in CI? A hook often runs
+it through a `package.json` script (`npm run check` → `docs:lint` →
+`pdocs check`), so the check follows `npm|pnpm|yarn|bun run <script>`, and the
+shorthand `pnpm|yarn|bun <script>`, through `package.json`. The hooks directory
+comes from git, because `.git` is a file in a worktree and `core.hooksPath` may
+point elsewhere:
+
+```bash
+bun -e '
+  const fs = require("fs");
+  const read = (f) => { try { return fs.readFileSync(f, "utf8"); } catch { return null; } };
+  const ls = (d) => { try { return fs.readdirSync(d).map((n) => `${d}/${n}`); } catch { return []; } };
+  const scripts = JSON.parse(read("package.json") ?? "{}").scripts ?? {};
+  const runs = (text, seen = new Set()) => /pdocs|cli\.ts check/.test(text) ||
+    [...text.matchAll(/(?:(?:npm|pnpm|yarn|bun) run|pnpm|yarn|bun) ([\w:.-]+)/g)].some(([, s]) =>
+      !seen.has(s) && seen.add(s) && scripts[s] !== undefined && runs(scripts[s], seen));
+  const [hooks] = process.argv.slice(1);
+  const files = [`${hooks}/pre-commit`, ".husky/pre-commit", "lefthook.yml", ".lefthook.yml",
+    "lefthook.yaml", ".pre-commit-config.yaml", ...ls(".github/workflows")];
+  for (const f of files) { const t = read(f); if (t !== null && runs(t)) console.log(`gate: ${f}`); }
+' "$(git config core.hooksPath || git rev-parse --git-path hooks)"
+```
+
+Each `gate:` line names a hook or workflow that runs the check. If there is one,
+say nothing. If there is none, recommend adding one: a pre-commit hook through
+whatever the project already uses (husky, lefthook, pre-commit, or a plain hook
+in the hooks directory), CI, or both, that runs
+`bun scripts/pdocs/cli.ts check`. It catches frontmatter edited by hand instead
+of through `pdocs set`: for example, an agent edits `lifecycle: active` into an
+item that was never reviewed. What the gate does about that depends on
+`checks.workItemReview.mode`:
+
+- **`warn`** (the default): `check` prints the advisory and exits 0, so the
+  commit goes through, and the advisory is in front of whoever commits.
+- **`strict`**: the hook blocks the commit, and CI fails.
+
+This is a recommendation to pass on. Never install a hook or edit CI without
+asking.
+
 ## Available Migrations
 
 The **Applies If** column is a shell test that is true when the migration is

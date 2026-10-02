@@ -49,6 +49,8 @@ conditional.
   (`released_in`)
 - A `pdocs view` ended with an **archive advisory** (`archive-threshold`):
   finished work has outgrown the view. Take **The Advisory Path** below
+- The user wants to audit finished items whose document was never marked
+  reviewed (`pdocs view unreviewed`). Take **The Audit Path** below
 
 **Don't use this skill for:**
 
@@ -180,6 +182,7 @@ pdocs view cycle <filename>                    # a cycle, its items, closable
 | Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.                                               |
 | Already under `_archive/`                         | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped`, an archived cycle `closed` or `abandoned` (`ARCHIVED NOT TERMINAL`). |
 | An archive advisory's candidates                  | Take **The Advisory Path** below — the work is already finished; there is nothing to reconcile, only a selection to agree on.                                                                                  |
+| `pdocs view unreviewed`'s finished drafts         | Take **The Audit Path** below — nothing moves; the only change is a reviewed `status`, for what the user approves.                                                                                             |
 | A cycle                                           | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                                                              |
 | A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                                                                 |
 | An item that is a single file (`items/<slug>.md`) | Reconcile from that one file, which is its own definition of done and record.                                                                                                                                  |
@@ -257,9 +260,9 @@ which you are writing and why. Then, in the cycle file's body:
   `(landed YYYY-MM-DD)`. A closed cycle that still says a branch is open is the
   most visible way to get this wrong.
 
-**Leave `status:` alone, whatever its value.** `status` says whether the
-document can be trusted and `lifecycle` says where the work got to; closing a
-cycle changes the second, not the first.
+**Leave the cycle file's `status:` alone, whatever its value.** `status` says
+whether the document can be trusted, and `lifecycle` says where the work got to.
+Closing a cycle changes the second, not the first.
 
 **The Outcome is the point of the whole document.** Write what shipped, what was
 cut and why, and what was learned that will change how the next cycle is scoped.
@@ -354,6 +357,27 @@ advisory where the archive advisory would be, and `pdocs check` reports
 `BAD CONFIG`; fix the value in `.project-docs.json` rather than working around
 it. Raising the threshold is the user's call, never a way to silence the
 advisory.
+
+### The Audit Path — finished items never marked reviewed
+
+An item's `status` is `stable` once the user has approved its description and
+definition of done. Work that finished before that rule existed is often still
+`draft`. `pdocs check` does not list it; the audit is a separate pass the user
+asks for.
+
+1. **List them.** `pdocs view unreviewed --format json` gives the live `done`
+   items whose `status` is not `stable`; `--all` adds the archived ones.
+2. **Offer a concrete batch.** For example, this cycle's, or the ten most
+   recent. For each item, show its description and definition of done, and what
+   shipped (its sessions, or `released_in`).
+3. **Mark only what the user approves:** `pdocs set item/<slug> --status stable`
+   for each one. If they approved a record earlier in this conversation, that
+   counts. Leave the rest `draft`. A record nobody can vouch for now is
+   accurately `draft`, and that is fine.
+4. **Rejoin at Step 6** and report what was marked and what was left.
+
+Never mark a batch reviewed by rule ("all done items"), and never change
+`lifecycle` on this path.
 
 ### Step 1: Gather Reconciliation Sources
 

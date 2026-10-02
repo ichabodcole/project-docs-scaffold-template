@@ -15,6 +15,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { type Advisory, adviseReview, advisoryLines } from "../advisories.ts";
 import type { Command, Invocation, Option } from "../cli.ts";
 import { parseFrontmatter, yamlList } from "../docs-lint/index.ts";
 import { ConflictError, ExitCode, UsageError, printEnvelope } from "../envelope.ts";
@@ -26,7 +27,16 @@ import {
 } from "../lint/registry.ts";
 import { OKF_STATUS, documentProblems, workbenchDocuments } from "../lint/rules.ts";
 import { workProblems } from "../lint/work.ts";
-import { CYCLE_FLAG_NOTE, collectWork, modelIds, resolveRef, scalar as unquote, shortenIds } from "../work.ts";
+import {
+  CYCLE_FLAG_NOTE,
+  collectWork,
+  modelIds,
+  resolveRef,
+  scalar as unquote,
+  shortenIds,
+  workModel,
+} from "../work.ts";
+import { reviewGuard } from "../review-guard.ts";
 import { existingDocuments, flagFor, rewriteFrontmatter, scalar } from "./new.ts";
 
 export interface SetChange {
@@ -42,6 +52,12 @@ export interface SetData {
   /** Repo-relative. */
   path: string;
   changes: SetChange[];
+  /**
+   * The `work-item-review` advisory for what this change touched — the item,
+   * or a cycle's members — when any of them needs review afterwards; and
+   * `bad-config` when `checks.workItemReview` is invalid. Empty otherwise.
+   */
+  advisories: Advisory[];
 }
 
 /** Keys every entity carries that `set` may change. */
@@ -234,6 +250,18 @@ export const set: Command = {
         `refusing: the change would make \`pdocs check\` report ${introduced.length === 1 ? "this" : "these"}:\n  ${introduced.join("\n  ")}`
       );
 
+    // ---- the review rule, before and after (strict refuses what it introduces) ----------
+    const afterModel = workModel(ctx, changed);
+    const touched =
+      entity.entity === "item"
+        ? afterModel.items.filter((e) => e.path === entity.path)
+        : entity.entity === "cycle"
+          ? afterModel.items.filter((e) => e.cycle === entity.slug)
+          : [];
+    // `model` is the tree before the change: `collectWork` read it above.
+    const findings = reviewGuard(ctx, model, afterModel, touched);
+    const advisories = adviseReview(ctx, findings);
+
     if (newRaw !== raw) writeFileSync(abs, newRaw);
 
     const after = parseFrontmatter(newBlock);
@@ -247,6 +275,7 @@ export const set: Command = {
         after: value(after, key),
         changed: !unchanged.has(key) && !absent.has(key),
       })),
+      advisories,
     };
 
     if (format === "json") printEnvelope("set", data);
@@ -261,6 +290,7 @@ export const set: Command = {
             modelIds(model)
           )
         );
+      for (const l of advisoryLines(advisories)) console.log(l);
     }
     return ExitCode.Success;
   },

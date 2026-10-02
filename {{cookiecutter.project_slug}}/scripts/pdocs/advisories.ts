@@ -18,7 +18,12 @@
 // lists as usual and carries a `bad-config` advisory, naming the key, the value
 // and what was expected, in place of the advice it could not compute.
 
-import { CONFIG_FILENAME, type ConfigIssue, issueValue } from "./docs-lint/config.ts";
+import {
+  CONFIG_FILENAME,
+  type ConfigIssue,
+  type ReviewMode,
+  issueValue,
+} from "./docs-lint/config.ts";
 import { CYCLE_ENDS } from "./lint/registry.ts";
 import type { Ctx } from "./lint/rules.ts";
 import type { WorkEntity, WorkModel } from "./work.ts";
@@ -176,28 +181,92 @@ export function archiveAdvisory(
   };
 }
 
-/** The issues that make `checks.archive` unreadable. */
-const archiveIssues = (issues: readonly ConfigIssue[]) =>
-  issues.filter((i) => i.key === "checks" || i.key.startsWith("checks.archive"));
+/** The issues that make `checks.<name>` unreadable: its own, or a `checks`
+ *  that is not an object at all. */
+const sectionIssues = (issues: readonly ConfigIssue[], name: string) =>
+  issues.filter(
+    (i) =>
+      i.kind !== "unknown-section" &&
+      (i.key === "checks" || i.key === `checks.${name}` || i.key.startsWith(`checks.${name}.`))
+  );
+
+/** What happens meanwhile, by what an invalid setting belongs to. */
+const MEANWHILE = {
+  archive: "until then the advice it governs is not computed.",
+  workItemReview:
+    "until then the work item review advice is still given, under the default policy, `warn`.",
+  both:
+    "until then the archive advice is not computed, and the work item review advice is still " +
+    "given under the default policy, `warn`.",
+  /** A `checks` section this version does not know, and nothing else wrong. */
+  unknown: "until then it is ignored, and the sections this version knows still apply.",
+} as const;
+
+/** The same, after another section's promise. */
+const UNKNOWN_TAIL = "A `checks` section this version does not know is ignored; the ones it knows still apply.";
+
+/** What an invalid setting belongs to. */
+type BadConfigKind = "archive" | "workItemReview" | "unknown";
+
+/** The promise for every kind present, as one clause. */
+function meanwhileFor(kinds: ReadonlySet<BadConfigKind>): string {
+  const archive = kinds.has("archive");
+  const review = kinds.has("workItemReview");
+  const base =
+    archive && review ? MEANWHILE.both : archive ? MEANWHILE.archive : review ? MEANWHILE.workItemReview : null;
+  if (base === null) return MEANWHILE.unknown;
+  return kinds.has("unknown") ? `${base} ${UNKNOWN_TAIL}` : base;
+}
+
+/** What each `bad-config` advisory was made for, so a merge keeps every promise. */
+const KINDS = new WeakMap<Advisory, ReadonlySet<BadConfigKind>>();
+
+const badConfigAction = (n: number, meanwhile: string) =>
+  `Fix or remove ${n === 1 ? "that setting" : "those settings"} in ${CONFIG_FILENAME}; ` +
+  `${meanwhile} \`pdocs check\` reports it as BAD CONFIG.`;
 
 /**
  * The `bad-config` advisory for `issues`, or `null` when there are none.
  * Not a refusal: a read-only view stays usable whatever the file says, and
- * `pdocs check` reports the same issues as `BAD CONFIG`.
+ * `pdocs check` reports the same issues as `BAD CONFIG`. `kind` says what
+ * the action promises meanwhile: the archive advice is not computed; the
+ * review advice is, under the default policy; an unknown section is ignored.
  */
-export function badConfigAdvisory(issues: readonly ConfigIssue[]): BadConfigAdvisory | null {
+export function badConfigAdvisory(
+  issues: readonly ConfigIssue[],
+  kind: BadConfigKind = "archive"
+): BadConfigAdvisory | null {
   if (issues.length === 0) return null;
-  return {
+  const advisory: BadConfigAdvisory = {
     id: BAD_CONFIG_ADVISORY,
     message: issues
-      .map((i) => `${CONFIG_FILENAME}: \`${i.key}\` is ${issueValue(i)}, expected ${i.expected}.`)
+      .map(
+        (i) =>
+          `${CONFIG_FILENAME}: \`${i.key}\` is ${issueValue(i)}, expected ${i.expected}` +
+          // A suggestion already ends its sentence: "did you mean `x`?".
+          (i.expected.endsWith("?") ? "" : ".")
+      )
       .join(" "),
-    action:
-      `Fix or remove ${issues.length === 1 ? "that setting" : "those settings"} in ${CONFIG_FILENAME}; ` +
-      "until then the advice it governs is not computed. `pdocs check` reports it as BAD CONFIG.",
+    action: badConfigAction(issues.length, meanwhileFor(new Set([kind]))),
     issues: issues.map((i) => ({ ...i })),
   };
+  KINDS.set(advisory, new Set([kind]));
+  return advisory;
 }
+
+/**
+ * Issues naming a `checks` section this version does not know. They take no
+ * advice down — the sections it knows are read as usual — but every view that
+ * reads `checks` reports them.
+ */
+const unknownSectionIssues = (issues: readonly ConfigIssue[]) =>
+  issues.filter((i) => i.kind === "unknown-section");
+
+/** The `bad-config` advisory for unknown sections, as a list. */
+const adviseUnknownSections = (ctx: Ctx): Advisory[] => {
+  const bad = badConfigAdvisory(unknownSectionIssues(ctx.config.issues), "unknown");
+  return bad ? [bad] : [];
+};
 
 /**
  * What a view attaches as `advisories` for archiving the `types` it lists:
@@ -210,10 +279,237 @@ export function adviseArchive(
   types: readonly Entity[],
   wording: ArchiveWording = {}
 ): Advisory[] {
-  const bad = badConfigAdvisory(archiveIssues(ctx.config.issues));
-  if (bad) return [bad];
+  const unknown = adviseUnknownSections(ctx);
+  const bad = badConfigAdvisory(sectionIssues(ctx.config.issues, "archive"));
+  if (bad) return combineAdvisories([bad], unknown);
   const advisory = archiveAdvisory(model, types, ctx.config.checks.archive.threshold, wording);
-  return advisory ? [advisory] : [];
+  return [...unknown, ...(advisory ? [advisory] : [])];
+}
+
+// ---------------------------------------------------------------------------------------
+// The review advisory
+// ---------------------------------------------------------------------------------------
+//
+// A work item's `status` says whether its own content — the description and
+// definition of done — has been reviewed: `draft` until a person has, `stable`
+// once they approve it. Work should not start on content nobody has approved.
+//
+// THE RULE, stated once: an unarchived item whose `status` is not `stable`
+// (`draft`, `deprecated`, missing or invalid) is a VIOLATION when it is
+//
+//   - `started`: `active` or `review`, in a cycle or not; or
+//   - `active-cycle`: unstarted (`triage`, `backlog`, `ready`) and a member of
+//     the `active` cycle.
+//
+// Finished items (`done`, `dropped`) never are: old finished drafts are the
+// audit's (`pdocs view unreviewed`), not every run's. Members of a `planned`
+// cycle are not either: preparing a cycle is drafting.
+//
+// A read-only view that lists what is about to start (`view ready`, a planned
+// cycle) also reports its unreviewed unstarted items as `on-start`: not a
+// violation, never counted by `pdocs check`, never refused — a prompt to review
+// before the start rather than after it.
+//
+// `checks.workItemReview.mode` decides what a violation does. `warn` (the
+// default) reports it everywhere. `strict` also refuses a `set` or `new` that
+// INTRODUCES one — evaluated on the proposed state, so a start that carries
+// `--status stable` succeeds — and fails `pdocs check` on every one. A change
+// that leaves an existing violation as it was, or repairs it, is never refused.
+
+/** The review advisory's `id`. */
+export const REVIEW_ADVISORY = "work-item-review";
+
+/** The setting the review advisory reads. */
+export const REVIEW_SETTING = "checks.workItemReview.mode";
+
+/** The one status that counts as reviewed. `deprecated` does not. */
+export const REVIEWED_STATUS = "stable";
+
+/** Why an item is in the review advisory. */
+export type ReviewReason = "started" | "active-cycle" | "on-start";
+
+/** The reasons, in the order a message names them. */
+const REVIEW_REASONS: readonly ReviewReason[] = ["started", "active-cycle", "on-start"];
+
+/** How a message names the items with each reason. */
+const REASON_PHRASE: Record<ReviewReason, string> = {
+  started: "started",
+  "active-cycle": "in the active cycle",
+  "on-start": "not started yet",
+};
+
+/** One item that needs review. */
+export interface ReviewItem {
+  /** `item/<slug>`. */
+  ref: string;
+  path: string;
+  status: string | null;
+  lifecycle: string | null;
+  cycle: string | null;
+  reason: ReviewReason;
+}
+
+export interface ReviewAdvisory extends Advisory {
+  id: typeof REVIEW_ADVISORY;
+  setting: typeof REVIEW_SETTING;
+  /** The effective policy. */
+  mode: ReviewMode;
+  /** Every item's `ref`. */
+  refs: string[];
+  items: ReviewItem[];
+}
+
+/** The slugs of the cycles that are `active` (and live). */
+export const activeCycles = (model: WorkModel): Set<string> =>
+  new Set(model.cycles.filter((c) => !c.archived && c.lifecycle === "active").map((c) => c.slug));
+
+/**
+ * Why `item` violates the review rule, or `null` when it does not. `active`
+ * defaults to the model's active cycles; pass it when asking about many items.
+ */
+export function reviewViolation(
+  model: WorkModel,
+  item: WorkEntity,
+  active: ReadonlySet<string> = activeCycles(model)
+): "started" | "active-cycle" | null {
+  if (item.archived || item.status === REVIEWED_STATUS) return null;
+  if (item.group === "started") return "started";
+  if (item.group === "unstarted" && item.cycle !== null && active.has(item.cycle)) return "active-cycle";
+  return null;
+}
+
+const reviewItem = (e: WorkEntity, reason: ReviewReason): ReviewItem => ({
+  ref: `item/${e.slug}`,
+  path: e.path,
+  status: e.status,
+  lifecycle: e.lifecycle,
+  cycle: e.cycle,
+  reason,
+});
+
+/**
+ * The review findings among `items` — work items; a caller hands it nothing
+ * else. A violation is always one; with
+ * `prospective`, an unreviewed unstarted item is one too, as `on-start`.
+ */
+export function reviewItems(
+  model: WorkModel,
+  items: readonly WorkEntity[],
+  opts: { prospective?: boolean } = {}
+): ReviewItem[] {
+  const active = activeCycles(model);
+  const out: ReviewItem[] = [];
+  for (const e of items) {
+    const v = reviewViolation(model, e, active);
+    if (v) out.push(reviewItem(e, v));
+    else if (
+      opts.prospective &&
+      !e.archived &&
+      e.group === "unstarted" &&
+      e.status !== REVIEWED_STATUS
+    )
+      out.push(reviewItem(e, "on-start"));
+  }
+  return out;
+}
+
+/** Every violation in the tree, in path order. */
+export const reviewViolations = (model: WorkModel): ReviewItem[] => reviewItems(model, model.items);
+
+/** How one item reads in a message: `item/x (draft, ready in active cycle c)`. */
+export function describeReviewItem(i: ReviewItem): string {
+  const status = i.status ?? "no status";
+  const where =
+    i.reason === "active-cycle"
+      ? `${i.lifecycle ?? "no lifecycle"} in active cycle ${i.cycle}`
+      : (i.lifecycle ?? "no lifecycle");
+  return `${i.ref} (${status}, ${where})`;
+}
+
+/** At most `max` items named, then `and N more`. */
+function named(items: readonly ReviewItem[], max = 5): string {
+  const shown = items.slice(0, max).map(describeReviewItem);
+  const more = items.length - shown.length;
+  return more > 0 ? `${shown.join(", ")} and ${more} more` : joined(shown);
+}
+
+/** What to do about an item that needs review. One sentence for every touch point. */
+export const REVIEW_ACTION =
+  "Show the user each item's description and definition of done; once they approve that content " +
+  "(approval already given in this conversation counts), run `pdocs set item/<slug> --status stable`, " +
+  "on its own or in the same command as the start. Never set it without that review.";
+
+/**
+ * The review advisory over `items`, or `null` when there are none. Pure, like
+ * the archive advisory: what a UI gets is what the CLI prints.
+ */
+export function reviewAdvisory(items: readonly ReviewItem[], mode: ReviewMode): ReviewAdvisory | null {
+  if (items.length === 0) return null;
+  const n = items.length;
+  // Said so it is true of every item named: started, in the active cycle, or
+  // only about to start.
+  const where = REVIEW_REASONS.filter((r) => items.some((i) => i.reason === r)).map((r) => REASON_PHRASE[r]);
+  const kinds = where.length < 2 ? (where[0] ?? "") : `${where.slice(0, -1).join(", ")} or ${where.at(-1)}`;
+  return {
+    id: REVIEW_ADVISORY,
+    setting: REVIEW_SETTING,
+    mode,
+    message:
+      `${n} item${n === 1 ? "" : "s"} ${kinds} ${n === 1 ? "has" : "have"} no reviewed document ` +
+      `(\`status: ${REVIEWED_STATUS}\`): ${named(items)}.`,
+    action:
+      mode === "strict"
+        ? `${REVIEW_ACTION} Strict (${REVIEW_SETTING}): a start or a join to the active cycle that leaves an item unreviewed is refused, and \`pdocs check\` fails on every item started or in the active cycle without one.`
+        : REVIEW_ACTION,
+    refs: items.map((i) => i.ref),
+    items: [...items],
+  };
+}
+
+/**
+ * What a view or command attaches for the review findings `items`: the review
+ * advisory, and — when `checks.workItemReview` is invalid — a `bad-config`
+ * advisory beside it. Unlike archiving, the advice does not depend on the
+ * setting, so it is still given, under the default policy.
+ */
+export function adviseReview(ctx: Ctx, items: readonly ReviewItem[]): Advisory[] {
+  const bad = badConfigAdvisory(sectionIssues(ctx.config.issues, "workItemReview"), "workItemReview");
+  const out = combineAdvisories(bad ? [bad] : [], adviseUnknownSections(ctx));
+  const advisory = reviewAdvisory(items, ctx.config.checks.workItemReview.mode);
+  if (advisory) out.push(advisory);
+  return out;
+}
+
+/**
+ * Several advice lists as one: every `bad-config` advisory folded into the
+ * first, its issues once each, so a `checks` that is broken as a whole is
+ * reported once rather than per section.
+ */
+export function combineAdvisories(...lists: Advisory[][]): Advisory[] {
+  const out: Advisory[] = [];
+  const issues: ConfigIssue[] = [];
+  const kinds = new Set<BadConfigKind>();
+  let badAt = -1;
+  for (const a of lists.flat()) {
+    if (a.id !== BAD_CONFIG_ADVISORY) {
+      out.push(a);
+      continue;
+    }
+    if (badAt === -1) {
+      badAt = out.length;
+      out.push(a);
+    }
+    for (const k of KINDS.get(a) ?? ["archive" as const]) kinds.add(k);
+    for (const i of (a as BadConfigAdvisory).issues)
+      if (!issues.some((j) => j.key === i.key)) issues.push(i);
+  }
+  if (badAt === -1) return out;
+  // Each kind keeps its own promise in the one merged action.
+  const merged = badConfigAdvisory(issues) as BadConfigAdvisory;
+  merged.action = badConfigAction(issues.length, meanwhileFor(kinds));
+  KINDS.set(merged, kinds);
+  out[badAt] = merged;
+  return out;
 }
 
 /** The text rendering: two lines per advisory, never one per entity. */

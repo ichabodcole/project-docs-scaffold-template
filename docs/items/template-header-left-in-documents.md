@@ -35,7 +35,8 @@ the block itself say to remove it.
   header (matched by its fixed opening line, `OWNERSHIP (of this template file`)
   is reported as a warning, not an error: one row per document, naming the file
   and what to delete. A warning keeps a clean exit code, using the same advisory
-  tier as the [draft review advisories](./pdocs-draft-review-advisories.md).
+  tier as the
+  [draft review advisories](./pdocs-draft-review-advisories/item.md).
 - **The per-section comments are out of scope.** Guidance comments further down
   a template stay where they are and are not checked.
 

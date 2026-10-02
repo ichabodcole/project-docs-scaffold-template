@@ -81,7 +81,10 @@ import {
   resolveRef,
   modelIds,
   shortId,
+  entityOf,
 } from "../work.ts";
+import { type Advisory, adviseReview, advisoryLines } from "../advisories.ts";
+import { reviewGuard } from "../review-guard.ts";
 import { promoteItem } from "./promote.ts";
 import { movedTo } from "../links-rewrite.ts";
 
@@ -99,6 +102,12 @@ export interface NewData {
   /** A new work item's full id; `null` for every other type (D25: JSON
    *  always carries the full id, text prints its shortest unique prefix, 12+ characters — D25). */
   id: string | null;
+  /**
+   * The `work-item-review` advisory when a new item is filed into started work
+   * or into the active cycle without `--status stable`; `bad-config` when
+   * `checks.workItemReview` is invalid. Empty otherwise.
+   */
+  advisories: Advisory[];
 }
 
 // ---------------------------------------------------------------------------------------
@@ -1173,6 +1182,21 @@ export const newCommand: Command = {
       resolved = parseFrontmatter(frontmatter);
     }
 
+    // ---- the review rule: an item filed into started work or the active cycle ----------
+    // Evaluated on the item as it would be written, before the first write
+    // (a promotion, below). Strict refuses one that is not `stable`.
+    let advisories: Advisory[] = [];
+    if (row.type === "item") {
+      // The item as it would be written. A new item changes no cycle, so the
+      // model already read answers which cycle is active; and it did not
+      // exist before, so any finding on it is introduced.
+      const proposed = entityOf(ctx, { rel, type: row.type, fields: resolved, misplaced: false });
+      advisories = adviseReview(
+        ctx,
+        reviewGuard(ctx, model(), model(), proposed ? [proposed] : [], "new")
+      );
+    }
+
     // ---- the body ----------------------------------------------------------------------
     let out = body;
     // `--title` fills the H1 too: the template's is a placeholder (`# [Title]`)
@@ -1258,7 +1282,7 @@ export const newCommand: Command = {
         if (!created.includes(p)) created.push(p);
 
     const id = fills.get("id") ?? null;
-    const data: NewData = { path: rel, type: row.type, created, promoted, id };
+    const data: NewData = { path: rel, type: row.type, created, promoted, id, advisories };
     if (format === "json") printEnvelope("new", data);
     else {
       console.log(rel);
@@ -1274,6 +1298,7 @@ export const newCommand: Command = {
       console.log(
         `  next: fill its placeholders, then run the project's formatter before committing, e.g. npx prettier --write ${created.join(" ")}`
       );
+      for (const l of advisoryLines(advisories)) console.log(l);
     }
     return ExitCode.Success;
   },

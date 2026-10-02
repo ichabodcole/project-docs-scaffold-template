@@ -2,7 +2,7 @@
 type: item # REQUIRED (OKF §3). Do not change it — the folder decides it.
 title: "[What needs doing, as a short imperative]"
 description: "[One sentence: the problem, and what done looks like.]"
-status: draft # OKF §5.4: draft | stable | deprecated. Nothing else.
+status: draft # OKF §5.4: draft | stable | deprecated. `stable` once the user approves this item's content.
 lifecycle: triage # triage | backlog | ready | active | review | done | dropped
 id: "[uuid]" # a lowercase UUID; `pdocs new item` writes it. Never edit it.
 kind: task # task | bug | chore | research
@@ -28,8 +28,12 @@ value the lint would reject.
 
   title, description, kind   whoever files the item
   id                         `pdocs new item`, once
-  status                     OKF's document-trust marker. It keeps this
-                             value; no workflow step moves it
+  status                     OKF's document-trust marker: `draft` until
+                             the user reviews this item's description and
+                             definition of done, `stable` once they approve
+                             it (`pdocs set <ref> --status stable`). Needed
+                             before it starts or joins the active cycle;
+                             nothing moves it on its own
   lifecycle                  `triage` when an agent files it. The user decides
                              at triage (the triage-items skill proposes):
                              `backlog`, `ready`, or `dropped`. Shaping sets

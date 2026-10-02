@@ -37,9 +37,13 @@ bun scripts/pdocs/cli.ts set cycle/2026-09-auth --lifecycle active
 slug. That filename is the cycle's identity — there is no `slug` field. Every
 command that names a cycle takes it with or without `.md` (`2026-09-auth` or
 `2026-09-auth.md`, live or in `_archive/`), and `cycle:` on an item stores it
-without. The
-month is when work started, not a deadline; a cycle that runs into the next
-month keeps its name.
+without. The month is when work started, not a deadline; a cycle that runs into
+the next month keeps its name.
+
+Starting it reports any unfinished item in it whose `status` is not `stable`.
+Under `checks.workItemReview.mode: strict` the start is refused until those
+items are reviewed. See
+[SCHEMA.md → The review advisory](../SCHEMA.md#the-review-advisory).
 
 ## Adding work to it
 
@@ -47,12 +51,16 @@ month keeps its name.
   active.
 - By hand: `bun scripts/pdocs/cli.ts set item/<slug> --cycle 2026-09-auth`.
 
+Joining an active cycle with an item that is not `stable` is reported, and under
+strict mode it is refused. Add `--status stable` once the user has approved the
+item's content (same SCHEMA section).
+
 A feature has no `cycle` field. Its items join cycles, one by one.
 
 ## When to close one
 
-`pdocs view cycle <filename>` reports `closable: yes` when the cycle has at least
-one item and every item is `done` or `dropped`. Then write the **Outcome**
+`pdocs view cycle <filename>` reports `closable: yes` when the cycle has at
+least one item and every item is `done` or `dropped`. Then write the **Outcome**
 section — what shipped, what was cut and why, what was learned — while you still
 remember, and close it:
 

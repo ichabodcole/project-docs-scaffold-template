@@ -347,27 +347,32 @@ is a document **owned** by one of them.
 
 Every field has a named writer. A field nobody writes goes stale.
 
-| Field         | On            | Required | Values                                                | Written by                                                                              |
-| ------------- | ------------- | -------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `id`          | item          | yes      | a lowercase UUID                                      | `pdocs new item`, once; never edited                                                    |
-| `kind`        | item          | yes      | `task` · `bug` · `chore` · `research`                 | whoever files the item                                                                  |
-| `lifecycle`   | feature, item | yes      | the states in [State groups](#state-groups)           | see [Who moves an item](#who-moves-an-item)                                             |
-| `parent`      | item          | no       | `feature/<slug>`                                      | whoever files it, or triage                                                             |
-| `scope`       | feature, item | no       | one name declared in `lint.scopes`                    | whoever files it                                                                        |
-| `from`        | item          | no       | a reference ([References](#references))               | whoever files it, when something spawned it; a review always writes it                  |
-| `source`      | item          | no       | any string: an issue number, an external capture's id | intake from outside the tree, always                                                    |
-| `priority`    | item          | no       | `urgent` · `high` · `medium` · `low`                  | triage                                                                                  |
-| `assignee`    | item          | no       | any string: an agent, a seat or a name                | triage, when the item is routed to a particular agent or seat                           |
-| `blocked_by`  | item          | no       | a list of item ids                                    | shaping — whoever writes the definition of done                                         |
-| `cycle`       | item          | no       | a cycle's slug: its filename without `.md`            | `init-branch`, when a cycle is active                                                   |
-| `released_in` | feature, item | no       | the version that first shipped it                     | `sweep-project`, at release. Never checked: `pdocs view unreleased` lists what lacks it |
+| Field         | On            | Required | Values                                                | Written by                                                                                             |
+| ------------- | ------------- | -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `id`          | item          | yes      | a lowercase UUID                                      | `pdocs new item`, once; never edited                                                                   |
+| `kind`        | item          | yes      | `task` · `bug` · `chore` · `research`                 | whoever files the item                                                                                 |
+| `lifecycle`   | feature, item | yes      | the states in [State groups](#state-groups)           | see [Who moves an item](#who-moves-an-item)                                                            |
+| `parent`      | item          | no       | `feature/<slug>`                                      | whoever files it, or triage                                                                            |
+| `scope`       | feature, item | no       | one name declared in `lint.scopes`                    | whoever files it                                                                                       |
+| `from`        | item          | no       | a reference ([References](#references))               | whoever files it, when something spawned it; a review always writes it                                 |
+| `source`      | item          | no       | any string: an issue number, an external capture's id | intake from outside the tree, always                                                                   |
+| `priority`    | item          | no       | `urgent` · `high` · `medium` · `low`                  | triage                                                                                                 |
+| `assignee`    | item          | no       | any string: an agent, a seat or a name                | triage, when the item is routed to a particular agent or seat                                          |
+| `blocked_by`  | item          | no       | a list of item ids                                    | shaping — whoever writes the definition of done                                                        |
+| `cycle`       | item          | no       | a cycle's slug: its filename without `.md`            | `init-branch`, when a cycle is active; `finalize-branch`, for an item it files or one its branch joins |
+| `released_in` | feature, item | no       | the version that first shipped it                     | `sweep-project`, at release. Never checked: `pdocs view unreleased` lists what lacks it                |
 
 `title`, `description`, `status` and `generated` are required on every document,
 as in [Frontmatter](#frontmatter--every-page). On an item, `status` is OKF's
-document-trust marker: it keeps the value the template gives it, and no workflow
-step moves it. Where the work has got to is `lifecycle`, never `status`. An
-item's body carries its definition of done. There are no estimates and no due
-dates.
+document-trust marker for the item's own content — its description and
+definition of done. It is `draft` until a person has reviewed that content and
+`stable` once they approve it. A workflow sets `stable` only after showing the
+user that content and getting their approval — approval already given in the
+conversation counts — with `pdocs set item/<slug> --status stable`. Starting
+work, joining a cycle or changing `lifecycle` never moves `status` on its own;
+[the review advisory](#the-review-advisory) reports work that starts without it.
+Where the work has got to is `lifecycle`, never `status`. An item's body carries
+its definition of done. There are no estimates and no due dates.
 
 `assignee` routes work to an agent or a seat. It does not track people, and it
 is optional because in the common case — one person and the agent they work with
@@ -375,18 +380,19 @@ is optional because in the common case — one person and the agent they work wi
 
 ### Who moves an item
 
-| Move                                       | Who                                                                                                                                                                                                                      | How                                                   |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| created → `triage`                         | an agent that files an item: a reviewer's finding, a bug hit mid-task                                                                                                                                                    | `pdocs new item` (the default)                        |
-| created → `backlog` / `ready`              | a person who already wants it, or an agent filing items the user has just approved (a plan's item list: `generate-dev-plan`)                                                                                             | `pdocs new item … --lifecycle ready`                  |
-| created → `active`                         | `create-investigation` or the `investigator` agent, for research the user asked for                                                                                                                                      | `pdocs new item … --kind research --lifecycle active` |
-| created → `review`                         | `finalize-branch`, for work that ran without an item; it moves to `done` when the branch lands, so it is born done                                                                                                       | `pdocs new item … --lifecycle review`                 |
-| `triage` → `backlog`, `ready` or `dropped` | the user, at a triage step they have seen: the `triage-items` skill proposes each item's disposition, `priority`, `assignee` and `parent`, and applies them once the user agrees                                         | `pdocs set <ref> --lifecycle backlog …`               |
-| `backlog` → `ready`                        | shaping: settling an accepted item's definition of done, once nothing blocks it. A shaped item that is still blocked stays `backlog`; `finalize-branch` moves it to `ready` when the last item in its `blocked_by` lands | `pdocs set <ref> --lifecycle ready`                   |
-| `backlog` / `ready` → `active`             | `init-branch`, when a branch starts on it                                                                                                                                                                                | `pdocs set <ref> --lifecycle active`                  |
-| → `review`                                 | `finalize-branch`, when the branch's review starts; or whoever else hands the work to a human or a reviewer to wait on                                                                                                   | `pdocs set <ref> --lifecycle review`                  |
-| → `done`                                   | `finalize-branch`, when the branch lands; for research that concludes without a branch, `create-investigation` or the `investigator` agent                                                                               | `pdocs set <ref> --lifecycle done`                    |
-| → `dropped`                                | whoever decides against it. Nothing is deleted                                                                                                                                                                           | `pdocs set <ref> --lifecycle dropped`                 |
+| Move                                       | Who                                                                                                                                                                                                                                                                                                                                     | How                                                                                                                                                                                       |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| created → `triage`                         | an agent that files an item: a reviewer's finding, a bug hit mid-task                                                                                                                                                                                                                                                                   | `pdocs new item` (the default)                                                                                                                                                            |
+| created → `backlog` / `ready`              | a person who already wants it, or an agent filing items the user has just approved (a plan's item list: `generate-dev-plan`)                                                                                                                                                                                                            | `pdocs new item … --lifecycle ready`                                                                                                                                                      |
+| created → `ready` → `active`               | `create-investigation` or the `investigator` agent, for research the user asked for: filed `ready`, started once the user approves its question and definition of done; without that approval it is researched at `ready` and closed `done`. The `investigator` agent, told in its prompt that the user approved them, files it started | `pdocs new item … --kind research --lifecycle ready`, then `pdocs set <ref> --status stable --lifecycle active`; or `pdocs new item … --kind research --status stable --lifecycle active` |
+| created → `review`                         | `finalize-branch`, for work that ran without an item: it files the item as a `draft` in `triage`, writes its body, and moves it to `review` once the user approves that content; it moves to `done` when the branch lands, so it is born done                                                                                           | `pdocs new item …`, then `pdocs set <ref> --status stable --lifecycle review [--cycle …]`                                                                                                 |
+| `triage` → `backlog`, `ready` or `dropped` | the user, at a triage step they have seen: the `triage-items` skill proposes each item's disposition, `priority`, `assignee` and `parent`, and applies them once the user agrees                                                                                                                                                        | `pdocs set <ref> --lifecycle backlog …`                                                                                                                                                   |
+| `backlog` → `ready`                        | shaping: settling an accepted item's definition of done, once nothing blocks it. A shaped item that is still blocked stays `backlog`; `finalize-branch` moves it to `ready` when the last item in its `blocked_by` lands                                                                                                                | `pdocs set <ref> --lifecycle ready`                                                                                                                                                       |
+| `backlog` / `ready` → `active`             | `init-branch`, when a branch starts on it                                                                                                                                                                                                                                                                                               | `pdocs set <ref> --lifecycle active`                                                                                                                                                      |
+| → `review`                                 | `finalize-branch`, when the branch's review starts; or whoever else hands the work to a human or a reviewer to wait on                                                                                                                                                                                                                  | `pdocs set <ref> --lifecycle review`                                                                                                                                                      |
+| → `done`                                   | `finalize-branch`, when the branch lands; for research that concludes without a branch, `create-investigation` or the `investigator` agent                                                                                                                                                                                              | `pdocs set <ref> --lifecycle done`                                                                                                                                                        |
+| → `dropped`                                | whoever decides against it. Nothing is deleted                                                                                                                                                                                                                                                                                          | `pdocs set <ref> --lifecycle dropped`                                                                                                                                                     |
+| `status: draft` → `stable`                 | whoever showed the user the item's description and definition of done and got their approval — before it starts, or in the same command as the start                                                                                                                                                                                    | `pdocs set <ref> --status stable`                                                                                                                                                         |
 
 `init-branch`, `finalize-branch`, `sweep-project` and `triage-items` are skills
 in the project-docs Claude Code plugin. `init-branch` offers the items
@@ -428,21 +434,22 @@ the full id.
 
 ### What the lint checks about work
 
-| Finding                                                 | Means                                                                                                                                                                                               |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MISSING id` / `kind`                                   | an item lacks a required field                                                                                                                                                                      |
-| `BAD ID`, `BAD KIND`, `BAD PRIORITY`                    | a value outside its vocabulary; an uppercase id is reported too                                                                                                                                     |
-| `BAD LIFECYCLE`                                         | a state the type does not take — `triage` on a feature, say                                                                                                                                         |
-| `BAD PARENT`, `BAD CYCLE`, `BAD BLOCKED_BY`, `BAD FROM` | a reference that resolves to nothing, or to the wrong kind of thing                                                                                                                                 |
-| `BLOCKED CYCLE`                                         | `blocked_by` loops, or an item blocks itself                                                                                                                                                        |
-| `BAD SCOPE`                                             | a `scope` not declared in `lint.scopes`, or more than one value                                                                                                                                     |
-| `BAD CONFIG`                                            | a `.project-docs.json` setting that is present and invalid: `lint.scopes` not a list of strings, `checks.archive.threshold` not a nonnegative integer, an unknown key in `checks.archive`           |
-| `DUPLICATE ID`, `DUPLICATE SLUG`                        | two items share an id, or one slug (item, feature or cycle) exists both live and archived                                                                                                           |
-| `MISSING ENTITY FILE`                                   | a folder in `features/` or `items/` with no `feature.md` or `item.md`                                                                                                                               |
-| `MISPLACED ENTITY`                                      | a `feature.md` under `items/`, or an `item.md` under `features/`                                                                                                                                    |
-| `ARCHIVED NOT TERMINAL`                                 | something in `_archive/` that is not `done` or `dropped`; a cycle there that is not `closed` or `abandoned`                                                                                         |
-| `ITEM DELETED`                                          | an item left the tree without reaching `dropped`                                                                                                                                                    |
-| `NO OUTCOME`                                            | a `closed` or `abandoned` cycle whose `## Outcome` is missing, empty or still only placeholder: the project's cycle template's, any released cycle template's, or a lone `_Written at close…_` line |
+| Finding                                                 | Means                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MISSING id` / `kind`                                   | an item lacks a required field                                                                                                                                                                                                                                                                                                   |
+| `BAD ID`, `BAD KIND`, `BAD PRIORITY`                    | a value outside its vocabulary; an uppercase id is reported too                                                                                                                                                                                                                                                                  |
+| `BAD LIFECYCLE`                                         | a state the type does not take — `triage` on a feature, say                                                                                                                                                                                                                                                                      |
+| `BAD PARENT`, `BAD CYCLE`, `BAD BLOCKED_BY`, `BAD FROM` | a reference that resolves to nothing, or to the wrong kind of thing                                                                                                                                                                                                                                                              |
+| `BLOCKED CYCLE`                                         | `blocked_by` loops, or an item blocks itself                                                                                                                                                                                                                                                                                     |
+| `BAD SCOPE`                                             | a `scope` not declared in `lint.scopes`, or more than one value                                                                                                                                                                                                                                                                  |
+| `BAD CONFIG`                                            | a `.project-docs.json` setting that is present and invalid: `lint.scopes` not a list of strings, `checks.archive.threshold` not a nonnegative integer, `checks.workItemReview.mode` not `warn` or `strict`, an unknown key in `checks.archive` or `checks.workItemReview`, a section under `checks` that is not one of those two |
+| `DUPLICATE ID`, `DUPLICATE SLUG`                        | two items share an id, or one slug (item, feature or cycle) exists both live and archived                                                                                                                                                                                                                                        |
+| `MISSING ENTITY FILE`                                   | a folder in `features/` or `items/` with no `feature.md` or `item.md`                                                                                                                                                                                                                                                            |
+| `MISPLACED ENTITY`                                      | a `feature.md` under `items/`, or an `item.md` under `features/`                                                                                                                                                                                                                                                                 |
+| `ARCHIVED NOT TERMINAL`                                 | something in `_archive/` that is not `done` or `dropped`; a cycle there that is not `closed` or `abandoned`                                                                                                                                                                                                                      |
+| `ITEM DELETED`                                          | an item left the tree without reaching `dropped`                                                                                                                                                                                                                                                                                 |
+| `NO OUTCOME`                                            | a `closed` or `abandoned` cycle whose `## Outcome` is missing, empty or still only placeholder: the project's cycle template's, any released cycle template's, or a lone `_Written at close…_` line                                                                                                                              |
+| `UNREVIEWED`                                            | only under `checks.workItemReview.mode: strict`: an item in started work, or unfinished in the active cycle, whose `status` is not `stable` — see [the review advisory](#the-review-advisory)                                                                                                                                    |
 
 `released_in` is never checked.
 
@@ -481,6 +488,7 @@ computes them from the fields:
 | `pdocs view unreleased [--since YYYY-MM-DD]` | `done` features and items with no `released_in`                                                     |
 | `pdocs view released <version>`              | what shipped in a version                                                                           |
 | `pdocs view portfolio [--all]`               | current cycles and features, each with its items counted by state group                             |
+| `pdocs view unreviewed [--all]`              | `done` items whose `status` is not `stable`: the review audit                                       |
 
 `view portfolio` counts a cycle's items by their `cycle` and a feature's by
 their `parent`, archived items included. A cycle is current when it is `planned`
@@ -493,18 +501,18 @@ says when no cycle is `active`. Its `--all` adds the history: `closed` and
 `pdocs find --kind`, `--parent`, `--cycle`, `--scope` and `--id` filter the same
 fields.
 
-**Live views hide archived work.** `board` and `scope` list current work, so
-they leave archived items and features out unless `--all` asks for them.
-`portfolio` lists only what is current, so it leaves out archived cycles and
-features along with every other finished one; its `--all` adds them all back as
-history. One flag, a meaning per view: on `board` and `scope` it adds the
-archive, on `portfolio` the past, and any other view refuses it. `backlog` and
-`ready` list only unstarted items, which the archive never holds. Three views
-are not live and show archived records as they always have: `feature <slug>` and
-`cycle <filename>` are the record of one entity (a cycle's `closable` needs
-every member), `unreleased` is release accounting (archived is not released),
-and `released` is history. `pdocs find` is a query, not a view: it returns
-archived records and never advises.
+**Live views hide archived work.** `board`, `scope` and `unreviewed` list
+current work, so they leave archived items and features out unless `--all` asks
+for them. `portfolio` lists only what is current, so it leaves out archived
+cycles and features along with every other finished one; its `--all` adds them
+all back as history. One flag, a meaning per view: on `board`, `scope` and
+`unreviewed` it adds the archive, on `portfolio` the past, and any other view
+refuses it. `backlog` and `ready` list only unstarted items, which the archive
+never holds. Three views are not live and show archived records as they always
+have: `feature <slug>` and `cycle <filename>` are the record of one entity (a
+cycle's `closable` needs every member), `unreleased` is release accounting
+(archived is not released), and `released` is history. `pdocs find` is a query,
+not a view: it returns archived records and never advises.
 
 ### The archive advisory
 
@@ -544,8 +552,17 @@ Set the threshold in `.project-docs.json`, beside `lint`:
 Omitted — the key, `archive` or the whole `checks` section — it is **25**: 25
 finished items give no advisory, 26 do. It takes a nonnegative integer; `0`
 advises whenever any finished work of a type is unarchived. `checks.archive`
-takes no other key, so a misspelling such as `treshold` is an error too; a
-section under `checks` that this version does not know is left alone.
+takes no other key, so a misspelling such as `treshold` is an error too.
+
+`checks` takes only the sections this version knows, `archive` and
+`workItemReview`. Any other section is `BAD CONFIG` too. The issue lists the
+known sections and suggests the nearest one when it is close: `workitemReview`
+gets "did you mean `workItemReview`?". A project carries its own copy of pdocs,
+and an upgrade moves pdocs and its config together, rewriting a renamed setting
+in its migration. So a section this copy does not know is a typo or a version
+mismatch, and you should hear about it either way. It changes nothing else: the
+sections that are known are still read, and every view that reads `checks`
+carries a `bad-config` advisory saying so.
 
 An invalid value is never replaced by the default, and it never takes a view
 down. `pdocs check` reports it as `BAD CONFIG` and exits 9. A view that reads it
@@ -556,6 +573,99 @@ what is `expected`:
 ```text
 advisory (bad-config): .project-docs.json: `checks.archive.threshold` is -1, expected a nonnegative integer; omit it for the default, 25.
 ```
+
+### The review advisory
+
+Work should not start on an item whose content nobody has approved. An
+unarchived item whose `status` is not `stable` — `draft`, `deprecated`, or
+missing — **needs review** when it is:
+
+- **started:** `active` or `review`, in a cycle or not; or
+- **in the active cycle:** unstarted (`triage`, `backlog`, `ready`) and its
+  `cycle` names the cycle that is `active`.
+
+Nothing else does. A `done` or `dropped` item is past starting, so a finished
+draft is left to the audit below. Members of a `planned` cycle are being
+prepared, and drafting is how that is done. Creating a draft is always allowed.
+
+Every place work starts reports it, as one advisory with
+`id: "work-item-review"`:
+
+| Touch point                                                 | Reports                                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `pdocs set item/<slug> --lifecycle active` or `review`      | the item                                                                  |
+| `pdocs set cycle/<filename> --lifecycle active`             | the cycle's unfinished members                                            |
+| `pdocs set item/<slug> --cycle`, `pdocs new item … --cycle` | the item, when the cycle is active                                        |
+| `pdocs new item … --lifecycle active` or `review`           | the item                                                                  |
+| `pdocs view board`                                          | every item that needs review                                              |
+| `pdocs view cycle <filename>`                               | the cycle's members; for a `planned` cycle, its unreviewed unstarted ones |
+| `pdocs view ready`                                          | the listed items that are not `stable`                                    |
+| `pdocs check`                                               | every item that needs review, after the verdict                           |
+
+`view ready` and a `planned` cycle report an unreviewed item **before** it
+starts, as `reason: "on-start"`; that is a prompt, not a finding, and it never
+fails anything. The other reasons are `started` and `active-cycle`. The message
+names the reasons present ("started", "in the active cycle", "not started yet").
+Under `strict`, `next:` gains one more sentence: "Strict
+(checks.workItemReview.mode): a start or a join to the active cycle that leaves
+an item unreviewed is refused, and `pdocs check` fails on every item started or
+in the active cycle without one."
+
+```text
+advisory (work-item-review): 1 item started has no reviewed document (`status: stable`): item/fix-hook (draft, active).
+  next: Show the user each item's description and definition of done; once they approve that content (approval already given in this conversation counts), run `pdocs set item/<slug> --status stable`, on its own or in the same command as the start. Never set it without that review.
+```
+
+In JSON the advisory has `setting`, `mode` (the policy in effect), `refs` and
+`items`: per item its `ref`, `path`, `status`, `lifecycle`, `cycle` and
+`reason`. `set`, `new` and `check` carry `advisories` in their `data` the way
+views do. `view board`, `view cycle` and `view ready` carry `reviewMode` too, so
+the policy is visible when there is nothing to report. Every view's entries
+carry `status`; in text, an item that is not `stable` ends with `[draft]`,
+`[deprecated]` or `[no status]`.
+
+The calling workflow presents the item's description and definition of done to
+the user, and runs `pdocs set item/<slug> --status stable` once they approve
+that concrete content; approval already given in the conversation counts.
+Nothing marks an item reviewed on its own.
+
+Set the policy in `.project-docs.json`, beside the archive threshold:
+
+```json
+"checks": { "workItemReview": { "mode": "warn" } }
+```
+
+- **`warn`**, the default when the key, the section or `checks` is omitted:
+  every touch point reports, every write goes ahead, and `pdocs check` keeps its
+  exit code.
+- **`strict`:** a `set` or `new` that would leave an item newly needing review —
+  a start, a cycle start, a join to the active cycle, an unreviewed item filed
+  straight into started work, a started item set back to `draft` — is refused
+  before anything is written, exit **6** (`conflict`), with the advisory in the
+  error's `details.advisory`. It is judged on the proposed state, so
+  `pdocs set item/<slug> --status stable --lifecycle active` succeeds. An edit
+  that leaves an existing finding as it was, or repairs it — `--status stable`,
+  back to `ready`, `done`, `dropped`, out of the cycle — is never refused.
+  Starting an item the active cycle already flagged is a start, and is refused.
+  `pdocs set` names the item to approve; `pdocs new` writes nothing, so run the
+  same `new` again with `--status stable` once its content is approved.
+  `pdocs check` reports each finding as `UNREVIEWED` and exits 9. Views list as
+  usual and exit 0.
+
+Where a pre-commit hook or CI runs `pdocs check`, strict mode blocks the commit,
+or fails CI, while a finding stands — including a `lifecycle` edited by hand.
+Approve the item (`--status stable`) or move it back; neither adds a finding.
+
+Any other value is `BAD CONFIG` for `pdocs check`, and the policy is `warn`
+meanwhile. A view or command that reports review carries a `bad-config` advisory
+beside the review advice. That advisory's action says the review advice is still
+given, under `warn`; unlike the archive advice, it does not depend on the
+setting. `checks.workItemReview` takes no key but `mode`.
+
+**The audit.** `pdocs view unreviewed` lists the `done` items whose `status` is
+not `stable`; `--all` adds the archived ones. It never advises and never fails:
+review them in batches, by choice — the `sweep-project` skill has the steps —
+and leave a record `draft` when nobody can vouch for it now.
 
 ## State groups
 

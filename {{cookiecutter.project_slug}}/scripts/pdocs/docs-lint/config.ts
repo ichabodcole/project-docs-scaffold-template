@@ -84,7 +84,22 @@ export interface ChecksConfig {
      */
     threshold: number;
   };
+  workItemReview: {
+    /**
+     * What a work item that needs review does at a start. `warn` (the default)
+     * reports it; `strict` refuses a start or a cycle join that would leave an
+     * unreviewed item in started work, and `pdocs check` fails on one.
+     */
+    mode: ReviewMode;
+  };
 }
+
+/** `checks.workItemReview.mode`'s values. */
+export const REVIEW_MODES = ["warn", "strict"] as const;
+export type ReviewMode = (typeof REVIEW_MODES)[number];
+
+/** `checks.workItemReview.mode` when the setting, or its section, is omitted. */
+export const DEFAULT_REVIEW_MODE: ReviewMode = "warn";
 
 /**
  * An explicit setting that failed validation. It is never silently replaced:
@@ -100,6 +115,12 @@ export interface ConfigIssue {
   value: unknown;
   /** What it should hold, as a phrase a fix can follow. */
   expected: string;
+  /**
+   * `unknown-section` on a `checks.<name>` this version does not take. Set
+   * where the issue is made, so nothing has to parse `key` back — a section
+   * name may itself contain a dot.
+   */
+  kind?: "unknown-section";
 }
 
 /** An issue's value as written in the file. */
@@ -138,7 +159,10 @@ export const DEFAULT_CONFIG: ProjectDocsConfig = {
     // or dropped work sits there) has to see it.
     skip: ["superpowers"],
   },
-  checks: { archive: { threshold: DEFAULT_ARCHIVE_THRESHOLD } },
+  checks: {
+    archive: { threshold: DEFAULT_ARCHIVE_THRESHOLD },
+    workItemReview: { mode: DEFAULT_REVIEW_MODE },
+  },
   issues: [],
 };
 
@@ -150,9 +174,13 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
  * every invalid explicit value recorded as an issue rather than ignored.
  *
  * Each section is read on its own by its own reader, so a new one is a new
- * entry in `SECTIONS` and nothing else. A section's own key set is closed (a
- * misspelt key is an issue); the set of sections is open, so a project that
- * sets one this version does not know yet is left alone.
+ * entry in `SECTIONS` and nothing else. Both key sets are closed: a misspelt
+ * key inside a section is an issue, and so is a section `SECTIONS` does not
+ * name. A project carries its own copy of pdocs, and an upgrade moves pdocs
+ * and `.project-docs.json` together — a renamed setting is rewritten by that
+ * upgrade's migration. So a section this copy does not know is a typo or a
+ * version mismatch, and either way the user should hear about it. It changes
+ * nothing else: the sections this copy knows are still read.
  */
 function readChecks(raw: unknown): { checks: ChecksConfig; issues: ConfigIssue[] } {
   const checks = structuredClone(DEFAULT_CONFIG.checks);
@@ -172,7 +200,41 @@ function readChecks(raw: unknown): { checks: ChecksConfig; issues: ConfigIssue[]
     }
     read(section, checks, issues);
   }
+  for (const [name, value] of Object.entries(raw))
+    // Own keys only: `valueOf`, `constructor` and `__proto__` are not sections.
+    if (!Object.hasOwn(SECTIONS, name)) issues.push(unknownSection(name, value));
   return { checks, issues };
+}
+
+/** The issue for a `checks.<name>` this version does not know. */
+function unknownSection(name: string, value: unknown): ConfigIssue {
+  const known = CHECK_SECTIONS;
+  // Case-insensitive, then a slip of up to two characters.
+  const near = known.find((k) => editDistance(k.toLowerCase(), name.toLowerCase()) <= 2);
+  return {
+    key: `checks.${name}`,
+    value,
+    kind: "unknown-section",
+    expected:
+      `no such section; checks takes ${known.join(", ")}` +
+      (near === undefined ? "" : ` — did you mean \`${near}\`?`),
+  };
+}
+
+/** Levenshtein distance: enough to catch a slip of one or two characters. */
+function editDistance(a: string, b: string): number {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++)
+      row[j] = Math.min(
+        (prev[j] as number) + 1,
+        (row[j - 1] as number) + 1,
+        (prev[j - 1] as number) + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    prev = row;
+  }
+  return prev[b.length] as number;
 }
 
 /** One `checks.<name>` section's reader: fills `checks`, records `issues`. */
@@ -212,7 +274,22 @@ const SECTIONS: Record<string, SectionReader> = {
         expected: `a nonnegative integer; omit it for the default, ${DEFAULT_ARCHIVE_THRESHOLD}`,
       });
   },
+  workItemReview(section, checks, issues) {
+    unknownKeys("workItemReview", section, ["mode"], issues);
+    const mode = section.mode;
+    if (mode === undefined) return;
+    if ((REVIEW_MODES as readonly unknown[]).includes(mode)) checks.workItemReview.mode = mode as ReviewMode;
+    else
+      issues.push({
+        key: "checks.workItemReview.mode",
+        value: mode,
+        expected: `"warn" or "strict"; omit it for the default, "${DEFAULT_REVIEW_MODE}"`,
+      });
+  },
 };
+
+/** The sections `checks` takes, in the order an issue lists them. */
+export const CHECK_SECTIONS: readonly string[] = Object.keys(SECTIONS);
 
 export const CONFIG_FILENAME = ".project-docs.json";
 
