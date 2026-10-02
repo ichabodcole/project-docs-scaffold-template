@@ -13,7 +13,7 @@ generated: { by: claude-opus-5-5, at: 2026-10-01 }
 # Migration test timeouts — 2026-10-01
 
 Part of
-[Migration test stability](../../../cycles/2026-10-migration-test-stability.md)
+[Migration test stability](../../../cycles/_archive/2026-10-migration-test-stability.md)
 
 ## Context
 

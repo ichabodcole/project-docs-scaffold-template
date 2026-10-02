@@ -13,8 +13,8 @@ generated: { by: claude-opus-5-5, at: 2026-09-22 }
 # Work Taxonomy Phase 2, the pdocs verbs — 2026-09-22
 
 Part of
-[Work Taxonomy release](../../../cycles/2026-09-work-taxonomy-release.md). Plan:
-[Phase 2](../plan.md). Branch `feature/work-taxonomy-p2-pdocs-verbs`. The
+[Work Taxonomy release](../../../cycles/_archive/2026-09-work-taxonomy-release.md).
+Plan: [Phase 2](../plan.md). Branch `feature/work-taxonomy-p2-pdocs-verbs`. The
 coordinator ran this from the main thread; an implementer sub-agent wrote the
 code, and two reviewer sub-agents checked it over three rounds.
 

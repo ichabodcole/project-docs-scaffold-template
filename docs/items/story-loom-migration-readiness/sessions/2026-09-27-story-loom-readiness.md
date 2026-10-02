@@ -14,7 +14,7 @@ generated: { by: claude-opus-5-5, at: 2026-09-27 }
 
 Branch `chore/story-loom-migration-readiness`. Answers [this item](../item.md)
 in [its write-up](../write-up.md), and opens
-[the story-loom migration cycle](../../../cycles/2026-09-story-loom-migration.md).
+[the story-loom migration cycle](../../../cycles/_archive/2026-09-story-loom-migration.md).
 
 ## What happened
 

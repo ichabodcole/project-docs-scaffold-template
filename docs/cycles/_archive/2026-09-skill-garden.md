@@ -51,15 +51,15 @@ smaller project-docs.
 
 ## Scope
 
-- **[Bootstrap skill-garden](../items/skill-garden-bootstrap/item.md)**: the new
-  repository exists from the 9.2.0 scaffold, holds the five plugins and its own
-  marketplace, carries their live items, and Cole has installed from it.
-- **[Remove the extracted plugins](../items/remove-extracted-plugins/item.md)**:
+- **[Bootstrap skill-garden](../../items/skill-garden-bootstrap/item.md)**: the
+  new repository exists from the 9.2.0 scaffold, holds the five plugins and its
+  own marketplace, carries their live items, and Cole has installed from it.
+- **[Remove the extracted plugins](../../items/remove-extracted-plugins/item.md)**:
   this repository holds project-docs alone, and nothing here points at a plugin
   that has left.
 
 Out of scope, deliberately: which project-docs skills should move too (the
-[skill-scope research](../items/project-docs-skill-scope.md), for a later
+[skill-scope research](../../items/project-docs-skill-scope.md), for a later
 cycle), and how skills reach runtimes other than Claude Code (moves to
 skill-garden with its item).
 

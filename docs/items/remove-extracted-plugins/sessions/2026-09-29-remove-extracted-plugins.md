@@ -39,7 +39,8 @@ For more guidance, see the owner folder's README: ../../README.md
 
 # Remove the extracted plugins — 2026-09-29
 
-Part of [Skill garden extraction](../../../cycles/2026-09-skill-garden.md).
+Part of
+[Skill garden extraction](../../../cycles/_archive/2026-09-skill-garden.md).
 
 ## Context
 

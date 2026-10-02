@@ -13,9 +13,9 @@ generated: { by: claude-opus-5-5, at: 2026-09-25 }
 # Work Taxonomy Phase 5, the migration and the dogfood run — 2026-09-25
 
 Part of
-[Work Taxonomy release](../../../cycles/2026-09-work-taxonomy-release.md). Plan:
-[Phase 5](../plan.md). Branch `feature/work-taxonomy-p5-migration`, 48 commits.
-The move itself is recorded in
+[Work Taxonomy release](../../../cycles/_archive/2026-09-work-taxonomy-release.md).
+Plan: [Phase 5](../plan.md). Branch `feature/work-taxonomy-p5-migration`, 48
+commits. The move itself is recorded in
 [the dogfood session](./2026-09-25-dogfood-migration.md); this record covers the
 phase as a whole — building the migration, the review rounds that made it safe,
 and the decisions taken along the way. The coordinator ran it from the main

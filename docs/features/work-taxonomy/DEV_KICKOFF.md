@@ -40,7 +40,7 @@ consumer.
 - [Test Plan](./test-plan.md) — 4 smoke, 11 critical path, 4 deferred
 - [Guidance Lifecycle proposal](../guidance-lifecycle/feature.md) — ships in the
   same release
-- [Cycle](../../cycles/2026-09-work-taxonomy-release.md)
+- [Cycle](../../cycles/_archive/2026-09-work-taxonomy-release.md)
 
 **Background context:**
 

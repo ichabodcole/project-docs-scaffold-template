@@ -39,7 +39,8 @@ For more guidance, see the owner folder's README: ../../README.md
 
 # Bootstrap skill-garden — 2026-09-29
 
-Part of [Skill garden extraction](../../../cycles/2026-09-skill-garden.md). The
+Part of
+[Skill garden extraction](../../../cycles/_archive/2026-09-skill-garden.md). The
 work happened in `~/Projects/skill-garden`
 ([github.com/ichabodcole/skill-garden](https://github.com/ichabodcole/skill-garden));
 this is its record here, where the extraction is tracked.

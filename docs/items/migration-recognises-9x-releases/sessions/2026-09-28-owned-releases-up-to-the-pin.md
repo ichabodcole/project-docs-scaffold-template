@@ -39,7 +39,8 @@ For more guidance, see the owner folder's README: ../../README.md
 
 # Owned releases up to the pin — 2026-09-28
 
-Part of [Story-loom migration](../../../cycles/2026-09-story-loom-migration.md).
+Part of
+[Story-loom migration](../../../cycles/_archive/2026-09-story-loom-migration.md).
 
 ## Context
 

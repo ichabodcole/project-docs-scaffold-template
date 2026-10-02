@@ -12,7 +12,8 @@ generated: { by: claude-opus-5-5, at: 2026-09-26 }
 
 # pdocs output and the placeholder lint — 2026-09-26
 
-Part of [v9 rollout feedback](../../../cycles/2026-09-v9-rollout-feedback.md).
+Part of
+[v9 rollout feedback](../../../cycles/_archive/2026-09-v9-rollout-feedback.md).
 Branch `fix/pdocs-output-and-placeholder-lint`. Implements rows 4 and 5 of
 [this item](../item.md); rows 1–3 (finalize-branch) are a later branch. Also
 finishes four items in the same files:

@@ -12,7 +12,8 @@ generated: { by: claude-opus-5-5, at: 2026-09-27 }
 
 # finalize-branch rows and born items — 2026-09-27
 
-Part of [v9 rollout feedback](../../../cycles/2026-09-v9-rollout-feedback.md).
+Part of
+[v9 rollout feedback](../../../cycles/_archive/2026-09-v9-rollout-feedback.md).
 Branch `fix/finalize-branch-wocky-rows`. Rows 1–3 of [this item](../item.md),
 which completes it; rows 4–5 landed with
 [the pdocs output session](./2026-09-26-pdocs-output-and-placeholder-lint.md).

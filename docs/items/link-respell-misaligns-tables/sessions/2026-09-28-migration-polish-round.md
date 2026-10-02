@@ -39,7 +39,8 @@ For more guidance, see the owner folder's README: ../../README.md
 
 # Migration polish round — 2026-09-28
 
-Part of [Story-loom migration](../../../cycles/2026-09-story-loom-migration.md).
+Part of
+[Story-loom migration](../../../cycles/_archive/2026-09-story-loom-migration.md).
 Owned by the table item; it is the record of five items landed on one branch
 with one review, by Cole's choice: [tables](../item.md),
 [the format phase](../../migration-format-phase-downloads-prettier.md),

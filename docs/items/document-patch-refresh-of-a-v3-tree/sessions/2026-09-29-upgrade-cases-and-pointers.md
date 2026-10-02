@@ -39,7 +39,8 @@ For more guidance, see the owner folder's README: ../../README.md
 
 # Upgrade cases, the CLI pointer and the Outcome lint — 2026-09-29
 
-Part of [Story-loom migration](../../../cycles/2026-09-story-loom-migration.md).
+Part of
+[Story-loom migration](../../../cycles/_archive/2026-09-story-loom-migration.md).
 Owned by the upgrade-case item; it is the record of five items landed on one
 branch with one review: [the upgrade case](../item.md),
 [Step 5 checks the markers](../../update-skill-step-5-rewrites-markers.md),
