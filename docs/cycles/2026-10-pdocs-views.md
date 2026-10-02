@@ -6,12 +6,13 @@ description:
   filename lookup and small pdocs lint fixes.
 tags: [pdocs, views, advisories]
 status: draft
-lifecycle: planned
+lifecycle: active
 appetite:
   Stop when the nine items land and ship in scaffold 9.4.0 with the plugin
   release.
 after: [2026-10-migration-test-stability]
 generated: { by: claude-opus-5-5, at: 2026-10-01 }
+started: 2026-10-01
 ---
 
 # pdocs work views and advisories

@@ -6,13 +6,14 @@ description:
   pdocs cycle relies on the gate.
 tags: [migrations, testing, ci]
 status: draft
-lifecycle: active
+lifecycle: closed
 started: 2026-10-01
 appetite:
   Stop when the fixture copy and timeout failures are fixed or shown not to
   reproduce; no scaffold release.
 after: []
 generated: { by: claude-opus-5-5, at: 2026-10-01 }
+closed: 2026-10-01
 ---
 
 # Migration test stability
@@ -41,7 +42,30 @@ waits for [2026-10-pdocs-views](./2026-10-pdocs-views.md).
 
 ## Outcome
 
-_Written at close, not before — and for an `abandoned` cycle too._
+Both items shipped on 2026-10-01, and the gate is reliable again. Under the same
+concurrent load, `develop` before this cycle timed out in both review rounds and
+after it passed 1,412/1,412 in both. Neither change touches what the scaffold
+ships, so no release was cut; the fixes ride along with the
+[pdocs views cycle](./2026-10-pdocs-views.md)'s release.
+
+- **The fixture copy failure is closed, not explained.** The release-marker
+  fixtures no longer copy the cached repository's `.git`, and fixture commits
+  run with auto-maintenance off. The first CI run after it passed. What deleted
+  the `.git/objects` directories on CI stays unconfirmed: the obvious suspect,
+  background maintenance, does nothing at this fixture's size under default
+  config. If the `ENOENT` returns, the cause is outside the copied `.git`.
+- **The timeouts were one mechanism, not load in general.** Each migration test
+  file builds its fixtures lazily, so whichever test touches them first pays for
+  `git archive` plus cookiecutter. A test killed mid-build leaves the cache
+  empty, so failures cluster: 23 failures from 10 timeouts in one run. A 30 s
+  per-file budget on the five spawning files fixed it.
+  `scripts/post-gen-hook.test.ts`, not a migration test, joined the scope
+  because it timed out under the same load.
+
+Learned for scoping: the cheap reproduction (two suites at once) found in one
+run what weeks of "passed on retry" had hidden. Next time a gate flakes,
+reproduce it under load first and save the output, since an unsaved hook failure
+loses the test names.
 
 ## Sessions
 
