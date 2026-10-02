@@ -351,7 +351,7 @@ See below.
 ### `view` — derived views of the work
 
 ```bash
-bun scripts/pdocs/cli.ts view <backlog|board|ready|feature|cycle|scope|unreleased|released> [<arg>] \
+bun scripts/pdocs/cli.ts view <backlog|board|ready|feature|cycle|scope|unreleased|released|portfolio> [<arg>] \
                               [--features] [--all] [--since <YYYY-MM-DD>]
 ```
 
@@ -367,28 +367,47 @@ Every view is computed from frontmatter; none is a file anyone writes.
 | `scope <name>`       | Live features and items in that scope; `--all` adds the archive                                                                          |
 | `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                                                   |
 | `released <version>` | Features and items with that `released_in`                                                                                               |
+| `portfolio`          | Current cycles and features, each with its items counted by state group; `--all` adds history                                            |
+
+`portfolio` counts a cycle's items by `cycle` and a feature's by `parent`,
+archived items included, and counts the live items in neither. A cycle is
+current when it is `planned` or `active` and not archived; a feature when it is
+not archived, `done` or `dropped`. An item whose `cycle` or `parent` names
+nothing in the tree is counted nowhere; `pdocs check` reports it as `BAD CYCLE`
+or `BAD PARENT`. It says when no cycle is `active`. Its `--all` adds the
+history: `closed` and `abandoned` cycles and `done` and `dropped` features,
+archived or not. In text it prints a zero count as `·` and folds past features
+with no items into one line per lifecycle; JSON keeps every entry (`entity`,
+`path`, `slug`, `title`, `lifecycle`, `archived`, `current`, and `counts` by
+group plus `ungrouped` and `total`) and the top-level `activeCycle` and
+`unattached`.
 
 An unknown view exits 2 and lists the views. Output is deterministic.
 
-**Live views hide archived work** unless `--all` asks for it: `board` and
-`scope` take the flag, and any view that lists cycles hides archived ones the
-same way. `feature`, `cycle`, `unreleased` and `released` show archived records,
-as the record of one entity, release accounting and history. `find` is a query,
-not a view: it returns archived records and never advises.
+**Live views hide archived work** unless `--all` asks for it. One flag, a
+meaning per view: on `board` and `scope` it adds archived records; on
+`portfolio`, which lists only current cycles and features, it adds the history —
+finished ones, archived or not. Any other view refuses it. `feature`, `cycle`,
+`unreleased` and `released` show archived records, as the record of one entity,
+release accounting and history. `find` is a query, not a view: it returns
+archived records and never advises.
 
 **Advisories.** Every view's JSON `data` carries `advisories`, empty when there
 is nothing to say. Each has a stable `id`, a `message` and an `action`, plus
 `refs` — the `<type>/<slug>` references a caller can act on — when it is about
 particular entities. A live view that lists a type across the tree — `board` for
-items, and features with `--features` — counts that type's unarchived finished
-work (`done`/`dropped` items and features, `closed`/`abandoned` cycles) against
-`checks.archive.threshold` in `.project-docs.json` (default 25). A type whose
-count is **greater than** the threshold puts it in one advisory: `id`
-`archive-threshold`, the `threshold`, `refs` (every type's candidates), and per
-type the `count`, `lifecycles`, `remediation` and `candidates` (the references
-`pdocs archive` takes, oldest first). Text output ends with the same message and
-its next step, two lines, never one per entity. The view still exits 0 and lists
-exactly what it would without it.
+items, and features with `--features`; `portfolio` for features and cycles —
+counts that type's unarchived finished work (`done`/`dropped` items and
+features, `closed`/`abandoned` cycles) against `checks.archive.threshold` in
+`.project-docs.json` (default 25). A type whose count is **greater than** the
+threshold puts it in one advisory: `id` `archive-threshold`, the `threshold`,
+`refs` (every type's candidates), and per type the `count`, `lifecycles`,
+`remediation` and `candidates` (the references `pdocs archive` takes, oldest
+first). Text output ends with the same message and its next step, two lines,
+never one per entity. The view still exits 0 and lists exactly what it would
+without it. Because `portfolio` already leaves finished work out, its message
+says archiving moves them out of the live folders, not that it shortens the
+view.
 
 **Acting on one.** The advisory is not permission to archive. Offer the user a
 concrete selection from `refs` — say, every finished item older than the current

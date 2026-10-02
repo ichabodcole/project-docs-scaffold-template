@@ -480,15 +480,27 @@ computes them from the fields:
 | `pdocs view scope <name> [--all]`            | live features and items in one scope                                                             |
 | `pdocs view unreleased [--since YYYY-MM-DD]` | `done` features and items with no `released_in`                                                  |
 | `pdocs view released <version>`              | what shipped in a version                                                                        |
+| `pdocs view portfolio [--all]`               | current cycles and features, each with its items counted by state group                          |
+
+`view portfolio` counts a cycle's items by their `cycle` and a feature's by
+their `parent`, archived items included. A cycle is current when it is `planned`
+or `active` and not archived; a feature when it is not archived, `done` or
+`dropped`. An item whose `cycle` or `parent` names nothing in the tree is
+counted nowhere; `pdocs check` reports it as `BAD CYCLE` or `BAD PARENT`. It
+says when no cycle is `active`. Its `--all` adds the history: `closed` and
+`abandoned` cycles and `done` and `dropped` features, archived or not.
 
 `pdocs find --kind`, `--parent`, `--cycle`, `--scope` and `--id` filter the same
 fields.
 
 **Live views hide archived work.** `board` and `scope` list current work, so
-they leave archived items and features out unless `--all` asks for them; a view
-that lists cycles leaves archived cycles out the same way. `backlog` and `ready`
-list only unstarted items, which the archive never holds. Three views are not
-live and show archived records as they always have: `feature <slug>` and
+they leave archived items and features out unless `--all` asks for them.
+`portfolio` lists only what is current, so it leaves out archived cycles and
+features along with every other finished one; its `--all` adds them all back as
+history. One flag, a meaning per view: on `board` and `scope` it adds the
+archive, on `portfolio` the past, and any other view refuses it. `backlog` and
+`ready` list only unstarted items, which the archive never holds. Three views
+are not live and show archived records as they always have: `feature <slug>` and
 `cycle <slug>` are the record of one entity (a cycle's `closable` needs every
 member), `unreleased` is release accounting (archived is not released), and
 `released` is history. `pdocs find` is a query, not a view: it returns archived
@@ -507,11 +519,14 @@ advisory (archive-threshold): 60 finished items and 31 finished features are not
   next: Offer the user a concrete selection, then run `pdocs archive <ref>` for each one they agree to; `--format json` lists the candidates. Nothing is archived automatically.
 ```
 
-`view board` advises on items, and on features too with `--features`. In JSON,
-every view's `data` carries `advisories`, a list that is empty when there is
-nothing to say. Every advisory has a stable `id`, a `message`, an `action`, and
-— when it is about particular entities — `refs`, the `<type>/<slug>` references
-a caller can act on; a caller reads `refs` whatever the advisory's kind. The
+`view board` advises on items, and on features too with `--features`.
+`view portfolio` advises on features and cycles. It already leaves finished work
+out, so its message says why archiving still helps there: "This view already
+leaves them out; archiving moves them out of the live folders." In JSON, every
+view's `data` carries `advisories`, a list that is empty when there is nothing
+to say. Every advisory has a stable `id`, a `message`, an `action`, and — when
+it is about particular entities — `refs`, the `<type>/<slug>` references a
+caller can act on; a caller reads `refs` whatever the advisory's kind. The
 archive advisory has `id: "archive-threshold"`, `setting`, `threshold`, `refs`
 (every type's candidates) and `types`: per type over the threshold, its `type`,
 `count`, `threshold`, `lifecycles` counted, a `remediation`, and the

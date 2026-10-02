@@ -2,9 +2,9 @@
 // work exceeds `checks.archive.threshold` says so, once, in text and JSON —
 // and lists, exits and writes exactly as it would without it.
 //
-// Real temp trees and the real CLI, in the style of `view.test.ts`. Cycles
-// are not on any view yet (`view portfolio` lists them), so the cycle cases
-// call the advisory function over a model read from a real tree.
+// Real temp trees and the real CLI, in the style of `view.test.ts`. The cycle
+// counting cases call the advisory function over a model read from a real
+// tree; `view portfolio`, which lists cycles, is exercised through the CLI.
 
 import { afterAll, describe, expect, test } from "bun:test";
 import {
@@ -20,7 +20,13 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { ARCHIVE_ADVISORY, BAD_CONFIG_ADVISORY, archiveAdvisory } from "../advisories.ts";
+import {
+  ARCHIVE_ADVISORY,
+  ARCHIVE_WHY_HIDDEN,
+  ARCHIVE_WHY_LIVE,
+  BAD_CONFIG_ADVISORY,
+  archiveAdvisory,
+} from "../advisories.ts";
 import { loadConfig } from "../docs-lint/config.ts";
 import { ExitCode } from "../envelope.ts";
 import { context } from "../lint/rules.ts";
@@ -443,7 +449,7 @@ describe("pdocs view board: the archive advisory", () => {
 });
 
 describe("cycles: counted against the same threshold", () => {
-  // No view lists cycles yet; the function is what `view portfolio` calls.
+  // The function `view portfolio` calls, over a model read from a real tree.
   const model = (shape: Shape) => collectWork(context(tree(shape)));
 
   test("closed and abandoned count; planned, active and archived do not", () => {
@@ -545,10 +551,109 @@ describe("live views hide archived work unless --all asks", () => {
       ["cycle", "2026-01-active-0"],
       ["unreleased"],
       ["released", "1.0.0"],
+      ["portfolio"],
+      ["portfolio", "--all"],
     ]) {
       const r = run(root, ["view", ...v, "--format", "json"]);
       expect([v, r.code]).toEqual([v, ExitCode.Success]);
       expect([v, JSON.parse(r.stdout).data.advisories]).toEqual([v, []]);
+    }
+  });
+});
+
+describe("pdocs view portfolio: the archive advisory", () => {
+  function portfolio(root: string, ...args: string[]) {
+    const r = run(root, ["view", "portfolio", ...args, "--format", "json"]);
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(ExitCode.Success);
+    return JSON.parse(r.stdout).data;
+  }
+
+  test("under the threshold it carries `advisories: []` and prints none", () => {
+    const root = tree({ features: { done: 25, active: 1 }, cycles: { closed: 25, active: 1 } });
+    expect(portfolio(root).advisories).toEqual([]);
+    expect(run(root, ["view", "portfolio", "--format", "text"]).stdout).not.toContain("advisory");
+  });
+
+  test("advises on features and cycles, never items, in the wording for a view that hides finished work", () => {
+    const root = tree({
+      items: { done: 5 },
+      features: { done: 3, dropped: 1, active: 1 },
+      cycles: { closed: 2, abandoned: 1, active: 1 },
+      archivedFeatures: 4,
+      archivedCycles: 4,
+    });
+    threshold(root, 2);
+    const data = portfolio(root);
+    // the listing is unchanged: finished features and cycles stay out by default
+    expect(data.features.map((e: { slug: string }) => e.slug)).toEqual(["f-active-0"]);
+    expect(data.advisories).toHaveLength(1);
+    const [a] = data.advisories;
+    expect(a.id).toBe(ARCHIVE_ADVISORY);
+    expect(a.types.map((t: { type: string; count: number }) => [t.type, t.count])).toEqual([
+      ["feature", 4],
+      ["cycle", 3],
+    ]);
+    expect(a.message).toBe(
+      "4 finished features and 3 finished cycles are not archived, over the threshold of 2 " +
+        `(checks.archive.threshold). ${ARCHIVE_WHY_HIDDEN} Archiving preserves their records and updates links.`
+    );
+    expect(a.message).not.toContain(ARCHIVE_WHY_LIVE);
+    // the same advisory under --all
+    expect(portfolio(root, "--all").advisories).toEqual(data.advisories);
+
+    // text: the advisory comes last, after a blank line, said once
+    const text = run(root, ["view", "portfolio", "--format", "text"]).stdout;
+    expect(text.endsWith(`\n\nadvisory (archive-threshold): ${a.message}\n  next: ${a.action}\n`)).toBe(
+      true
+    );
+    expect(text.split("advisory (").length).toBe(2);
+  });
+
+  test("the board keeps the live-view wording", () => {
+    const root = tree({ items: { done: 3 } });
+    threshold(root, 1);
+    expect(board(root).advisories[0].message).toContain(ARCHIVE_WHY_LIVE);
+  });
+
+  test("a bad threshold gives a bad-config advisory, and the portfolio still lists", () => {
+    const root = tree({ features: { done: 30, active: 1 }, cycles: { active: 1 } });
+    threshold(root, -1);
+    const data = portfolio(root);
+    expect(data.features.map((e: { slug: string }) => e.slug)).toEqual(["f-active-0"]);
+    expect(data.cycles).toHaveLength(1);
+    expect(data.advisories.map((x: { id: string }) => x.id)).toEqual([BAD_CONFIG_ADVISORY]);
+    const text = run(root, ["view", "portfolio", "--format", "text"]);
+    expect(text.code).toBe(ExitCode.Success);
+    expect(text.stdout).toContain("advisory (bad-config): ");
+  });
+});
+
+describe("--all: one option, a meaning per view", () => {
+  test("help documents both meanings in one entry", () => {
+    const r = run(tree({}), ["view", "--help", "--format", "text"]);
+    const lines = r.stdout.split("\n").filter((l) => l.trimStart().startsWith("--all"));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("board, scope: include archived work");
+    expect(lines[0]).toContain("portfolio: add past cycles and features");
+  });
+
+  test("board, scope and portfolio take it; any other view refuses it, naming the three", () => {
+    const root = tree({ features: { active: 1 } });
+    const cfg = JSON.parse(readFileSync(join(root, ".project-docs.json"), "utf8"));
+    cfg.lint.scopes = ["cli"];
+    writeFileSync(join(root, ".project-docs.json"), JSON.stringify(cfg, null, 2));
+    for (const v of [["board"], ["scope", "cli"], ["portfolio"]])
+      expect([v, run(root, ["view", ...v, "--all", "--format", "json"]).code]).toEqual([
+        v,
+        ExitCode.Success,
+      ]);
+    for (const v of [["backlog"], ["feature", "f-active-0"]]) {
+      const r = run(root, ["view", ...v, "--all", "--format", "json"]);
+      expect(r.code).toBe(ExitCode.Usage);
+      expect(JSON.parse(r.stderr).error.message).toBe(
+        "--all applies to `view board`, `view scope` and `view portfolio` only."
+      );
     }
   });
 });

@@ -507,3 +507,113 @@ export function entitiesBySlug(
       ? model.itemsBySlug
       : model.cyclesBySlug;
 }
+
+// ---------------------------------------------------------------------------------------
+// Portfolio
+// ---------------------------------------------------------------------------------------
+
+/** How many member items sit in each state group. `ungrouped` counts a
+ *  lifecycle outside the vocabulary (the lint reports it); `total` is all. */
+export type GroupCounts = Record<StateGroup | "ungrouped" | "total", number>;
+
+/** A cycle or feature in the portfolio, with its members counted. */
+export interface PortfolioEntry {
+  entity: WorkEntity;
+  /** Planned or active cycle; unarchived feature that is not done or dropped. */
+  current: boolean;
+  counts: GroupCounts;
+}
+
+export interface Portfolio {
+  cycles: PortfolioEntry[];
+  features: PortfolioEntry[];
+  /** Whether any current cycle is `active` — a planned one alone is not. */
+  activeCycle: boolean;
+  /** Live (unarchived) items with neither a `cycle` nor a `parent`. */
+  unattached: GroupCounts;
+}
+
+/** `cycle` lifecycles that make a cycle current. */
+export const CURRENT_CYCLE = ["active", "planned"] as const;
+
+function countGroups(items: readonly WorkEntity[]): GroupCounts {
+  const out: GroupCounts = {
+    unstarted: 0,
+    started: 0,
+    completed: 0,
+    cancelled: 0,
+    ungrouped: 0,
+    total: items.length,
+  };
+  for (const e of items) out[e.group ?? "ungrouped"]++;
+  return out;
+}
+
+const cmpStr = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
+
+/** A cycle is current when it is planned or active and not archived. */
+export const isCurrentCycle = (c: WorkEntity): boolean =>
+  !c.archived && (CURRENT_CYCLE as readonly string[]).includes(c.lifecycle ?? "");
+
+/** A feature is current when it is not archived and not done or dropped. */
+export const isCurrentFeature = (f: WorkEntity): boolean =>
+  !f.archived && f.group !== "completed" && f.group !== "cancelled";
+
+/**
+ * `portfolio`: current cycles and features, each with its member items counted
+ * by state group. Membership is the item's `cycle` (a cycle's slug) and its
+ * `parent` (`feature/<slug>`) — nothing else — and every member counts,
+ * archived or not: archiving hides an item, it does not unmake its membership.
+ *
+ * `all` adds the rest: closed, abandoned and archived cycles, and done,
+ * dropped and archived features, each marked `current: false`.
+ *
+ * Order: current before history. Current cycles active first, then planned,
+ * each by slug (cycle slugs lead with the month). Current features started
+ * first, then unstarted, each in `workOrder`. History newest first: cycles by
+ * slug descending, features by `generated.at` descending, then path.
+ */
+export function viewPortfolio(model: WorkModel, opts: { all?: boolean } = {}): Portfolio {
+  const byCycle = index(model.items, (e) => e.cycle);
+  const byParent = index(model.items, (e) => e.parent);
+
+  const cycleRank = (c: WorkEntity) => (c.lifecycle === "active" ? 0 : 1);
+  const currentCycles = model.cycles
+    .filter(isCurrentCycle)
+    .sort((a, b) => cycleRank(a) - cycleRank(b) || cmpStr(a.slug, b.slug) || cmpStr(a.path, b.path));
+  const pastCycles = opts.all
+    ? model.cycles
+        .filter((c) => !isCurrentCycle(c))
+        .sort((a, b) => cmpStr(b.slug, a.slug) || cmpStr(a.path, b.path))
+    : [];
+
+  const featureRank = (f: WorkEntity) => (f.group === "started" ? 0 : f.group === "unstarted" ? 1 : 2);
+  const currentFeatures = model.features
+    .filter(isCurrentFeature)
+    .sort((a, b) => featureRank(a) - featureRank(b) || workOrder(a, b));
+  const pastFeatures = opts.all
+    ? model.features
+        .filter((f) => !isCurrentFeature(f))
+        .sort((a, b) => cmpStr(b.date ?? "", a.date ?? "") || cmpStr(a.path, b.path))
+    : [];
+
+  const cycleEntry = (c: WorkEntity): PortfolioEntry => ({
+    entity: c,
+    current: isCurrentCycle(c),
+    counts: countGroups(byCycle.get(c.slug) ?? []),
+  });
+  const featureEntry = (f: WorkEntity): PortfolioEntry => ({
+    entity: f,
+    current: isCurrentFeature(f),
+    counts: countGroups(byParent.get(`feature/${f.slug}`) ?? []),
+  });
+
+  return {
+    cycles: [...currentCycles, ...pastCycles].map(cycleEntry),
+    features: [...currentFeatures, ...pastFeatures].map(featureEntry),
+    activeCycle: currentCycles.some((c) => c.lifecycle === "active"),
+    unattached: countGroups(
+      model.items.filter((e) => !e.archived && e.cycle === null && e.parent === null)
+    ),
+  };
+}

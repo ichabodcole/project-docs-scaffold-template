@@ -5,7 +5,7 @@ description:
   Show current cycles and features in one concise overview with progress counts
   and an option to include completed history.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0f8c6-2e4e-72f3-bdce-6a3e96b77e66
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
@@ -44,25 +44,25 @@ current state.
 
 ## Definition of done
 
-- [ ] A single portfolio view lists current cycles and features together, with
+- [x] A single portfolio view lists current cycles and features together, with
       their lifecycle and counts of child items in unstarted, started,
       completed, and cancelled groups.
-- [ ] A planned cycle is included as current/upcoming; a closed or abandoned
+- [x] A planned cycle is included as current/upcoming; a closed or abandoned
       cycle is excluded by default. Done, dropped and archived features are
       excluded by default.
-- [ ] The view says when no active cycle exists even if planned cycles are
+- [x] The view says when no active cycle exists even if planned cycles are
       listed, and handles an empty current-feature set explicitly.
-- [ ] `--all` includes historical cycles and completed, dropped, and archived
+- [x] `--all` includes historical cycles and completed, dropped, and archived
       features with clear state labels.
-- [ ] Text output is compact and scannable; JSON exposes stable entity,
+- [x] Text output is compact and scannable; JSON exposes stable entity,
       lifecycle, and per-state count fields with equivalent inclusion rules.
-- [ ] Counts derive from existing `cycle` and `parent` references, count each
+- [x] Counts derive from existing `cycle` and `parent` references, count each
       associated item once per applicable summary, and handle items without a
       parent or cycle.
-- [ ] Tests cover mixed lifecycle states, planned/active/closed cycles, archived
+- [x] Tests cover mixed lifecycle states, planned/active/closed cycles, archived
       features, feature child items, empty states, text/JSON parity, and
       `--all`.
-- [ ] Help and work documentation describe the view and its inclusion rules; the
+- [x] Help and work documentation describe the view and its inclusion rules; the
       pdocs suite and docs checks pass.
 
 ## Context

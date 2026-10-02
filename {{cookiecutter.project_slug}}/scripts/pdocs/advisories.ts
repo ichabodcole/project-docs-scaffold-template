@@ -64,6 +64,21 @@ export const FINISHED: Readonly<Record<Entity, readonly string[]>> = {
   cycle: CYCLE_ENDS,
 };
 
+/** Why archiving helps, as a view that lists finished work says it. The default. */
+export const ARCHIVE_WHY_LIVE = "Consider archiving them to shorten this view.";
+
+/** Why archiving helps, as a view that already leaves finished work out says it
+ *  (`view portfolio`): the view is short already, and its `--all` lists past
+ *  work archived or not — what archiving still shortens is the live folders. */
+export const ARCHIVE_WHY_HIDDEN =
+  "This view already leaves them out; archiving moves them out of the live folders.";
+
+/** How a view words the archive advisory. */
+export interface ArchiveWording {
+  /** The sentence saying why archiving helps here. Defaults to `ARCHIVE_WHY_LIVE`. */
+  why?: string;
+}
+
 /** One type over the threshold. */
 export interface ArchiveTypeCount {
   type: Entity;
@@ -125,7 +140,8 @@ export function unarchivedFinished(model: WorkModel, type: Entity): WorkEntity[]
 export function archiveAdvisory(
   model: WorkModel,
   types: readonly Entity[],
-  threshold: number
+  threshold: number,
+  wording: ArchiveWording = {}
 ): ArchiveAdvisory | null {
   const over: ArchiveTypeCount[] = [];
   for (const type of types) {
@@ -151,7 +167,7 @@ export function archiveAdvisory(
     message:
       `${counts} ${over.length === 1 && over[0]!.count === 1 ? "is" : "are"} not archived, ` +
       `over the threshold of ${threshold} (${ARCHIVE_SETTING}). ` +
-      `Consider archiving them to shorten this view. Archiving preserves their records and updates links.`,
+      `${wording.why ?? ARCHIVE_WHY_LIVE} Archiving preserves their records and updates links.`,
     action:
       "Offer the user a concrete selection, then run `pdocs archive <ref>` for each one they agree to; " +
       "`--format json` lists the candidates. Nothing is archived automatically.",
@@ -188,10 +204,15 @@ export function badConfigAdvisory(issues: readonly ConfigIssue[]): BadConfigAdvi
  * the archive advisory, or nothing, or — when `checks.archive` is invalid —
  * the `bad-config` advisory in its place. The one call a view makes.
  */
-export function adviseArchive(ctx: Ctx, model: WorkModel, types: readonly Entity[]): Advisory[] {
+export function adviseArchive(
+  ctx: Ctx,
+  model: WorkModel,
+  types: readonly Entity[],
+  wording: ArchiveWording = {}
+): Advisory[] {
   const bad = badConfigAdvisory(archiveIssues(ctx.config.issues));
   if (bad) return [bad];
-  const advisory = archiveAdvisory(model, types, ctx.config.checks.archive.threshold);
+  const advisory = archiveAdvisory(model, types, ctx.config.checks.archive.threshold, wording);
   return advisory ? [advisory] : [];
 }
 

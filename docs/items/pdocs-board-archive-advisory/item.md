@@ -105,8 +105,8 @@ for moves and link updates.
 - [Archive closed cycles](../archive-closed-cycles/item.md) supplies the cycle
   archive this rule counts against. Land it first, or have this item count
   cycles once it does.
-- [Portfolio view](../pdocs-work-portfolio-view.md) is where feature and cycle
-  advisories appear.
+- [Portfolio view](../pdocs-work-portfolio-view/item.md) is where feature and
+  cycle advisories appear.
 - [Draft review advisories](../pdocs-draft-review-advisories.md) use the same
   report-condition, prompt-for-action pattern and the same `checks` section.
 

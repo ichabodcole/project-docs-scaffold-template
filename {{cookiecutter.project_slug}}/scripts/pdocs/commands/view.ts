@@ -1,10 +1,11 @@
 // `pdocs view <name> [<arg>]` — the backlog, the board, the ready list, a
-// feature's items, a cycle's scope, a scope's work, and what is done but not
-// released. None of these is an authored file: each is computed from fields,
-// by the pure functions in `work.ts`. This file only presents them.
+// feature's items, a cycle's scope, a scope's work, what is done but not
+// released, and the portfolio of cycles and features. None of these is an
+// authored file: each is computed from fields, by the pure functions in
+// `work.ts`. This file only presents them.
 
 import type { Command, Invocation } from "../cli.ts";
-import { type Advisory, adviseArchive, advisoryLines } from "../advisories.ts";
+import { ARCHIVE_WHY_HIDDEN, type Advisory, adviseArchive, advisoryLines } from "../advisories.ts";
 import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import {
   GROUPS,
@@ -18,7 +19,10 @@ import {
   viewBoard,
   viewCycle,
   viewFeature,
+  viewPortfolio,
   viewReady,
+  type GroupCounts,
+  type PortfolioEntry,
   viewReleased,
   viewScope,
   viewUnreleased,
@@ -72,6 +76,13 @@ const entry = (e: WorkEntity): ViewEntry => ({
  */
 const WITH_ARCHIVE = ["board", "scope"];
 
+/**
+ * The views that take `--all`. On a live view it adds the archive; on
+ * `portfolio`, which lists what is current, it adds the history — past cycles
+ * and features, archived or not.
+ */
+const WITH_ALL = [...WITH_ARCHIVE, "portfolio"];
+
 /** The views, in help order. `arg` names the positional a view needs. */
 export const VIEWS: ReadonlyArray<{ name: string; arg?: string; summary: string }> = [
   { name: "backlog", summary: "items not yet started, by priority" },
@@ -82,7 +93,127 @@ export const VIEWS: ReadonlyArray<{ name: string; arg?: string; summary: string 
   { name: "scope", arg: "name", summary: "the live features and items in a scope (--all adds the archive)" },
   { name: "unreleased", summary: "done, with no released_in (--since YYYY-MM-DD)" },
   { name: "released", arg: "version", summary: "what a version released" },
+  { name: "portfolio", summary: "current cycles and features with item counts (--all adds history)" },
 ];
+
+/** A cycle or feature as `view portfolio` lists it. Stable JSON fields. */
+export interface PortfolioJson {
+  entity: "cycle" | "feature";
+  path: string;
+  slug: string;
+  title: string | null;
+  lifecycle: string | null;
+  archived: boolean;
+  current: boolean;
+  counts: GroupCounts;
+}
+
+const portfolioEntry = (p: PortfolioEntry): PortfolioJson => ({
+  entity: p.entity.entity as "cycle" | "feature",
+  path: p.entity.path,
+  slug: p.entity.slug,
+  title: p.entity.title,
+  lifecycle: p.entity.lifecycle,
+  archived: p.entity.archived,
+  current: p.current,
+  counts: p.counts,
+});
+
+/** The data `view portfolio` prints, in JSON as it stands and in text through
+ *  `renderPortfolio`. */
+export interface PortfolioData {
+  view: "portfolio";
+  all: boolean;
+  activeCycle: boolean;
+  cycles: PortfolioJson[];
+  features: PortfolioJson[];
+  unattached: GroupCounts;
+}
+
+/** The count columns, named as `view board` names its groups. */
+const COUNT_COLS = ["unstarted", "started", "completed", "cancelled"] as const;
+
+/**
+ * `view portfolio` as text. Kept apart from the data so the layout can change
+ * without touching what is counted.
+ *
+ * A zero prints as `·`, so the counts that matter stand out. Past features
+ * with no items fold into one line per lifecycle: history rows of zeros say
+ * nothing a count cannot. Current features are always listed, items or not —
+ * they are what the view is for. The JSON keeps every entry and every number.
+ */
+export function renderPortfolio(d: PortfolioData): string[] {
+  const out: string[] = [];
+  const lcWidth = Math.max(
+    "lifecycle".length,
+    ...[...d.cycles, ...d.features].map((e) => (e.lifecycle ?? "-").length)
+  );
+  const header = (noun: string) =>
+    `  ${"lifecycle".padEnd(lcWidth)}  ${COUNT_COLS.join("  ")}  ${noun}`;
+  const num = (n: number, width: number) => (n === 0 ? "·" : String(n)).padStart(width);
+  const row = (e: PortfolioJson) => {
+    const nums = COUNT_COLS.map((c) => num(e.counts[c], c.length)).join("  ");
+    const odd = e.counts.ungrouped > 0 ? `  (+${e.counts.ungrouped} in an unknown state)` : "";
+    const name = `${e.slug}${e.archived ? " [archived]" : ""}`;
+    return `  ${(e.lifecycle ?? "-").padEnd(lcWidth)}  ${nums}  ${name}${e.title ? `  — ${e.title}` : ""}${odd}`;
+  };
+  const tally = (list: PortfolioJson[]) => {
+    const n = new Map<string, number>();
+    for (const e of list) n.set(e.lifecycle ?? "-", (n.get(e.lifecycle ?? "-") ?? 0) + 1);
+    return [...n].map(([k, v]) => `${v} ${k}`).join(", ");
+  };
+  const section = (
+    title: string,
+    noun: string,
+    list: PortfolioJson[],
+    empty: string,
+    fold = false
+  ) => {
+    out.push(list.length ? `${title} (${tally(list)})` : title);
+    if (list.length === 0) {
+      out.push(`  ${empty}`);
+      return;
+    }
+    const shown = fold ? list.filter((e) => e.counts.total > 0) : list;
+    const folded = fold ? list.filter((e) => e.counts.total === 0) : [];
+    if (shown.length > 0) {
+      out.push(header(noun));
+      for (const e of shown) out.push(row(e));
+    }
+    const byLc = new Map<string, PortfolioJson[]>();
+    for (const e of folded) byLc.set(e.lifecycle ?? "-", [...(byLc.get(e.lifecycle ?? "-") ?? []), e]);
+    for (const [lc, es] of byLc) {
+      const archived = es.filter((e) => e.archived).length;
+      out.push(
+        `  ${es.length} ${lc} ${es.length === 1 ? noun : `${noun}s`} with no items${archived ? ` (${archived} archived)` : ""}`
+      );
+    }
+  };
+
+  const curCycles = d.cycles.filter((e) => e.current);
+  section("Cycles", "cycle", curCycles, "No current cycle — none planned or active.");
+  if (curCycles.length > 0 && !d.activeCycle) out.push("  No active cycle — only planned ones.");
+  out.push("");
+  section(
+    "Features",
+    "feature",
+    d.features.filter((e) => e.current),
+    "No current feature — none in backlog, ready, active or review."
+  );
+  const u = d.unattached;
+  if (u.total > 0)
+    out.push(
+      "",
+      `Items in no cycle or feature: ${u.unstarted} unstarted, ${u.started} started, ${u.completed} completed, ${u.cancelled} cancelled (archived not counted)`
+    );
+  if (d.all) {
+    out.push("");
+    section("Past cycles", "cycle", d.cycles.filter((e) => !e.current), "None.");
+    out.push("");
+    section("Past features", "feature", d.features.filter((e) => !e.current), "None.", true);
+  }
+  return out;
+}
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -97,7 +228,7 @@ function line(e: ViewEntry, ids: readonly string[], width: number): string {
 
 export const view: Command = {
   name: "view",
-  summary: "Derived views: backlog, board, ready, feature, cycle, scope, unreleased, released.",
+  summary: "Derived views: backlog, board, ready, feature, cycle, scope, unreleased, released, portfolio.",
   usage: `pdocs view <${VIEWS.map((v) => v.name).join("|")}> [<arg>] [--features] [--all] [--since <YYYY-MM-DD>]`,
   positionals: [
     { name: "view", required: true },
@@ -105,7 +236,12 @@ export const view: Command = {
   ],
   options: [
     { flag: "--features", summary: "board: include features beside the items." },
-    { flag: "--all", summary: "board, scope: include archived work, which a live view leaves out." },
+    {
+      flag: "--all",
+      summary:
+        "board, scope: include archived work, which a live view leaves out. " +
+        "portfolio: add past cycles and features — closed or abandoned, done or dropped, archived or not.",
+    },
     {
       flag: "--since",
       metavar: "<YYYY-MM-DD>",
@@ -134,8 +270,10 @@ export const view: Command = {
     if (flags["--features"] === true && spec.name !== "board")
       throw new UsageError("--features applies to `view board` only.");
     const all = flags["--all"] === true;
-    if (all && !WITH_ARCHIVE.includes(spec.name))
-      throw new UsageError(`--all applies to ${WITH_ARCHIVE.map((v) => `\`view ${v}\``).join(" and ")} only.`);
+    if (all && !WITH_ALL.includes(spec.name))
+      throw new UsageError(
+        `--all applies to ${WITH_ALL.slice(0, -1).map((v) => `\`view ${v}\``).join(", ")} and \`view ${WITH_ALL.at(-1)}\` only.`
+      );
 
     const model = collectWork(ctx);
     const list = (items: WorkEntity[]) => ({ view: spec.name, items: items.map(entry) });
@@ -177,6 +315,21 @@ export const view: Command = {
       case "unreleased":
         data = list(viewUnreleased(model, since));
         break;
+      case "portfolio": {
+        const p = viewPortfolio(model, { all });
+        // Portfolio leaves finished features and cycles out by default, so the
+        // advice is about `--all` and the tree, not about this view's length.
+        advisories = adviseArchive(ctx, model, ["feature", "cycle"], { why: ARCHIVE_WHY_HIDDEN });
+        data = {
+          view: "portfolio",
+          all,
+          activeCycle: p.activeCycle,
+          cycles: p.cycles.map(portfolioEntry),
+          features: p.features.map(portfolioEntry),
+          unattached: p.unattached,
+        } satisfies PortfolioData;
+        break;
+      }
       default:
         data = list(viewReleased(model, arg as string));
     }
@@ -188,7 +341,11 @@ export const view: Command = {
       return ExitCode.Success;
     }
 
-    printText(data, modelIds(model));
+    if (spec.name === "portfolio") {
+      for (const l of renderPortfolio(data as unknown as PortfolioData)) console.log(l);
+      // Its sections are set apart by blank lines; so is the advice after them.
+      if (advisories.length > 0) console.log("");
+    } else printText(data, modelIds(model));
     for (const l of advisoryLines(advisories)) console.log(l);
     return ExitCode.Success;
   },

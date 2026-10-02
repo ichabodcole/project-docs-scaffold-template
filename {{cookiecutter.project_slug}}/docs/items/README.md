@@ -120,6 +120,8 @@ where the work has got to.
 
 `pdocs view backlog` lists everything unstarted, `pdocs view ready` what can be
 started now, and `pdocs view board` everything by state group.
+`pdocs view portfolio` counts items by state group per current cycle and
+feature, and counts the live items in neither.
 
 ## A file, then a folder
 

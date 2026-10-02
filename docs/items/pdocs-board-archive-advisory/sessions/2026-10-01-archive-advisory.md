@@ -21,8 +21,8 @@ This repository's board held 66 unarchived finished items, and nothing suggested
 archiving them. The item sets one rule across items, features and cycles: live
 views hide archived work unless a flag asks, and one threshold,
 `checks.archive.threshold`, decides when to suggest archiving. It ran in
-parallel with the [portfolio view](../../pdocs-work-portfolio-view.md), which
-was built in a git worktree.
+parallel with the [portfolio view](../../pdocs-work-portfolio-view/item.md),
+which was built in a git worktree.
 
 ## What Happened
 

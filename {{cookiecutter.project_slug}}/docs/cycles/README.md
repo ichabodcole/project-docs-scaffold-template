@@ -77,7 +77,8 @@ bun scripts/pdocs/cli.ts archive cycle/2026-09-auth
 rewrites every link to and from it. Never move a cycle by hand. The slug does
 not change, so items whose `cycle:` names it still resolve,
 `pdocs view cycle 2026-09-auth` still finds it, and `pdocs find --type cycle`
-still lists it.
+still lists it. `pdocs view portfolio` lists `planned` and `active` cycles; a
+`closed`, `abandoned` or archived one appears only under `--all`.
 
 ## Shape
 
