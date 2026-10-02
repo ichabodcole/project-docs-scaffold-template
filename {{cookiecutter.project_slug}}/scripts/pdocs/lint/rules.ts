@@ -404,7 +404,7 @@ function placeholderProblems(
   const h1 = at === -1 ? null : (body.split("\n")[at] as string).trim();
   const tags = yamlList(fields.get("tags"));
   if (placeholders.length && tags.length && tags.every((t) => PLACEHOLDER_TAGS.has(t)))
-    out.add(`PLACEHOLDER    ${rel}: \`tags\` is still the template's prompt [${tags.join(", ")}]`);
+    out.add(`PLACEHOLDER    ${rel}: \`tags\` holds only placeholder words [${tags.join(", ")}]`);
   for (const p of placeholders) {
     for (const [key, value] of p.fields)
       if (fields.get(key) === value)

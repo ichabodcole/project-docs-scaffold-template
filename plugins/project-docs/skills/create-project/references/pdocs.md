@@ -404,6 +404,12 @@ Moves `items/<slug>.md` to `items/<slug>/item.md` and rewrites every link to and
 from it. `new <type> --owner item/<slug>` does this for you when an item gains
 its first owned document. An item that is already a folder is a no-op, exit 0.
 
+A respelled link changes a line's length. When the project has its own Prettier
+(resolved from the repository, never downloaded), every file whose links
+changed, and that Prettier already left unchanged, is printed through it again,
+so `prettier --check` still passes. `archive` does the same. A file Prettier
+would have changed anyway keeps every byte but its links.
+
 `data`: `from`, `to`, `moved`, `rewritten[]` (the files whose links changed),
 `links` (the count).
 
@@ -546,17 +552,17 @@ folder plus one, zero-padded to two.
 
 ### Flags
 
-| Flag                   | Notes                                                                                                                                                                                                       |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--title <text>`       | Fills `title` and the template's H1. Without it, `title` defaults to the slug, title-cased, and the H1 is left as the template's — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`). **Pass it.** |
-| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                                               |
-| `--tags <a,b>`         | Comma-separated kebab-case. Written as a list, `[a, b]`, whatever the template has.                                                                                                                         |
-| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                                                         |
-| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff`, `session` and `write-up` — exits 2.                                     |
-| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                                                          |
-| `--owner <ref>`        | Required for an owned type: `feature/<slug>` or `item/<slug-or-id>`. A single-file item is promoted first. An owner that does not resolve exits 2, naming what was expected.                                |
-| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                                                  |
-| `--from <path>`        | See below.                                                                                                                                                                                                  |
+| Flag                   | Notes                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--title <text>`       | Fills `title` and the template's H1. Without it, `title` defaults to the slug, title-cased — which mangles acronyms (`oauth-upgrade` → `Oauth Upgrade`) — and the H1 is left as the template's. **Pass it.** |
+| `--description <text>` | One sentence. Doubles as the catalog hook for a library page.                                                                                                                                                |
+| `--tags <a,b>`         | Comma-separated kebab-case. Written as a list, `[a, b]`, whatever the template has.                                                                                                                          |
+| `--status <s>`         | OKF status: `draft`, `stable`, `deprecated`. Anything else exits 2.                                                                                                                                          |
+| `--lifecycle <l>`      | Checked against the type's own vocabulary. Passing one to a type that declares none — every library type, plus `report`, `handoff`, `session` and `write-up` — exits 2.                                      |
+| `--by <actor>`         | `generated.by`. Defaults to `pdocs` — pass your own model or name.                                                                                                                                           |
+| `--owner <ref>`        | Required for an owned type: `feature/<slug>` or `item/<slug-or-id>`. A single-file item is promoted first. An owner that does not resolve exits 2, naming what was expected.                                 |
+| `--variant <v>`        | Required where a type has more than one template. `specification` is the only one: `overview` or `domain`.                                                                                                   |
+| `--from <path>`        | See below.                                                                                                                                                                                                   |
 
 Plus the fields a type declares, as kebab-case flags: on an item `--kind`,
 `--parent`, `--scope`, `--cycle`, `--blocked-by`, `--source`, `--priority`,

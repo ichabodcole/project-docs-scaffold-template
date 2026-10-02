@@ -730,6 +730,13 @@ export function appendRelated(body: string, bullet: string): string {
 // The catalog
 // ---------------------------------------------------------------------------------------
 
+/**
+ * A word Prettier never puts at the start of a line, because there it would
+ * open a block: a list marker (`-`, `+`, `*`, `1.`, `1)`), a heading (`#`) or
+ * a blockquote (`>…`). Prettier's own test, from its Markdown printer.
+ */
+const NO_BREAK_BEFORE = /^>|^(?:[*+-]|#{1,6}|\d+[).])$/;
+
 /** A catalog entry, wrapped the way Prettier (`proseWrap: always`, width 80)
  *  wraps one: the link is a single unbreakable token, and the dash and the
  *  description flow after it. */
@@ -738,15 +745,23 @@ export function catalogEntry(
   target: string,
   description: string
 ): string[] {
-  const lines: string[] = [];
   // The dash is a word of its own, as it is to Prettier: when it does not fit
   // after the link it opens the next line rather than overrunning this one.
-  let line = `- [${title}](${target})`;
+  // A word in NO_BREAK_BEFORE is bound to the word before it, and the two move
+  // to the next line together — a continuation line opening `- ` would be read
+  // as a nested list, and Prettier would rewrite the entry.
+  const units: string[] = [];
   for (const word of ["—", ...description.split(/\s+/).filter(Boolean)]) {
-    if (line.length + 1 + word.length <= PRINT_WIDTH) line += ` ${word}`;
+    if (units.length && NO_BREAK_BEFORE.test(word)) units[units.length - 1] += ` ${word}`;
+    else units.push(word);
+  }
+  const lines: string[] = [];
+  let line = `- [${title}](${target})`;
+  for (const unit of units) {
+    if (line.length + 1 + unit.length <= PRINT_WIDTH) line += ` ${unit}`;
     else {
       lines.push(line);
-      line = `  ${word}`;
+      line = `  ${unit}`;
     }
   }
   lines.push(line);

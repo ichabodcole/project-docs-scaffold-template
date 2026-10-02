@@ -6,7 +6,7 @@ description:
   closed cycle created from an older template, with its placeholder still in
   place, passes.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0ec94-2723-71b3-8c47-74fd0b197420
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
@@ -27,6 +27,6 @@ closed Hollowbrook with no Outcome was not reported.
 
 ## Definition of done
 
-- [ ] A closed or abandoned cycle whose Outcome is only a placeholder from any
+- [x] A closed or abandoned cycle whose Outcome is only a placeholder from any
       released cycle template (or a lone `_Written at close…_` line) is
       reported, with a test.

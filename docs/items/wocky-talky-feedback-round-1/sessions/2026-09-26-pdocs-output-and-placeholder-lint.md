@@ -80,7 +80,7 @@ and is reported, and `new cycle` fails without `--appetite` and passes with it;
 20 stripper edge cases; four new fixes neutered, each failing its test.
 
 **Follow-up items:** filed in `triage` from this session:
-[the catalog line can wrap into a nested list](../../catalog-line-wraps-into-a-list.md),
+[the catalog line can wrap into a nested list](../../catalog-line-wraps-into-a-list/item.md),
 [placeholder-lint wording polish](../../placeholder-lint-wording-polish.md). Two
 finalize-branch wording points from the re-review (the session `tags` bullet and
 the handoff step not suggesting `--title`/`--description`) go with rows 1–3 of

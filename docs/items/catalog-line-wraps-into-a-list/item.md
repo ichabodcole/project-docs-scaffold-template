@@ -6,7 +6,7 @@ description:
   can start a continuation line with it, and Prettier then reads a nested list
   and rewrites the entry.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0e03f-d229-74d5-a5ba-1a68fde61ec7
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-26 }
@@ -32,11 +32,11 @@ format check failed until the file was reformatted by hand.
 
 ## Definition of done
 
-- [ ] A catalog line whose description contains `-`, `+` or `1. ` at a wrap
+- [x] A catalog line whose description contains `-`, `+` or `1. ` at a wrap
       point is left unchanged by `prettier --check`, with a test.
-- [ ] A link rewritten by promotion or `pdocs archive` leaves the file
+- [x] A link rewritten by promotion or `pdocs archive` leaves the file
       Prettier-stable, with a test.
 
 ## Related Documents
 
-- [pdocs output and the placeholder lint — 2026-09-26](./wocky-talky-feedback-round-1/sessions/2026-09-26-pdocs-output-and-placeholder-lint.md)
+- [pdocs output and the placeholder lint — 2026-09-26](../wocky-talky-feedback-round-1/sessions/2026-09-26-pdocs-output-and-placeholder-lint.md)

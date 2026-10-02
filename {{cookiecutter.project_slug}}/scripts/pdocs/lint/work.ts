@@ -194,19 +194,45 @@ export function outcomeParagraphs(body: string): string[] | null {
 }
 
 /**
+ * The Outcome paragraphs every RELEASED cycle template has shipped, whitespace
+ * collapsed as `outcomeParagraphs` leaves them. A migration replaces the
+ * project's template but not the cycles created from it, so a cycle can hold
+ * a placeholder its project's template no longer has. Add the old paragraphs
+ * here whenever the template's Outcome changes.
+ */
+const RELEASED_OUTCOME_PLACEHOLDERS: readonly string[] = [
+  // v7.0.0 – v9.0.0
+  "_Written at close, not before._",
+  "[What shipped. What was cut, and why. What was learned that will change how the next cycle is scoped. Two paragraphs is usually enough; the point is that a reader six months from now can tell what happened without reading every session.]",
+  // v9.0.1 –
+  "_Written at close, not before — and for an `abandoned` cycle too._",
+  "[What shipped. What was cut, and why. What carried over to the next cycle: each item still open, and the cycle it joined. What was learned that will change how the next cycle is scoped. For an `abandoned` cycle, what was falsified: the assumption that stopped it. Two paragraphs is usually enough; the point is that a reader six months from now can tell what happened without reading every session.]",
+];
+
+/**
+ * The italic prompt line, in whatever wording a template gave it: ONE italic
+ * run. Prose after it on the same line — `_Written at close…_ We shipped A;
+ * B was _cut_` — is an Outcome, and is not matched.
+ */
+const WRITTEN_AT_CLOSE = /^_Written at close\b[^_]*_$/;
+
+/**
  * A `closed` or `abandoned` cycle whose `## Outcome` is missing, empty, or
- * still only the cycle template's own placeholder paragraphs — read from the
- * template the project has, so an edited template's placeholder counts. A
- * `planned` or `active` cycle is not asked: the Outcome is written at close.
+ * still only placeholder paragraphs: the project's own cycle template's (so an
+ * edited template's placeholder counts), any released template's, or a lone
+ * `_Written at close…_` line. A `planned` or `active` cycle is not asked: the
+ * Outcome is written at close.
  */
 export function cycleOutcomeProblems(ctx: Ctx, cycles: readonly WorkEntity[]): string[] {
   const ended = cycles.filter((c) => c.lifecycle !== null && CYCLE_ENDS.has(c.lifecycle));
   if (ended.length === 0) return [];
   const template = [registryIndex(ctx.config).get("cycle")?.template ?? []].flat()[0];
   const tplPath = template ? join(ctx.repoRoot, template) : null;
-  const placeholder = new Set(
-    tplPath && existsSync(tplPath) ? outcomeParagraphs(bodyOf(readFileSync(tplPath, "utf8"))) ?? [] : []
-  );
+  const placeholder = new Set([
+    ...RELEASED_OUTCOME_PLACEHOLDERS,
+    ...(tplPath && existsSync(tplPath) ? outcomeParagraphs(bodyOf(readFileSync(tplPath, "utf8"))) ?? [] : []),
+  ]);
+  const isPlaceholder = (p: string) => placeholder.has(p) || WRITTEN_AT_CLOSE.test(p);
   const problems: string[] = [];
   for (const c of ended) {
     const abs = join(ctx.repoRoot, c.path);
@@ -217,8 +243,8 @@ export function cycleOutcomeProblems(ctx: Ctx, cycles: readonly WorkEntity[]): s
         ? "has no `## Outcome` section"
         : paragraphs.length === 0
           ? "has an empty `## Outcome`"
-          : paragraphs.every((p) => placeholder.has(p))
-            ? "still has the template's placeholder under `## Outcome`"
+          : paragraphs.every(isPlaceholder)
+            ? "still has a cycle template's placeholder under `## Outcome`"
             : null;
     if (why)
       problems.push(

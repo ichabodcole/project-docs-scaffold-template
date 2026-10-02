@@ -2339,6 +2339,29 @@ describe("PLACEHOLDER — a document still holding its template's placeholders",
     expect(problems).toHaveLength(expected);
   });
 
+  // An item's template has no `tags:` at all, so a lone `feature` tag is not
+  // the template's anything: the row names the words, not their origin.
+  test("an item's lone placeholder tag is reported as a placeholder word, not as the template's", () => {
+    const item =
+      fm({
+        type: "item",
+        title: "Real",
+        description: "A real item.",
+        tags: "[feature]",
+        status: "draft",
+        lifecycle: "triage",
+        id: "0190f4b2-7c3a-7d4e-8f00-000000000002",
+        kind: "task",
+        generated: GENERATED,
+      }) + "\n# Real\n";
+    const problems = thinTier(fixture({ ...templates(), "docs/items/real.md": item })).filter(
+      (p) => p.startsWith("PLACEHOLDER")
+    );
+    expect(problems).toEqual([
+      "PLACEHOLDER    docs/items/real.md: `tags` holds only placeholder words [feature]",
+    ]);
+  });
+
   test("a cycle's `appetite` still the template's prompt is reported", () => {
     const cycle = FRESH_CYCLE.replace(
       "started: YYYY-MM-DD",

@@ -427,20 +427,20 @@ the full id.
 
 ### What the lint checks about work
 
-| Finding                                                 | Means                                                                                                          |
-| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `MISSING id` / `kind`                                   | an item lacks a required field                                                                                 |
-| `BAD ID`, `BAD KIND`, `BAD PRIORITY`                    | a value outside its vocabulary; an uppercase id is reported too                                                |
-| `BAD LIFECYCLE`                                         | a state the type does not take — `triage` on a feature, say                                                    |
-| `BAD PARENT`, `BAD CYCLE`, `BAD BLOCKED_BY`, `BAD FROM` | a reference that resolves to nothing, or to the wrong kind of thing                                            |
-| `BLOCKED CYCLE`                                         | `blocked_by` loops, or an item blocks itself                                                                   |
-| `BAD SCOPE`                                             | a `scope` not declared in `lint.scopes`, or more than one value                                                |
-| `DUPLICATE ID`, `DUPLICATE SLUG`                        | two items share an id, or one slug exists both live and archived                                               |
-| `MISSING ENTITY FILE`                                   | a folder in `features/` or `items/` with no `feature.md` or `item.md`                                          |
-| `MISPLACED ENTITY`                                      | a `feature.md` under `items/`, or an `item.md` under `features/`                                               |
-| `ARCHIVED NOT TERMINAL`                                 | something in `_archive/` that is not `done` or `dropped`                                                       |
-| `ITEM DELETED`                                          | an item left the tree without reaching `dropped`                                                               |
-| `NO OUTCOME`                                            | a `closed` or `abandoned` cycle whose `## Outcome` is missing, empty or still the cycle template's placeholder |
+| Finding                                                 | Means                                                                                                                                                                                               |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MISSING id` / `kind`                                   | an item lacks a required field                                                                                                                                                                      |
+| `BAD ID`, `BAD KIND`, `BAD PRIORITY`                    | a value outside its vocabulary; an uppercase id is reported too                                                                                                                                     |
+| `BAD LIFECYCLE`                                         | a state the type does not take — `triage` on a feature, say                                                                                                                                         |
+| `BAD PARENT`, `BAD CYCLE`, `BAD BLOCKED_BY`, `BAD FROM` | a reference that resolves to nothing, or to the wrong kind of thing                                                                                                                                 |
+| `BLOCKED CYCLE`                                         | `blocked_by` loops, or an item blocks itself                                                                                                                                                        |
+| `BAD SCOPE`                                             | a `scope` not declared in `lint.scopes`, or more than one value                                                                                                                                     |
+| `DUPLICATE ID`, `DUPLICATE SLUG`                        | two items share an id, or one slug exists both live and archived                                                                                                                                    |
+| `MISSING ENTITY FILE`                                   | a folder in `features/` or `items/` with no `feature.md` or `item.md`                                                                                                                               |
+| `MISPLACED ENTITY`                                      | a `feature.md` under `items/`, or an `item.md` under `features/`                                                                                                                                    |
+| `ARCHIVED NOT TERMINAL`                                 | something in `_archive/` that is not `done` or `dropped`                                                                                                                                            |
+| `ITEM DELETED`                                          | an item left the tree without reaching `dropped`                                                                                                                                                    |
+| `NO OUTCOME`                                            | a `closed` or `abandoned` cycle whose `## Outcome` is missing, empty or still only placeholder: the project's cycle template's, any released cycle template's, or a lone `_Written at close…_` line |
 
 `released_in` is never checked.
 

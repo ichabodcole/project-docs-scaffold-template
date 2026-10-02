@@ -46,7 +46,7 @@ for advisories and one archive rule across items, features and cycles.
   — `pdocs check` warns on a filled document that keeps its template header, and
   the header says to remove it. After draft-review.
 - **[item/outcome-lint-old-template-placeholders](../items/outcome-lint-old-template-placeholders.md)**,
-  **[item/catalog-line-wraps-into-a-list](../items/catalog-line-wraps-into-a-list.md)**
+  **[item/catalog-line-wraps-into-a-list](../items/catalog-line-wraps-into-a-list/item.md)**
   and
   **[item/placeholder-lint-wording-polish](../items/placeholder-lint-wording-polish.md)**
   — small lint and `pdocs new` fixes, landed as one batched branch.
@@ -69,4 +69,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 <!-- One line per branch, appended by init-branch: `- <type>/<slug> (open)`. -->
 
 - feature/archive-closed-cycles (open)
-- fix/pdocs-small-fixes (open)
+- fix/pdocs-small-fixes (landed 2026-10-01)

@@ -6,7 +6,7 @@ description:
   template's prompt', and the pdocs reference's --title row attaches 'mangles
   acronyms' to the H1 clause.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0e03f-d272-73dc-886a-8f28317aef00
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-26 }
@@ -28,9 +28,9 @@ default it describes.
 
 ## Definition of done
 
-- [ ] The tags message says the tags are only placeholder words (`area`,
+- [x] The tags message says the tags are only placeholder words (`area`,
       `feature`), not that they are the template's.
-- [ ] The `--title` row attaches the acronym note to the slug default.
+- [x] The `--title` row attaches the acronym note to the slug default.
 
 ## Related Documents
 
