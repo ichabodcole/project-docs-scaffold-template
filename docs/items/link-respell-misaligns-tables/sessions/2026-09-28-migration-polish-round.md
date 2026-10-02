@@ -10,33 +10,6 @@ status: stable
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 ---
 
-<!--
-OWNERSHIP (of this template file — not of documents created from it): it is
-yours to edit. The scaffold records its hash, so a migration updates it only
-while you have not touched it. Frontmatter is the contract the lint enforces;
-below it is yours. See docs/SCHEMA.md → "Who owns which file".
-
-USAGE: `bun scripts/pdocs/cli.ts new session <topic> --owner feature/<slug>` (or
-`item/<slug>`) writes this as sessions/YYYY-MM-DD-<topic>.md in the owner's
-folder, dated today, and links the owner.
-
-This is your dev journal - write what's relevant, skip what's not. Sessions are informal and flexible.
-Focus on what stands out: deviations from plan, unexpected discoveries, what you would do differently.
-
-Sessions serve two audiences:
-1. YOU (or future you) - reflecting on what happened, capturing context for later
-2. THE NEXT DEVELOPER - if someone takes over your work, this provides breadcrumbs to understand where
-   you left off, what issues you hit, and what went off-plan
-
-If everything went smoothly and there's nothing notable, you might only need a few lines.
-If you wrestled with a complex bug for hours, write as much as helps capture what happened.
-
-A step a future agent must follow does not stay here: add it, with its check, to
-the playbook for that kind of work (docs/playbooks/README.md).
-
-For more guidance, see the owner folder's README: ../../README.md
--->
-
 # Migration polish round — 2026-09-28
 
 Part of

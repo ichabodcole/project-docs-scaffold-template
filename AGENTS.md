@@ -104,6 +104,12 @@ nothing; a changed sentence means everything, and a byte comparison cannot tell
 them apart. The `.ts` files are compared byte for byte, since Prettier's scope
 here is `**/*.md` and code has no excuse to differ at all.
 
+It also holds `docs/.pdocs-seed.json` to the files it records: every entry's
+hash must equal `hashOf` (from `scripts/pdocs/seed.ts`) of `docs/<path>`. An
+edited template whose hash was not refreshed fails as `STALE SEED`, and the
+failure prints the one-line command that refreshes the record. It lives in the
+mirror check because the seeded files are already compared byte for byte there.
+
 Two files are exempt, listed in the script with their reasons:
 `docs/PROJECT_MANIFESTO.md` and `docs/index.md` are structurally mirrored but
 their content differs by design — this repository's are filled in, the payload's
@@ -176,7 +182,7 @@ the lint.
 ```bash
 npm run check         # The gate: format:check + docs:lint + check:version + check:mirror + check:dist + test
 npm run check:version # Every release-please marker agrees with package.json
-npm run check:mirror  # Payload and docs/ agree, normalized through Prettier
+npm run check:mirror  # Payload and docs/ agree, normalized through Prettier; seed hashes are current
 npm run check:dist    # dist/ is what build:dist would produce from plugins/
 npm run build:dist    # Rebuild dist/ from plugins/ — run it when check:dist fails
 npm run docs:lint     # Frontmatter, links, anchors and the document graph

@@ -11,7 +11,12 @@
 //
 // The JSON rendering is NEW output and covered by tests of its own.
 
-import { type Advisory, advisoryLines, reviewAdvisory } from "../advisories.ts";
+import {
+  type Advisory,
+  advisoryLines,
+  reviewAdvisory,
+  templateHeaderAdvisory,
+} from "../advisories.ts";
 import type { Command, Invocation } from "../cli.ts";
 import { docsLintSummary } from "../docs-lint/index.ts";
 import { ExitCode, Outcome, UsageError, printEnvelope } from "../envelope.ts";
@@ -43,10 +48,12 @@ export interface CheckData {
    *  page leaves no other trace, so the list is the only way to see it. */
   templates: string[];
   /**
-   * What the gate reports and does not fail on by itself: today the
-   * `work-item-review` advisory, over every item the review rule finds. Empty
-   * when there is nothing to say. Under `checks.workItemReview.mode: strict`
-   * the same items are also `UNREVIEWED` problems.
+   * What the gate reports and does not fail on by itself: the
+   * `work-item-review` advisory, over every item the review rule finds, then
+   * the `template-header` advisory, over every document that still holds a
+   * template's header comment. Empty when there is nothing to say. Under
+   * `checks.workItemReview.mode: strict` the review items are also
+   * `UNREVIEWED` problems.
    */
   advisories: Advisory[];
 }
@@ -54,8 +61,9 @@ export interface CheckData {
 /** The advisories `pdocs check` attaches. An invalid setting is a `BAD CONFIG`
  *  problem here, not a `bad-config` advisory. */
 export function checkAdvisories(report: LintReport, ctx: Invocation["ctx"]): Advisory[] {
-  const a = reviewAdvisory(report.reviews, ctx.config.checks.workItemReview.mode);
-  return a ? [a] : [];
+  const review = reviewAdvisory(report.reviews, ctx.config.checks.workItemReview.mode);
+  const header = templateHeaderAdvisory(report.templateHeaders);
+  return [...(review ? [review] : []), ...(header ? [header] : [])];
 }
 
 export function checkData(report: LintReport, advisories: Advisory[] = []): CheckData {

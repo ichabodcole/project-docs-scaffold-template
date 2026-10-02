@@ -6,7 +6,7 @@ description:
   document, and agents often leave it in afterwards; pdocs check should warn on
   it, and the header should say to remove it.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0f942-cb7e-7456-a2c3-b115102b17dc
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-01 }
@@ -36,17 +36,17 @@ the block itself say to remove it.
   is reported as a warning, not an error: one row per document, naming the file
   and what to delete. A warning keeps a clean exit code, using the same advisory
   tier as the
-  [draft review advisories](./pdocs-draft-review-advisories/item.md).
+  [draft review advisories](../pdocs-draft-review-advisories/item.md).
 - **The per-section comments are out of scope.** Guidance comments further down
   a template stay where they are and are not checked.
 
 ## Definition of done
 
-- [ ] Every shipped template's header carries a line saying to delete the block
+- [x] Every shipped template's header carries a line saying to delete the block
       once the document is filled, in this repository and the payload.
-- [ ] `pdocs check` reports a non-template document that still holds the header
+- [x] `pdocs check` reports a non-template document that still holds the header
       as a warning, with the file and the fix; templates themselves are never
       reported. Warnings alone leave the exit code at success, in text and JSON.
-- [ ] Tests cover a filled document with the header, a template, a document
+- [x] Tests cover a filled document with the header, a template, a document
       without it, and the exit code when only warnings are found.
-- [ ] The documents in this repository that carry the header have it removed.
+- [x] The documents in this repository that carry the header have it removed.

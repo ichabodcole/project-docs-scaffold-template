@@ -667,6 +667,31 @@ not `stable`; `--all` adds the archived ones. It never advises and never fails:
 review them in batches, by choice — the `sweep-project` skill has the steps —
 and leave a record `draft` when nobody can vouch for it now.
 
+### The template-header advisory
+
+Every template opens with a header comment whose first line is
+`OWNERSHIP (of this template file`. `pdocs new` copies it into the document it
+writes, as guidance for whoever fills it in, and the header says so itself:
+`ONCE WRITTEN: delete this whole comment block from the document.`
+
+`pdocs check` reports every document under the docs root that still holds it —
+an HTML comment, outside code, that opens with that line — as one advisory with
+`id: "template-header"`, printed after the verdict. Templates are never
+reported, and neither is a `lint.exclude`d file, a page in a `lint.skip`
+directory, or a document that quotes the line in prose or in code: a fenced
+block (backticks or tildes), an indented block, or an inline code span. Only
+`check` reports it; views do not.
+
+```text
+advisory (template-header): 2 documents still hold their template's header comment: docs/items/fix-login/item.md and docs/items/fix-login/sessions/2026-10-02-first-pass.md.
+  next: Delete the whole comment block that starts `OWNERSHIP (of this template file` from each, from its `<!--` to its `-->`; leave the rest of the document as it is.
+```
+
+The message names five documents, then `and N more`. In JSON the advisory's
+`refs` lists every document's path, relative to the repository root. It is a
+warning: it is never a problem, never counts in `total`, and leaves the exit
+code as it is. Guidance comments further down a template are not checked.
+
 ## State groups
 
 Work items and features carry these states in `lifecycle`, and each state
@@ -887,6 +912,13 @@ bun scripts/pdocs/cli.ts report               # what is missing — the backfill
 bun scripts/pdocs/cli.ts graph --format json  # the whole graph as JSON
 bun scripts/pdocs/cli.ts view board           # the work, by state group
 ```
+
+`check` prints its advisories after the verdict —
+[the review advisory](#the-review-advisory) and
+[the template-header advisory](#the-template-header-advisory) — and its JSON
+`data` carries them as `advisories`. An advisory never changes the exit code;
+under `checks.workItemReview.mode: strict` the review findings are also
+`UNREVIEWED` problems, and those do.
 
 The scaffold ships no `package.json` wrapping these. A project that wants
 `npm run docs:lint` can add it, but the CLI is the interface and the form above

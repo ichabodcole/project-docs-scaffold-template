@@ -38,8 +38,9 @@ export interface Advisory {
   action: string;
   /**
    * The references a caller can act on — `item/<slug>`, `feature/<slug>`,
-   * `cycle/<slug>` — when the advisory is about particular entities. The one
-   * field a caller reads to know WHICH, whatever the advisory's kind.
+   * `cycle/<slug>` — when the advisory is about particular entities, or the
+   * repo-relative paths when it is about particular files (`template-header`).
+   * The one field a caller reads to know WHICH, whatever the advisory's kind.
    */
   refs?: string[];
 }
@@ -478,6 +479,51 @@ export function adviseReview(ctx: Ctx, items: readonly ReviewItem[]): Advisory[]
   const advisory = reviewAdvisory(items, ctx.config.checks.workItemReview.mode);
   if (advisory) out.push(advisory);
   return out;
+}
+
+// ---------------------------------------------------------------------------------------
+// The template-header advisory
+// ---------------------------------------------------------------------------------------
+//
+// Every template opens with a header comment whose first line is
+// `OWNERSHIP (of this template file`, and `pdocs new` copies it in as guidance
+// for filling the document. A filled document that still holds it is reported
+// by `pdocs check` only, as ONE advisory naming every such document. It never
+// fails the gate; templates themselves are never reported.
+
+/** The template-header advisory's `id`. */
+export const TEMPLATE_HEADER_ADVISORY = "template-header";
+
+export interface TemplateHeaderAdvisory extends Advisory {
+  id: typeof TEMPLATE_HEADER_ADVISORY;
+  /** Each document's path, repo-relative. */
+  refs: string[];
+}
+
+/** At most `max` paths named, then `and N more`. */
+function namedPaths(paths: readonly string[], max = 5): string {
+  const shown = paths.slice(0, max);
+  const more = paths.length - shown.length;
+  return more > 0 ? `${shown.join(", ")} and ${more} more` : joined(shown);
+}
+
+/**
+ * The template-header advisory over `paths`, repo-relative, or `null` when
+ * there are none. Pure, like the others.
+ */
+export function templateHeaderAdvisory(paths: readonly string[]): TemplateHeaderAdvisory | null {
+  if (paths.length === 0) return null;
+  const n = paths.length;
+  return {
+    id: TEMPLATE_HEADER_ADVISORY,
+    message:
+      `${n} document${n === 1 ? "" : "s"} still ${n === 1 ? "holds" : "hold"} ` +
+      `${n === 1 ? "its" : "their"} template's header comment: ${namedPaths(paths)}.`,
+    action:
+      "Delete the whole comment block that starts `OWNERSHIP (of this template file` from each, " +
+      "from its `<!--` to its `-->`; leave the rest of the document as it is.",
+    refs: [...paths],
+  };
 }
 
 /**

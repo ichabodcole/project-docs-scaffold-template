@@ -221,8 +221,20 @@ bun scripts/pdocs/cli.ts check [--root <path>] [--format text|json] [--against <
 ```
 
 `data`: `clean` (bool), `adopting` (bool), `total` (int), `problems[]` — each
-`{ tier, message }` where `tier` is `library` or `workbench` — `outside` (int)
-and `templates[]`.
+`{ tier, message }` where `tier` is `library` or `workbench` — `outside` (int),
+`templates[]` and `advisories[]`.
+
+`advisories[]` holds what the gate reports without failing on it, printed in
+text after the verdict: the review advisory (`work-item-review`, see `set`
+below) and the **template-header advisory** (`id` `template-header`). The second
+names every document under the docs root, templates aside, that still holds a
+template's header comment — the block `pdocs new` copies in, opening `<!--` then
+`OWNERSHIP (of this template file`, outside code. A document that quotes the
+line in prose or in code (a fenced or indented block, an inline span) is not
+reported, nor is a `lint.exclude`d file or a `lint.skip` directory. Its `refs`
+are the documents' repo-relative paths; the message names five, then
+`and N more`. Delete that whole comment block from each, and nothing else.
+Neither advisory changes the exit code.
 
 `outside` is how many tracked Markdown files **outside the docs root** were read
 — `README.md`, `AGENTS.md`, anything `git ls-files '*.md'` lists — for links and
@@ -572,7 +584,10 @@ What it writes: the template, with `type`, `title`, `generated`, and the flags
 filled in; a date the template leaves as `YYYY-MM-DD` (a cycle's `started`) set
 to today unless its flag is passed; and none of the template's inline `# …`
 guidance comments in the frontmatter. `--title` also fills the template's H1;
-without it the H1 is left as the template's, for you to write.
+without it the H1 is left as the template's, for you to write. The body keeps
+the template's header comment (`OWNERSHIP (of this template file …`) as guidance
+for filling it: delete that whole block once the document is written, or
+`pdocs check` reports it as a `template-header` advisory.
 
 JSON `data`: `path` (the document), `type` (the resolved registry type),
 `created[]` — every file written or modified, document first — `promoted` (the

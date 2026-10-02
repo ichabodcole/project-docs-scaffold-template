@@ -422,8 +422,10 @@ template's three placeholders:
   reviewer without asking you.
 
 None of those three bracketed prompts may remain in an item this step created.
-The `- [x]` ticks you write are not prompts, and the template's leading HTML
-comment, which the CLI copies in, stays as it is.
+The `- [x]` ticks you write are not prompts. Once the body is written, delete
+the template's leading HTML comment, the block that starts
+`OWNERSHIP (of this template file`, which the CLI copies in; `pdocs check`
+reports one left in place as a `template-header` advisory.
 
 **Then start it.** Show the user the item's description and definition of done
 as you wrote them. If they want changes, make them first. When they approve that
@@ -478,10 +480,11 @@ in the body: the H1 (`# [Topic] — YYYY-MM-DD`, filled only when you pass
 `--title`), every bracketed prompt in the template's sections, answered from the
 work or deleted when a section does not apply, and the template's example
 bullets under Related Documents (delete them; keep the owner link the CLI
-wrote). Add a `## Review` section for the census. `pdocs check` reports a
-frontmatter value, date, `tags` or H1 still the template's own placeholder
-(`PLACEHOLDER`); it does not judge the body's prompts. Those are on you. For the
-frontmatter:
+wrote). Delete the template's leading comment block, the one that starts
+`OWNERSHIP (of this template file`, once the session is written. Add a
+`## Review` section for the census. `pdocs check` reports a frontmatter value,
+date, `tags` or H1 still the template's own placeholder (`PLACEHOLDER`); it does
+not judge the body's prompts. Those are on you. For the frontmatter:
 
 - `type: session` — written by the CLI; the folder decides it. Don't change it.
 - `title` — the session's topic and its date, matching the H1

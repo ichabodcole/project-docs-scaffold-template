@@ -43,7 +43,7 @@ for advisories and one archive rule across items, features and cycles.
 - **[item/pdocs-draft-review-advisories](../items/pdocs-draft-review-advisories/item.md)**
   — warn (or, in `strict`, refuse) when unreviewed work starts. Adds the
   advisory tier to `pdocs check`. After the archive advisory.
-- **[item/template-header-left-in-documents](../items/template-header-left-in-documents.md)**
+- **[item/template-header-left-in-documents](../items/template-header-left-in-documents/item.md)**
   — `pdocs check` warns on a filled document that keeps its template header, and
   the header says to remove it. After draft-review.
 - **[item/outcome-lint-old-template-placeholders](../items/outcome-lint-old-template-placeholders.md)**,
@@ -75,4 +75,4 @@ _Written at close, not before — and for an `abandoned` cycle too._
 - feature/pdocs-work-portfolio-view (landed 2026-10-02)
 - feature/pdocs-cycle-filename-lookup (landed 2026-10-02)
 - feature/pdocs-draft-review-advisories (landed 2026-10-02)
-- feature/template-header-left-in-documents (open)
+- feature/template-header-left-in-documents (landed 2026-10-02)

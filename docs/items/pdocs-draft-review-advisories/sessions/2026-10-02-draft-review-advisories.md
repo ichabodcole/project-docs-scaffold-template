@@ -162,7 +162,7 @@ Left as they are:
 
 ## Follow-up
 
-- [Template header left in documents](../../template-header-left-in-documents.md)
+- [Template header left in documents](../../template-header-left-in-documents/item.md)
   is next in the cycle.
 - The 37 finished drafts can go through the sweep-project Audit Path when Cole
   wants.

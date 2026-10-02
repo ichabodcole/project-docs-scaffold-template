@@ -17,6 +17,8 @@ yours to edit. The scaffold records its hash, so a migration updates it only
 while you have not touched it. Frontmatter is the contract the lint enforces;
 below it is yours. See docs/SCHEMA.md → "Who owns which file".
 
+ONCE WRITTEN: delete this whole comment block from the document.
+
 USAGE: `bun scripts/pdocs/cli.ts new cycle <slug>` writes this as
 docs/cycles/YYYY-MM-<slug>.md. That filename is the cycle's identity;
 commands take it with or without `.md`.

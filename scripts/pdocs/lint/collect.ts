@@ -25,6 +25,7 @@ import {
   graphTier,
   libraryFieldChecks,
   schemaTableChecks,
+  templateHeaderPaths,
   templatePaths,
   templateProblems,
   templateTest,
@@ -62,6 +63,12 @@ export interface LintReport {
    * `checks.workItemReview.mode` is `strict`.
    */
   reviews: ReviewItem[];
+  /**
+   * Documents under the docs root, not templates, that still hold a template's
+   * header comment, repo-relative. Reported as the `template-header` advisory;
+   * never a problem, never counted in `total`.
+   */
+  templateHeaders: string[];
 }
 
 /**
@@ -144,5 +151,6 @@ export function collect(ctx: Ctx): LintReport {
     templates: templatePaths(ctx),
     adopting: ctx.config.lint.adopting,
     reviews,
+    templateHeaders: templateHeaderPaths(ctx),
   };
 }
