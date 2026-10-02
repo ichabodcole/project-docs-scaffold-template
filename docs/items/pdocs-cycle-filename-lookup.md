@@ -5,7 +5,7 @@ description:
   Let cycle lookup accept either the existing filename stem or the full filename
   with .md.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0f8c4-33cb-7560-8185-1a7042f56393
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
