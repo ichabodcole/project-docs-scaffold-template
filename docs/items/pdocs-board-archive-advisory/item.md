@@ -5,7 +5,7 @@ description:
   Emit an actionable advisory when unarchived finished items, features or cycles
   crowd a live view, governed by one archive threshold, in text and JSON output.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0f8bb-5027-77cd-b8e5-13948e071aa0
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
@@ -22,7 +22,7 @@ done, and six dropped items. The archive already provides a way to shorten that
 output; the missing touch point is a hint that it is time to use it.
 
 The same holds for features and, once
-[cycles can be archived](./archive-closed-cycles/item.md), for cycles. One rule
+[cycles can be archived](../archive-closed-cycles/item.md), for cycles. One rule
 governs all three types:
 
 - **Live views hide archived work** unless a deliberate flag asks for it
@@ -76,38 +76,38 @@ for moves and link updates.
 
 ## Definition of done
 
-- [ ] One rule, stated in the work documentation: live views hide archived
+- [x] One rule, stated in the work documentation: live views hide archived
       items, features and cycles by default, and show them only on an explicit
       flag; `find` returns archived records as it does today.
-- [ ] `.project-docs.json` supports `checks.archive.threshold`, defaults it to
+- [x] `.project-docs.json` supports `checks.archive.threshold`, defaults it to
       25 when omitted, and validates explicit values as nonnegative integers.
-- [ ] Each live view counts unarchived finished work for each type it lists, and
+- [x] Each live view counts unarchived finished work for each type it lists, and
       emits one advisory naming every type above the threshold; archived records
       do not contribute.
-- [ ] Text output includes the counts and actionable archive guidance without
+- [x] Text output includes the counts and actionable archive guidance without
       one warning per entity.
-- [ ] JSON output exposes a stable machine-readable advisory identifier and, per
+- [x] JSON output exposes a stable machine-readable advisory identifier and, per
       type, the affected count, the threshold and the remediation, alongside the
       existing view data.
-- [ ] Advisory-only output preserves the successful exit code and changes no
+- [x] Advisory-only output preserves the successful exit code and changes no
       files.
-- [ ] The calling workflow proposes a concrete archive selection before acting;
+- [x] The calling workflow proposes a concrete archive selection before acting;
       an existing user authorization can cover that selection.
-- [ ] Tests cover omitted configuration, custom limits (10, 25, 100), invalid
+- [x] Tests cover omitted configuration, custom limits (10, 25, 100), invalid
       values, zero, below/at/above the threshold for each type, mixed finished
       states, archived records, text/JSON parity, and unchanged view membership.
-- [ ] Documentation explains the rule, the advisory, the configuration key, the
+- [x] Documentation explains the rule, the advisory, the configuration key, the
       default and the strict greater-than boundary. Payload copies match their
       source where affected.
 
 ## Related work
 
-- [Archive closed cycles](./archive-closed-cycles/item.md) supplies the cycle
+- [Archive closed cycles](../archive-closed-cycles/item.md) supplies the cycle
   archive this rule counts against. Land it first, or have this item count
   cycles once it does.
-- [Portfolio view](./pdocs-work-portfolio-view.md) is where feature and cycle
+- [Portfolio view](../pdocs-work-portfolio-view.md) is where feature and cycle
   advisories appear.
-- [Draft review advisories](./pdocs-draft-review-advisories.md) use the same
+- [Draft review advisories](../pdocs-draft-review-advisories.md) use the same
   report-condition, prompt-for-action pattern and the same `checks` section.
 
 Open-only defaults, recent completion dates, automatic archiving, and bulk

@@ -352,23 +352,55 @@ See below.
 
 ```bash
 bun scripts/pdocs/cli.ts view <backlog|board|ready|feature|cycle|scope|unreleased|released> [<arg>] \
-                              [--features] [--since <YYYY-MM-DD>]
+                              [--features] [--all] [--since <YYYY-MM-DD>]
 ```
 
 Every view is computed from frontmatter; none is a file anyone writes.
 
-| View                 | What it lists                                                                                                  |
-| -------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `backlog`            | Items in the unstarted group (`triage`, `backlog`, `ready`), by priority (urgent first, none last), then age   |
-| `board`              | Items grouped by state group (unstarted, started, completed, cancelled); `--features` adds features. Live only |
-| `ready`              | `ready` items whose every `blocked_by` item is `done` — what can start now                                     |
-| `feature <slug>`     | The feature and the items whose `parent` names it                                                              |
-| `cycle <slug>`       | The items whose `cycle` names it, and `closable`: at least one item, and every one `done` or `dropped`         |
-| `scope <name>`       | Features and items in that scope                                                                               |
-| `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                         |
-| `released <version>` | Features and items with that `released_in`                                                                     |
+| View                 | What it lists                                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `backlog`            | Items in the unstarted group (`triage`, `backlog`, `ready`), by priority (urgent first, none last), then age                             |
+| `board`              | Items grouped by state group (unstarted, started, completed, cancelled); `--features` adds features. Live only; `--all` adds the archive |
+| `ready`              | `ready` items whose every `blocked_by` item is `done` — what can start now                                                               |
+| `feature <slug>`     | The feature and the items whose `parent` names it                                                                                        |
+| `cycle <slug>`       | The items whose `cycle` names it, and `closable`: at least one item, and every one `done` or `dropped`                                   |
+| `scope <name>`       | Live features and items in that scope; `--all` adds the archive                                                                          |
+| `unreleased`         | `done` features and items with no `released_in`; `--since` limits it by `generated.at`                                                   |
+| `released <version>` | Features and items with that `released_in`                                                                                               |
 
 An unknown view exits 2 and lists the views. Output is deterministic.
+
+**Live views hide archived work** unless `--all` asks for it: `board` and
+`scope` take the flag, and any view that lists cycles hides archived ones the
+same way. `feature`, `cycle`, `unreleased` and `released` show archived records,
+as the record of one entity, release accounting and history. `find` is a query,
+not a view: it returns archived records and never advises.
+
+**Advisories.** Every view's JSON `data` carries `advisories`, empty when there
+is nothing to say. Each has a stable `id`, a `message` and an `action`, plus
+`refs` — the `<type>/<slug>` references a caller can act on — when it is about
+particular entities. A live view that lists a type across the tree — `board` for
+items, and features with `--features` — counts that type's unarchived finished
+work (`done`/`dropped` items and features, `closed`/`abandoned` cycles) against
+`checks.archive.threshold` in `.project-docs.json` (default 25). A type whose
+count is **greater than** the threshold puts it in one advisory: `id`
+`archive-threshold`, the `threshold`, `refs` (every type's candidates), and per
+type the `count`, `lifecycles`, `remediation` and `candidates` (the references
+`pdocs archive` takes, oldest first). Text output ends with the same message and
+its next step, two lines, never one per entity. The view still exits 0 and lists
+exactly what it would without it.
+
+**Acting on one.** The advisory is not permission to archive. Offer the user a
+concrete selection from `refs` — say, every finished item older than the current
+cycle — and run `pdocs archive <ref>` only for what they agree to. A selection
+they already authorized in this conversation counts; don't ask twice.
+
+**A bad setting never takes a view down.** An invalid
+`checks.archive.threshold`, or an unknown key in `checks.archive`, makes `check`
+report `BAD CONFIG` and exit 9. A view still lists as usual and carries a
+`bad-config` advisory in place of the archive advice, whose `issues` give each
+setting's `key`, `value` and what is `expected`. Fix the file; don't raise or
+remove the threshold to silence it.
 
 ### `set` — change a feature's, an item's or a cycle's fields
 

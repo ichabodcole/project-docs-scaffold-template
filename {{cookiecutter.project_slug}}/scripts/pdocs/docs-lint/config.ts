@@ -68,13 +68,61 @@ export interface LintConfig {
   scopes: string[];
 }
 
+/**
+ * Advisory checks: conditions `pdocs` reports and the calling workflow acts on
+ * with the user. Separate from `lint`, whose settings decide what the gate
+ * fails on.
+ */
+export interface ChecksConfig {
+  archive: {
+    /**
+     * How many unarchived finished entities of one type — `done`/`dropped`
+     * items, `done`/`dropped` features, `closed`/`abandoned` cycles — a live
+     * view tolerates before it suggests archiving. The advisory fires when a
+     * type's count is strictly GREATER than this. A nonnegative integer; `0`
+     * advises whenever any finished work of a type is unarchived.
+     */
+    threshold: number;
+  };
+}
+
+/**
+ * An explicit setting that failed validation. It is never silently replaced:
+ * `pdocs check` reports it as `BAD CONFIG`, and a view that reads the setting
+ * reports it as a `bad-config` advisory in place of the advice it would have
+ * given. The value in `checks` is the default meanwhile, so nothing reads a
+ * half-valid number.
+ */
+export interface ConfigIssue {
+  /** The dotted key: `checks.archive.threshold`. */
+  key: string;
+  /** What the file holds there. */
+  value: unknown;
+  /** What it should hold, as a phrase a fix can follow. */
+  expected: string;
+}
+
+/** An issue's value as written in the file. */
+export const issueValue = (i: ConfigIssue): string =>
+  i.value === undefined ? "undefined" : JSON.stringify(i.value);
+
+/** An issue as one line: `checks.archive.threshold is -1  (expected …)`. */
+export const describeIssue = (i: ConfigIssue): string =>
+  `${i.key} is ${issueValue(i)}  (expected ${i.expected})`;
+
 export interface ProjectDocsConfig {
   /** Repository-relative path to the documentation root. */
   docsRoot: string;
   /** The scaffold version this project's docs are on. Release-please bumps it. */
   version: string | null;
   lint: LintConfig;
+  checks: ChecksConfig;
+  /** Explicit `checks` settings that are invalid. Empty when all are valid. */
+  issues: ConfigIssue[];
 }
+
+/** `checks.archive.threshold` when the setting, or its section, is omitted. */
+export const DEFAULT_ARCHIVE_THRESHOLD = 25;
 
 export const DEFAULT_CONFIG: ProjectDocsConfig = {
   docsRoot: "docs",
@@ -89,6 +137,80 @@ export const DEFAULT_CONFIG: ProjectDocsConfig = {
     // `_archive` is linted, not skipped: the terminal-state rule (only done
     // or dropped work sits there) has to see it.
     skip: ["superpowers"],
+  },
+  checks: { archive: { threshold: DEFAULT_ARCHIVE_THRESHOLD } },
+  issues: [],
+};
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * The `checks` section: each setting, validated, defaulted when omitted, and
+ * every invalid explicit value recorded as an issue rather than ignored.
+ *
+ * Each section is read on its own by its own reader, so a new one is a new
+ * entry in `SECTIONS` and nothing else. A section's own key set is closed (a
+ * misspelt key is an issue); the set of sections is open, so a project that
+ * sets one this version does not know yet is left alone.
+ */
+function readChecks(raw: unknown): { checks: ChecksConfig; issues: ConfigIssue[] } {
+  const checks = structuredClone(DEFAULT_CONFIG.checks);
+  const issues: ConfigIssue[] = [];
+  if (raw === undefined) return { checks, issues };
+  if (!isObject(raw)) {
+    issues.push({ key: "checks", value: raw, expected: "an object" });
+    return { checks, issues };
+  }
+  for (const [name, read] of Object.entries(SECTIONS)) {
+    const section = raw[name];
+    if (section === undefined) continue;
+    const key = `checks.${name}`;
+    if (!isObject(section)) {
+      issues.push({ key, value: section, expected: "an object" });
+      continue;
+    }
+    read(section, checks, issues);
+  }
+  return { checks, issues };
+}
+
+/** One `checks.<name>` section's reader: fills `checks`, records `issues`. */
+type SectionReader = (
+  section: Record<string, unknown>,
+  checks: ChecksConfig,
+  issues: ConfigIssue[]
+) => void;
+
+/** Unknown keys in a section whose key set is closed. */
+function unknownKeys(
+  name: string,
+  section: Record<string, unknown>,
+  known: readonly string[],
+  issues: ConfigIssue[]
+): void {
+  for (const [k, v] of Object.entries(section))
+    if (!known.includes(k))
+      issues.push({
+        key: `checks.${name}.${k}`,
+        value: v,
+        expected: `no such key; checks.${name} takes ${known.join(", ")}`,
+      });
+}
+
+const SECTIONS: Record<string, SectionReader> = {
+  archive(section, checks, issues) {
+    unknownKeys("archive", section, ["threshold"], issues);
+    const threshold = section.threshold;
+    if (threshold === undefined) return;
+    if (typeof threshold === "number" && Number.isSafeInteger(threshold) && threshold >= 0)
+      checks.archive.threshold = threshold;
+    else
+      issues.push({
+        key: "checks.archive.threshold",
+        value: threshold,
+        expected: `a nonnegative integer; omit it for the default, ${DEFAULT_ARCHIVE_THRESHOLD}`,
+      });
   },
 };
 
@@ -136,6 +258,8 @@ export function loadConfig(repoRoot: string): ProjectDocsConfig {
   const strings = (v: unknown, fallback: string[]): string[] =>
     Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]) : fallback;
 
+  const { checks, issues } = readChecks(o.checks);
+
   return {
     docsRoot: typeof o.docsRoot === "string" ? o.docsRoot : DEFAULT_CONFIG.docsRoot,
     version: typeof o.version === "string" ? o.version : DEFAULT_CONFIG.version,
@@ -148,5 +272,7 @@ export function loadConfig(repoRoot: string): ProjectDocsConfig {
       types: typeMap(lint.types),
       scopes: strings(lint.scopes, DEFAULT_CONFIG.lint.scopes),
     },
+    checks,
+    issues,
   };
 }

@@ -24,7 +24,7 @@ including the shipped Codex marketplace item. `pdocs check` reported the tree
 clean.
 
 The user agreed to advisory warnings at the following touch points, following
-our [archive advisory](./pdocs-board-archive-advisory.md) pattern:
+our [archive advisory](./pdocs-board-archive-advisory/item.md) pattern:
 
 1. Starting a cycle: identify draft items already assigned to it.
 2. Adding an item to an active cycle: check it when it joins.
@@ -124,4 +124,4 @@ reviewed in conversation.
 
 ## Related work
 
-- [Archive advisory](./pdocs-board-archive-advisory.md)
+- [Archive advisory](./pdocs-board-archive-advisory/item.md)

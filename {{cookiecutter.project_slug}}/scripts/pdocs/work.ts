@@ -401,15 +401,15 @@ export function viewBacklog(model: WorkModel): WorkEntity[] {
 
 /**
  * `board`: live items (and, with `features`, live features) by state group.
- * The archive stays off the board: it holds only finished work, and keeping
- * the live view short is what it is for.
+ * The archive stays off the board unless `archived` asks for it: it holds only
+ * finished work, and keeping the live view short is what it is for.
  */
 export function viewBoard(
   model: WorkModel,
-  opts: { features?: boolean } = {}
+  opts: { features?: boolean; archived?: boolean } = {}
 ): Record<StateGroup, WorkEntity[]> {
   const live = [...(opts.features ? model.features : []), ...model.items].filter(
-    (e) => !e.archived
+    (e) => opts.archived || !e.archived
   );
   const out = {} as Record<StateGroup, WorkEntity[]>;
   for (const g of GROUPS) out[g] = ordered(live.filter((e) => e.group === g));
@@ -459,9 +459,20 @@ export function viewCycle(
   };
 }
 
-/** `scope <name>`: the features and items whose `scope` is `name`. */
-export function viewScope(model: WorkModel, scope: string): WorkEntity[] {
-  return ordered([...model.features, ...model.items].filter((e) => e.scope === scope));
+/**
+ * `scope <name>`: the features and items whose `scope` is `name`. A live view,
+ * so archived ones are left out unless `archived` asks for them.
+ */
+export function viewScope(
+  model: WorkModel,
+  scope: string,
+  opts: { archived?: boolean } = {}
+): WorkEntity[] {
+  return ordered(
+    [...model.features, ...model.items].filter(
+      (e) => e.scope === scope && (opts.archived || !e.archived)
+    )
+  );
 }
 
 /**

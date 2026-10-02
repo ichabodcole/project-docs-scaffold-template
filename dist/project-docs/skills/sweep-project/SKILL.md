@@ -12,7 +12,9 @@ description: >
   project", "sweep this project", "reconcile the plan", "check if we can archive
   this", "clean up completed projects", "did we ever archive that", or "this
   project looks finished". Also sweeps a cycle: "close this cycle", "is the
-  cycle done", "sweep the cycle".
+  cycle done", "sweep the cycle". Also acts on a `pdocs view` archive advisory
+  (`archive-threshold`): "the board says to archive", "archive the finished
+  items".
 allowed-tools:
   - Read
   - Write
@@ -51,6 +53,8 @@ conditional.
   needs its Outcome written and its `lifecycle` closed
 - A release shipped and a person can say which version first carried the work
   (`released_in`)
+- A `pdocs view` ended with an **archive advisory** (`archive-threshold`):
+  finished work has outgrown the view. Take **The Advisory Path** below
 
 **Don't use this skill for:**
 
@@ -147,9 +151,11 @@ Before starting, verify:
 ### Step 0: Resolve the Target and Check Its State
 
 Accept an explicit target — `feature/<slug>`, `item/<slug>` (or an item id, 8+
-characters), or `cycle/<slug>`. The target may come from the user directly, or
-be passed in by a calling skill (e.g. `finalize-branch` Step 6). If no target is
-given, **ask**.
+characters), `cycle/<slug>`, or an **advisory selection**: references taken from
+a `pdocs view` archive advisory's `refs`, which the user has agreed to (or asked
+you to propose from). The target may come from the user directly, or be passed
+in by a calling skill (e.g. `finalize-branch` Step 6). If no target is given,
+**ask**.
 
 A caller may hand you a path rather than a reference —
 `docs/features/foo/plan.md` instead of `feature/foo`, or
@@ -179,6 +185,7 @@ pdocs view cycle <slug>                        # a cycle, its items, closable
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.                                               |
 | Already under `_archive/`                         | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped`, an archived cycle `closed` or `abandoned` (`ARCHIVED NOT TERMINAL`). |
+| An archive advisory's candidates                  | Take **The Advisory Path** below — the work is already finished; there is nothing to reconcile, only a selection to agree on.                                                                                  |
 | A cycle                                           | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                                                              |
 | A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                                                                 |
 | An item that is a single file (`items/<slug>.md`) | Reconcile from that one file, which is its own definition of done and record.                                                                                                                                  |
@@ -296,6 +303,63 @@ items whose `cycle:` names it still resolve and `pdocs view cycle <cycle-slug>`
 still finds it. Never `git mv` a cycle by hand. A cycle already closed by an
 earlier run can be archived the same way — closing and archiving are separate
 steps, and each needs its own yes.
+
+### The Advisory Path — archive finished work a view has outgrown
+
+A live view such as `pdocs view board` (items, and features with `--features`)
+ends with an advisory when one type's unarchived finished work — `done` or
+`dropped` items and features, `closed` or `abandoned` cycles — is greater than
+`checks.archive.threshold` in `.project-docs.json` (default 25). The advisory
+reports; it is not permission. pdocs never archives on its own, and neither do
+you.
+
+1. **Read the candidates.** Rerun the view with `--format json`. Each entry of
+   `advisories[]` whose `id` is `archive-threshold` has `refs`, every reference
+   `pdocs archive` takes, and `types[]`: per type the `count`, the `threshold`,
+   and that type's `candidates`, oldest first. Its `lifecycle` is already
+   terminal, so there is nothing to reconcile.
+2. **Offer a concrete selection.** Propose specific references, not "archive
+   them all?": for example, every finished item older than the active cycle, or
+   the oldest `count - threshold`, and the entities that should stay visible
+   (work a current item still points at, say). List what you propose in the
+   message, so the user approves a list rather than a rule. A selection the user
+   already authorized in this conversation counts; do not ask again.
+3. **Scan the selection for prose, in one pass.** `pdocs archive` rewrites
+   links, not paths written in sentences — Step 3's concern, batched. Build one
+   alternation from the selection (`items/<slug>`, `features/<slug>`,
+   `cycles/<slug>` per reference) and grep once:
+
+   ```bash
+   ROOT=$(git rev-parse --show-toplevel)
+   SEL='items/<slug-a>|items/<slug-b>|features/<slug-c>|cycles/<slug-d>'
+   git -C "$ROOT" grep -nE "($SEL)([/.)\"'[:space:]]|$)" -- '*.md'
+   ```
+
+   Substitute the real slugs — `<` and `>` are shell redirections. Drop hits
+   whose every match is inside a link target or a path-valued `from:` (both are
+   rewritten by the move), and the selected entities' own files, then classify
+   the rest with Step 3's table: report examples as a count, list historical
+   ones as deliberately left, and **show every live claim with the selection**
+   before anything moves, so the user agrees to both together. Take an entity
+   out of the selection if they would rather fix its live claims first.
+
+4. **Archive what was agreed, one reference at a time:**
+
+   ```bash
+   pdocs archive <type>/<slug>
+   ```
+
+   Each run moves the entity and rewrites every link to and from it. Then run
+   `pdocs check`; it should be clean.
+
+5. **Rejoin at Step 6** and report what moved, what you left and why, and the
+   prose hits by kind.
+
+An invalid threshold, or a misspelt key in `checks.archive`, puts a `bad-config`
+advisory where the archive advisory would be, and `pdocs check` reports
+`BAD CONFIG`; fix the value in `.project-docs.json` rather than working around
+it. Raising the threshold is the user's call, never a way to silence the
+advisory.
 
 ### Step 1: Gather Reconciliation Sources
 
@@ -556,8 +620,9 @@ pdocs backlinks docs/items/<slug>.md                 # a single-file item
 pdocs backlinks docs/items/<slug>/item.md            # a folder item
 ```
 
-Those are the links that will be rewritten. References by id (`blocked_by`,
-`from:`) are untouched and keep resolving.
+Those are the links that will be rewritten, along with any path-valued `from:`
+that points into the moved folder. References by id or slug (`blocked_by`, an
+id-valued `from:`, `cycle:`) are untouched and keep resolving.
 
 **What it does not touch is prose**: a path written in a sentence rather than as
 a link. Find those:
@@ -676,13 +741,21 @@ silent no-op that reads like a failure.
 - [ ] `pdocs check` exits 0 after the run (or reports only problems that were
       already there)
 
-**Feature and item runs:**
+**Feature and item runs** (an advisory run uses its own block below instead):
 
 - [ ] `lifecycle` on disk matches what the reconciliation concluded
 - [ ] A feature marked `done` has no item still open
 - [ ] Anything moved was moved by `pdocs archive`, after explicit confirmation
 - [ ] Prose mentions of the moved path were classified, and the live ones shown
       to the human
+
+**Advisory runs:**
+
+- [ ] The selection was a concrete list of references the user agreed to, taken
+      from the advisory's `refs`
+- [ ] One batched prose scan covered the whole selection; its live hits were
+      shown with the selection, before anything moved
+- [ ] Only agreed references were archived, each with `pdocs archive`
 
 **Cycle runs:**
 

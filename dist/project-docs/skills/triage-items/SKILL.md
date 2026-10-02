@@ -63,6 +63,10 @@ pdocs view board --format text            # the items, by state group
 pdocs view backlog --format text          # everything unstarted, triage included
 ```
 
+If the board ends with an archive advisory (`archive-threshold`), finish the
+triage first, then mention it once and offer the `sweep-project` advisory path.
+Never archive as part of triage.
+
 An item that duplicates one already on the board is a drop candidate. So is one
 that duplicates a phase in a feature's `plan.md`, when the feature has one
 (`pdocs new feature` creates only `feature.md`, so a feature not yet shaped has

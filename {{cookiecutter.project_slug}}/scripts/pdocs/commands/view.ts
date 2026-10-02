@@ -4,6 +4,7 @@
 // by the pure functions in `work.ts`. This file only presents them.
 
 import type { Command, Invocation } from "../cli.ts";
+import { type Advisory, adviseArchive, advisoryLines } from "../advisories.ts";
 import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import {
   GROUPS,
@@ -64,14 +65,21 @@ const entry = (e: WorkEntity): ViewEntry => ({
   date: e.date,
 });
 
+/**
+ * The live views: they list current work, so they leave archived records out
+ * unless `--all` asks for them. `backlog` and `ready` are live too, but list
+ * only unstarted items, which the archive never holds.
+ */
+const WITH_ARCHIVE = ["board", "scope"];
+
 /** The views, in help order. `arg` names the positional a view needs. */
 export const VIEWS: ReadonlyArray<{ name: string; arg?: string; summary: string }> = [
   { name: "backlog", summary: "items not yet started, by priority" },
-  { name: "board", summary: "live items by state group (--features adds features)" },
+  { name: "board", summary: "live items by state group (--features adds features, --all the archive)" },
   { name: "ready", summary: "`ready` items whose blockers are all done" },
   { name: "feature", arg: "slug", summary: "a feature and its items" },
   { name: "cycle", arg: "slug", summary: "the items naming a cycle, and whether it can close" },
-  { name: "scope", arg: "name", summary: "the features and items in a scope" },
+  { name: "scope", arg: "name", summary: "the live features and items in a scope (--all adds the archive)" },
   { name: "unreleased", summary: "done, with no released_in (--since YYYY-MM-DD)" },
   { name: "released", arg: "version", summary: "what a version released" },
 ];
@@ -90,13 +98,14 @@ function line(e: ViewEntry, ids: readonly string[], width: number): string {
 export const view: Command = {
   name: "view",
   summary: "Derived views: backlog, board, ready, feature, cycle, scope, unreleased, released.",
-  usage: `pdocs view <${VIEWS.map((v) => v.name).join("|")}> [<arg>] [--features] [--since <YYYY-MM-DD>]`,
+  usage: `pdocs view <${VIEWS.map((v) => v.name).join("|")}> [<arg>] [--features] [--all] [--since <YYYY-MM-DD>]`,
   positionals: [
     { name: "view", required: true },
     { name: "arg", required: false },
   ],
   options: [
     { flag: "--features", summary: "board: include features beside the items." },
+    { flag: "--all", summary: "board, scope: include archived work, which a live view leaves out." },
     {
       flag: "--since",
       metavar: "<YYYY-MM-DD>",
@@ -124,9 +133,16 @@ export const view: Command = {
       throw new UsageError("--since applies to `view unreleased` only.");
     if (flags["--features"] === true && spec.name !== "board")
       throw new UsageError("--features applies to `view board` only.");
+    const all = flags["--all"] === true;
+    if (all && !WITH_ARCHIVE.includes(spec.name))
+      throw new UsageError(`--all applies to ${WITH_ARCHIVE.map((v) => `\`view ${v}\``).join(" and ")} only.`);
 
     const model = collectWork(ctx);
     const list = (items: WorkEntity[]) => ({ view: spec.name, items: items.map(entry) });
+    // Every view carries `advisories`, empty when it has none, so a caller
+    // reads one field whatever it asked for. Only a view that lists a type
+    // across the whole tree advises on archiving it.
+    let advisories: Advisory[] = [];
     let data: Record<string, unknown>;
     switch (spec.name) {
       case "backlog":
@@ -136,7 +152,9 @@ export const view: Command = {
         data = list(viewReady(model));
         break;
       case "board": {
-        const board = viewBoard(model, { features: flags["--features"] === true });
+        const features = flags["--features"] === true;
+        const board = viewBoard(model, { features, archived: all });
+        advisories = adviseArchive(ctx, model, features ? ["item", "feature"] : ["item"]);
         data = {
           view: "board",
           groups: Object.fromEntries(GROUPS.map((g) => [g, board[g].map(entry)])),
@@ -154,7 +172,7 @@ export const view: Command = {
         break;
       }
       case "scope":
-        data = list(viewScope(model, arg as string));
+        data = list(viewScope(model, arg as string, { archived: all }));
         break;
       case "unreleased":
         data = list(viewUnreleased(model, since));
@@ -163,30 +181,37 @@ export const view: Command = {
         data = list(viewReleased(model, arg as string));
     }
 
+    data.advisories = advisories;
+
     if (format === "json") {
       printEnvelope("view", data);
       return ExitCode.Success;
     }
 
-    const ids = modelIds(model);
-    const shown = [
-      ...Object.values((data.groups ?? {}) as Record<string, ViewEntry[]>).flat(),
-      ...((data.items ?? []) as ViewEntry[]),
-    ];
-    const width = Math.max(SHORT_ID, ...shown.map((e) => (e.id ? shortId(e.id, ids).length : 1)));
-    if (data.groups) {
-      for (const [group, items] of Object.entries(data.groups as Record<string, ViewEntry[]>)) {
-        console.log(`${group} (${items.length})`);
-        for (const e of items) console.log(line(e, ids, width));
-      }
-      return ExitCode.Success;
-    }
-    const head = (data.feature ?? data.cycle) as ViewEntry | undefined;
-    if (head) console.log(`${head.path}${head.title ? `  — ${head.title}` : ""}`);
-    if (data.closable !== undefined) console.log(`closable: ${data.closable ? "yes" : "no"}`);
-    const items = data.items as ViewEntry[];
-    if (items.length === 0) console.log("  (none)");
-    for (const e of items) console.log(line(e, ids, width));
+    printText(data, modelIds(model));
+    for (const l of advisoryLines(advisories)) console.log(l);
     return ExitCode.Success;
   },
 };
+
+/** A view's entities as text: grouped for the board, a list for the rest. */
+function printText(data: Record<string, unknown>, ids: string[]): void {
+  const shown = [
+    ...Object.values((data.groups ?? {}) as Record<string, ViewEntry[]>).flat(),
+    ...((data.items ?? []) as ViewEntry[]),
+  ];
+  const width = Math.max(SHORT_ID, ...shown.map((e) => (e.id ? shortId(e.id, ids).length : 1)));
+  if (data.groups) {
+    for (const [group, items] of Object.entries(data.groups as Record<string, ViewEntry[]>)) {
+      console.log(`${group} (${items.length})`);
+      for (const e of items) console.log(line(e, ids, width));
+    }
+    return;
+  }
+  const head = (data.feature ?? data.cycle) as ViewEntry | undefined;
+  if (head) console.log(`${head.path}${head.title ? `  — ${head.title}` : ""}`);
+  if (data.closable !== undefined) console.log(`closable: ${data.closable ? "yes" : "no"}`);
+  const items = data.items as ViewEntry[];
+  if (items.length === 0) console.log("  (none)");
+  for (const e of items) console.log(line(e, ids, width));
+}

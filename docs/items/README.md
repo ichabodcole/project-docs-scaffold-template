@@ -211,3 +211,9 @@ It refuses an item in any other state, moves the file or folder, and rewrites
 every link to and from it. References by `id` keep working. Archiving is
 optional, and only `pdocs archive` does it; the lint reports anything in
 `_archive/` that is not `done` or `dropped`.
+
+`pdocs view board` leaves archived items out (`--all` puts them back). Once more
+than `checks.archive.threshold` finished items (default 25) are unarchived, it
+ends with an advisory that says how many and suggests archiving some; its JSON
+form (`--format json`) lists the candidates. Nothing moves until someone agrees
+to a selection. `docs/SCHEMA.md` describes the setting.

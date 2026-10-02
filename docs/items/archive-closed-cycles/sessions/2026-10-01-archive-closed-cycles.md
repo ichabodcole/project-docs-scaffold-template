@@ -58,7 +58,7 @@ afterwards.
 
 No live view lists cycles yet, so there was nothing to hide; hiding archived
 cycles and counting them in the advisory belong to
-[pdocs-board-archive-advisory](../../pdocs-board-archive-advisory.md). No
+[pdocs-board-archive-advisory](../../pdocs-board-archive-advisory/item.md). No
 migration step is needed, because the first archive creates the folder.
 
 ## Verification

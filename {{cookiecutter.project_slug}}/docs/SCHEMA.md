@@ -436,6 +436,7 @@ the full id.
 | `BAD PARENT`, `BAD CYCLE`, `BAD BLOCKED_BY`, `BAD FROM` | a reference that resolves to nothing, or to the wrong kind of thing                                                                                                                                 |
 | `BLOCKED CYCLE`                                         | `blocked_by` loops, or an item blocks itself                                                                                                                                                        |
 | `BAD SCOPE`                                             | a `scope` not declared in `lint.scopes`, or more than one value                                                                                                                                     |
+| `BAD CONFIG`                                            | a `.project-docs.json` setting that is present and invalid: `lint.scopes` not a list of strings, `checks.archive.threshold` not a nonnegative integer, an unknown key in `checks.archive`                                                 |
 | `DUPLICATE ID`, `DUPLICATE SLUG`                        | two items share an id, or one slug (item, feature or cycle) exists both live and archived                                                                                                           |
 | `MISSING ENTITY FILE`                                   | a folder in `features/` or `items/` with no `feature.md` or `item.md`                                                                                                                               |
 | `MISPLACED ENTITY`                                      | a `feature.md` under `items/`, or an `item.md` under `features/`                                                                                                                                    |
@@ -472,16 +473,74 @@ computes them from the fields:
 | View                                         | Shows                                                                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `pdocs view backlog`                         | unstarted items (`triage`, `backlog`, `ready`), by priority                                      |
-| `pdocs view board [--features]`              | live items (and features) grouped by state group                                                 |
+| `pdocs view board [--features] [--all]`      | live items (and features) grouped by state group                                                 |
 | `pdocs view ready`                           | `ready` items whose blockers are all `done` — what an agent can start                            |
 | `pdocs view feature <slug>`                  | a feature and the items whose `parent` names it                                                  |
 | `pdocs view cycle <slug>`                    | the items naming a cycle (`<slug>` is its file name, `2026-09-auth`), and whether it is closable |
-| `pdocs view scope <name>`                    | features and items in one scope                                                                  |
+| `pdocs view scope <name> [--all]`            | live features and items in one scope                                                             |
 | `pdocs view unreleased [--since YYYY-MM-DD]` | `done` features and items with no `released_in`                                                  |
 | `pdocs view released <version>`              | what shipped in a version                                                                        |
 
 `pdocs find --kind`, `--parent`, `--cycle`, `--scope` and `--id` filter the same
 fields.
+
+**Live views hide archived work.** `board` and `scope` list current work, so
+they leave archived items and features out unless `--all` asks for them; a view
+that lists cycles leaves archived cycles out the same way. `backlog` and `ready`
+list only unstarted items, which the archive never holds. Three views are not
+live and show archived records as they always have: `feature <slug>` and
+`cycle <slug>` are the record of one entity (a cycle's `closable` needs every
+member), `unreleased` is release accounting (archived is not released), and
+`released` is history. `pdocs find` is a query, not a view: it returns archived
+records and never advises.
+
+### The archive advisory
+
+A live view that lists a type across the whole tree counts that type's
+unarchived finished work — `done` and `dropped` items, `done` and `dropped`
+features, `closed` and `abandoned` cycles — each type on its own against one
+threshold. When a type's count is **greater than** the threshold, the view ends
+with one advisory naming every such type:
+
+```text
+advisory (archive-threshold): 60 finished items and 31 finished features are not archived, over the threshold of 25 (checks.archive.threshold). Consider archiving them to shorten this view. Archiving preserves their records and updates links.
+  next: Offer the user a concrete selection, then run `pdocs archive <ref>` for each one they agree to; `--format json` lists the candidates. Nothing is archived automatically.
+```
+
+`view board` advises on items, and on features too with `--features`. In JSON,
+every view's `data` carries `advisories`, a list that is empty when there is
+nothing to say. Every advisory has a stable `id`, a `message`, an `action`, and
+— when it is about particular entities — `refs`, the `<type>/<slug>` references
+a caller can act on; a caller reads `refs` whatever the advisory's kind. The
+archive advisory has `id: "archive-threshold"`, `setting`, `threshold`, `refs`
+(every type's candidates) and `types`: per type over the threshold, its `type`,
+`count`, `threshold`, `lifecycles` counted, a `remediation`, and the
+`candidates` — the references `pdocs archive` takes, oldest first by
+`generated.at`. The advisory changes nothing the view lists, writes nothing and
+exits 0. It reports; the calling workflow offers the user a concrete selection
+and archives only what they agree to.
+
+Set the threshold in `.project-docs.json`, beside `lint`:
+
+```json
+"checks": { "archive": { "threshold": 25 } }
+```
+
+Omitted — the key, `archive` or the whole `checks` section — it is **25**: 25
+finished items give no advisory, 26 do. It takes a nonnegative integer; `0`
+advises whenever any finished work of a type is unarchived. `checks.archive`
+takes no other key, so a misspelling such as `treshold` is an error too; a
+section under `checks` that this version does not know is left alone.
+
+An invalid value is never replaced by the default, and it never takes a view
+down. `pdocs check` reports it as `BAD CONFIG` and exits 9. A view that reads it
+still lists as usual, and carries a `bad-config` advisory in place of the
+archive advice — `issues` holds each setting's `key`, the `value` written and
+what is `expected`:
+
+```text
+advisory (bad-config): .project-docs.json: `checks.archive.threshold` is -1, expected a nonnegative integer; omit it for the default, 25.
+```
 
 ## State groups
 
@@ -517,8 +576,10 @@ stay short to scan.
   by hand.
 - Archiving is optional. A finished item, or a closed cycle, may stay where it
   is.
-- `pdocs view board` leaves archived items and features out. `pdocs find` is a
-  query, not a live view: it returns archived records, cycles included.
+- Live views leave archived work out unless `--all` asks for it, and suggest
+  archiving once finished work outgrows `checks.archive.threshold` (see
+  [Views](#views)). `pdocs find` is a query, not a live view: it returns
+  archived records, cycles included.
 - Owned documents are not archived on their own; they move with the feature or
   item that owns them.
 

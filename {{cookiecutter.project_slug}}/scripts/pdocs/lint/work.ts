@@ -14,7 +14,7 @@
 // `from:` path names a file, which is a stat, not a walk.
 
 import { existsSync, readFileSync } from "node:fs";
-import { CONFIG_FILENAME } from "../docs-lint/config.ts";
+import { CONFIG_FILENAME, describeIssue } from "../docs-lint/config.ts";
 import { join, relative } from "node:path";
 import { parseFrontmatter } from "../docs-lint/index.ts";
 import { CYCLE_ENDS, ENTITY_FILE, ITEMS_FOLDER, registryIndex } from "./registry.ts";
@@ -423,23 +423,33 @@ export function deletedItems(
 // ---------------------------------------------------------------------------------------
 
 /**
- * `lint.scopes` in `.project-docs.json`, when it is present and not a list of
- * strings. `loadConfig` falls back to `[]` for it, as it does for every array;
- * without this row the only symptom is every `scope:` in the tree reporting
- * "declare it in lint.scopes" — about a key the project did declare.
+ * `.project-docs.json` settings that are present and invalid.
+ *
+ * - `lint.scopes`, when it is not a list of strings. `loadConfig` falls back to
+ *   `[]` for it, as it does for every array; without this row the only symptom
+ *   is every `scope:` in the tree reporting "declare it in lint.scopes" — about
+ *   a key the project did declare.
+ * - Every `checks` issue `loadConfig` recorded (`checks.archive.threshold`
+ *   that is not a nonnegative integer, or an unknown key in `checks.archive`).
+ *   A view that reads such a setting still runs and carries a `bad-config`
+ *   advisory; this row is what makes the gate fail on it.
  */
 export function configProblems(ctx: Ctx): string[] {
+  const issues = ctx.config.issues.map(
+    (i) => `BAD CONFIG  ${CONFIG_FILENAME}: ${describeIssue(i)}`
+  );
   let raw: unknown;
   try {
     raw = JSON.parse(readFileSync(join(ctx.repoRoot, CONFIG_FILENAME), "utf8"));
   } catch {
-    return []; // absent, or malformed — `loadConfig` has already thrown for that
+    return issues; // absent, or malformed — `loadConfig` has already thrown for that
   }
   const lint = (raw as { lint?: Record<string, unknown> } | null)?.lint;
-  if (!lint || typeof lint !== "object" || !("scopes" in lint)) return [];
+  if (!lint || typeof lint !== "object" || !("scopes" in lint)) return issues;
   const scopes = lint.scopes;
-  if (Array.isArray(scopes) && scopes.every((x) => typeof x === "string")) return [];
+  if (Array.isArray(scopes) && scopes.every((x) => typeof x === "string")) return issues;
   return [
     `BAD CONFIG  ${CONFIG_FILENAME}: lint.scopes is ${JSON.stringify(scopes)}  (expected a list of strings; until it is one, no scope is declared)`,
+    ...issues,
   ];
 }

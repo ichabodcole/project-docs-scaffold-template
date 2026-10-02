@@ -288,7 +288,7 @@ const EXIT_CODE_TABLE: Array<[number, string]> = [
   [1, "an unexpected fault inside pdocs itself"],
   [2, "bad invocation: unknown command, unknown flag, missing value"],
   [5, "no docs root, or no .project-docs.json"],
-  [6, "the document already exists"],
+  [6, "the document already exists, or the tree refuses the request"],
   [9, "outcome: it ran fine, and the documents are dirty"],
 ];
 

@@ -36,8 +36,8 @@ stays a separate, confirmed step after closing, and links are rewritten by
 Cole's call (2026-10-01): cycles follow the same rules as items and features
 everywhere, not only on disk. Live views hide archived cycles unless an explicit
 flag asks for them, and the shared archive threshold
-([archive advisory](../pdocs-board-archive-advisory.md)) prompts archiving once
-too many closed cycles remain unarchived.
+([archive advisory](../pdocs-board-archive-advisory/item.md)) prompts archiving
+once too many closed cycles remain unarchived.
 
 ## Definition of done
 
@@ -52,9 +52,9 @@ too many closed cycles remain unarchived.
 - [x] A new project ships `cycles/_archive/`, as it does `items/_archive/`.
 
 Two parts of Cole's 2026-10-01 rule belong to
-[pdocs-board-archive-advisory](../pdocs-board-archive-advisory.md), not to this
-item: live views (the portfolio view, and any view that lists cycles) hiding
-archived cycles unless an explicit flag asks for them, and the archive advisory
-counting unarchived `closed` and `abandoned` cycles against the shared
+[pdocs-board-archive-advisory](../pdocs-board-archive-advisory/item.md), not to
+this item: live views (the portfolio view, and any view that lists cycles)
+hiding archived cycles unless an explicit flag asks for them, and the archive
+advisory counting unarchived `closed` and `abandoned` cycles against the shared
 threshold. No view lists cycles yet, so there was nothing here to hide them
 from.
