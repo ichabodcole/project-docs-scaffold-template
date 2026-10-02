@@ -1,5 +1,24 @@
 # Changelog
 
+## [9.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.3.0...project-docs-scaffold-template-v9.4.0) (2026-10-02)
+
+
+### Features
+
+* **pdocs:** a cycle is named by its filename, with or without .md ([05e9668](https://github.com/ichabodcole/project-docs-scaffold-template/commit/05e9668a8e5ffabda57d3ecdb1f8c9703e9a42da))
+* **pdocs:** check warns when a filled document keeps its template header ([609ad4b](https://github.com/ichabodcole/project-docs-scaffold-template/commit/609ad4b729b1319cfb5a7c218debd6616f3af3cf))
+* **pdocs:** closed and abandoned cycles can be archived to cycles/_archive/ ([0ff2b4c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/0ff2b4c034442258dd03751b98a06c2ade13ce37))
+* **pdocs:** links stay in Prettier's shape, and the Outcome lint knows old templates ([3522ae0](https://github.com/ichabodcole/project-docs-scaffold-template/commit/3522ae05f48071ef18c815bf289316f123bfbc45))
+* **pdocs:** live views suggest archiving once finished work passes a threshold ([7708099](https://github.com/ichabodcole/project-docs-scaffold-template/commit/7708099c0efbcf5f8fc79cd0163008124c8f7b1b))
+* **pdocs:** started work needs a reviewed item document, and pdocs says so ([597ef77](https://github.com/ichabodcole/project-docs-scaffold-template/commit/597ef775bc597eb4838ab9f706dc45e28cfcf017))
+* **pdocs:** view portfolio summarises current cycles and features ([8cd648f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/8cd648f3911bec21ffb78a3ae12e750fffae2266))
+
+
+### Bug Fixes
+
+* **migrations:** marker-test fixtures no longer copy a cached repo's .git ([a129d53](https://github.com/ichabodcole/project-docs-scaffold-template/commit/a129d533ad48c7a7ff3ba23bd64fb086eb340736))
+* **project-docs:** the review rule's workflows walk cleanly on their main paths ([aa86449](https://github.com/ichabodcole/project-docs-scaffold-template/commit/aa86449555af1be7652d669d9c63f1c48fc6c40e))
+
 ## [9.3.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.2.0...project-docs-scaffold-template-v9.3.0) (2026-10-01)
 
 
