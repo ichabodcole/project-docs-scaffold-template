@@ -288,12 +288,13 @@ skill does.
 - **Started work needs a reviewed item.** `init-branch`, `finalize-branch`,
   `dev-kickoff`, `create-investigation`, the `investigator`, `generate-dev-plan`
   and `triage-items` mark an item `status: stable` only when the user approved
-  its description and definition of done as shown; an earlier approval in the
-  conversation counts, and approving a disposition or a priority does not. One
-  decline rule holds under `warn` and `strict`: a declined item does not move,
-  and `finalize-branch` closes it `done` with its cycle; under `strict`, a
-  started draft is approved or moved back with
-  `--lifecycle ready --unset cycle`.
+  its description and definition of done as shown. An earlier approval of that
+  content counts; the `investigator`, which cannot ask, counts it only when its
+  prompt shows it. General assent ("looks good", "land it"), a code-review
+  approval, a plan's item list or a triage disposition does not. One decline
+  rule holds under `warn` and `strict`: a declined item does not move, and
+  `finalize-branch` closes it `done` with its cycle; under `strict`, a started
+  draft is approved or moved back with `--lifecycle ready --unset cycle`.
 - **`sweep-project`** gains the Advisory Path (archive the finished work a
   view's archive advisory names, from a concrete selection) and the Audit Path
   (mark reviewed the `done` items `pdocs view unreviewed` lists, only as the
@@ -305,6 +306,10 @@ skill does.
 - **The pdocs reference** covers `view portfolio`, `view unreviewed`, the
   `archive`, `work-item-review` and `template-header` advisories, the closed
   `checks` section set, and cycles named by filename.
+- **`provide-feedback`** labels an issue `documentation`, not `docs` (which
+  neither repository has, so `gh issue create` failed), and routes feedback on
+  `html-mockup-prototyping`, which both project-docs and toolbox ship, by the
+  plugin the user invoked.
 - Skills name other skills and delegation in host-neutral words, for the Codex
   marketplace.
 - **The v2.10 → v3.0 migration installs scaffold 9.4.0**
