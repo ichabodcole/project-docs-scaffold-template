@@ -71,3 +71,5 @@ _Written at close, not before — and for an `abandoned` cycle too._
 
 - feature/archive-closed-cycles (landed 2026-10-01)
 - fix/pdocs-small-fixes (landed 2026-10-01)
+- feature/pdocs-board-archive-advisory (open)
+- feature/pdocs-work-portfolio-view (open)

@@ -5,7 +5,7 @@ description:
   Show current cycles and features in one concise overview with progress counts
   and an option to include completed history.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0f8c6-2e4e-72f3-bdce-6a3e96b77e66
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }

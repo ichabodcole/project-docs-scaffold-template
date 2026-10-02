@@ -5,7 +5,7 @@ description:
   Emit an actionable advisory when unarchived finished items, features or cycles
   crowd a live view, governed by one archive threshold, in text and JSON output.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0f8bb-5027-77cd-b8e5-13948e071aa0
 kind: task
 generated: { by: pdocs, at: 2026-10-01 }
