@@ -42,7 +42,7 @@ walks into.
   (#202) — fall back when the CLI has no `view`.
 - **[item/finalize-branch-playbook-vs-landing-policy](../items/finalize-branch-playbook-vs-landing-policy/item.md)**
   (#199) — a stale playbook can't override the landing policy or the review.
-- **[item/v26-migration-test-git-hang](../items/v26-migration-test-git-hang.md)**
+- **[item/v26-migration-test-git-hang](../items/v26-migration-test-git-hang/item.md)**
   — the CI flake: harden the v2.6 test's git helper.
 
 The three lint items share `docs-lint/index.ts`; land them in the order above.
@@ -82,3 +82,4 @@ placeholder line into a real cycle.
 - fix/upgrade-skill-zsh-and-audit-order (landed 2026-10-03)
 - fix/ground-in-project-old-cli-fallback (landed 2026-10-03)
 - fix/finalize-branch-playbook-vs-landing-policy (landed 2026-10-03)
+- fix/v26-migration-test-git-hang (landed 2026-10-03)

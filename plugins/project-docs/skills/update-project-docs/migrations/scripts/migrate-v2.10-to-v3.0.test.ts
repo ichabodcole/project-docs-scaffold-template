@@ -1021,8 +1021,18 @@ describe("the copied logic equals the originals in scripts/pdocs/", () => {
 
 // ─── Generated fixtures: real trees, not hand-built ones ─────────────────────
 
-function sh(cmd: string[], cwd?: string, env?: Record<string, string>): string {
-  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe", env: childEnv(env) });
+/**
+ * How long one fixture `git` may run before it is killed. A `git add` once
+ * hung on CI until the file's 30 s budget killed the test, which reported a
+ * timeout and named no command; well under that budget, the hang fails as
+ * itself, naming the command.
+ */
+const GIT_TIMEOUT_MS = 10_000;
+
+function sh(cmd: string[], cwd?: string, env?: Record<string, string>, timeout?: number): string {
+  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe", env: childEnv(env), timeout, killSignal: "SIGKILL" });
+  if (r.exitedDueToTimeout)
+    throw new Error(`${cmd.join(" ")} timed out after ${timeout} ms and was killed\n${r.stderr.toString()}${r.stdout.toString()}`);
   if (r.exitCode !== 0) throw new Error(`${cmd.join(" ")} exited ${r.exitCode}\n${r.stderr.toString()}${r.stdout.toString()}`);
   return r.stdout.toString();
 }
@@ -1067,7 +1077,7 @@ function generatedScaffolds(): Scaffolds {
 // `git maintenance run --auto` that can rewrite `.git` while a test copies or
 // removes the fixture.
 function git(root: string, ...args: string[]): string {
-  return sh(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", "-c", "maintenance.auto=false", "-c", "gc.auto=0", ...args], root);
+  return sh(["git", "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", "-c", "maintenance.auto=false", "-c", "gc.auto=0", ...args], root, undefined, GIT_TIMEOUT_MS);
 }
 
 function commitAll(root: string, message: string): void {
@@ -1125,7 +1135,8 @@ const SHAPES: Record<string, string> = {
 /** Fixture O: the generated 8.1.0 tree with every shape, committed. */
 function fixtureO(extra: Record<string, string> = {}): string {
   const root = tmp("migrate-v30-O-");
-  cpSync(generatedScaffolds().old, root, { recursive: true });
+  const src = generatedScaffolds().old;
+  cpSync(src, root, { recursive: true, filter: (from) => from !== join(src, ".git") });
   write(root, { ...SHAPES, ...extra });
   const index = read(root, "docs/index.md")
     .replace(/(## Lessons learned[\s\S]*?)_No pages yet\._/, "$1- [A lesson](./lessons-learned/a-lesson.md) — What was learned.")
@@ -1152,7 +1163,8 @@ function withRecorded(root: string, ...rels: string[]): string {
 /** The 9.0.0 scaffold with its docs_version set, so the markers have somewhere to move. */
 function scaffoldAt(version: string): string {
   const s = tmp("migrate-v30-N-");
-  cpSync(generatedScaffolds().current, s, { recursive: true });
+  const src = generatedScaffolds().current;
+  cpSync(src, s, { recursive: true, filter: (from) => from !== join(src, ".git") });
   write(s, { "docs/README.md": read(s, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${version}"`) });
   return s;
 }

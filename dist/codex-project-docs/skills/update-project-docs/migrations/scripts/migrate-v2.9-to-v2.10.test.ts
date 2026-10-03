@@ -110,13 +110,25 @@ interface Scaffolds {
 
 let scaffolds: Scaffolds | null = null;
 
-function sh(cmd: string[], cwd?: string, env?: Record<string, string>): string {
+/**
+ * How long one fixture `git` may run before it is killed. A `git add` once
+ * hung on CI until the file's 30 s budget killed the test, which reported a
+ * timeout and named no command; well under that budget, the hang fails as
+ * itself, naming the command.
+ */
+const GIT_TIMEOUT_MS = 10_000;
+
+function sh(cmd: string[], cwd?: string, env?: Record<string, string>, timeout?: number): string {
   const r = Bun.spawnSync(cmd, {
     cwd,
     stdout: "pipe",
     stderr: "pipe",
     env: childEnv(env),
+    timeout,
+    killSignal: "SIGKILL",
   });
+  if (r.exitedDueToTimeout)
+    throw new Error(`${cmd.join(" ")} timed out after ${timeout} ms and was killed\n${r.stderr.toString()}${r.stdout.toString()}`);
   if (r.exitCode !== 0)
     throw new Error(
       `${cmd.join(" ")} exited ${r.exitCode}\n${r.stderr.toString()}${r.stdout.toString()}`
@@ -187,7 +199,12 @@ function generatedScaffolds(): Scaffolds {
   return scaffolds;
 }
 
-/** `git`, borrowing no identity, signing or default branch from the machine. */
+/**
+ * `git`, borrowing no identity, signing or default branch from the machine.
+ * Automatic maintenance is off: a commit would otherwise spawn a detached
+ * `git maintenance run --auto` that can rewrite `.git` while a test copies or
+ * removes the fixture.
+ */
 function git(root: string, ...args: string[]): string {
   return sh(
     [
@@ -196,9 +213,13 @@ function git(root: string, ...args: string[]): string {
       "-c", "user.email=fixture@example.invalid",
       "-c", "commit.gpgsign=false",
       "-c", "init.defaultBranch=main",
+      "-c", "maintenance.auto=false",
+      "-c", "gc.auto=0",
       ...args,
     ],
-    root
+    root,
+    undefined,
+    GIT_TIMEOUT_MS
   );
 }
 
@@ -215,7 +236,8 @@ function commitAll(root: string, message: string): void {
  */
 function fixtureO(): string {
   const root = tmp("migrate-v210-O-");
-  cpSync(generatedScaffolds().old, root, { recursive: true });
+  const src = generatedScaffolds().old;
+  cpSync(src, root, { recursive: true, filter: (from) => from !== join(src, ".git") });
   commitAll(root, "the 8.0.0 tree, as generated");
   return root;
 }
@@ -313,7 +335,8 @@ const variantUnshipped = () =>
  */
 function scaffoldAt(version: string): string {
   const s = tmp("migrate-v210-N-");
-  cpSync(generatedScaffolds().current, s, { recursive: true });
+  const src = generatedScaffolds().current;
+  cpSync(src, s, { recursive: true, filter: (from) => from !== join(src, ".git") });
   const readme = join(s, "docs/README.md");
   writeFileSync(readme, read(s, "docs/README.md").replace(/^docs_version:\s*"[^"]*"/m, `docs_version: "${version}"`));
   return s;
