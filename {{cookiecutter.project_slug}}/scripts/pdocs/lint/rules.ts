@@ -413,6 +413,11 @@ export const OKF_STATUS = ["draft", "stable", "deprecated"];
  * cloud nobody reads.
  */
 const REQUIRED = ["type", "title", "description", "status", "generated"];
+/** The shape a `MISSING` row asks for, where the key has one to get wrong. */
+const MISSING_HINT: Record<string, string> = {
+  tags: "  (expected `tags: [ ... ]`)",
+  generated: "  (expected `generated: { by: <actor>, at: YYYY-MM-DD }`)",
+};
 const OPTIONAL = new Set(["tags", "related", "supersedes"]);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -799,9 +804,14 @@ export function documentProblems(
   ];
   const allowed = allowedFields(type, registry);
 
-  for (const key of required) if (!fields.get(key)) missing.push(key);
+  // An empty `tags: []` lists nothing, so where tags are required it is as
+  // missing as an absent key.
+  const blank = (key: string) =>
+    key === "tags" ? yamlList(fields.get(key)).length === 0 : !fields.get(key);
+  for (const key of required) if (blank(key)) missing.push(key);
   if (lifecycle && !fields.get("lifecycle")) missing.push("lifecycle");
-  for (const key of missing) problems.push(`MISSING ${key}   ${rel}`);
+  for (const key of missing)
+    problems.push(`MISSING ${key}   ${rel}${MISSING_HINT[key] ?? ""}`);
   // The key set is closed, so a file that is somebody else's format — a draft
   // of a Claude Code `SKILL.md`, with `name:` — cannot be made to pass by
   // adding fields: the key that makes it what it is stays unknown. The way out
@@ -1050,6 +1060,8 @@ function generatedProblems(
     ];
   if (!DATE_RE.test(g[2] as string))
     return [`BAD generated.at  ${rel}: "${g[2]}"  (expected YYYY-MM-DD)`];
+  if (!(g[1] as string).trim())
+    return [`MISSING generated.by  ${rel}  (OKF requires an actor)`];
   return [];
 }
 
@@ -1174,7 +1186,7 @@ export function catalogEntries(
  * how a catalog ends up describing a page that has since been rewritten — and
  * nobody re-reads the catalog, so it survives every review of the page itself.
  */
-export function hookChecks(pages: LintPage[]): string[] {
+export function hookChecks(pages: LintPage[], docsRoot = ""): string[] {
   const index = pages.find((p) => p.rel === "index.md");
   if (!index) return [];
   const byRel = new Map(pages.map((p) => [p.rel, p]));
@@ -1188,7 +1200,7 @@ export function hookChecks(pages: LintPage[]): string[] {
     if (!description) continue; // already reported as missing frontmatter
     if (hook !== description)
       problems.push(
-        `STALE HOOK     index.md → ${target}:\n         hook: ${JSON.stringify(hook)}\n  description: ${JSON.stringify(description)}`
+        `STALE HOOK     ${join(docsRoot, "index.md")} → ${join(docsRoot, target)}:\n         hook: ${JSON.stringify(hook)}\n  description: ${JSON.stringify(description)}`
       );
   }
   return problems;
@@ -1209,8 +1221,18 @@ export function graphTier(ctx: Ctx): DocsLintReport {
   // editing `.project-docs.json` can see.
   const excluded = excluder(ctx);
   const isTpl = templateTest(ctx);
+  // `libraryFieldChecks` runs the frontmatter rules on every library page, so
+  // the core does not run its own on the same pages: one missing `tags` was two
+  // rows, in two path forms. A page `libraryFiles` does not type — loose at the
+  // docs root — is still the core's to check.
+  const library = new Set(
+    libraryFiles(ctx).map((f) => relative(ctx.docsRoot, f.path))
+  );
   return collectDocsLint({
     root: ctx.docsRoot,
+    fieldsCheckedElsewhere: (rel) => library.has(rel),
+    // Repo-relative, as every other problem row and every read command is.
+    problemPathRoot: ctx.repoRoot,
     // A library page may link out of the docs root, not out of the repository.
     repoRoot: linkBoundary(ctx),
     // A type this project declared is a known type. Passing only the built-in
@@ -1229,7 +1251,7 @@ export function graphTier(ctx: Ctx): DocsLintReport {
       isTpl(join(ctx.docsRoot, rel)) ||
       excluded(join(ctx.config.docsRoot, rel)),
     isContractPage: (rel) => CONTRACT_BASENAMES.has(basename(rel)),
-    extraChecks: hookChecks,
+    extraChecks: (pages) => hookChecks(pages, ctx.config.docsRoot),
   });
 }
 

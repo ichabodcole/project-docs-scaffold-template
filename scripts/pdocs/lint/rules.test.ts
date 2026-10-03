@@ -1381,7 +1381,7 @@ describe("the gate — a link may leave docs/, not the repository", () => {
     expect(stdout).toContain(
       `MISSING FILE   docs/cycles/2026-07-14-co-presence.md: ${abs}  ${hint}`
     );
-    expect(stdout).toContain(`MISSING FILE   index.md: ${abs}  ${hint}`);
+    expect(stdout).toContain(`MISSING FILE   docs/index.md: ${abs}  ${hint}`);
     expect(stdout).not.toContain("src/checker.ts");
     expect(stdout).toContain("docs-lint: 3 problem(s)");
   });
@@ -1469,6 +1469,97 @@ describe("the gate — a frontmatter key written twice", () => {
     const { code, stdout } = run(["check", "--format", "text", "--root", root]);
     expect(stdout).toContain("docs-lint: clean");
     expect(code).toBe(0);
+  });
+});
+
+describe("the gate — a library page's frontmatter problem is reported once", () => {
+  // The graph tier's core and the library's field checks both read a library
+  // page's frontmatter, and both reported what they found: one missing `tags`
+  // was two rows, `docs/playbooks/x.md` from one pass and `playbooks/x.md` from
+  // the other, which `sort -u` and `grep -F -f <file-list>` cannot fold.
+  const page = (fields: Record<string, string>) => fm(fields) + "# A Playbook\n";
+  const valid = {
+    type: "playbook",
+    title: "A playbook",
+    description: "A playbook.",
+    status: "stable",
+    tags: "[a]",
+    generated: GENERATED,
+  };
+  const pages: Record<string, string> = {
+    "docs/playbooks/no-tags.md": page({ ...valid, tags: "" }),
+    "docs/playbooks/empty-tags.md": page({ ...valid, tags: "[]" }),
+    "docs/playbooks/bare.md": page({ title: "Bare" }),
+    "docs/playbooks/no-frontmatter.md": "# No frontmatter\n",
+    "docs/playbooks/bad-date.md": page({
+      ...valid,
+      generated: "{ by: test, at: someday }",
+    }),
+    "docs/playbooks/no-actor.md": page({
+      ...valid,
+      generated: "{ by: , at: 2026-09-03 }",
+    }),
+    "docs/playbooks/scalar-generated.md": page({
+      ...valid,
+      generated: "2026-09-03",
+    }),
+    // Loose at the docs root: no type the library gives it, so its fields are
+    // still the core's to check.
+    "docs/loose.md": "# Loose\n",
+  };
+  const catalog =
+    fm({
+      type: "index",
+      title: "Index",
+      description: "The catalog.",
+      status: "stable",
+      tags: "[index]",
+      generated: GENERATED,
+    }) +
+    "# Index\n\n" +
+    Object.keys(pages)
+      .map((rel) => `- [x](./${rel.slice("docs/".length)}) — A playbook.`)
+      .join("\n") +
+    "\n";
+  const hint = {
+    tags: "  (expected `tags: [ ... ]`)",
+    generated: "  (expected `generated: { by: <actor>, at: YYYY-MM-DD }`)",
+  };
+  const EXPECTED = [
+    "BAD GENERATED  docs/playbooks/scalar-generated.md: 2026-09-03  (expected `{ by: <actor>, at: YYYY-MM-DD }`)",
+    'BAD generated.at  docs/playbooks/bad-date.md: "someday"  (expected YYYY-MM-DD)',
+    `MISSING description   docs/playbooks/bare.md`,
+    `MISSING generated   docs/playbooks/bare.md${hint.generated}`,
+    "MISSING generated.by  docs/playbooks/no-actor.md  (OKF requires an actor)",
+    `MISSING status   docs/playbooks/bare.md`,
+    `MISSING tags   docs/playbooks/bare.md${hint.tags}`,
+    `MISSING tags   docs/playbooks/empty-tags.md${hint.tags}`,
+    `MISSING tags   docs/playbooks/no-tags.md${hint.tags}`,
+    `MISSING type   docs/playbooks/bare.md`,
+    "NO FRONTMATTER docs/loose.md",
+    "NO FRONTMATTER docs/playbooks/no-frontmatter.md  (see docs/SCHEMA.md)",
+  ];
+
+  test("in text: each problem on one row, every path repo-relative", () => {
+    const root = minimal({ ...pages, "docs/index.md": catalog });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(9);
+    const rows = stdout
+      .split("\n")
+      .filter((l) => /^(MISSING|NO FRONTMATTER|BAD)/.test(l));
+    expect(rows.sort()).toEqual(EXPECTED);
+    expect(stdout).not.toMatch(/\s(playbooks|loose\.md|index\.md)\b/);
+    expect(stdout).toContain(`docs-lint: ${EXPECTED.length} problem(s)`);
+  });
+
+  test("in JSON: the same problems, counted once", () => {
+    const root = minimal({ ...pages, "docs/index.md": catalog });
+    const { code, stdout } = run(["check", "--format", "json", "--root", root]);
+    expect(code).toBe(9);
+    const data = JSON.parse(stdout).data;
+    const messages = data.problems.map((p: { message: string }) => p.message);
+    expect(messages.sort()).toEqual(EXPECTED);
+    expect(data.total).toBe(EXPECTED.length);
   });
 });
 

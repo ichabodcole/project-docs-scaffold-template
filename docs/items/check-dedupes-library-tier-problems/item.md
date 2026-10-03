@@ -5,7 +5,7 @@ description:
   pdocs check prints library-tier frontmatter problems twice, once with a docs/
   prefix and once without.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a0ff09-eb6c-7636-b533-066f03d9eeb3
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
@@ -33,5 +33,5 @@ Reported in
 
 ## Definition of done
 
-- [ ] Each (rule, path) problem is reported once, in one path form, in text and
+- [x] Each (rule, path) problem is reported once, in one path form, in text and
       JSON, with a test.

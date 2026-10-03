@@ -28,6 +28,12 @@
 // 4. The link grammar `checkLinks` scans with is exported as `MARKDOWN_LINK_RE`,
 //    so a tool that REWRITES links (`scripts/pdocs/links-rewrite.ts`) reads
 //    exactly the links the checker reads, rather than a second regex.
+// 5. `fieldsCheckedElsewhere` and `problemPathRoot` are configurable. A caller
+//    that runs its own frontmatter rules over the same pages reported a missing
+//    `tags` twice, once from each pass and in two path forms; the first hands
+//    those pages' field checks to the caller, the second writes problem paths
+//    from the root every other line of the caller's output uses. Both default
+//    to the source's behaviour.
 
 import {
   existsSync,
@@ -113,6 +119,19 @@ export interface DocsLintConfig {
    * may not leave the repository — see `checkLinks`. Default: not checked.
    */
   repoRoot?: string;
+  /**
+   * Pages, by path relative to `root`, whose frontmatter FIELDS the caller
+   * checks itself. The core skips its presence, `type`, `tags` and date-field
+   * checks on them — and still checks escapes, links and the graph — so a page
+   * is not reported twice for one missing field. Default: none.
+   */
+  fieldsCheckedElsewhere?: (rel: string) => boolean;
+  /**
+   * The directory a problem's path is written relative to. Only the problem
+   * messages: `nodes`, the indexes and `LintPage.rel` stay relative to `root`.
+   * Default: `root`.
+   */
+  problemPathRoot?: string;
   /** Emit the graph as JSON instead of human lint output. */
   json?: boolean;
 }
@@ -602,6 +621,8 @@ export function collectDocsLint(
 
   const fieldsOf = (f: string): Map<string, string> => meta.get(f) ?? new Map();
   const rel = (f: string) => relative(ROOT, f);
+  const shown = (f: string) => relative(config.problemPathRoot ?? ROOT, f);
+  const elsewhere = config.fieldsCheckedElsewhere ?? (() => false);
   // Contract pages are maintainer meta-documents about the wiki, not entries in its type system,
   // so the OKF frontmatter rules and the slug/catalog checks do not apply to them. Kept as a list
   // rather than one hardcoded filename: this module is meant to be lifted into other repos, and
@@ -618,42 +639,45 @@ export function collectDocsLint(
   // --- OKF frontmatter conformance ------------------------------------------------------
   for (const file of files) {
     if (isContract(file)) continue;
+    const checkFields = !elsewhere(rel(file));
     if (!/^---\n[\s\S]*?\n---/.test(body.get(file) ?? "")) {
-      say(`NO FRONTMATTER ${rel(file)}`);
+      if (checkFields) say(`NO FRONTMATTER ${shown(file)}`);
       continue;
     }
     const fields = fieldsOf(file);
-    const type = fields.get("type");
-    if (!type)
-      say(`MISSING type   ${rel(file)}  (OKF requires a \`type\` field)`);
-    else if (!OKF_TYPES.has(type))
-      say(
-        `BAD type       ${rel(file)}: "${type}" not in {${[...OKF_TYPES].join(", ")}}`
-      );
-
-    // Accept flow style (`[a, b]`) and YAML block sequence (`- a`): Prettier rewraps long
-    // flow lists, and lint-staged runs it on every staged .md.
-    const tags = fields.get("tags");
-    if (!tags || !(/^\[.*\S.*\]$/.test(tags) || /^- \S/.test(tags)))
-      say(`MISSING tags   ${rel(file)}  (expected \`tags: [ ... ]\`)`);
-
-    // `generated` is OKF 0.2's replacement for `timestamp`, and it is a mapping rather than a
-    // scalar — so the instant to validate is inside it, and the actor beside it is checked too.
-    // Any other `dateField` stays the plain scalar it always was.
-    if (DATE_FIELD === "generated") {
-      const g = parseGenerated(fields.get("generated"));
-      if (!g)
+    if (checkFields) {
+      const type = fields.get("type");
+      if (!type)
+        say(`MISSING type   ${shown(file)}  (OKF requires a \`type\` field)`);
+      else if (!OKF_TYPES.has(type))
         say(
-          `MISSING generated  ${rel(file)}  (expected \`generated: { by: <actor>, at: YYYY-MM-DD }\`)`
+          `BAD type       ${shown(file)}: "${type}" not in {${[...OKF_TYPES].join(", ")}}`
         );
-      else if (!DATE_RE.test(g.at))
-        say(`BAD generated.at  ${rel(file)}: "${g.at}"  (expected YYYY-MM-DD)`);
-      else if (!g.by)
-        say(`MISSING generated.by  ${rel(file)}  (OKF requires an actor)`);
-    } else if (!DATE_RE.test(fields.get(DATE_FIELD) ?? "")) {
-      say(
-        `MISSING ${DATE_FIELD}  ${rel(file)}  (expected \`${DATE_FIELD}: YYYY-MM-DD\`)`
-      );
+
+      // Accept flow style (`[a, b]`) and YAML block sequence (`- a`): Prettier rewraps long
+      // flow lists, and lint-staged runs it on every staged .md.
+      const tags = fields.get("tags");
+      if (!tags || !(/^\[.*\S.*\]$/.test(tags) || /^- \S/.test(tags)))
+        say(`MISSING tags   ${shown(file)}  (expected \`tags: [ ... ]\`)`);
+
+      // `generated` is OKF 0.2's replacement for `timestamp`, and it is a mapping rather than a
+      // scalar — so the instant to validate is inside it, and the actor beside it is checked too.
+      // Any other `dateField` stays the plain scalar it always was.
+      if (DATE_FIELD === "generated") {
+        const g = parseGenerated(fields.get("generated"));
+        if (!g)
+          say(
+            `MISSING generated  ${shown(file)}  (expected \`generated: { by: <actor>, at: YYYY-MM-DD }\`)`
+          );
+        else if (!DATE_RE.test(g.at))
+          say(`BAD generated.at  ${shown(file)}: "${g.at}"  (expected YYYY-MM-DD)`);
+        else if (!g.by)
+          say(`MISSING generated.by  ${shown(file)}  (OKF requires an actor)`);
+      } else if (!DATE_RE.test(fields.get(DATE_FIELD) ?? "")) {
+        say(
+          `MISSING ${DATE_FIELD}  ${shown(file)}  (expected \`${DATE_FIELD}: YYYY-MM-DD\`)`
+        );
+      }
     }
 
     // Frontmatter values are user-facing output downstream (`acc show` prints title and
@@ -662,7 +686,7 @@ export function collectDocsLint(
     const escapes = unsupportedEscapes(frontmatter.get(file) ?? "");
     if (escapes.length)
       say(
-        `BAD ESCAPE     ${rel(file)}: ${escapes.join(", ")}  (frontmatter decodes only \\" \\\\ \\/ \\n \\t \\r)`
+        `BAD ESCAPE     ${shown(file)}: ${escapes.join(", ")}  (frontmatter decodes only \\" \\\\ \\/ \\n \\t \\r)`
       );
   }
 
@@ -681,8 +705,8 @@ export function collectDocsLint(
     for (const p of res.problems) {
       say(
         p.kind === "MISSING FILE"
-          ? `MISSING FILE   ${rel(file)}: ${p.target}${p.outside ? OUTSIDE_REPOSITORY : ""}`
-          : `MISSING ANCHOR ${rel(file)}: ${p.target}  (#${p.anchor} not a heading)`
+          ? `MISSING FILE   ${shown(file)}: ${p.target}${p.outside ? OUTSIDE_REPOSITORY : ""}`
+          : `MISSING ANCHOR ${shown(file)}: ${p.target}  (#${p.anchor} not a heading)`
       );
     }
   }
@@ -692,7 +716,7 @@ export function collectDocsLint(
   const reached = new Set<string>();
   if (!existsSync(INDEX)) {
     say(
-      `NO CATALOG     ${rel(INDEX)} is missing — every page is an orphan without it.`
+      `NO CATALOG     ${shown(INDEX)} is missing — every page is an orphan without it.`
     );
   } else {
     reached.add(INDEX);
@@ -711,7 +735,7 @@ export function collectDocsLint(
       if (file === INDEX || isContract(file)) continue;
       if (!reached.has(file))
         say(
-          `ORPHAN         ${rel(file)}  (unreachable from index.md — add its catalog line)`
+          `ORPHAN         ${shown(file)}  (unreachable from index.md — add its catalog line)`
         );
     }
   }
@@ -732,7 +756,7 @@ export function collectDocsLint(
     const first = byTypeSlug.get(key);
     if (first)
       say(
-        `DUPLICATE KEY  ${rel(file)}: "${key}" already used by ${rel(first)}`
+        `DUPLICATE KEY  ${shown(file)}: "${key}" already used by ${shown(first)}`
       );
     else byTypeSlug.set(key, file);
   }
@@ -740,7 +764,7 @@ export function collectDocsLint(
     for (const entry of yamlList(fieldsOf(file).get("related"))) {
       if (!byTypeSlug.has(entry))
         say(
-          `BAD related    ${rel(file)}: "${entry}" matches no page (expected \`type/slug\`)`
+          `BAD related    ${shown(file)}: "${entry}" matches no page (expected \`type/slug\`)`
         );
     }
   }

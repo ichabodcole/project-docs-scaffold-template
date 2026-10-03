@@ -34,6 +34,11 @@
 // (BAD KIND, BAD PARENT, MISPLACED ENTITY, MISSING ENTITY FILE, ARCHIVED NOT
 // TERMINAL) so the transcript witnesses that the corpus rules are called.
 //
+// RE-RECORDED when the library tier stopped reporting a frontmatter problem
+// twice: the graph tier's rows (ORPHAN, BAD related, STALE HOOK) now name
+// repo-relative paths, as every other row does, and `MISSING generated` carries
+// the shape it asks for, which only the graph tier's copy used to.
+//
 // WHY THE FIXTURES ARE BUILT HERE AND NOT COMMITTED. A dirty tree of `.md`
 // inside this repository would be linted by the live gate (`main()` also walks
 // everything git tracks outside `docs/`), would fail `format:check`, and — the

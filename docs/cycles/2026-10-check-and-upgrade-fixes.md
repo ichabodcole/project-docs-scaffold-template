@@ -32,7 +32,7 @@ walks into.
   (#192) — a link with any URI scheme is external.
 - **[item/lint-duplicate-frontmatter-key](../items/lint-duplicate-frontmatter-key/item.md)**
   (#190) — a duplicate key is an error naming both lines.
-- **[item/check-dedupes-library-tier-problems](../items/check-dedupes-library-tier-problems.md)**
+- **[item/check-dedupes-library-tier-problems](../items/check-dedupes-library-tier-problems/item.md)**
   (#198) — each problem once, in one path form.
 - **[item/upgrade-verify-snippet-zsh-glob](../items/upgrade-verify-snippet-zsh-glob.md)**
   (#197) and
@@ -78,3 +78,4 @@ placeholder line into a real cycle.
 
 - fix/link-check-skips-uri-schemes (landed 2026-10-03)
 - fix/lint-duplicate-frontmatter-key (landed 2026-10-03)
+- fix/check-dedupes-library-tier-problems (landed 2026-10-03)
