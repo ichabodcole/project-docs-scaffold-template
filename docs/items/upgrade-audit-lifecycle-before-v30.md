@@ -5,7 +5,7 @@ description:
   A multi-hop upgrade audits lifecycle after v3.0 has already mapped stale
   values into feature and item states.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a0ff09-ea1e-710b-a207-961dbc275c12
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
@@ -28,6 +28,10 @@ Reported in
 
 ## Definition of done
 
-- [ ] update-project-docs Step 4 says: when v2.10-to-v3.0 is in the run, audit
-      `lifecycle` (blanks and stale values) after v2.6-to-v2.7 and before v3.0;
-      the description backfill can wait until the end.
+- [x] update-project-docs Step 4 says: when v2.10-to-v3.0 is in the run, audit
+      `lifecycle` (blanks and stale values) after v2.6-to-v2.7 and before v3.0.
+      Changed at review: the description backfill comes before v3.0 too, since
+      v3.0 copies descriptions into the items it creates.
+
+Landed with
+[the zsh glob fix](./upgrade-verify-snippet-zsh-glob/sessions/2026-10-03-upgrade-skill-zsh-and-audit-order.md).
