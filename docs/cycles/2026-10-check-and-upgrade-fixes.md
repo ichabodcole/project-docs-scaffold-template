@@ -30,7 +30,7 @@ walks into.
 
 - **[item/link-check-skips-uri-schemes](../items/link-check-skips-uri-schemes/item.md)**
   (#192) — a link with any URI scheme is external.
-- **[item/lint-duplicate-frontmatter-key](../items/lint-duplicate-frontmatter-key.md)**
+- **[item/lint-duplicate-frontmatter-key](../items/lint-duplicate-frontmatter-key/item.md)**
   (#190) — a duplicate key is an error naming both lines.
 - **[item/check-dedupes-library-tier-problems](../items/check-dedupes-library-tier-problems.md)**
   (#198) — each problem once, in one path form.
@@ -77,3 +77,4 @@ placeholder line into a real cycle.
 -->
 
 - fix/link-check-skips-uri-schemes (landed 2026-10-03)
+- fix/lint-duplicate-frontmatter-key (landed 2026-10-03)

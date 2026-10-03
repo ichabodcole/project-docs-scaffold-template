@@ -1066,6 +1066,11 @@ function generatedProblems(
  * Checked across both tiers, because the hazard is the punctuation rather than
  * the folder — and hand-written `description` values are exactly where a colon
  * turns up.
+ *
+ * A top-level key written twice is the same hazard: the parser keeps the last
+ * value, other YAML tools keep the first or refuse the document, so the value
+ * the lint validated may not be the one the next tool reads. Reported here, in
+ * the one pass that reads both tiers, so a document is reported once.
  */
 export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
   const excluded = excluder(ctx);
@@ -1080,7 +1085,14 @@ export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
     const m = /^---\n([\s\S]*?)\n---/.exec(readFileSync(path, "utf8"));
     if (!m) continue;
 
-    for (const line of (m[1] as string).split("\n")) {
+    // Key -> the file's line numbers: the block opens on line 2, after `---`.
+    // Only a key at column 0 is top-level; a nested key, a list item or a
+    // continuation line is indented.
+    const keyLines = new Map<string, number[]>();
+    for (const [i, line] of (m[1] as string).split("\n").entries()) {
+      const key = /^([A-Za-z_][\w-]*):/.exec(line)?.[1];
+      if (key) keyLines.set(key, [...(keyLines.get(key) ?? []), i + 2]);
+
       const kv = /^([A-Za-z_][\w-]*):\s+(\S.*)$/.exec(line);
       if (!kv) continue;
       // A trailing ` # comment` is not part of the scalar — YAML strips it, so
@@ -1098,6 +1110,11 @@ export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
           `BAD SCALAR     ${rel}: \`${kv[1]}\` contains ": " unquoted  (a real YAML parser reads this as a nested mapping)`
         );
     }
+    for (const [key, lines] of keyLines)
+      if (lines.length > 1)
+        problems.push(
+          `DUPLICATE FIELD  ${rel}: \`${key}\` on lines ${lines.slice(0, -1).join(", ")} and ${lines.at(-1)}  (YAML tools disagree on which value wins)`
+        );
   }
   return problems;
 }

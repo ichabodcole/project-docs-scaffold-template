@@ -5,7 +5,7 @@ description:
   pdocs check passes a frontmatter that repeats a key, though YAML tools
   disagree on which value wins.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a0ff09-9fd1-743f-b6f2-a2830ddb1c5e
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
@@ -29,5 +29,5 @@ Reported in
 
 ## Definition of done
 
-- [ ] `check` reports a duplicate frontmatter key as an error, naming the key
+- [x] `check` reports a duplicate frontmatter key as an error, naming the key
       and both line numbers, with a test.

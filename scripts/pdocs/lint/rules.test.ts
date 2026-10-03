@@ -544,6 +544,33 @@ describe("frontmatter a real YAML parser would reject", () => {
     });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
+
+  // The parser keeps the last value; another YAML tool may keep the first or
+  // refuse the document. Spellbook shipped a cycle with `started:` twice.
+  test("a top-level key written twice, in either tier, names the key and its lines", () => {
+    const ctx = fixture({
+      "docs/architecture/a.md":
+        "---\ntype: architecture\ntitle: A\nstatus: draft\nstatus: stable\n---\n\n# A\n",
+      "docs/cycles/2026-09-b.md":
+        "---\ntype: cycle\nstarted: 2026-09-01\ntitle: B\nstarted: 2026-09-02\n" +
+        "started: 2026-09-03\n---\n\n# B\n",
+    });
+    expect(frontmatterSyntaxProblems(ctx).sort()).toEqual([
+      "DUPLICATE FIELD  docs/architecture/a.md: `status` on lines 4 and 5  (YAML tools disagree on which value wins)",
+      "DUPLICATE FIELD  docs/cycles/2026-09-b.md: `started` on lines 3, 5 and 6  (YAML tools disagree on which value wins)",
+    ]);
+  });
+
+  test("nested keys, list items and continuation lines are not top-level keys", () => {
+    const ctx = fixture({
+      "docs/architecture/a.md":
+        "---\ntype: architecture\ntitle: A\ndescription:\n  A description that wraps\n" +
+        "  onto a second line.\ngenerated:\n  by: t\n  at: 2026-09-03\nmeta:\n" +
+        "  title: nested\n  type: nested\nrelated:\n  - title: x\n  - title: y\n" +
+        "status: stable\n---\n\n# A\n",
+    });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+  });
 });
 
 describe("at most one cycle is active", () => {
@@ -1390,6 +1417,58 @@ describe("the gate — a link with a URI scheme is external", () => {
     for (const external of ["operator:", "op:doc", "file:", "https:", "mailto:"])
       expect(stdout).not.toContain(external);
     expect(stdout).toContain("docs-lint: 3 problem(s)");
+  });
+});
+
+describe("the gate — a frontmatter key written twice", () => {
+  // Line 4 opens a description folded over lines 5 and 6, so a line count
+  // that miscounts continuation lines lands on the wrong numbers.
+  const item = (extra: string) =>
+    [
+      "---",
+      "type: item",
+      "title: Fix the hook",
+      "description:",
+      "  The hook reads the wrong index, and the commit it",
+      "  makes is not the one that was staged.",
+      "status: draft",
+      "lifecycle: triage",
+      "id: 0190f4b2-7c3a-7d4e-8f00-00000000abcd",
+      "kind: bug",
+      "tags:",
+      "  - hooks",
+      `generated: ${GENERATED}`,
+      ...(extra ? [extra] : []),
+      "---",
+      "",
+      "# Fix the hook",
+      "",
+    ].join("\n");
+  const PROBLEM =
+    "DUPLICATE FIELD  docs/items/fix-hook.md: `lifecycle` on lines 8 and 14  (YAML tools disagree on which value wins)";
+
+  test("is an error naming the key and both lines, reported once", () => {
+    const root = minimal({ "docs/items/fix-hook.md": item("lifecycle: backlog") });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(9);
+    expect(stdout.split("\n").filter((l) => l === PROBLEM)).toHaveLength(1);
+    expect(stdout).toContain("docs-lint: 1 problem(s)");
+  });
+
+  test("reaches the JSON envelope as one workbench problem", () => {
+    const root = minimal({ "docs/items/fix-hook.md": item("lifecycle: backlog") });
+    const { code, stdout } = run(["check", "--format", "json", "--root", root]);
+    expect(code).toBe(9);
+    const data = JSON.parse(stdout).data;
+    expect(data.clean).toBe(false);
+    expect(data.problems).toEqual([{ tier: "workbench", message: PROBLEM }]);
+  });
+
+  test("the same document without the second key is clean", () => {
+    const root = minimal({ "docs/items/fix-hook.md": item("") });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(stdout).toContain("docs-lint: clean");
+    expect(code).toBe(0);
   });
 });
 
