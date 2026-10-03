@@ -5,11 +5,12 @@ description:
   The v2.5-to-v2.6 script nests archive/ inside an _archive/ that already
   exists, and its sed respells every /archive/ substring.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ff09-e929-7532-9684-7e072f84d79c
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#191"
+priority: low
 ---
 
 # Merge archive/ into an existing \_archive/ in the v2.6 migration

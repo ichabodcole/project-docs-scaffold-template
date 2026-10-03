@@ -4,12 +4,14 @@ title: Print each library-tier problem once, with one path form
 description:
   pdocs check prints library-tier frontmatter problems twice, once with a docs/
   prefix and once without.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ff09-eb6c-7636-b533-066f03d9eeb3
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#198"
+priority: high
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # Print each library-tier problem once, with one path form

@@ -4,12 +4,14 @@ title: Handle tool-written folders in the v3.0 preflight
 description:
   The v3.0 preflight stops once per file for folders a project's tools keep
   writing into, and the guide has no pattern for a standing output stream.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a10389-621b-739c-9901-e2863eeeba90
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 source: "#200"
+priority: high
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # Handle tool-written folders in the v3.0 preflight

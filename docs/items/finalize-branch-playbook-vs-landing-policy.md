@@ -5,12 +5,14 @@ description:
   finalize-branch follows a branch-finalization playbook even when it predates
   the skill and contradicts the project's Branch Landing Policy or skips the
   independent review.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ff09-ebc0-738b-8313-cba708160cb6
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#199"
+priority: medium
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # Stop a stale finalization playbook overriding the landing policy

@@ -4,12 +4,14 @@ title: Refuse a duplicate frontmatter key
 description:
   pdocs check passes a frontmatter that repeats a key, though YAML tools
   disagree on which value wins.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ff09-9fd1-743f-b6f2-a2830ddb1c5e
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#190"
+priority: high
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # Refuse a duplicate frontmatter key

@@ -4,12 +4,14 @@ title: Keep the v3.0 config patch's arrays formatter-clean
 description:
   The v3.0 config patch keeps a shrunk array's multi-line layout, so a project's
   formatter rejects .project-docs.json at the commit gate.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a10389-b4c4-767d-9872-03c6955c131b
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 source: "#195 (comment)"
+priority: medium
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # Keep the v3.0 config patch's arrays formatter-clean

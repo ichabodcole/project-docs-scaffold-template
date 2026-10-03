@@ -5,11 +5,13 @@ description:
   On CI two v2.6-to-v2.7 guard tests that take ~250ms hung in git add -A for the
   full 30 s budget; the same SHA passed on re-run. Its git helper lacks the
   hardening the v2.10 tests got.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0fdc5-e8e1-7032-b536-05bd4834600a
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
+priority: medium
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # A v2.6 migration test's git add hangs until the test budget kills it

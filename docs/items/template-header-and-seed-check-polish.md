@@ -6,11 +6,12 @@ description:
   header after a stray backtick, and clearer check-mirror output for a stale or
   missing seed entry."
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0fc3d-997f-72e2-ac17-93cfbdc61987
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 from: items/template-header-left-in-documents/sessions/2026-10-02-template-header-warning.md
+priority: low
 ---
 
 # Template header and seed check polish

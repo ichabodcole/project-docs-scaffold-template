@@ -1,18 +1,20 @@
 ---
 type: item
-title: Fill the catalog in bulk and respell the index intro
+title: Respell the index intro's retired folders in v3.0
 description:
-  An adopting project must hand-write a catalog line per library page, and
-  index.md's intro still names retired folders after v3.0.
-status: draft
-lifecycle: triage
+  After v3.0, docs/index.md's intro still lists the retired workbench folders;
+  the migration should respell it while it matches the scaffold's text.
+status: stable
+lifecycle: ready
 id: 01a0ff09-eac4-728c-a363-352495830e3f
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#196"
+priority: low
+cycle: 2026-10-v3-migration-feedback
 ---
 
-# Fill the catalog in bulk and respell the index intro
+# Respell the index intro's retired folders in v3.0
 
 Two rough edges filling `docs/index.md` on an adopting project:
 
@@ -29,7 +31,8 @@ Reported in
 
 ## Definition of done
 
-- [ ] A way to add missing library pages to the catalog (archived pages in a
-      sub-list) and resync stale hooks, e.g. `pdocs catalog [--write]`.
 - [ ] v3.0 respells the intro sentence when it still matches the scaffold's
-      text.
+      text, with a test.
+
+The bulk fill is [pdocs-catalog-command](./pdocs-catalog-command.md), split out
+at triage.

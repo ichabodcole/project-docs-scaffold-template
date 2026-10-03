@@ -5,11 +5,12 @@ description:
   The v2.7 codemod leaves lifecycle blank for common Status wording such as
   Open, Backlog, RESOLVED and Graduated.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ff09-e9ca-71db-ba74-13d244b68c46
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#193"
+priority: low
 ---
 
 # Map common Status wording in the v2.7 codemod

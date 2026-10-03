@@ -5,13 +5,15 @@ description:
   The migration's respell option rewrote docs/investigations to docs/items in
   code that scaffolds documents, which would run and do the wrong thing, since
   an investigation is now an item plus a write-up.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ee56-066d-7402-bc0c-e97cd34e12e7
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: migrations
 source: "grapevine project-docs-v9 #17"
+priority: medium
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # The respell option flags hits in code rather than rewriting them

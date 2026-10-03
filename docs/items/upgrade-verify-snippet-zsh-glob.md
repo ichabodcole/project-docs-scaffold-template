@@ -4,12 +4,14 @@ title: Guard the tsconfig glob in the upgrade's verify snippet
 description:
   Step 7's verify snippet aborts under zsh when no root tsconfig*.json exists,
   skipping the formatter checks after it.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ff09-eb17-7700-b264-7748f0d82c42
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#197"
+priority: high
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # Guard the tsconfig glob in the upgrade's verify snippet

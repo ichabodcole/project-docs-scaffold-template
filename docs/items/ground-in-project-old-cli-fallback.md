@@ -4,12 +4,14 @@ title: Fall back when the CLI has no view command in ground-in-project
 description:
   ground-in-project Step 3 runs pdocs view, which an 8.x CLI rejects, and the
   skill has no fallback for it.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a10389-6281-77f1-a38e-79b6422968e8
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 source: "#202"
+priority: medium
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # Fall back when the CLI has no view command in ground-in-project

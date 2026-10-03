@@ -4,12 +4,14 @@ title: Repair legacy link rot that linting the archive exposes
 description:
   Linting _archive/ in 9.x surfaces years of broken links on a long-lived
   project, and pdocs has no tool to repair them.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ff09-ea71-7516-9fc0-6f852f916a9a
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#195"
+priority: medium
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # Repair legacy link rot that linting the archive exposes
@@ -39,7 +41,7 @@ Reported in
 - [ ] The v3.0 guide's "After the script" warns about archive link rot and names
       a supported way to adopt in stages (e.g. `lint.skip: ["_archive"]`).
 - [ ] The v3.0 migration can apply its own phase-10 suggestions (e.g.
-      `--apply-suggestions`, or a `--write` like `--respell`'s).
-- [ ] Decide at triage whether a `pdocs relink [--write]` (move record plus
-      rename history, unique matches only, reporting the rest) is worth
-      building.
+      `--apply-suggestions`, or a `--write` like `--respell`'s), with a test.
+
+A general repair tool is [pdocs-relink-command](./pdocs-relink-command.md),
+split out at triage.

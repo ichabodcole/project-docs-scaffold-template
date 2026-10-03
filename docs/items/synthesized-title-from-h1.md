@@ -4,13 +4,15 @@ title: Synthesized titles come from the slug when an H1 exists
 description:
   Story-loom got titles like 'Agent cli conformance' and 'Mcp follow ups' from
   folder slugs, where the document's H1 would have been right.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ee55-c8e9-777b-a516-a11750774198
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: migrations
 source: "grapevine project-docs-v9 #17"
+priority: low
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # Synthesized titles come from the slug when an H1 exists

@@ -4,12 +4,14 @@ title: Skip links with a URI scheme in the link check
 description:
   The link check reads operator://, file:// and other custom-scheme links as
   file paths and reports them MISSING FILE.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ff09-e97b-72b7-9bff-f71e9d2e57bf
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#192"
+priority: high
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # Skip links with a URI scheme in the link check

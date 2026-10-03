@@ -4,12 +4,14 @@ title: Stop the respell option rewriting a path split across lines
 description:
   The v3.0 respell option rewrites a retired folder path that a comment wraps
   onto the next line as the bare folder, producing a path that never exists.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a10389-7ed4-72f9-aa55-d7d4c3a4b23f
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 source: "#201"
+priority: high
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # Stop the respell option rewriting a path split across lines

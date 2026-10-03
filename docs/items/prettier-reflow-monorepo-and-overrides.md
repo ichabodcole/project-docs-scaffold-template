@@ -6,12 +6,13 @@ description:
   not the git top level, and asks Prettier for file info without resolving
   config overrides.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0fa1b-4537-769a-a219-151ce2f41244
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-01 }
 scope: pdocs
 from: items/catalog-line-wraps-into-a-list/sessions/2026-10-01-pdocs-small-fixes.md
+priority: low
 ---
 
 # The link reflow misses monorepo ignore files and parser overrides

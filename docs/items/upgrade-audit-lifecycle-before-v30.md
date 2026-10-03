@@ -4,12 +4,14 @@ title: Audit lifecycle before v3.0 in a multi-hop upgrade
 description:
   A multi-hop upgrade audits lifecycle after v3.0 has already mapped stale
   values into feature and item states.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ff09-ea1e-710b-a207-961dbc275c12
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
 source: "#194"
+priority: medium
+cycle: 2026-10-check-and-upgrade-fixes
 ---
 
 # Audit lifecycle before v3.0 in a multi-hop upgrade
