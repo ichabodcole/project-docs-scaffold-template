@@ -6,7 +6,7 @@ description:
   the skill and contradicts the project's Branch Landing Policy or skips the
   independent review.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a0ff09-ebc0-738b-8313-cba708160cb6
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
@@ -29,8 +29,9 @@ Reported in
 
 ## Definition of done
 
-- [ ] When a playbook and a `## Branch Landing Policy` disagree, finalize-branch
+- [x] When a playbook and a `## Branch Landing Policy` disagree, finalize-branch
       says so before following either, and the policy governs landing.
-- [ ] No playbook relaxes Step 2's independent review.
-- [ ] Decide at triage whether update-project-docs should flag a finalization
-      playbook that names retired paths.
+- [x] No playbook relaxes Step 2's independent review.
+- [x] Decide at triage whether update-project-docs should flag a finalization
+      playbook that names retired paths: moved to
+      [a follow-up](../stale-lifecycle-playbooks-after-upgrade.md) in triage.
