@@ -25,6 +25,12 @@ the v3.0 move record; `git log -M --diff-filter=R` rename history; a path-suffix
 match; a unique filename match, also with a leading `YYYY-MM-DD-` stripped; a
 retired folder README → its successor. Folder hints in the old link broke ties.
 
+media-forge (8.1.0 → 9.4.0) hit the same cliff at a smaller size: 69
+`MISSING FILE`. Phase 10's suggestions covered 64, and since each prints as
+`file: old → new (reading)`, a ten-line script applied 58 of them; the rest
+pointed at a file moved by hand before the run. So the move-record-backed subset
+could be applied by the migration itself.
+
 Reported in
 [#195](https://github.com/ichabodcole/project-docs-scaffold-template/issues/195).
 
@@ -32,6 +38,8 @@ Reported in
 
 - [ ] The v3.0 guide's "After the script" warns about archive link rot and names
       a supported way to adopt in stages (e.g. `lint.skip: ["_archive"]`).
+- [ ] The v3.0 migration can apply its own phase-10 suggestions (e.g.
+      `--apply-suggestions`, or a `--write` like `--respell`'s).
 - [ ] Decide at triage whether a `pdocs relink [--write]` (move record plus
       rename history, unique matches only, reporting the rest) is worth
       building.
