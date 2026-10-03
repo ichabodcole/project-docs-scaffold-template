@@ -396,6 +396,25 @@ describe("checkLinks", () => {
     expect(check("[x](https://example.com/a) [y](mailto:a@b.c)")).toEqual([]);
   });
 
+  test("a target with any URI scheme is external", () => {
+    expect(
+      check(
+        "[a](operator://documents/x) [b](op:doc/x) [c](file:///x) [d](<braindump://x>) [e](OPERATOR://X)"
+      )
+    ).toEqual([]);
+  });
+
+  test("a relative path with a colon after its first segment is still a path", () => {
+    expect(check("[x](./a:b.md) [y](docs/a:b.md)")).toEqual([
+      { kind: "MISSING FILE", target: "./a:b.md" },
+      { kind: "MISSING FILE", target: "docs/a:b.md" },
+    ]);
+  });
+
+  test("a drive letter is not a scheme", () => {
+    expect(check("[x](C:/a.md)").map((p) => p.target)).toEqual(["C:/a.md"]);
+  });
+
   test("a link inside a fence is a specimen, not a link", () => {
     expect(check("```\n[x](./gone.md)\n```\n")).toEqual([]);
   });

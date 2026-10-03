@@ -5,7 +5,7 @@ description:
   The link check reads operator://, file:// and other custom-scheme links as
   file paths and reports them MISSING FILE.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a0ff09-e97b-72b7-9bff-f71e9d2e57bf
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
@@ -27,6 +27,6 @@ Reported in
 
 ## Definition of done
 
-- [ ] A link target that starts with a URI scheme (`[a-z][a-z0-9+.-]*:`) is
+- [x] A link target that starts with a URI scheme (`[a-z][a-z0-9+.-]*:`) is
       treated as external and skipped, with a test that a relative path
       containing a colon later on is still checked.

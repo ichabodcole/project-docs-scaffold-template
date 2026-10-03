@@ -1360,6 +1360,39 @@ describe("the gate — a link may leave docs/, not the repository", () => {
   });
 });
 
+describe("the gate — a link with a URI scheme is external", () => {
+  const page = (body: string) =>
+    fm({
+      type: "cycle",
+      title: "App links",
+      description: "A cycle that cites documents in another app.",
+      status: "stable",
+      lifecycle: "closed",
+      generated: GENERATED,
+    }) + `# App links\n\n${body}\n\n## Outcome\n\nShipped.\n`;
+
+  test("any scheme is skipped; a relative path with a later colon is still checked", () => {
+    const root = minimal({
+      "docs/cycles/2026-07-14-app-links.md": page(
+        [
+          "[a](operator://documents/abc) [b](op:doc/abc) [c](file:///tmp/x.md)",
+          "[d](https://example.com/nope.md) [e](mailto:a@b.c)",
+          "[f](./gone.md) [g](./a:b.md) [h](notes/a:b.md)",
+        ].join("\n")
+      ),
+    });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(9);
+    const at = "MISSING FILE   docs/cycles/2026-07-14-app-links.md:";
+    expect(stdout).toContain(`${at} ./gone.md`);
+    expect(stdout).toContain(`${at} ./a:b.md`);
+    expect(stdout).toContain(`${at} notes/a:b.md`);
+    for (const external of ["operator:", "op:doc", "file:", "https:", "mailto:"])
+      expect(stdout).not.toContain(external);
+    expect(stdout).toContain("docs-lint: 3 problem(s)");
+  });
+});
+
 describe("the gate — the repository is git's, not the config's", () => {
   // A docs root nested in a monorepo: `.project-docs.json` sits in
   // `packages/app/`, and a link from there to the monorepo's own

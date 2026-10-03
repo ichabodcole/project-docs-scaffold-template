@@ -28,7 +28,7 @@ walks into.
 
 ## Scope
 
-- **[item/link-check-skips-uri-schemes](../items/link-check-skips-uri-schemes.md)**
+- **[item/link-check-skips-uri-schemes](../items/link-check-skips-uri-schemes/item.md)**
   (#192) — a link with any URI scheme is external.
 - **[item/lint-duplicate-frontmatter-key](../items/lint-duplicate-frontmatter-key.md)**
   (#190) — a duplicate key is an error naming both lines.
@@ -75,3 +75,5 @@ One line per branch, appended by `init-branch` as it opens them:
 lands. Leave this section empty until the first branch; do not carry a
 placeholder line into a real cycle.
 -->
+
+- fix/link-check-skips-uri-schemes (landed 2026-10-03)

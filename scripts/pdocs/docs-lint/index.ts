@@ -432,6 +432,16 @@ function climbsOut(root: string, fromDir: string, pathPart: string): boolean {
 export const MARKDOWN_LINK_RE = /\]\((<[^>]*>|[^)]+)\)/g;
 
 /**
+ * Does a link destination name something other than a file — a URL, `mailto:`,
+ * or an app URI like `operator://documents/<id>` or `op:doc/<id>`? Any leading
+ * URI scheme counts; a colon later in a relative path (`./a:b.md`) does not. A
+ * scheme takes two characters or more, so a drive letter (`C:/x.md`) stays a path.
+ */
+export function isExternalLink(target: string): boolean {
+  return /^[a-z][a-z0-9+.-]+:/i.test(target);
+}
+
+/**
  * Resolve every relative markdown link in one file: does the target exist, and if it names an
  * anchor, is that anchor a heading there?
  *
@@ -476,7 +486,7 @@ export function checkLinks(
     const link = m[1];
     if (link === undefined) continue;
     const target = link.trim().replace(/^<(.*)>$/, "$1");
-    if (/^https?:\/\//.test(target) || target.startsWith("mailto:")) continue;
+    if (isExternalLink(target)) continue;
     const [pathPart = "", anchor] = target.split("#");
     let filePath: string;
     if (pathPart === "") {
