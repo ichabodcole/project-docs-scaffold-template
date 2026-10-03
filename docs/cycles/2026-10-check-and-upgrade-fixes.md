@@ -38,7 +38,7 @@ walks into.
   (#197) and
   **[item/upgrade-audit-lifecycle-before-v30](../items/upgrade-audit-lifecycle-before-v30.md)**
   (#194) — update-project-docs fixes, one branch.
-- **[item/ground-in-project-old-cli-fallback](../items/ground-in-project-old-cli-fallback.md)**
+- **[item/ground-in-project-old-cli-fallback](../items/ground-in-project-old-cli-fallback/item.md)**
   (#202) — fall back when the CLI has no `view`.
 - **[item/finalize-branch-playbook-vs-landing-policy](../items/finalize-branch-playbook-vs-landing-policy.md)**
   (#199) — a stale playbook can't override the landing policy or the review.
@@ -80,3 +80,4 @@ placeholder line into a real cycle.
 - fix/lint-duplicate-frontmatter-key (landed 2026-10-03)
 - fix/check-dedupes-library-tier-problems (landed 2026-10-03)
 - fix/upgrade-skill-zsh-and-audit-order (landed 2026-10-03)
+- fix/ground-in-project-old-cli-fallback (landed 2026-10-03)

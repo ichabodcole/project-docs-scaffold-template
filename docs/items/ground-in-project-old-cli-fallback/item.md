@@ -5,7 +5,7 @@ description:
   ground-in-project Step 3 runs pdocs view, which an 8.x CLI rejects, and the
   skill has no fallback for it.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a10389-6281-77f1-a38e-79b6422968e8
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
@@ -27,7 +27,7 @@ Reported in
 
 ## Definition of done
 
-- [ ] Step 3 falls back to the folder listing when the CLI is missing or rejects
+- [x] Step 3 falls back to the folder listing when the CLI is missing or rejects
       `view`.
-- [ ] The orientation's nudges say the tree's `pdocs` predates the work board
+- [x] The orientation's nudges say the tree's `pdocs` predates the work board
       and that update-project-docs would migrate it.

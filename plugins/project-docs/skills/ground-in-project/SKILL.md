@@ -91,11 +91,12 @@ unless something specifically demands it.
 - For each started feature, read just the first ~30 lines of its `feature.md` to
   learn its purpose. Cap at 5; if more, sample the most recently modified.
 - Glance at 1–2 most recent session notes:
-  `ls -t docs/features/*/sessions/*.md docs/items/*/sessions/*.md 2>/dev/null | head -2`,
+  `find docs/features docs/items -path '*/sessions/*.md' -exec ls -t {} + 2>/dev/null | head -2`,
   read just the title and first paragraph of each.
 
-On a project without `scripts/pdocs/cli.ts`, list `docs/` and peek at whatever
-work folders it has instead.
+On a project without `scripts/pdocs/cli.ts`, or whose CLI refuses `view`
+(`unknown command`, exit 2: a scaffold older than 9.0), list `docs/` and peek at
+whatever work folders it has instead.
 
 ### Step 4: Stop unless something demands deeper reading
 
@@ -131,7 +132,8 @@ migration in `docs/features/x-migration/` is `ready` but has no plan yet" or
 "there's an open research item on Y"]
 ```
 
-After the orientation, **only if applicable**, add one short line:
+After the orientation, **only if applicable**, add one short line for each case
+that applies:
 
 - If `PROJECT-SUMMARY.md` is missing entirely:
   > _No `docs/PROJECT-SUMMARY.md` exists. If you'd like a durable synthesized
@@ -139,6 +141,9 @@ After the orientation, **only if applicable**, add one short line:
 - If `PROJECT-SUMMARY.md` exists but is older than ~30 days:
   > _`PROJECT-SUMMARY.md` is from [date]. `/project-docs:project-summary` would
   > refresh it._
+- If the CLI refused `view`:
+  > _This tree's `pdocs` predates the work board.
+  > `/project-docs:update-project-docs` would migrate it._
 - Otherwise: no nudge.
 
 Do **not** auto-run `/project-docs:project-summary`. Grounding is always cheap;
