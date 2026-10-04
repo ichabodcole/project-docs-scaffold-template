@@ -5,10 +5,11 @@ description:
   "Minor and older gaps from the 9.4.0 cold reads: cycle close dates, docs
   commit timing, the pdocs alias, help text and placeholder names."
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0fc4c-ca19-75cc-9331-9bbe6eb34cf5
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-10-02 }
+priority: low
 ---
 
 # Polish the smaller workflow-doc gaps a cold read found

@@ -7,13 +7,15 @@ description:
   A slug collision says nothing about how to rename or where the inbound links
   are, and a project whose proposal is named <slug>-proposal.md silently becomes
   a born done item.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ee55-c89b-7366-b9fb-3c60b0099906
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: migrations
 source: "grapevine project-docs-v9 #17"
+priority: low
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # Preflight messages name the rename shape, the backlinks, and a near-miss proposal

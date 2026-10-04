@@ -6,12 +6,13 @@ description:
   reports guidance don't say that a docs-review or project-summary report
   belongs in the PR or session, not the tree.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0ee55-c937-7490-a516-1fd504d0cf12
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: docs
 source: "grapevine project-docs-v9 #17"
+priority: low
 ---
 
 # Say where a process report goes now

@@ -202,8 +202,18 @@ interface Scaffolds {
 
 let scaffolds: Scaffolds | null = null;
 
-function sh(cmd: string[], cwd?: string): string {
-  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe", env: childEnv() });
+/**
+ * How long one fixture `git` may run before it is killed. A `git add` once
+ * hung on CI until the file's 30 s budget killed the test, which reported a
+ * timeout and named no command; well under that budget, the hang fails as
+ * itself, naming the command.
+ */
+const GIT_TIMEOUT_MS = 10_000;
+
+function sh(cmd: string[], cwd?: string, timeout?: number): string {
+  const r = Bun.spawnSync(cmd, { cwd, stdout: "pipe", stderr: "pipe", env: childEnv(), timeout, killSignal: "SIGKILL" });
+  if (r.exitedDueToTimeout)
+    throw new Error(`${cmd.join(" ")} timed out after ${timeout} ms and was killed\n${r.stderr.toString()}${r.stdout.toString()}`);
   if (r.exitCode !== 0)
     throw new Error(
       `${cmd.join(" ")} exited ${r.exitCode}\n${r.stderr.toString()}${r.stdout.toString()}`
@@ -299,7 +309,12 @@ function generatedScaffolds(): Scaffolds {
   return scaffolds;
 }
 
-/** `git`, borrowing no identity, signing or default branch from the machine. */
+/**
+ * `git`, borrowing no identity, signing or default branch from the machine.
+ * Automatic maintenance is off: a commit would otherwise spawn a detached
+ * `git maintenance run --auto` that can rewrite `.git` while a test copies or
+ * removes the fixture.
+ */
 function git(root: string, ...args: string[]): string {
   return sh(
     [
@@ -312,9 +327,14 @@ function git(root: string, ...args: string[]): string {
       "commit.gpgsign=false",
       "-c",
       "init.defaultBranch=main",
+      "-c",
+      "maintenance.auto=false",
+      "-c",
+      "gc.auto=0",
       ...args,
     ],
-    root
+    root,
+    GIT_TIMEOUT_MS
   );
 }
 
@@ -347,7 +367,8 @@ function fixtureA({ undeclaredFolder }: { undeclaredFolder: boolean }): string {
     join(tmpdir(), undeclaredFolder ? "migrate-v27-A0-" : "migrate-v27-A1-")
   );
   roots.push(root);
-  cpSync(generatedScaffolds().v26, root, { recursive: true });
+  const src = generatedScaffolds().v26;
+  cpSync(src, root, { recursive: true, filter: (from) => from !== join(src, ".git") });
   if (undeclaredFolder) {
     mkdirSync(join(root, "docs", UNDECLARED_FOLDER));
     writeFileSync(join(root, UNDECLARED_FILE), "# Deploy\n\nHow to deploy.\n");

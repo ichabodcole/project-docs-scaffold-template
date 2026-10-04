@@ -11,7 +11,7 @@
 // checker would read is never missed.
 
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { MARKDOWN_LINK_RE, stripCode } from "./docs-lint/index.ts";
+import { isExternalLink, MARKDOWN_LINK_RE, stripCode } from "./docs-lint/index.ts";
 
 /**
  * A reference-style link definition: `[label]: destination`, up to three
@@ -84,7 +84,7 @@ export function rewriteLinks(
     const written = text.slice(start, start + raw.length);
     const pointy = /^<.*>$/.test(written.trim());
     const target = written.trim().replace(/^<(.*)>$/, "$1");
-    if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue; // a URL, mailto:, …
+    if (isExternalLink(target)) continue; // a URL, mailto:, …
     const hash = target.indexOf("#");
     const pathPart = hash === -1 ? target : target.slice(0, hash);
     const anchor = hash === -1 ? "" : target.slice(hash);

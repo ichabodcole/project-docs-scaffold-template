@@ -544,6 +544,33 @@ describe("frontmatter a real YAML parser would reject", () => {
     });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
   });
+
+  // The parser keeps the last value; another YAML tool may keep the first or
+  // refuse the document. Spellbook shipped a cycle with `started:` twice.
+  test("a top-level key written twice, in either tier, names the key and its lines", () => {
+    const ctx = fixture({
+      "docs/architecture/a.md":
+        "---\ntype: architecture\ntitle: A\nstatus: draft\nstatus: stable\n---\n\n# A\n",
+      "docs/cycles/2026-09-b.md":
+        "---\ntype: cycle\nstarted: 2026-09-01\ntitle: B\nstarted: 2026-09-02\n" +
+        "started: 2026-09-03\n---\n\n# B\n",
+    });
+    expect(frontmatterSyntaxProblems(ctx).sort()).toEqual([
+      "DUPLICATE FIELD  docs/architecture/a.md: `status` on lines 4 and 5  (YAML tools disagree on which value wins)",
+      "DUPLICATE FIELD  docs/cycles/2026-09-b.md: `started` on lines 3, 5 and 6  (YAML tools disagree on which value wins)",
+    ]);
+  });
+
+  test("nested keys, list items and continuation lines are not top-level keys", () => {
+    const ctx = fixture({
+      "docs/architecture/a.md":
+        "---\ntype: architecture\ntitle: A\ndescription:\n  A description that wraps\n" +
+        "  onto a second line.\ngenerated:\n  by: t\n  at: 2026-09-03\nmeta:\n" +
+        "  title: nested\n  type: nested\nrelated:\n  - title: x\n  - title: y\n" +
+        "status: stable\n---\n\n# A\n",
+    });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+  });
 });
 
 describe("at most one cycle is active", () => {
@@ -1354,9 +1381,185 @@ describe("the gate — a link may leave docs/, not the repository", () => {
     expect(stdout).toContain(
       `MISSING FILE   docs/cycles/2026-07-14-co-presence.md: ${abs}  ${hint}`
     );
-    expect(stdout).toContain(`MISSING FILE   index.md: ${abs}  ${hint}`);
+    expect(stdout).toContain(`MISSING FILE   docs/index.md: ${abs}  ${hint}`);
     expect(stdout).not.toContain("src/checker.ts");
     expect(stdout).toContain("docs-lint: 3 problem(s)");
+  });
+});
+
+describe("the gate — a link with a URI scheme is external", () => {
+  const page = (body: string) =>
+    fm({
+      type: "cycle",
+      title: "App links",
+      description: "A cycle that cites documents in another app.",
+      status: "stable",
+      lifecycle: "closed",
+      generated: GENERATED,
+    }) + `# App links\n\n${body}\n\n## Outcome\n\nShipped.\n`;
+
+  test("any scheme is skipped; a relative path with a later colon is still checked", () => {
+    const root = minimal({
+      "docs/cycles/2026-07-14-app-links.md": page(
+        [
+          "[a](operator://documents/abc) [b](op:doc/abc) [c](file:///tmp/x.md)",
+          "[d](https://example.com/nope.md) [e](mailto:a@b.c)",
+          "[f](./gone.md) [g](./a:b.md) [h](notes/a:b.md)",
+        ].join("\n")
+      ),
+    });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(9);
+    const at = "MISSING FILE   docs/cycles/2026-07-14-app-links.md:";
+    expect(stdout).toContain(`${at} ./gone.md`);
+    expect(stdout).toContain(`${at} ./a:b.md`);
+    expect(stdout).toContain(`${at} notes/a:b.md`);
+    for (const external of ["operator:", "op:doc", "file:", "https:", "mailto:"])
+      expect(stdout).not.toContain(external);
+    expect(stdout).toContain("docs-lint: 3 problem(s)");
+  });
+});
+
+describe("the gate — a frontmatter key written twice", () => {
+  // Line 4 opens a description folded over lines 5 and 6, so a line count
+  // that miscounts continuation lines lands on the wrong numbers.
+  const item = (extra: string) =>
+    [
+      "---",
+      "type: item",
+      "title: Fix the hook",
+      "description:",
+      "  The hook reads the wrong index, and the commit it",
+      "  makes is not the one that was staged.",
+      "status: draft",
+      "lifecycle: triage",
+      "id: 0190f4b2-7c3a-7d4e-8f00-00000000abcd",
+      "kind: bug",
+      "tags:",
+      "  - hooks",
+      `generated: ${GENERATED}`,
+      ...(extra ? [extra] : []),
+      "---",
+      "",
+      "# Fix the hook",
+      "",
+    ].join("\n");
+  const PROBLEM =
+    "DUPLICATE FIELD  docs/items/fix-hook.md: `lifecycle` on lines 8 and 14  (YAML tools disagree on which value wins)";
+
+  test("is an error naming the key and both lines, reported once", () => {
+    const root = minimal({ "docs/items/fix-hook.md": item("lifecycle: backlog") });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(9);
+    expect(stdout.split("\n").filter((l) => l === PROBLEM)).toHaveLength(1);
+    expect(stdout).toContain("docs-lint: 1 problem(s)");
+  });
+
+  test("reaches the JSON envelope as one workbench problem", () => {
+    const root = minimal({ "docs/items/fix-hook.md": item("lifecycle: backlog") });
+    const { code, stdout } = run(["check", "--format", "json", "--root", root]);
+    expect(code).toBe(9);
+    const data = JSON.parse(stdout).data;
+    expect(data.clean).toBe(false);
+    expect(data.problems).toEqual([{ tier: "workbench", message: PROBLEM }]);
+  });
+
+  test("the same document without the second key is clean", () => {
+    const root = minimal({ "docs/items/fix-hook.md": item("") });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(stdout).toContain("docs-lint: clean");
+    expect(code).toBe(0);
+  });
+});
+
+describe("the gate — a library page's frontmatter problem is reported once", () => {
+  // The graph tier's core and the library's field checks both read a library
+  // page's frontmatter, and both reported what they found: one missing `tags`
+  // was two rows, `docs/playbooks/x.md` from one pass and `playbooks/x.md` from
+  // the other, which `sort -u` and `grep -F -f <file-list>` cannot fold.
+  const page = (fields: Record<string, string>) => fm(fields) + "# A Playbook\n";
+  const valid = {
+    type: "playbook",
+    title: "A playbook",
+    description: "A playbook.",
+    status: "stable",
+    tags: "[a]",
+    generated: GENERATED,
+  };
+  const pages: Record<string, string> = {
+    "docs/playbooks/no-tags.md": page({ ...valid, tags: "" }),
+    "docs/playbooks/empty-tags.md": page({ ...valid, tags: "[]" }),
+    "docs/playbooks/bare.md": page({ title: "Bare" }),
+    "docs/playbooks/no-frontmatter.md": "# No frontmatter\n",
+    "docs/playbooks/bad-date.md": page({
+      ...valid,
+      generated: "{ by: test, at: someday }",
+    }),
+    "docs/playbooks/no-actor.md": page({
+      ...valid,
+      generated: "{ by: , at: 2026-09-03 }",
+    }),
+    "docs/playbooks/scalar-generated.md": page({
+      ...valid,
+      generated: "2026-09-03",
+    }),
+    // Loose at the docs root: no type the library gives it, so its fields are
+    // still the core's to check.
+    "docs/loose.md": "# Loose\n",
+  };
+  const catalog =
+    fm({
+      type: "index",
+      title: "Index",
+      description: "The catalog.",
+      status: "stable",
+      tags: "[index]",
+      generated: GENERATED,
+    }) +
+    "# Index\n\n" +
+    Object.keys(pages)
+      .map((rel) => `- [x](./${rel.slice("docs/".length)}) — A playbook.`)
+      .join("\n") +
+    "\n";
+  const hint = {
+    tags: "  (expected `tags: [ ... ]`)",
+    generated: "  (expected `generated: { by: <actor>, at: YYYY-MM-DD }`)",
+  };
+  const EXPECTED = [
+    "BAD GENERATED  docs/playbooks/scalar-generated.md: 2026-09-03  (expected `{ by: <actor>, at: YYYY-MM-DD }`)",
+    'BAD generated.at  docs/playbooks/bad-date.md: "someday"  (expected YYYY-MM-DD)',
+    `MISSING description   docs/playbooks/bare.md`,
+    `MISSING generated   docs/playbooks/bare.md${hint.generated}`,
+    "MISSING generated.by  docs/playbooks/no-actor.md  (OKF requires an actor)",
+    `MISSING status   docs/playbooks/bare.md`,
+    `MISSING tags   docs/playbooks/bare.md${hint.tags}`,
+    `MISSING tags   docs/playbooks/empty-tags.md${hint.tags}`,
+    `MISSING tags   docs/playbooks/no-tags.md${hint.tags}`,
+    `MISSING type   docs/playbooks/bare.md`,
+    "NO FRONTMATTER docs/loose.md",
+    "NO FRONTMATTER docs/playbooks/no-frontmatter.md  (see docs/SCHEMA.md)",
+  ];
+
+  test("in text: each problem on one row, every path repo-relative", () => {
+    const root = minimal({ ...pages, "docs/index.md": catalog });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(code).toBe(9);
+    const rows = stdout
+      .split("\n")
+      .filter((l) => /^(MISSING|NO FRONTMATTER|BAD)/.test(l));
+    expect(rows.sort()).toEqual(EXPECTED);
+    expect(stdout).not.toMatch(/\s(playbooks|loose\.md|index\.md)\b/);
+    expect(stdout).toContain(`docs-lint: ${EXPECTED.length} problem(s)`);
+  });
+
+  test("in JSON: the same problems, counted once", () => {
+    const root = minimal({ ...pages, "docs/index.md": catalog });
+    const { code, stdout } = run(["check", "--format", "json", "--root", root]);
+    expect(code).toBe(9);
+    const data = JSON.parse(stdout).data;
+    const messages = data.problems.map((p: { message: string }) => p.message);
+    expect(messages.sort()).toEqual(EXPECTED);
+    expect(data.total).toBe(EXPECTED.length);
   });
 });
 

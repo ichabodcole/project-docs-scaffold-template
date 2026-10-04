@@ -209,7 +209,7 @@ describe("pdocs check", () => {
     // And the real page is READ, not skipped: uncatalogued, so an orphan.
     expect(
       out.data.problems.some((p: { message: string }) =>
-        p.message.startsWith("ORPHAN         memories/templates.md")
+        p.message.startsWith("ORPHAN         docs/memories/templates.md")
       )
     ).toBe(true);
   });

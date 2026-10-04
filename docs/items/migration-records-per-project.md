@@ -7,13 +7,14 @@ description:
   base and docs root only, so two docs projects in one repository (or a --force
   re-run from a reset) mix their records.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0e3c5-8ab9-729b-b90f-799a801d87bc
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-27 }
 tags: [migrations]
 scope: migrations
 from: items/spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md
+priority: low
 ---
 
 # Migration state and move records are shared across projects in one repository

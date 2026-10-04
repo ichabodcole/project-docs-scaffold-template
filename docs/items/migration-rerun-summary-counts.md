@@ -5,13 +5,14 @@ description:
   After a stop, the run that completes v2.10-to-v3.0 prints '0 move(s), 0
   document(s) written', counting only its own plan rather than the migration's.
 status: draft
-lifecycle: triage
+lifecycle: backlog
 id: 01a0e3c5-8b05-72d0-af59-19961bd11b60
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-09-27 }
 tags: [migrations]
 scope: migrations
 from: items/spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md
+priority: low
 ---
 
 # A completing re-run's summary counts only its own plan

@@ -36,7 +36,10 @@ Code review, documentation, and merge workflow for completed branches.
 `docs/playbooks/branch-finalization-playbook.md`, follow the workflow there — it
 takes precedence over this file wherever the two differ — and say in your output
 that you followed it, naming the file. Most projects don't have one; the steps
-below stand on their own. Two narrower overrides apply at their own steps:
+below stand on their own. Two things it never overrides: Step 2's independent
+review runs whatever the playbook says about reviewing, and the project's
+`## Branch Landing Policy` governs landing (Step 8 says where to look, and what
+to do when the two disagree). Two narrower overrides apply at their own steps:
 `handoff-playbook.md` (Step 6) and `release-playbook.md` (Step 8).
 
 **`pdocs`** below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
@@ -160,8 +163,9 @@ before Step 2. The review reads the net diff, and an empty one reviews nothing.
 
 ### Step 2: Independent Code Review (Mandatory)
 
-**This step is not optional and cannot be self-performed.** Dispatch a subagent
-to perform the review — do not review the code yourself.
+**This step is not optional and cannot be self-performed**, whatever a
+finalization playbook says. Dispatch a subagent to perform the review — do not
+review the code yourself.
 
 **Why:** The agent that wrote the code cannot be a fresh reader of it. An "I've
 been reviewing as I go, so this is covered" reflex is the signal to delegate,
@@ -928,16 +932,12 @@ precedence over the strategies below — and say that you did.
    standing between a SHA-cited ruling and the squash that would destroy it.
    This check fails open, so the anchor is not optional.
 
-2. **Look for a project-owned landing policy.** Check, in order:
-   - `docs/playbooks/branch-finalization-playbook.md` (the override at the top
-     of this file). If it says how to land, that is the policy: follow it, and
-     it waives this step's "announce and ask" and the squash checkpoint as far
-     as it says. Still compute and surface step 1's branch facts.
-   - Otherwise, a `## Branch Landing Policy` heading (exact match), in this
-     order: root `AGENTS.md`, root `CLAUDE.md`, then the docs root's `AGENTS.md`
-     and `CLAUDE.md` (`docs/AGENTS.md`, `docs/CLAUDE.md`). The first file that
-     has the heading is the policy. A generated project may have only the
-     `docs/` copies.
+2. **Look for a project-owned landing policy.**
+   - A `## Branch Landing Policy` heading (exact match), in this order: root
+     `AGENTS.md`, root `CLAUDE.md`, then the docs root's `AGENTS.md` and
+     `CLAUDE.md` (`docs/AGENTS.md`, `docs/CLAUDE.md`). The first file that has
+     the heading is the policy. A generated project may have only the `docs/`
+     copies.
    - If that section only points to another file (e.g. "see
      `docs/BRANCH_POLICY.md`"), follow the pointer one level and read the linked
      file.
@@ -946,6 +946,14 @@ precedence over the strategies below — and say that you did.
      as something to run (a `bash`/`sh`-tagged block, or prose like "run:"
      immediately before it). Fenced blocks that are clearly illustrative
      (example output, a diagram) are not commands to execute.
+   - No such heading: `docs/playbooks/branch-finalization-playbook.md` (the
+     override at the top of this file). If it says how to land, that is the
+     policy: follow it, and it waives this step's "announce and ask" and the
+     squash checkpoint as far as it says. Still compute and surface step 1's
+     branch facts.
+   - **Both exist and disagree** (the playbook says always squash, the policy
+     says keep commits that each deliver value): the heading is the policy. Tell
+     the user what each says before landing.
 
 3. **If a policy was found:** print the section's content inline — not "see your
    project's policy"; a pointer that needs a second lookup is a pointer that
@@ -1196,6 +1204,7 @@ At completion, summarize:
 - **The Reflect outcome** — "nothing this time", or the playbook appended to,
   quoting the `pdocs find` line you chose it from
 - Any playbook override followed (`branch-finalization`, `handoff`, `release`),
-  by path — or that none exists
+  by path — or that none exists, and any place a finalization playbook disagreed
+  with the landing policy
 - Final commit message, and the commit carrying `Work-Item:`
 - Follow-up items filed from the review (their paths, all in `triage`)

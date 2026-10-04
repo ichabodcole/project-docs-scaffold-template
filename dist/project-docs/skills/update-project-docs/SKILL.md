@@ -198,6 +198,17 @@ For each migration file:
    of a script
 4. Move to the next migration
 
+**Before `v2.10-to-v3.0`, whatever version the run started from, do the
+backfill.** v3.0 builds features and items from the documents it finds, so what
+they say carries forward: a stale `lifecycle` becomes a wrong state (a `draft`
+proposal for shipped work becomes a `backlog` feature), and an item it creates
+takes its `description` from the document it came from, falling back to a title
+or a placeholder. In a run through `v2.6-to-v2.7`, do that guide's "After the
+script" step 1 — descriptions and the `lifecycle` audit — once its script has
+run; its later steps can wait until the end. A run that starts later checks the
+same two fields before v3.0, with
+`bun scripts/pdocs/cli.ts report --format text` listing missing descriptions.
+
 ### Step 5: Check the Version Markers
 
 **The migration scripts set the markers; this step checks them.** Each script's
@@ -283,7 +294,7 @@ bun scripts/pdocs/cli.ts check --format text
 #    older build left artefacts behind.
 find scripts/pdocs \( -name '*.test.ts' -o -name 'test-env.ts' \) | grep -q . \
   && echo "FAIL — the CLI's tests are installed" || echo "no shipped tests"
-grep -lE '"(scripts|\*\*/)' tsconfig*.json 2>/dev/null \
+find . -maxdepth 1 -name 'tsconfig*.json' -exec grep -lE '"(scripts|\*\*/)' {} + | grep . \
   && echo "FAIL — a tsconfig reaches into scripts/" || echo "tsconfig is the project's own"
 #    And no formatter or linter of the project's own has claimed it. Ask the
 #    tool, not its config: each one the project has — a config file of its

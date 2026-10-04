@@ -7,12 +7,14 @@ description:
   A report linked with two investigations stops the preflight, and the only fix
   is editing its prose, because the rule decides only when the report links to
   exactly one.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a0ee55-545e-709b-987e-00f929f56189
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-09-29 }
 scope: migrations
+priority: low
+cycle: 2026-10-v3-migration-feedback
 ---
 
 # The v3.0 preflight lets a report name its owner when it links to two investigations

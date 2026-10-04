@@ -569,15 +569,13 @@ describe("pdocs orphans", () => {
     const gate = JSON.parse(
       run(["check", "--format", "json", "--root", ROOT]).stdout
     );
-    const docsRoot = context(ROOT).config.docsRoot;
     const fromLint = new Set<string>(
       gate.data.problems
         .map((p: { message: string }) => p.message)
         .filter((m: string) => m.startsWith("ORPHAN"))
-        // `ORPHAN         playbooks/x.md  (unreachable from index.md — …)`.
-        // The lint's paths are DOCS-root-relative; the command speaks
-        // repo-relative, so the mapping is explicit here rather than assumed.
-        .map((m: string) => join(docsRoot, m.split(/\s+/)[1] as string))
+        // `ORPHAN         docs/playbooks/x.md  (unreachable from index.md — …)`.
+        // Both speak repo-relative paths, so the sets compare as they are.
+        .map((m: string) => m.split(/\s+/)[1] as string)
     );
 
     const out = JSON.parse(

@@ -5,9 +5,9 @@ UNKNOWN FIELD  docs/interaction-design/unknown-field.md: "owner"
 BAD STATUS     docs/playbooks/bad-status.md: "approved"  (OKF 0.2: draft | stable | deprecated)
 UNKNOWN FIELD  docs/specifications/frozen-with-lifecycle.md: "lifecycle"
 LIFECYCLE      docs/specifications/frozen-with-lifecycle.md: a specification is a frozen record and carries no lifecycle
-ORPHAN         specifications/orphan.md  (unreachable from index.md — add its catalog line)
-BAD related    playbooks/dangling-related.md: "playbook/no-such-page" matches no page (expected `type/slug`)
-STALE HOOK     index.md → architecture/legacy-date.md:
+ORPHAN         docs/specifications/orphan.md  (unreachable from index.md — add its catalog line)
+BAD related    docs/playbooks/dangling-related.md: "playbook/no-such-page" matches no page (expected `type/slug`)
+STALE HOOK     docs/index.md → docs/architecture/legacy-date.md:
          hook: "A hook that no longer says what the page says."
   description: "An architecture page still carrying a legacy date field."
 
@@ -19,7 +19,7 @@ STALE HOOK     index.md → architecture/legacy-date.md:
 MISSING type   docs/features/sample/SKILL.draft.md
 MISSING title   docs/features/sample/SKILL.draft.md
 MISSING status   docs/features/sample/SKILL.draft.md
-MISSING generated   docs/features/sample/SKILL.draft.md
+MISSING generated   docs/features/sample/SKILL.draft.md  (expected `generated: { by: <actor>, at: YYYY-MM-DD }`)
 UNKNOWN FIELD  docs/features/sample/SKILL.draft.md: "name"  (not a project-docs document? add it to `lint.exclude` in .project-docs.json)
 BAD LIFECYCLE  docs/features/sample/plan.md: "shipped"  (plan: draft | active | completed | abandoned)
 NO FRONTMATTER docs/features/sample/reports/2026-01-01-no-frontmatter.md  (see docs/SCHEMA.md)
@@ -30,7 +30,7 @@ MISPLACED ENTITY  docs/items/misplaced/feature.md  (a feature belongs at feature
 MISSING title   docs/items/missing-fields.md
 MISSING description   docs/items/missing-fields.md
 MISSING status   docs/items/missing-fields.md
-MISSING generated   docs/items/missing-fields.md
+MISSING generated   docs/items/missing-fields.md  (expected `generated: { by: <actor>, at: YYYY-MM-DD }`)
 MISSING id   docs/items/missing-fields.md
 MISSING kind   docs/items/missing-fields.md
 MISSING lifecycle   docs/items/missing-fields.md
