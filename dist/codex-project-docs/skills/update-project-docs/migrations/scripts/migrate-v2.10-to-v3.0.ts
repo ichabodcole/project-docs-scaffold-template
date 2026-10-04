@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * v2.10 → v3.0 (scaffold 9.4.0, the 9.0.0 layout). The migration, not a description of one.
+ * v2.10 → v3.0 (scaffold 9.4.1, the 9.0.0 layout). The migration, not a description of one.
  *
  * WHY THIS IS A SCRIPT. It generates a scaffold and reads a version from it,
  * every later phase consumes the move map an earlier one built, several checks
@@ -10,7 +10,7 @@
  *   1  preflight  — a v2.10 tree, the tools, git, the baseline `pdocs check`,
  *                   and every JUDGMENT BLOCKER (briefs, reports without one
  *                   owner, edited retired templates, files it cannot place)
- *   2  scaffold   — the template at SCAFFOLD_TAG (9.4.0), its own tag (D16), verified
+ *   2  scaffold   — the template at SCAFFOLD_TAG (9.4.1), its own tag (D16), verified
  *   3  plan       — the move map, every frontmatter rewrite (each block as the
  *                   project's own Prettier prints it), every config key;
  *                   `--dry-run` prints it and stops here
@@ -98,13 +98,13 @@ import {
 
 const TEMPLATE_REPO = "gh:ichabodcole/project-docs-scaffold-template";
 /**
- * The scaffold release this migration installs (plan D16): 9.4.0, which has the
+ * The scaffold release this migration installs (plan D16): 9.4.1, which has the
  * 9.0.0 layout the script was written against and the cycle template and
  * features README that shipped after it. As the newest migration it is re-pinned
  * at every scaffold release (the writing-migrations playbook), so re-running it
  * refreshes a tree to the release being adopted.
  */
-export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.4.0";
+export const SCAFFOLD_TAG = "project-docs-scaffold-template-v9.4.1";
 /** SCAFFOLD_TAG's release number, for the messages that name it. */
 export const SCAFFOLD_RELEASE = SCAFFOLD_TAG.slice(SCAFFOLD_TAG.lastIndexOf("-v") + 2);
 const MANIFEST_NAME = ".pdocs-seed.json";
@@ -206,7 +206,7 @@ export function proseKey(text: string): string {
  * file: re-pinning `SCAFFOLD_TAG` fails that test until this is regenerated.
  */
 export const OWNED_RELEASES: Record<string, string[]> = {
-  "SCHEMA.md": ["6a4ce2204a9b20ee", "6a7f72fdb958b0b7", "6f56fbcf5ec845de", "8d64c7f2babd9b5f", "901d5b55b7d48422", "bcf64b0b7e5f20ea", "ed4c7ff0666db6f1"],
+  "SCHEMA.md": ["5a3eaf192f938d3d", "6a4ce2204a9b20ee", "6a7f72fdb958b0b7", "6f56fbcf5ec845de", "8d64c7f2babd9b5f", "901d5b55b7d48422", "bcf64b0b7e5f20ea", "ed4c7ff0666db6f1"],
   "README.md": ["1be5adeeeb3eda24", "2dfa4eca342cb5c5", "3fd655241d87344f", "7b9204982f2451be", "8b94b8d4f8c3e2de", "cca8b12d9e6ed3aa", "f2bf59dce2c8c345", "fe573ebb6c6ea6b7", "feac07aacbdf0615"],
   "AGENTS.md": ["28870996acb9be93", "3510f2c1d02a4463", "37d349a023908d4d", "4e85093fe9f42c12", "681903bdee562d9f", "833f44053c166134", "dbf3ee4501c58069", "fc5ac2d9fdf95b05"],
   "CLAUDE.md": ["2292934d5083c5d4", "b5cdedb2e6025309"],
