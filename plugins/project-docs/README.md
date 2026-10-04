@@ -301,9 +301,10 @@ the test hardening alters what a skill does.
 - **The v2.10 → v3.0 migration installs scaffold 9.4.1**
   (`project-docs-scaffold-template-v9.4.1`); the migrated tree is at 9.4.1. Its
   `pdocs check` treats a link with any URI scheme as external, reports a
-  top-level frontmatter key written twice as `DUPLICATE FIELD` (a tree the older
-  lint passed can stop the run's verify phase), and prints each problem once,
-  with repo-relative `docs/…` paths.
+  top-level frontmatter key written twice as `DUPLICATE FIELD` and an empty
+  `generated.by` as `MISSING generated.by` (a tree the older lint passed can
+  stop the run's verify phase on either), and prints each problem once, with
+  repo-relative `docs/…` paths.
 
 ### 4.4.0 (2026-10-02)
 
