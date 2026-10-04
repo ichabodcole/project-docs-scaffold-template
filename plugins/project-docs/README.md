@@ -280,6 +280,31 @@ fields, not folders. Projects still on the older layout (`projects/`,
 
 ## Version History
 
+### 4.5.0 (2026-10-03)
+
+**The check and upgrade-skill fixes from adopter feedback.** Every change but
+the test hardening alters what a skill does.
+
+- **`update-project-docs`** finds files before it checks them, so a verify
+  snippet no longer aborts in zsh on an unmatched glob, and puts the whole
+  backfill before v3.0, whatever version the run started from, so v3.0 never
+  builds features and items from stale lifecycles or missing descriptions.
+- **`ground-in-project`** falls back to the folder listing when the CLI is
+  missing or refuses `view` (an 8.x tree), and nudges toward
+  `update-project-docs`.
+- **`finalize-branch`**: a branch-finalization playbook never relaxes the
+  independent review, and the project's Branch Landing Policy governs landing;
+  the playbook applies only when there is no policy, and a disagreement between
+  them is told to the user before landing.
+- The migration tests harden and bound every fixture git call, and name a hung
+  command (test hardening; no skill changes).
+- **The v2.10 → v3.0 migration installs scaffold 9.4.1**
+  (`project-docs-scaffold-template-v9.4.1`); the migrated tree is at 9.4.1. Its
+  `pdocs check` treats a link with any URI scheme as external, reports a
+  top-level frontmatter key written twice as `DUPLICATE FIELD` (a tree the older
+  lint passed can stop the run's verify phase), and prints each problem once,
+  with repo-relative `docs/…` paths.
+
 ### 4.4.0 (2026-10-02)
 
 **The pdocs views cycle and the cold-read fixes.** Every change alters what a
