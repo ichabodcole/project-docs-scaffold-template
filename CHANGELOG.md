@@ -1,5 +1,17 @@
 # Changelog
 
+## [9.4.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.4.0...project-docs-scaffold-template-v9.4.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* **pdocs:** report a frontmatter key written twice ([83419e4](https://github.com/ichabodcole/project-docs-scaffold-template/commit/83419e405933a501da49624709e6dc682c3c5981))
+* **pdocs:** report each check problem once, with repo-relative paths ([764a463](https://github.com/ichabodcole/project-docs-scaffold-template/commit/764a463a6e50d4ba394aaf0d4949cbdc7d7d26c0))
+* **pdocs:** treat a link with any URI scheme as external ([fda57ec](https://github.com/ichabodcole/project-docs-scaffold-template/commit/fda57ec2443c4461d931dbf2020b0a21fce759d4))
+* **project-docs:** a finalization playbook keeps the review and the landing policy ([daccc79](https://github.com/ichabodcole/project-docs-scaffold-template/commit/daccc79c9d6560a03aa424df1cb09f7ba0b97bfb))
+* **project-docs:** ground-in-project falls back when the CLI has no view ([52dc4ec](https://github.com/ichabodcole/project-docs-scaffold-template/commit/52dc4ec31911e60626bb6f9d985f881090d7505b))
+* **project-docs:** guard verify globs for zsh; backfill before v3.0 ([94557ff](https://github.com/ichabodcole/project-docs-scaffold-template/commit/94557ff1578b0d1fb961eeacb73e44c05aa42068))
+
 ## [9.4.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.3.0...project-docs-scaffold-template-v9.4.0) (2026-10-02)
 
 
