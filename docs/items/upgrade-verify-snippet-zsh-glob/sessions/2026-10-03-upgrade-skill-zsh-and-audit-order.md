@@ -12,7 +12,7 @@ generated: { by: claude-opus-5-5, at: 2026-10-03 }
 # Upgrade skill: zsh glob and audit order — 2026-10-03
 
 Part of
-[check and upgrade-skill fixes](../../../cycles/2026-10-check-and-upgrade-fixes.md).
+[check and upgrade-skill fixes](../../../cycles/_archive/2026-10-check-and-upgrade-fixes.md).
 One branch for two items: [the zsh glob](../item.md)
 ([#197](https://github.com/ichabodcole/project-docs-scaffold-template/issues/197))
 and [audit lifecycle before v3.0](../../upgrade-audit-lifecycle-before-v30.md)

@@ -12,7 +12,7 @@ generated: { by: claude-opus-5-5, at: 2026-10-03 }
 # Duplicate frontmatter key — 2026-10-03
 
 Part of
-[check and upgrade-skill fixes](../../../cycles/2026-10-check-and-upgrade-fixes.md)
+[check and upgrade-skill fixes](../../../cycles/_archive/2026-10-check-and-upgrade-fixes.md)
 
 ## Context
 
