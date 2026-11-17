@@ -72,3 +72,5 @@ One line per branch, appended by `init-branch` as it opens them:
 lands. Leave this section empty until the first branch; do not carry a
 placeholder line into a real cycle.
 -->
+
+- chore/pin-bun-1-4-4 (landed 2026-11-17)
