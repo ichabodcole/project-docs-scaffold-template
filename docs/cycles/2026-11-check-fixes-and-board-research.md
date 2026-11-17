@@ -36,7 +36,7 @@ them (#207) lets through frontmatter that other tools cannot open, and
   — research: where the feature question reaches an agent filing work.
 - **[item/dot-dot-name-inside-docs-root](../items/dot-dot-name-inside-docs-root/item.md)**
   (#209),
-  **[item/heading-anchors-match-github](../items/heading-anchors-match-github.md)**
+  **[item/heading-anchors-match-github](../items/heading-anchors-match-github/item.md)**
   (#208) and
   **[item/check-rejects-non-strict-yaml-frontmatter](../items/check-rejects-non-strict-yaml-frontmatter.md)**
   (#207) — the check fixes. They share lint files, so the branches run in that
@@ -76,3 +76,4 @@ placeholder line into a real cycle.
 - chore/pin-bun-1-4-4 (landed 2026-11-17)
 - fix/dot-dot-name-inside-docs-root (landed 2026-11-17)
 - fix/project-summary-zsh-glob-and-old-cli (landed 2026-11-17)
+- fix/heading-anchors-match-github (landed 2026-11-17)

@@ -5,7 +5,7 @@ description:
   The lint's heading slug drops accented letters, keeps link targets and never
   numbers repeats, so pdocs check reports anchors GitHub renders as missing.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a1eaa7-4464-7652-a622-94473a0a63f3
 kind: bug
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
@@ -36,8 +36,10 @@ from a project on scaffold 9.4.1.
 
 ## Definition of done
 
-- [ ] `slug` keeps Unicode letters and numbers (`\p{L}\p{N}`), and a markdown
-      link in a heading contributes its text, not its target.
-- [ ] Repeated headings in one document are numbered `-1`, `-2`, … in document
+- [x] `slug` keeps what GitHub keeps: letters, marks, decimal digits and letter
+      numbers in any script. Other numbers such as `²` and `½` are dropped, as
+      GitHub drops them; the issue suggested `\p{N}`, which would keep them. A
+      markdown link in a heading contributes its text, not its target.
+- [x] Repeated headings in one document are numbered `-1`, `-2`, … in document
       order, and a link to `#notes-1` passes.
-- [ ] Tests cover the three headings above. `pdocs` stays zero-dependency.
+- [x] Tests cover the three headings above. `pdocs` stays zero-dependency.

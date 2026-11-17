@@ -185,12 +185,46 @@ describe("slug", () => {
     for (const [input] of cases) expect(slug(slug(input))).toBe(slug(input));
   });
 
-  // KNOWN DIVERGENCE (documented, not asserted as correct): `\w` is ASCII-only, so accented
-  // letters are dropped rather than kept. GitHub yields `café-résumé`; we yield `caf-rsum`.
-  // Harmless here (this wiki is ASCII) and the failure mode is a false MISSING ANCHOR, which
-  // is loud rather than silent — but it would bite a wiki with non-English headings.
-  test("drops non-ASCII letters (diverges from GitHub, which keeps them)", () => {
-    expect(slug("Café résumé")).toBe("caf-rsum");
+  // Unicode letters, marks and digits survive, as they do on GitHub. ASCII `\w` dropped them,
+  // which reported a correct link to an accented heading as a MISSING ANCHOR.
+  test("keeps non-ASCII letters and digits", () => {
+    expect(slug("Café notes")).toBe("café-notes");
+    expect(slug("Café résumé")).toBe("café-résumé");
+    expect(slug("日本語 の見出し")).toBe("日本語-の見出し");
+    expect(slug("Cafe\u0301 ٣")).toBe("cafe\u0301-٣");
+  });
+
+  // Symbols and "other" numbers are punctuation to GitHub, in any script.
+  test("drops non-ASCII punctuation and symbols", () => {
+    expect(slug("Ship it 🚀 “now”")).toBe("ship-it--now");
+    expect(slug("x² + ½ y")).toBe("x---y");
+  });
+
+  // GitHub slugs the heading's rendered text, and a link renders as its text alone.
+  test("a markdown link contributes its text, not its target", () => {
+    expect(slug("See [the plan](plan.md)")).toBe("see-the-plan");
+    expect(slug("[One](a.md#x) and [two](https://example.com/b_c)")).toBe(
+      "one-and-two"
+    );
+    expect(slug('See [the plan](plan.md "A title")')).toBe("see-the-plan");
+  });
+
+  test("brackets that are not a link are just punctuation", () => {
+    expect(slug("Options [draft] (later)")).toBe("options-draft-later");
+  });
+});
+
+describe("slug — what looks like a link but is not one", () => {
+  test("a link inside a code span keeps its target", () => {
+    expect(slug("Use `[x](y)` syntax")).toBe("use-xy-syntax");
+  });
+
+  test("escaped brackets are not a link", () => {
+    expect(slug("\\[not link\\](x) y")).toBe("not-linkx-y");
+  });
+
+  test("a real link beside a code span is still reduced to its text", () => {
+    expect(slug("`a` and [the plan](plan.md)")).toBe("a-and-the-plan");
   });
 });
 
@@ -208,8 +242,34 @@ describe("headingSlugsOf", () => {
     expect([...headingSlugsOf(md)]).toEqual(["real"]);
   });
 
-  test("de-duplicates identical headings", () => {
-    expect([...headingSlugsOf("## Same\n## Same\n")]).toEqual(["same"]);
+  // GitHub numbers a repeated heading's anchor in document order, so `#same-1` is real.
+  test("numbers repeated headings -1, -2, … in document order", () => {
+    expect([...headingSlugsOf("## Same\n## Same\n### Same\n")]).toEqual([
+      "same",
+      "same-1",
+      "same-2",
+    ]);
+  });
+
+  // A numbered repeat can land on an anchor a later or earlier heading owns outright; the
+  // count moves on until the anchor is free, exactly as github-slugger does.
+  test("a numbered repeat skips an anchor another heading already took", () => {
+    expect([...headingSlugsOf("## Notes\n## Notes 1\n## Notes\n")]).toEqual([
+      "notes",
+      "notes-1",
+      "notes-2",
+    ]);
+  });
+
+  test("a fenced repeat does not consume a number", () => {
+    const md = "## Notes\n\n```md\n## Notes\n```\n\n## Notes\n";
+    expect([...headingSlugsOf(md)]).toEqual(["notes", "notes-1"]);
+  });
+
+  test("slugs a heading's link text, not its target", () => {
+    expect([...headingSlugsOf("## See [the plan](plan.md)\n")]).toEqual([
+      "see-the-plan",
+    ]);
   });
 
   // REGRESSION: `headingSlugsOf` used to scan RAW text, so a `# comment` inside a fenced block
@@ -1157,6 +1217,37 @@ describe("runDocsLint — anchors", () => {
     const res = lint(config(root));
     expect(res.problems).toHaveLength(1);
     expect(res.problems[0]).toContain("MISSING ANCHOR");
+  });
+
+  // The three headings of issue #208: each anchor below is the one GitHub renders.
+  test("accented, linked and repeated headings resolve to GitHub's anchors", () => {
+    const root = wiki({
+      "index.md": page(
+        { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
+        "# Catalog\n\n- [A](./a.md)\n- [accent](./a.md#café-notes)\n- [repeat](./a.md#notes-1)\n"
+      ),
+      "a.md": page(
+        OK_FM,
+        "# A\n\n[accent](#café-notes), [link](#see-the-plan), [first](#notes), [second](#notes-1)\n\n## Café notes\n\n## See [the plan](a.md)\n\n## Notes\n\n## Notes\n"
+      ),
+    });
+    expect(lint(config(root)).problems).toEqual([]);
+  });
+
+  test("the old, wrong anchors for those headings are now MISSING ANCHOR", () => {
+    const root = wiki({
+      "index.md": page(
+        { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
+        "# Catalog\n\n- [A](./a.md)\n"
+      ),
+      "a.md": page(
+        OK_FM,
+        "# A\n\n[a](#caf-notes) [b](#see-the-planamd) [c](#notes-2)\n\n## Café notes\n\n## See [the plan](a.md)\n\n## Notes\n\n## Notes\n"
+      ),
+    });
+    const res = lint(config(root));
+    expect(res.problems).toHaveLength(3);
+    for (const p of res.problems) expect(p).toContain("MISSING ANCHOR");
   });
 
   test("the double-hyphen slug rule is applied to real anchors", () => {

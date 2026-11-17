@@ -153,12 +153,25 @@ export function walkMarkdown(
 
 // GitHub heading -> anchor slug: lowercase, drop punctuation (keeping spaces/hyphens),
 // spaces -> hyphens. "Beating / detune" -> "beating--detune".
+//
+// An in-tree port of github-slugger, which pdocs cannot depend on. What survives is what
+// its generated regex keeps: letters, marks, decimal and letter numbers, connector
+// punctuation (`_`), in any script — so "Café notes" -> "café-notes". Symbols and other
+// numbers ("²", "½") go, as on GitHub.
+//
+// GitHub slugs the heading's rendered text, so an inline link is reduced to its text first:
+// "See [the plan](plan.md)" -> "see-the-plan". A code span and a backslash escape are
+// matched first and kept, because neither holds a link: "Use `[x](y)` syntax" ->
+// "use-xy-syntax".
 export function slug(h: string): string {
   return h
+    .replace(/(`+)[\s\S]*?\1|\\.|\[([^\]]*)\]\([^)]*\)/g, (m, _ticks, text) =>
+      text === undefined ? m : text
+    )
     .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
+    .replace(/[^\p{L}\p{M}\p{Nd}\p{Nl}\p{Pc}\p{Alphabetic} -]/gu, "")
     .trim()
-    .replace(/\s/g, "-");
+    .replace(/ /g, "-");
 }
 
 /**
@@ -169,12 +182,25 @@ export function slug(h: string): string {
  * FALSE NEGATIVE, which is the one direction a gate must never fail in. `stripCode` is
  * length-preserving and only collapses newlines *inside* a fence, so headings before and
  * after one still begin a line.
+ *
+ * A repeated heading is numbered in document order, as GitHub does: the second "Notes" is
+ * `notes-1`, the third `notes-2`. The count belongs to the base slug and skips any anchor
+ * already taken, so "Notes", "Notes 1", "Notes" yields `notes`, `notes-1`, `notes-2`.
  */
 export function headingSlugsOf(text: string): Set<string> {
   const s = new Set<string>();
+  const repeats = new Map<string, number>();
   for (const line of stripFences(text).split("\n")) {
     const heading = /^#+\s+(.*)$/.exec(line)?.[1];
-    if (heading !== undefined) s.add(slug(heading));
+    if (heading === undefined) continue;
+    const base = slug(heading);
+    let anchor = base;
+    while (s.has(anchor)) {
+      const n = (repeats.get(base) ?? 0) + 1;
+      repeats.set(base, n);
+      anchor = `${base}-${n}`;
+    }
+    s.add(anchor);
   }
   return s;
 }
