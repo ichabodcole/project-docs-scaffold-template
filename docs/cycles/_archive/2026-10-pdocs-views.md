@@ -57,10 +57,10 @@ The cycle ends in a scaffold minor (9.4.0) with the migration re-pin (playbook
 Step 14), then a plugin release.
 
 Out of scope, deliberately: the visual board
-([pdocs-board-landscape](../../items/pdocs-board-landscape.md)), which should
-take the portfolio view as input; linting beyond the docs root and user-defined
-types, each its own cycle; and the migration bugs, which would make a natural
-migrations-polish cycle.
+([pdocs-board-landscape](../../items/pdocs-board-landscape/item.md)), which
+should take the portfolio view as input; linting beyond the docs root and
+user-defined types, each its own cycle; and the migration bugs, which would make
+a natural migrations-polish cycle.
 
 ## Outcome
 
