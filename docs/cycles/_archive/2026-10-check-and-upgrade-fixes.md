@@ -82,7 +82,7 @@ What changed on the way, none of it in Scope:
 
 Follow-ups filed to triage:
 [check-output-polish](../../items/check-output-polish.md),
-[project-summary-zsh-glob-and-old-cli](../../items/project-summary-zsh-glob-and-old-cli.md)
+[project-summary-zsh-glob-and-old-cli](../../items/project-summary-zsh-glob-and-old-cli/item.md)
 and
 [stale-lifecycle-playbooks-after-upgrade](../../items/stale-lifecycle-playbooks-after-upgrade.md).
 Next is the planned

@@ -41,7 +41,7 @@ them (#207) lets through frontmatter that other tools cannot open, and
   **[item/check-rejects-non-strict-yaml-frontmatter](../items/check-rejects-non-strict-yaml-frontmatter.md)**
   (#207) — the check fixes. They share lint files, so the branches run in that
   order.
-- **[item/project-summary-zsh-glob-and-old-cli](../items/project-summary-zsh-glob-and-old-cli.md)**
+- **[item/project-summary-zsh-glob-and-old-cli](../items/project-summary-zsh-glob-and-old-cli/item.md)**
   — the project-summary command runs under zsh and on an older CLI.
 - **[item/ci-migration-test-git-hang-cause](../items/ci-migration-test-git-hang-cause/item.md)**
   — research: why fixture git hangs on CI. The cycle's release pushes to main,
@@ -75,3 +75,4 @@ placeholder line into a real cycle.
 
 - chore/pin-bun-1-4-4 (landed 2026-11-17)
 - fix/dot-dot-name-inside-docs-root (landed 2026-11-17)
+- fix/project-summary-zsh-glob-and-old-cli (landed 2026-11-17)
