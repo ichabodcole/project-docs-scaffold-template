@@ -5,7 +5,7 @@ description:
   What project-docs already holds and derives that a work board would show, and
   what is still to be found out before one is designed.
 tags: [pdocs, work-board, research]
-status: draft
+status: stable
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
 ---
 

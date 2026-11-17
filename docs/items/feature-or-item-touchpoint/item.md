@@ -6,7 +6,7 @@ description:
   whether the work is a feature, because the rule sits in READMEs it does not
   read at that moment.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a1eab2-ae6b-7236-8be0-cee5e10d7960
 kind: research
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
@@ -75,14 +75,14 @@ To settle:
   for an existing feature to join.
 
 Related:
-[keep a feature's finished items in view](./research-items-parent-feature.md),
+[keep a feature's finished items in view](../research-items-parent-feature.md),
 the archiving half of the same gap.
 
 ## Definition of done
 
-- [ ] A write-up records the path three fresh agents took when asked for "a new
+- [x] A write-up records the path three fresh agents took when asked for "a new
       research item", and where each could have been prompted.
-- [ ] It names the signals that mean a feature, and the wording of the question.
-- [ ] It says whether a `pdocs new item` advisory can carry the prompt, with a
+- [x] It names the signals that mean a feature, and the wording of the question.
+- [x] It says whether a `pdocs new item` advisory can carry the prompt, with a
       trial of the wording on fresh agents.
-- [ ] It recommends the surfaces to change, as items filed under one feature.
+- [x] It recommends the surfaces to change, as items filed under one feature.

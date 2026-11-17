@@ -6,7 +6,7 @@ description:
   hang past 10 s on pushes to main, after the spawn hardening; the cause is
   unknown.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a104d4-ddac-760f-abcf-d1e591a24a65
 kind: research
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
@@ -17,7 +17,7 @@ cycle: 2026-11-check-fixes-and-board-research
 
 # Find why fixture git hangs in the migration tests on CI
 
-[The test-hang fix](./v26-migration-test-git-hang/item.md) bounded fixture git
+[The test-hang fix](../v26-migration-test-git-hang/item.md) bounded fixture git
 calls at 10 s and passed the maintenance and gc settings, but the hang came
 back. CI run 37172149263, the push of main at `d4ff2ee` (2026-10-04), failed
 four tests in `migrate-v2.6-to-v2.7.test.ts`:
@@ -49,4 +49,4 @@ and the item closes on that.
 
 ## Related Documents
 
-- [A v2.6 migration test's git add hangs until the test budget kills it](./v26-migration-test-git-hang/item.md)
+- [A v2.6 migration test's git add hangs until the test budget kills it](../v26-migration-test-git-hang/item.md)

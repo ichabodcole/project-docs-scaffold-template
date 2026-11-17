@@ -7,7 +7,7 @@ description:
   same things, and recommend what a project-docs work board includes and leaves
   out.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a0e970-e72d-70d2-b506-ae4899a7d04e
 kind: research
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
@@ -39,12 +39,12 @@ included.
 
 ## Definition of done
 
-- [ ] An inventory of our document types and the states each can be in.
-- [ ] A landscape of how comparable products visualize the same things: what
+- [x] An inventory of our document types and the states each can be in.
+- [x] A landscape of how comparable products visualize the same things: what
       each shows, and what it lets you do, not only see.
-- [ ] A read of which `pdocs` reads and writes a board would sit on, and what
+- [x] A read of which `pdocs` reads and writes a board would sit on, and what
       the CLI lacks for it.
-- [ ] What belongs in the app, and what stays out because Scriptorium or another
+- [x] What belongs in the app, and what stays out because Scriptorium or another
       tool already does it.
-- [ ] Recommendations for a lighter and a more robust version, or a
+- [x] Recommendations for a lighter and a more robust version, or a
       recommendation not to build it yet.

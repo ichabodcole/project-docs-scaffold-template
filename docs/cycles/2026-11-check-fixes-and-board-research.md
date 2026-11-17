@@ -32,7 +32,7 @@ them (#207) lets through frontmatter that other tools cannot open, and
 - **[item/pdocs-board-landscape](../items/pdocs-board-landscape/item.md)** —
   research: what a work board shows, lets you do, and leaves to other tools.
   Unblocks the mockups.
-- **[item/feature-or-item-touchpoint](../items/feature-or-item-touchpoint.md)**
+- **[item/feature-or-item-touchpoint](../items/feature-or-item-touchpoint/item.md)**
   — research: where the feature question reaches an agent filing work.
 - **[item/dot-dot-name-inside-docs-root](../items/dot-dot-name-inside-docs-root.md)**
   (#209),
@@ -43,7 +43,7 @@ them (#207) lets through frontmatter that other tools cannot open, and
   order.
 - **[item/project-summary-zsh-glob-and-old-cli](../items/project-summary-zsh-glob-and-old-cli.md)**
   — the project-summary command runs under zsh and on an older CLI.
-- **[item/ci-migration-test-git-hang-cause](../items/ci-migration-test-git-hang-cause.md)**
+- **[item/ci-migration-test-git-hang-cause](../items/ci-migration-test-git-hang-cause/item.md)**
   — research: why fixture git hangs on CI. The cycle's release pushes to main,
   which is where the hang shows. Timeboxed to one working session: if the cause
   is not found by then, record what was ruled out and what to instrument next,
