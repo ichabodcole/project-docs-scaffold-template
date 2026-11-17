@@ -42,6 +42,7 @@ import {
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { Command, Invocation } from "../cli.ts";
 import {
+  leavesRoot,
   parseFrontmatter,
   stripInlineComment,
   yamlList,
@@ -899,7 +900,7 @@ function resolveFrom(
     if (!existsSync(abs) || !statSync(abs).isFile()) continue;
     if (model === null) return { abs };
     const within = relative(ctx.docsRoot, abs);
-    if (within.startsWith("..") || within === "")
+    if (leavesRoot(within) || within === "")
       throw new UsageError(
         `--from: \`${from}\` is outside the docs root — \`from:\` names a document under it.`
       );

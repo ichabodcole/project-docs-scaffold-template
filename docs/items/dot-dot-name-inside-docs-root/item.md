@@ -6,7 +6,7 @@ description:
   named ..notes is refused by pdocs new and judged differently by two lint
   rules.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a1eaa7-44ae-748c-8a20-e44a70bde5f8
 kind: bug
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
@@ -38,7 +38,7 @@ Reported in
 
 ## Definition of done
 
-- [ ] One exported helper answers "is this relative path outside?" and all three
+- [x] One exported helper answers "is this relative path outside?" and all three
       sites use it.
-- [ ] A test shows `..notes/x.md` is inside the docs root for `pdocs new --from`
+- [x] A test shows `..notes/x.md` is inside the docs root for `pdocs new --from`
       and for the lint.

@@ -34,7 +34,7 @@ them (#207) lets through frontmatter that other tools cannot open, and
   Unblocks the mockups.
 - **[item/feature-or-item-touchpoint](../items/feature-or-item-touchpoint/item.md)**
   — research: where the feature question reaches an agent filing work.
-- **[item/dot-dot-name-inside-docs-root](../items/dot-dot-name-inside-docs-root.md)**
+- **[item/dot-dot-name-inside-docs-root](../items/dot-dot-name-inside-docs-root/item.md)**
   (#209),
   **[item/heading-anchors-match-github](../items/heading-anchors-match-github.md)**
   (#208) and
@@ -74,3 +74,4 @@ placeholder line into a real cycle.
 -->
 
 - chore/pin-bun-1-4-4 (landed 2026-11-17)
+- fix/dot-dot-name-inside-docs-root (landed 2026-11-17)

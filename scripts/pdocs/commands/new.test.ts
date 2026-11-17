@@ -1376,6 +1376,16 @@ describe("pdocs new item", () => {
     expect(fields(root, "docs/items/x.md").get("scope")).toBe("cli");
   });
 
+  test("--from accepts a folder whose name only begins with two dots (#209)", () => {
+    const root = workTree();
+    mkdirSync(join(root, "docs/..notes"), { recursive: true });
+    writeFileSync(join(root, "docs/..notes/x.md"), "# X\n");
+    const r = newItem(root, "from-dots", "--kind", "chore", "--from", "docs/..notes/x.md");
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(ExitCode.Success);
+    expect(fields(root, "docs/items/from-dots.md").get("from")).toBe("..notes/x.md");
+  });
+
   test("--from writes `from:` AND the Related link — one flag, both jobs", () => {
     const root = workTree();
     const r = newItem(

@@ -35,6 +35,7 @@ import {
   OUTSIDE_REPOSITORY,
   checkLinks,
   collectDocsLint,
+  leavesRoot,
   parseFrontmatter,
   stripInlineComment,
   walkMarkdown,
@@ -150,11 +151,7 @@ export function linkBoundary(ctx: Ctx): string {
   const top = out.success ? new TextDecoder().decode(out.stdout).trim() : "";
   if (top && existsSync(top)) {
     const rel = relative(realpathSync(top), realpathSync(ctx.repoRoot));
-    const nested =
-      rel !== "" &&
-      rel !== ".." &&
-      !rel.startsWith(`..${sep}`) &&
-      !isAbsolute(rel);
+    const nested = rel !== "" && !leavesRoot(rel);
     if (nested)
       boundary = resolve(ctx.repoRoot, ...rel.split(sep).map(() => ".."));
   }
@@ -217,7 +214,7 @@ export function templateTest(ctx: Ctx): (path: string) => boolean {
     if (seeded.size === 0) return false;
     const abs = isAbsolute(path) ? path : join(ctx.repoRoot, path);
     const rel = relative(ctx.docsRoot, abs);
-    if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return false;
+    if (rel === "" || leavesRoot(rel)) return false;
     // A seeded PAGE is recorded like a template and read like a document: its
     // links are checked. Skipping it here would switch that off.
     if (SEEDED_PAGES.has(rel.split(sep).join("/"))) return false;

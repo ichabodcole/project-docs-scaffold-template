@@ -6,8 +6,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { UsageError } from "./envelope.ts";
-import { type Ctx, context } from "./lint/rules.ts";
-import { collectWork, resolveRef, shortId } from "./work.ts";
+import { type Ctx, context, templateTest } from "./lint/rules.ts";
+import { collectWork, ownerPosition, resolveRef, shortId } from "./work.ts";
 
 const roots: string[] = [];
 afterAll(() => {
@@ -229,5 +229,28 @@ describe("resolveRef", () => {
   test("`kinds` restricts what the reference may name", () => {
     expect(() => resolveRef(work, "item/big", ["feature"])).toThrow(UsageError);
     expect(resolveRef(work, "feature/auth", ["feature"]).slug).toBe("auth");
+  });
+});
+
+describe("a name that only begins with two dots is inside the docs root (#209)", () => {
+  const ctx = fixture({
+    "docs/..notes/x.md": "# X\n",
+    "docs/.pdocs-seed.json": JSON.stringify({ version: "1.0.0", files: { "..notes/x.md": "h" } }),
+    "README.md": "# Readme\n",
+  });
+
+  test("ownerPosition still reads `../` as outside, and an item folder named with two dots as owned", () => {
+    expect(ownerPosition(ctx, "README.md")).toBeNull();
+    expect(ownerPosition(ctx, "docs/items/..notes/x.md")).toEqual({
+      owner: "items",
+      archived: false,
+      segs: ["..notes", "x.md"],
+    });
+  });
+
+  test("the template test finds a seeded file in such a folder", () => {
+    const isTpl = templateTest(ctx);
+    expect(isTpl("docs/..notes/x.md")).toBe(true);
+    expect(isTpl("README.md")).toBe(false);
   });
 });

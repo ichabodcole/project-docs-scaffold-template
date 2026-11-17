@@ -400,10 +400,21 @@ export interface BrokenLink {
   outside?: true;
 }
 
+/**
+ * Does `rel`, the output of `relative(root, path)`, leave `root`?
+ *
+ * `..` and `../x` leave. A name that only BEGINS with two dots (`..notes`,
+ * `...draft.md`) does not, which a bare `startsWith("..")` gets wrong. An
+ * absolute `rel` leaves too: `relative` returns one across Windows drives.
+ * The empty string, the root itself, is the caller's to decide.
+ */
+export function leavesRoot(rel: string): boolean {
+  return rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+}
+
 /** Is `path` under `root`, going by how the two are spelled? */
 function within(root: string, path: string): boolean {
-  const rel = relative(root, path);
-  return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+  return !leavesRoot(relative(root, path));
 }
 
 /** What a caller appends to a `MISSING FILE` whose `outside` is set. */

@@ -45,6 +45,7 @@ import {
   checkLinks,
   type DocsLintConfig,
   headingSlugsOf,
+  leavesRoot,
   type LintPage,
   parseFrontmatter,
   parseGenerated,
@@ -2113,5 +2114,19 @@ describe("runDocsLint — nonPageDirs", () => {
     // control: without the exclusion the same tree is full of problems
     const control = lint(config(wiki(files)));
     expect(control.problems.length).toBeGreaterThan(0);
+  });
+});
+
+describe("leavesRoot — is this relative path outside the folder it is relative to?", () => {
+  test("`..` and `../x` leave; a name that only begins with two dots does not (#209)", () => {
+    expect(leavesRoot("..")).toBe(true);
+    expect(leavesRoot(join("..", "x.md"))).toBe(true);
+    expect(leavesRoot(join("..notes", "x.md"))).toBe(false);
+    expect(leavesRoot("...draft.md")).toBe(false);
+    expect(leavesRoot(join("a", "b.md"))).toBe(false);
+  });
+
+  test("an absolute path leaves", () => {
+    expect(leavesRoot(join(tmpdir(), "x.md"))).toBe(true);
   });
 });
