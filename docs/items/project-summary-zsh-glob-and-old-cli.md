@@ -11,6 +11,7 @@ kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 from: items/ground-in-project-old-cli-fallback/sessions/2026-10-03-ground-in-project-old-cli.md
 priority: medium
+cycle: 2026-11-check-fixes-and-board-research
 ---
 
 # Guard project-summary's session glob and view call

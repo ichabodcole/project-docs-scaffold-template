@@ -11,6 +11,7 @@ kind: bug
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
 source: "#207"
 priority: high
+cycle: 2026-11-check-fixes-and-board-research
 ---
 
 # Report frontmatter a strict YAML parser rejects

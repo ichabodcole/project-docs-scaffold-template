@@ -12,6 +12,7 @@ kind: bug
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
 source: "#209"
 priority: low
+cycle: 2026-11-check-fixes-and-board-research
 ---
 
 # Treat a name starting with two dots as inside the docs root

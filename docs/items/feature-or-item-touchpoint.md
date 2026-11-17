@@ -12,6 +12,7 @@ kind: research
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
 priority: medium
 parent: feature/feature-touchpoints
+cycle: 2026-11-check-fixes-and-board-research
 ---
 
 # Find where an agent should ask whether work needs a feature

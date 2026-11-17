@@ -7,12 +7,13 @@ description:
   same things, and recommend what a project-docs work board includes and leaves
   out.
 status: stable
-lifecycle: ready
+lifecycle: active
 id: 01a0e970-e72d-70d2-b506-ae4899a7d04e
 kind: research
 generated: { by: claude-opus-5-5, at: 2026-09-28 }
 scope: pdocs
 parent: feature/pdocs-work-board
+cycle: 2026-11-check-fixes-and-board-research
 ---
 
 # A work board for project-docs: what we have, the landscape, and what to build

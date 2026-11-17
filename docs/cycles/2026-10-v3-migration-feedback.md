@@ -10,7 +10,7 @@ lifecycle: planned
 started: 2026-10-03
 appetite:
   Stop when the nine items land, with the migration re-pin and a plugin release.
-after: [2026-10-check-and-upgrade-fixes]
+after: 2026-10-check-and-upgrade-fixes,2026-11-check-fixes-and-board-research
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 ---
 
