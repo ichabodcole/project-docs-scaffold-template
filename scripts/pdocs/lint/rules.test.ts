@@ -33,6 +33,7 @@ import {
   libraryFieldChecks,
   reportDocuments,
   reportLines,
+  scalarFaults,
   schemaLifecycles,
   schemaStateGroups,
   schemaTableChecks,
@@ -42,12 +43,56 @@ import {
   workbenchFiles,
 } from "./rules.ts";
 import { DEFAULT_CONFIG } from "../docs-lint/config.ts";
+import { parseFrontmatter } from "../docs-lint/index.ts";
 import { childEnv } from "../test-env.ts";
 import { OWNED_FILE_TYPE, buildRegistry } from "./registry.ts";
 import { collect } from "./collect.ts";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const SCHEMA = readFileSync(join(REPO_ROOT, "docs/SCHEMA.md"), "utf8");
+
+/** The frontmatter block of a document, or "" where it has none. */
+const frontmatterOf = (text: string) => /^---\n([\s\S]*?)\n---/.exec(text)?.[1] ?? "";
+
+/**
+ * `description` (and one neighbour) written in ways a strict YAML parser reads:
+ * the shapes the BAD SCALAR rules sit closest to.
+ */
+const VALID_FRONTMATTER: string[][] = [
+  ["description: A plain sentence."],
+  ["description:", "  A plain sentence that Prettier wrapped onto", "  a second line, and a third", "  line."],
+  ["description: A first line beside the key", "  and a second under it."],
+  ["description:", "  Ratios of 3:1 and up, at 12:30, from", "  https://example.com/a:b and c:d."],
+  ["description:", "  A paragraph", "", "  and another."],
+  ['description: "Quoted: with a colon."'],
+  ["description: 'Quoted: with a colon, and it''s escaped.'"],
+  ['description: "Quoted \\"inner\\" quotes: and a colon." # then a comment: here'],
+  ["description:", '  "Quoted: and wrapped by Prettier', '  onto a second line: twice."'],
+  ["description:", "  'Single quoted: and wrapped", "  onto a second line.'"],
+  ['description: "Quoted"', "  # a comment: under it"],
+  ['description: "Tagged #urgent: act now"'],
+  ["description:", '  A plain value with "quotes" inside it and', "  it's fine."],
+  ["description: A value # with a comment: holding a colon"],
+  ["description: # a comment", "  then the value."],
+  ["description: >-", "  Folded: with a colon, and", '  "quotes" that continue.'],
+  ["description: >", "  Folded: with a colon.", "", "  And a second paragraph: too."],
+  ["description: |", "  Literal: with a colon.", '  "quoted" and more.'],
+  ["description: |-", "  Literal: stripped."],
+  ["description:"],
+  ["description: ''"],
+  ["description: A.", "tags: [a, b]"],
+  ["description: A.", "tags:", "  - a", "  - b: c"],
+  ["description: A.", "tags:", "- a", "- b"],
+  ["description: A.", "related:", "  [", "    concept/a,", "    concept/b,", "  ]"],
+  ["description: A.", "meta:", "  { by: x, at: 2026-01-01 }"],
+  ["description: A.", "meta:", "  by: x", "  at: 2026-01-01"],
+  ["description: A.", "meta:", "  by: x", "    wrapped under it", "  at: 2026-01-01"],
+  ["description: A.", "meta:", '  "a quoted key": x', "  'another': y"],
+  ["description: A.", "meta:", "  Board tours: a landscape", "  and second: thing."],
+  ["description: A.", "meta:", "  nested:", "    deeper: value", "    list:", "      - a"],
+  ["description: A.", "date: 2026-01-01", "count: 3", "flag: true", "empty: ~"],
+  ["description: A.", "# a whole-line comment: with a colon", "tags: [a]"],
+];
 
 const roots: string[] = [];
 afterAll(() => {
@@ -543,6 +588,117 @@ describe("frontmatter a real YAML parser would reject", () => {
         "status: stable\ngenerated: { by: t, at: 2026-09-03 }\n---\n\n# B\n",
     });
     expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+  });
+
+  // Prettier wraps a long `description:` onto indented lines, and the parser
+  // joins them back. A strict parser reads the first `: ` as a mapping key that
+  // runs over two lines, and refuses the document (#207).
+  const wrapped = (lines: string[]) =>
+    `---\ntype: report\ntitle: A\n${lines.join("\n")}\nstatus: stable\n` +
+    "generated: { by: t, at: 2026-09-03 }\n---\n\n# A\n";
+  const REPORT = "docs/features/x/reports/2026-09-03-a.md";
+  const FIX =
+    "(a strict YAML parser rejects this: fold it, `description: >-`, or quote the whole value)";
+  const COLON = `BAD SCALAR     ${REPORT}: \`description\` holds ": " in a plain multi-line value  ${FIX}`;
+  const QUOTE = `BAD SCALAR     ${REPORT}: \`description\` continues after its closing quote  ${FIX}`;
+
+  test("a plain multi-line value holding a colon and a space names the field and the fix", () => {
+    for (const lines of [
+      [
+        "description:",
+        "  The first step of Board tours: a landscape of how other tools author and",
+        "  play paths through a canvas.",
+      ],
+      // The colon on a later line, at a line's end, and under a first line
+      // that sits beside the key.
+      ["description:", "  Plain first line with nothing odd, then", "  a second line: with a colon."],
+      ["description:", "  We tested three things:", "  speed and size."],
+      ["description: A first line beside the key", "  and a second: with a colon."],
+    ]) {
+      const text = wrapped(lines);
+      expect(() => Bun.YAML.parse(frontmatterOf(text))).toThrow();
+      expect(frontmatterSyntaxProblems(fixture({ [REPORT]: text }))).toEqual([COLON]);
+    }
+  });
+
+  test("a value that starts with a quote and continues after the closing quote", () => {
+    for (const lines of [
+      [
+        "description:",
+        '  "Never write the active version" is the right default but an absolute today;',
+      ],
+      ['description: "Never write" is the default.'],
+      ["description: 'Never write' is the default, and", "  it wraps."],
+      ["description:", '  "A quoted value that wraps', '  onto a second line" and then goes on.'],
+    ]) {
+      const text = wrapped(lines);
+      expect(() => Bun.YAML.parse(frontmatterOf(text))).toThrow();
+      expect(frontmatterSyntaxProblems(fixture({ [REPORT]: text }))).toEqual([QUOTE]);
+    }
+  });
+
+  test("a colon on the key's own line is reported once, by the single-line rule", () => {
+    const ctx = fixture({
+      [REPORT]: wrapped(["description: The gate learned a rule: state the", "  contract: then check it."]),
+    });
+    expect(frontmatterSyntaxProblems(ctx)).toEqual([
+      `BAD SCALAR     ${REPORT}: \`description\` contains ": " unquoted  (a real YAML parser reads this as a nested mapping)`,
+    ]);
+  });
+
+  // Every block here is YAML a strict parser reads, so none may be reported:
+  // a lint that refuses valid frontmatter is worse than the bug it fixes.
+  test("valid YAML is left alone, and the strict parser agrees it is valid", () => {
+    for (const lines of VALID_FRONTMATTER) {
+      const text = wrapped(lines);
+      expect(() => Bun.YAML.parse(frontmatterOf(text))).not.toThrow();
+      expect([lines, frontmatterSyntaxProblems(fixture({ [REPORT]: text }))]).toEqual([lines, []]);
+    }
+  });
+
+  test("the two fixes the message names are read as the value they hold", () => {
+    for (const lines of [
+      ["description: >-", "  Board tours: a landscape of how other tools", '  "author" and play paths.'],
+      ["description: >", "  Board tours: a landscape of how other tools", '  "author" and play paths.'],
+      ["description:", "  'Board tours: a landscape of how other tools", '  "author" and play paths.\''],
+    ]) {
+      const text = wrapped(lines);
+      const ctx = fixture({ [REPORT]: text });
+      expect(frontmatterSyntaxProblems(ctx)).toEqual([]);
+      const strict = (Bun.YAML.parse(frontmatterOf(text)) as { description: string }).description;
+      expect(parseFrontmatter(frontmatterOf(text)).get("description")).toBe(strict.trim());
+    }
+  });
+
+  // The differential check: whatever this repository's own documents and the
+  // payload's hold, a block the lint reports is one the strict parser refuses.
+  test("no document in this repository is reported unless a strict parser refuses it", () => {
+    const blocks = new Map<string, string>();
+    for (const dir of ["docs", "{{cookiecutter.project_slug}}/docs", "plugins"]) {
+      const walk = (d: string) => {
+        for (const e of readdirSync(d, { withFileTypes: true })) {
+          const p = join(d, e.name);
+          if (e.isDirectory()) walk(p);
+          else if (e.name.endsWith(".md")) {
+            const block = frontmatterOf(readFileSync(p, "utf8"));
+            if (block) blocks.set(p, block);
+          }
+        }
+      };
+      walk(join(REPO_ROOT, dir));
+    }
+    expect(blocks.size).toBeGreaterThan(300);
+    const wrong: string[] = [];
+    for (const [path, block] of blocks) {
+      let strict = true;
+      try {
+        Bun.YAML.parse(block);
+      } catch {
+        strict = false;
+      }
+      if (scalarFaults(block).length > 0 && strict) wrong.push(path);
+    }
+    expect(wrong).toEqual([]);
   });
 
   // The parser keeps the last value; another YAML tool may keep the first or
@@ -1560,6 +1716,67 @@ describe("the gate — a library page's frontmatter problem is reported once", (
     const messages = data.problems.map((p: { message: string }) => p.message);
     expect(messages.sort()).toEqual(EXPECTED);
     expect(data.total).toBe(EXPECTED.length);
+  });
+});
+
+describe("the gate — a wrapped value a strict YAML parser refuses", () => {
+  const item = (description: string[]) =>
+    [
+      "---",
+      "type: item",
+      "title: Fix the hook",
+      ...description,
+      "status: draft",
+      "lifecycle: triage",
+      "id: 0190f4b2-7c3a-7d4e-8f00-00000000abcd",
+      "kind: bug",
+      `generated: ${GENERATED}`,
+      "---",
+      "",
+      "# Fix the hook",
+      "",
+    ].join("\n");
+  const FIX =
+    "(a strict YAML parser rejects this: fold it, `description: >-`, or quote the whole value)";
+
+  test("is an error in the text report and the JSON envelope, naming the field and the fix", () => {
+    for (const [description, what] of [
+      [
+        ["description:", "  The hook reads the wrong index: the commit it", "  makes is not the one that was staged."],
+        'holds ": " in a plain multi-line value',
+      ],
+      [
+        ["description:", '  "Never write the active version" is the right default but an absolute today;'],
+        "continues after its closing quote",
+      ],
+    ] as const) {
+      const problem = `BAD SCALAR     docs/items/fix-hook.md: \`description\` ${what}  ${FIX}`;
+      const root = minimal({ "docs/items/fix-hook.md": item([...description]) });
+      const text = run(["check", "--format", "text", "--root", root]);
+      expect(text.code).toBe(9);
+      expect(text.stdout.split("\n").filter((l) => l === problem)).toHaveLength(1);
+      expect(text.stdout).toContain("docs-lint: 1 problem(s)");
+      const json = run(["check", "--format", "json", "--root", root]);
+      expect(json.code).toBe(9);
+      expect(JSON.parse(json.stdout).data.problems).toEqual([{ tier: "workbench", message: problem }]);
+    }
+  });
+
+  test("the same description folded is clean, and reads as the sentence", () => {
+    const root = minimal({
+      "docs/items/fix-hook.md": item([
+        "description: >-",
+        "  The hook reads the wrong index: the commit it",
+        "  makes is not the one that was staged.",
+      ]),
+    });
+    const { code, stdout } = run(["check", "--format", "text", "--root", root]);
+    expect(stdout).toContain("docs-lint: clean");
+    expect(code).toBe(0);
+    const found = run(["find", "--type", "item", "--format", "json", "--root", root]);
+    expect(JSON.parse(found.stdout).data.matches[0].description).toBe(
+      "The hook reads the wrong index: the commit it makes is not the one that was staged."
+    );
   });
 });
 

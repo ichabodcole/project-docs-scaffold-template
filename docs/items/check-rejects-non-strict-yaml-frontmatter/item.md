@@ -5,7 +5,7 @@ description:
   pdocs check passes a plain multi-line value holding a colon and a space, or
   one that starts with a quote, which strict YAML parsers refuse to read.
 status: stable
-lifecycle: ready
+lifecycle: done
 id: 01a1eaa7-441a-7045-ae6d-4878bc45b011
 kind: bug
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
@@ -43,11 +43,16 @@ Reported in
 
 ## Definition of done
 
-- [ ] `pdocs check` reports a plain multi-line value that holds `: `, and one
+- [x] `pdocs check` reports a plain multi-line value that holds `: `, and one
       that starts with a quote and continues after the closing quote, naming the
       field and the fix (a folded block, `description: >`, `description: >-`, or
       a quoted value). Tests cover both shapes.
-- [ ] `pdocs new` and `pdocs set` write a value holding `: ` in a form a strict
+- [x] `pdocs new` and `pdocs set` write a value holding `: ` in a form a strict
       parser reads, with a test that parses the written file.
 - [ ] Whether the report is an error or a warning is decided, and the release
       notes say what an adopter's first `check` after upgrading will show.
+
+The report is an error, under the existing `BAD SCALAR` code. The release notes
+are not written yet: the sentence for adopters goes in the v3.0 migration
+guide's "After the script" list when the migration is re-pinned to the release
+that carries this fix.

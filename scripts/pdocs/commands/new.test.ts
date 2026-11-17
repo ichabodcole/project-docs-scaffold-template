@@ -64,6 +64,19 @@ const FIXTURE_CONFIG = {
 };
 const CREATABLE = ROWS.filter((r) => r.creatable);
 
+/** Descriptions a plain YAML scalar cannot hold, or holds as something else. */
+const STRICT_YAML_DESCRIPTIONS = [
+  "Part one: part two, long enough to wrap onto a second line in the file, which takes more than eighty columns.",
+  '"Never write the active version" is the right default but an absolute today; long enough to wrap onto a second line.',
+  "'Never' is the right default.",
+  "We tested three things:",
+  "A value with a # in it, and a trailing one #",
+  "[brackets], {braces}, a | pipe and a - dash",
+  "> not a folded block",
+  "Ratios of 3:1 and up, at https://example.com/a:b — nothing a plain scalar cannot hold, but long enough to wrap.",
+  'An "inner" quote: and a back\\slash',
+];
+
 const roots: string[] = [];
 afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });
@@ -790,6 +803,27 @@ describe("pdocs new — frontmatter", () => {
     const body = readFileSync(join(root, "docs/playbooks/a-playbook.md"), "utf8");
     expect(body).toContain(`generated: { by: claude-opus-5, at: ${today()} }`);
     expect(body).not.toContain("YYYY-MM-DD }");
+  });
+
+  // What a strict parser makes of the written file, before and after the
+  // formatter the `next:` hint names has wrapped it (#207).
+  test("a description a plain scalar cannot hold is written so a strict YAML parser reads it back", async () => {
+    const config = await prettier.resolveConfig(join(REPO_ROOT, "docs/index.md"));
+    for (const [i, description] of STRICT_YAML_DESCRIPTIONS.entries()) {
+      const root = tree();
+      const r = run(["new", "item", `case-${i}`, "--kind", "task", "--root", root, "--description", description]);
+      expect([description, r.stderr]).toEqual([description, ""]);
+      const written = readFileSync(join(root, `docs/items/case-${i}.md`), "utf8");
+      const formatted = await prettier.format(written, { ...config, parser: "markdown" });
+      for (const text of [written, formatted]) {
+        const block = /^---\n([\s\S]*?)\n---/.exec(text)?.[1] as string;
+        expect([description, (Bun.YAML.parse(block) as { description: unknown }).description]).toEqual([
+          description,
+          description,
+        ]);
+        expect(parseFrontmatter(block).get("description")).toBe(description);
+      }
+    }
   });
 
   test("a description with a colon is quoted, so a real YAML parser agrees", () => {

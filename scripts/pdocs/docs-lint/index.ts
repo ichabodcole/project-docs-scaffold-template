@@ -341,13 +341,22 @@ export function unquoteScalar(v: string): string {
  * their key and dropping trailing `# comments`. This is what makes the checks
  * formatting-agnostic: Prettier rewrites a long flow sequence into an indented multi-line
  * block, which a line-anchored regex cannot see.
+ *
+ * A block scalar (`description: >-` over indented lines) is read as its lines, without the
+ * header: folded with spaces under `>`, kept one per line under `|`. Nothing in it is a
+ * comment or a quote. Blank lines are dropped and the header's indicators are ignored, which
+ * is all a one-paragraph description needs.
  */
 export function parseFrontmatter(fm: string): Map<string, string> {
   const out = new Map<string, string>();
   let key: string | null = null;
   let buf: string[] = [];
   const flush = () => {
-    if (key)
+    if (!key) return;
+    const header = stripInlineComment(buf[0] as string).trim();
+    if (buf.length > 1 && /^[|>][-+0-9]*$/.test(header))
+      out.set(key, buf.slice(1).join(header.startsWith("|") ? "\n" : " "));
+    else
       out.set(
         key,
         unquoteScalar(stripInlineComment(buf.join(" ").trim()).trim())

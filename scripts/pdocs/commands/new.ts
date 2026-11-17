@@ -639,11 +639,12 @@ export function frontmatterShapes(block: string): Map<string, "list" | "scalar">
 
 /** A plain scalar this repository's lenient parser AND a real YAML parser will
  *  read the same way. `frontmatterSyntaxProblems` fails an unquoted `": "`, and
- *  a description is exactly where one turns up. */
+ *  a description is exactly where one turns up. A colon that ENDS the value is
+ *  the same mapping to a real parser. */
 export function scalar(value: string): string {
   const risky =
     value === "" ||
-    /:\s/.test(value) ||
+    /:(\s|$)/.test(value) ||
     /\s#/.test(value) ||
     // A leading YAML indicator character changes what the value IS.
     /^[-?:,[\]{}#&*!|>'"%@`]/.test(value) ||

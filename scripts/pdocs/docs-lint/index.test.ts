@@ -695,6 +695,27 @@ describe("parseFrontmatter", () => {
     expect(yamlList(fields.get("tags"))).toEqual(["parsing", "exit-codes"]);
   });
 
+  // A block scalar's header is not part of its value. The lint tells an author
+  // to fold a description holding `: `, so the folded form has to read back as
+  // the sentence and not as `>- The sentence`.
+  test("reads a folded or literal block scalar without its header", () => {
+    const fields = parseFrontmatter(
+      'description: >-\n  Board tours: a landscape of "tools"\n  and paths. # not a comment\n' +
+        "note: > # a comment\n  One\n  two.\nkept: |\n  line one\n  line two\ntype: rule"
+    );
+    expect(fields.get("description")).toBe(
+      'Board tours: a landscape of "tools" and paths. # not a comment'
+    );
+    expect(fields.get("note")).toBe("One two.");
+    expect(fields.get("kept")).toBe("line one\nline two");
+    expect(fields.get("type")).toBe("rule");
+  });
+
+  test("a lone `>` or `|` with nothing under it is still the value it was", () => {
+    expect(parseFrontmatter("a: >\nb: x").get("a")).toBe(">");
+    expect(parseFrontmatter("a: > b").get("a")).toBe("> b");
+  });
+
   test("strips a trailing `# comment`", () => {
     expect(parseFrontmatter("type: concept # why this type").get("type")).toBe(
       "concept"

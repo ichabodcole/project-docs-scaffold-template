@@ -38,7 +38,7 @@ them (#207) lets through frontmatter that other tools cannot open, and
   (#209),
   **[item/heading-anchors-match-github](../items/heading-anchors-match-github/item.md)**
   (#208) and
-  **[item/check-rejects-non-strict-yaml-frontmatter](../items/check-rejects-non-strict-yaml-frontmatter.md)**
+  **[item/check-rejects-non-strict-yaml-frontmatter](../items/check-rejects-non-strict-yaml-frontmatter/item.md)**
   (#207) — the check fixes. They share lint files, so the branches run in that
   order.
 - **[item/project-summary-zsh-glob-and-old-cli](../items/project-summary-zsh-glob-and-old-cli/item.md)**
@@ -77,3 +77,4 @@ placeholder line into a real cycle.
 - fix/dot-dot-name-inside-docs-root (landed 2026-11-17)
 - fix/project-summary-zsh-glob-and-old-cli (landed 2026-11-17)
 - fix/heading-anchors-match-github (landed 2026-11-17)
+- fix/check-rejects-non-strict-yaml-frontmatter (landed 2026-11-17)

@@ -20,6 +20,20 @@ const REPO_ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(REPO_ROOT, "scripts/pdocs/cli.ts");
 const PAYLOAD = join(REPO_ROOT, "{{cookiecutter.project_slug}}");
 
+/** Descriptions a plain YAML scalar cannot hold, or holds as something else:
+ *  the list `new.test.ts` writes too. */
+const STRICT_YAML_DESCRIPTIONS = [
+  "Part one: part two, long enough to wrap onto a second line in the file, which takes more than eighty columns.",
+  '"Never write the active version" is the right default but an absolute today; long enough to wrap onto a second line.',
+  "'Never' is the right default.",
+  "We tested three things:",
+  "A value with a # in it, and a trailing one #",
+  "[brackets], {braces}, a | pipe and a - dash",
+  "> not a folded block",
+  "Ratios of 3:1 and up, at https://example.com/a:b — nothing a plain scalar cannot hold, but long enough to wrap.",
+  'An "inner" quote: and a back\\slash',
+];
+
 const roots: string[] = [];
 afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });
@@ -120,6 +134,32 @@ describe("pdocs set", () => {
       "lifecycle: active"
     ).replace("cycle: 2026-09-x", "cycle: 2026-10-y");
     expect(read(root)).toBe(expected);
+  });
+
+  // #207: the value `set` writes is one a strict parser reads back, whatever
+  // shape the description it replaces had.
+  test("a description a plain scalar cannot hold is written so a strict YAML parser reads it back", () => {
+    const root = tree();
+    for (const before of [
+      "description: The hook reads the wrong index.",
+      "description: >-\n  The hook reads: the wrong\n  index.",
+      'description:\n  "The hook reads: the wrong\n  index."',
+    ]) {
+      writeFileSync(
+        join(root, "docs/items/fix-hook.md"),
+        ITEM_A.replace("description: The hook reads the wrong index.", before)
+      );
+      for (const description of STRICT_YAML_DESCRIPTIONS) {
+        const r = set(root, "item/fix-hook", "--description", description);
+        expect([description, r.stderr]).toEqual([description, ""]);
+        const block = /^---\n([\s\S]*?)\n---/.exec(read(root))?.[1] as string;
+        const strict = Bun.YAML.parse(block) as Record<string, unknown>;
+        expect([description, strict.description]).toEqual([description, description]);
+        expect(Object.keys(strict)).toEqual([
+          "type", "title", "description", "status", "lifecycle", "id", "kind", "priority", "cycle", "generated",
+        ]);
+      }
+    }
   });
 
   test("`--lifecycle backlog` on a triage item succeeds: there is no triage flag (D8)", () => {
