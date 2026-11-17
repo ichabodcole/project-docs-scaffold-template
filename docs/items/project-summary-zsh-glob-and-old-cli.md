@@ -4,12 +4,13 @@ title: Guard project-summary's session glob and view call
 description:
   The project-summary command globs session folders that zsh refuses when they
   are empty, and runs pdocs view with no fallback for an 8.x CLI.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a1040e-e8ee-70cb-9eca-129f9d0d01ff
 kind: bug
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 from: items/ground-in-project-old-cli-fallback/sessions/2026-10-03-ground-in-project-old-cli.md
+priority: medium
 ---
 
 # Guard project-summary's session glob and view call

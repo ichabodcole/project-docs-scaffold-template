@@ -4,12 +4,13 @@ title: Help a project notice a stale lifecycle playbook
 description:
   After an upgrade, a lifecycle-override playbook can name retired paths or a
   merge rule the landing policy now beats, and nothing points it out.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: backlog
 id: 01a10418-32d1-7462-a753-1f06fd1b1f93
 kind: task
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 from: items/finalize-branch-playbook-vs-landing-policy/sessions/2026-10-03-playbook-vs-landing-policy.md
+priority: low
 ---
 
 # Help a project notice a stale lifecycle playbook

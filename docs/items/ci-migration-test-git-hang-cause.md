@@ -5,12 +5,13 @@ description:
   On CI, fixture git init and commit in the v2.6 migration tests intermittently
   hang past 10 s on pushes to main, after the spawn hardening; the cause is
   unknown.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: ready
 id: 01a104d4-ddac-760f-abcf-d1e591a24a65
 kind: research
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 from: 01a0fdc5-e8e1-7032-b536-05bd4834600a
+priority: medium
 ---
 
 # Find why fixture git hangs in the migration tests on CI
