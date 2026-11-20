@@ -13,6 +13,7 @@ generated: { by: claude-fable-5-2, at: 2026-11-17 }
 source: "#210"
 priority: medium
 parent: feature/feature-touchpoints
+cycle: 2026-11-work-board
 ---
 
 # Keep a feature's finished items in view until the feature is done

@@ -59,6 +59,11 @@ out). Every other change is asked of the agent.
 **The pages.** Now (the active cycle and what is started), Inbox, Triage, Cycle
 and Feature.
 
+**Where it lives.** In this repository, inside a `work-board` skill of the
+project-docs plugin. An agent opens it through the skill, and it reaches a
+project only through that project's `pdocs … --json` output. The
+[plan](./plan.md) has the comparison behind that choice and the phases.
+
 ## Scope
 
 **In scope:** the research and the mockups (both done), then the skill and the
@@ -74,9 +79,10 @@ application at the in-between capability level.
 
 ## Open Questions
 
-- Where the app lives: in this repository beside `pdocs`, or in Spellbook with
-  the other surfaces.
+- Whether the board should push the user's requests to the agent, as Scriptorium
+  does, instead of giving a line to say in chat.
 - Where the robust version's "Plan next cycle" checklist sits in this shell. D
   does not mock it up.
 - How the shell holds up with a cycle of more than 11 items, and at widths under
-  1280px. Neither was tested in the mockup.
+  1280px. Neither was tested in the mockup; the [plan](./plan.md) records both
+  during the build.
