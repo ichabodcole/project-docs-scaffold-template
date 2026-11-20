@@ -5,7 +5,7 @@ description:
   The layout D shell over live data, with the Now, Inbox, Triage, Cycle and
   Feature pages drawn, polled and navigable by keyboard, before any write.
 status: draft
-lifecycle: backlog
+lifecycle: ready
 id: 01a1f70e-fc9f-7123-bb09-bdf30f682a7f
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-19 }
@@ -27,7 +27,7 @@ writes yet. The markup is ported from layout D in the
 without its switcher and sample data.
 
 This is Phase 4 of the [plan](../features/pdocs-work-board/plan.md). It needs
-[the server](./board-server-and-pdocs-bridge.md) and
+[the server](./board-server-and-pdocs-bridge/item.md) and
 [the model](./board-model-and-selection-rules/item.md).
 
 ## Definition of done

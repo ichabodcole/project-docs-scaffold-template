@@ -198,17 +198,31 @@ plugins/project-docs/skills/work-board/
   values the `set` result returns. A field that was absent before is undone with
   `--unset`. This is more than the prototype's `dUndo`, which resets only the
   lifecycle.
+- **The Undo contract:** the server accepts a `restore` only if it issued that
+  body itself, in this process, among its last 100 writes, and the body comes
+  back unchanged, byte for byte as JSON. An Undo is consumed on use, and the
+  response to a `restore` carries no `restore` of its own. The server refuses a
+  `restore` with 409 in three cases: after a server restart (the 30-minute idle
+  exit is one), when the item changed since the write (a key the Undo would put
+  back no longer holds the value the write left), and beyond the last 100
+  writes. The last-write bar treats any 409 on Undo as "Undo no longer
+  available" and removes the Undo control.
 - **Everything else** is a line to copy and say to the agent (the prototype's
   `ask`), or a Scriptorium handoff line (`open`, then `show --doc <path>`). The
   board starts no other tool.
 - **Safety:** bind `127.0.0.1` only. Put a random per-session token in the
-  opened URL and require it as a header on every `/api/*` call. Check `Origin`
-  and `Host` against the bound port. Build argv as arrays (no shell). Check each
-  `ref` against the current snapshot before spawning.
-- **Lifetime:** keep a pointer file in `os.tmpdir()/pdocs-work-board/`, keyed by
-  a hash of the root, so a second `open` reuses the running board. Never write a
-  file into the adopter's repository. The server exits after 30 minutes with no
-  browser request, and on `stop`.
+  opened URL and require it as a header on every `/api/*` call. The token is
+  never accepted from the query string. Check `Origin` and `Host` against the
+  bound port. Build argv as arrays (no shell). Check each `ref` against the
+  current snapshot before spawning.
+- **Lifetime:** keep a pointer file and a log in a state folder that belongs to
+  the user alone: `$XDG_RUNTIME_DIR/pdocs-work-board` when that variable is set,
+  else `<os.tmpdir()>/pdocs-work-board-<uid>`. Both files are keyed by a hash of
+  the root, so a second `open` reuses the running board. The folder must be a
+  real directory, owned by the user, with mode 0700, or every verb refuses.
+  Never write a file into the adopter's repository. The server exits after 30
+  minutes with no request from the board's own page, and on `stop`; both remove
+  the pointer and the log.
 
 ## Phases
 
@@ -304,8 +318,11 @@ the two write kinds. It serves a placeholder page until Phase 4.
     (adds `--status stable`). One `set` call, matching `triage-items` step 5.
   - `membership`: `ref` and `cycle`, a slug to bring the item in or `null` to
     take it out (`--unset cycle`).
-  - `restore`: `ref` and a list of `{ key, before }` limited to `lifecycle`,
-    `priority`, `parent`, `status` and `cycle`.
+  - `restore`: `ref` and a list of `{ key, before }`, named `changes`, limited
+    to `lifecycle`, `priority`, `parent`, `status` and `cycle`. The server takes
+    a `restore` only under the Undo contract in the Approach Summary: a body it
+    issued in this process among its last 100 writes, unchanged, not yet used,
+    for an item that still holds what the write left. Anything else is a 409.
 
   Each returns the argv, the command string the UI shows, and the `restore` body
   that undoes it.
@@ -425,6 +442,11 @@ drawn, polled and navigable by keyboard. No writes yet.
   `Alpine.data("board", …)`, not inline `x-data`, as the prototype does. Port
   the markup from the prototype's `layout === 'd'` block (line 2104 onward),
   without the switcher chrome and the sample data.
+- Read the token from `location.search`, then remove `?token=` from the address
+  bar with `history.replaceState`. Send it as the `x-board-token` header only.
+  Keep `/` free of project data: the page gets everything through `/api/*`.
+- Render a 409 from `/api/snapshot` as its `message`: the project's CLI is too
+  old, and the message names the fix (`update-project-docs`).
 - Wire `board.ts` to `/api/*` with the token, through the Phase 3 functions.
   Replace the snapshot object on every poll and never mutate it: the Phase 3
   functions compare the list before a change with the list after
@@ -475,7 +497,12 @@ drawn, polled and navigable by keyboard. No writes yet.
     out** in the inspector only, and the `t` key. A brought-in item joins "Added
     just now" and the row or the tab it went to flashes (`dLand`).
   - The last-write bar: the command that ran and an Undo, after a write only.
-    Undo posts the `restore` body that the server returned.
+    Undo posts the `restore` body that the server returned, unchanged: the
+    object as received, not one rebuilt from its parts. A successful Undo
+    removes the Undo control, because an Undo is used once and returns no
+    `restore`. Any 409 on Undo (the server restarted, the item changed since the
+    write, or more than 100 writes followed) shows "Undo no longer available"
+    and removes the Undo control too.
   - A drop's reason is a text box whose content becomes a line for the agent to
     record. It is not written.
 - Show refusals from `set` (exit 2 with `message` and `choices`; exit 6 under

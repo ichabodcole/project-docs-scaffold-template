@@ -270,7 +270,9 @@ Branch: server, and again on skill.
    the server item's tests, or the real v9.4.1 tag.
 2. In each, run `scripts/cli.ts open --no-browser` (with the fixture as the
    working directory). Capture stdout, stderr and the exit code.
-3. List `$TMPDIR/pdocs-work-board/` and `pgrep -f work-board/scripts/server.ts`.
+3. List the board's state folder (`$XDG_RUNTIME_DIR/pdocs-work-board` when that
+   variable is set, else `$TMPDIR/pdocs-work-board-$(id -u)`) and
+   `pgrep -f work-board/scripts/server.ts`.
 
 **Expected:** Each exits non-zero (2, 5 or 6 as the plan assigns) with one error
 envelope on stderr that names the project's pdocs version when it can be read
@@ -592,7 +594,8 @@ adopter's repository). Branch: server.
 
 1. On temp copy `a`, run `open --no-browser` twice and compare the two printed
    `url` values.
-2. List `$TMPDIR/pdocs-work-board/`.
+2. List the board's state folder (`$XDG_RUNTIME_DIR/pdocs-work-board` when that
+   variable is set, else `$TMPDIR/pdocs-work-board-$(id -u)`).
 3. Run a triage write through the API, then `git -C "$SCRATCH/a" status --short`
    and `git -C "$SCRATCH/a" ls-files --others --exclude-standard`.
 4. Run `stop` and list the pointer directory again.

@@ -6,7 +6,7 @@ description:
   its own pdocs CLI, refuses a CLI too old to serve it, and accepts exactly two
   kinds of write.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a1f70e-fbe5-718b-8d2d-d1af33d3f266
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-19 }
@@ -28,28 +28,32 @@ placeholder page until the shell is built. The snapshot has four parts, typed as
 `Snapshot` in `app/model.ts`, and `work-board` is already excluded from the
 Codex package.
 
-This is Phase 2 of the [plan](../features/pdocs-work-board/plan.md). It merges
-after [the view fields](./view-entries-carry-board-fields/item.md), which its
-end-to-end test needs.
+The server accepts a `restore` only if it issued that body in this process among
+its last 100 writes, unchanged and not yet used, for an item that still holds
+what the write left; anything else is a 409 (the plan's Undo contract).
+
+This is Phase 2 of the [plan](../../features/pdocs-work-board/plan.md). It
+merges after [the view fields](../view-entries-carry-board-fields/item.md),
+which its end-to-end test needs.
 
 ## Definition of done
 
-- [ ] `scripts/cli.ts open` starts a server on `127.0.0.1` and prints one JSON
+- [x] `scripts/cli.ts open` starts a server on `127.0.0.1` and prints one JSON
       line with `url`, `port`, `pid` and `root`; a second `open` prints the same
       `url`; `stop` ends the process.
-- [ ] On a CLI with no `view`, or without the view fields, `open` does not start
+- [x] On a CLI with no `view`, or without the view fields, `open` does not start
       and prints one error naming the fix: run `update-project-docs`.
-- [ ] The server accepts only a triage decision, cycle membership and their
+- [x] The server accepts only a triage decision, cycle membership and their
       Undo. Any other key, lifecycle or body shape is rejected, and a request
       without the token or from a foreign `Origin` is refused with nothing
       spawned.
-- [ ] Against a fixture project, a triage write followed by its Undo leaves the
+- [x] Against a fixture project, a triage write followed by its Undo leaves the
       item file byte-identical, including a field that was absent before.
-- [ ] Nothing is written into the project's repository by the server itself, and
+- [x] Nothing is written into the project's repository by the server itself, and
       nothing is copied into `dist/codex-project-docs/`.
-- [ ] `bun test plugins/project-docs/skills/work-board` and `npm run check` pass
+- [x] `bun test plugins/project-docs/skills/work-board` and `npm run check` pass
       after `npm run build:dist`.
 
 ## Related Documents
 
-- [pdocs Work Board Implementation Plan](../features/pdocs-work-board/plan.md)
+- [pdocs Work Board Implementation Plan](../../features/pdocs-work-board/plan.md)

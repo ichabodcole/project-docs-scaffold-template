@@ -24,6 +24,11 @@ row and the `b` key; Take out in the inspector and the `t` key). After a write,
 a bar shows the command that ran with an Undo. A drop's reason becomes a line
 for the agent to record; the board does not write it.
 
+Undo posts the `restore` body the server returned, unchanged. An Undo is used
+once, and any 409 on it (the server restarted, the item changed since the write,
+or more than 100 writes followed) shows "Undo no longer available" and removes
+the Undo control (the plan's Undo contract).
+
 This is Phase 5 of the [plan](../features/pdocs-work-board/plan.md). It needs
 [the shell](./board-shell-and-five-pages.md).
 

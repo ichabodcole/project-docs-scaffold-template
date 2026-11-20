@@ -5,7 +5,7 @@ description:
   Build the pdocs work board at its in-between level, and keep a feature's
   finished items in view until the feature is done.
 tags: [pdocs, work-board]
-status: draft
+status: stable
 lifecycle: active
 started: 2026-11-19
 appetite:
@@ -37,7 +37,7 @@ Inbox row afterwards, so the two go together.
   [plan](../features/pdocs-work-board/plan.md):
   - [item/view-entries-carry-board-fields](../items/view-entries-carry-board-fields/item.md)
     — the five fields the board needs in `pdocs view` JSON. First.
-  - [item/board-server-and-pdocs-bridge](../items/board-server-and-pdocs-bridge.md)
+  - [item/board-server-and-pdocs-bridge](../items/board-server-and-pdocs-bridge/item.md)
     and
     [item/board-model-and-selection-rules](../items/board-model-and-selection-rules/item.md)
     — the server and the pure model. They share no files and can run side by
@@ -83,5 +83,5 @@ placeholder line into a real cycle.
 
 - feature/view-entries-carry-board-fields (landed 2026-11-19)
 - feature/board-model-and-selection-rules (landed 2026-11-19)
-- feature/board-server-and-pdocs-bridge (open)
+- feature/board-server-and-pdocs-bridge (landed 2026-11-19)
 - feature/research-items-parent-feature (open)
