@@ -5,12 +5,13 @@ description:
   "Optional leftovers from the check dedupe review: repeated MISSING FILE rows,
   a bare SCHEMA.md path, a lost MISSING type hint and an untested workbench
   rule."
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: backlog
 id: 01a103f7-71d0-75b7-8027-b75de35af593
 kind: chore
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 from: items/check-dedupes-library-tier-problems/sessions/2026-10-03-check-problems-once.md
+priority: low
 ---
 
 # Polish the remaining check output gaps

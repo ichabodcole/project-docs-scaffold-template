@@ -22,6 +22,13 @@ two modes based on how much has changed since the existing summary:
 `pdocs` below means `bun scripts/pdocs/cli.ts`, the documentation CLI at the
 repo root.
 
+On a project without `scripts/pdocs/cli.ts`, or whose CLI refuses `view`
+(`unknown command`, exit 2: a scaffold older than 9.0), wherever a step below
+runs a `pdocs` command, list `docs/` and read whatever work folders it has
+instead, taking each document's state from its frontmatter. If the CLI refused
+`view`, add one line to what you tell the user at the end: _This tree's `pdocs`
+predates the work board. `/project-docs:update-project-docs` would migrate it._
+
 **No report.** The summary is the durable output; the command writes nothing
 else. Your notes on what you read and how you decided are scratch — keep them in
 the conversation, not in `docs/`. Only if the user explicitly asks to keep them
@@ -138,7 +145,11 @@ before Step 6 (synthesis):
   domains specified and a one-line description of each
 - **Active work explorer** — run `pdocs view board --features`, read the
   `feature.md` of each feature not `done` or `dropped`, and return
-  `{name, lifecycle, brief purpose}` per feature, plus the items in flight
+  `{name, lifecycle, brief purpose}` per feature, plus the items in flight.
+  **Run `pdocs view board --features` yourself before you dispatch it.** An
+  explorer never sees this file. If the CLI is missing or refuses `view`, brief
+  the explorer to list `docs/` and read the work folders it finds, taking each
+  document's state from its frontmatter, and not to run `pdocs`
 - **Code structure explorer** — survey top-level source directories, identify
   entry points and major patterns, return a structural summary (do NOT read
   every file — directory + naming patterns are enough)
@@ -236,7 +247,8 @@ git log --since="30 days ago" --name-only --pretty=format: | sort | uniq -c | so
 ```
 
 Read 2-3 most recent session notes to flavor the activity summary:
-`ls -t docs/features/*/sessions/*.md docs/items/*/sessions/*.md 2>/dev/null | head -3`.
+`find docs/features docs/items -path '*/sessions/*.md' -exec ls -t {} + 2>/dev/null | head -3`.
+No output means there are no session notes; go on without them.
 
 ### Step R5: Always re-examine Current Direction
 
@@ -315,8 +327,9 @@ Run this when Step 0 selected **full rebuild**.
 
 ### Step 4: Understand recent activity and current state
 
-- Check `docs/features/*/sessions/` and `docs/items/*/sessions/` for recent
-  session notes (read 3-5 most recent across all of them)
+- Read the 3-5 most recent session notes across features and items:
+  `find docs/features docs/items -path '*/sessions/*.md' -exec ls -t {} + 2>/dev/null | head -5`.
+  No output means there are none; go on without them.
 - Use git to find recently modified files:
   `git log --since="30 days ago" --name-only --pretty=format: | sort | uniq -c | sort -rn | head -20`
 - Look at recent commits for context:

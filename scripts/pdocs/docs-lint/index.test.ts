@@ -45,6 +45,7 @@ import {
   checkLinks,
   type DocsLintConfig,
   headingSlugsOf,
+  leavesRoot,
   type LintPage,
   parseFrontmatter,
   parseGenerated,
@@ -184,12 +185,46 @@ describe("slug", () => {
     for (const [input] of cases) expect(slug(slug(input))).toBe(slug(input));
   });
 
-  // KNOWN DIVERGENCE (documented, not asserted as correct): `\w` is ASCII-only, so accented
-  // letters are dropped rather than kept. GitHub yields `café-résumé`; we yield `caf-rsum`.
-  // Harmless here (this wiki is ASCII) and the failure mode is a false MISSING ANCHOR, which
-  // is loud rather than silent — but it would bite a wiki with non-English headings.
-  test("drops non-ASCII letters (diverges from GitHub, which keeps them)", () => {
-    expect(slug("Café résumé")).toBe("caf-rsum");
+  // Unicode letters, marks and digits survive, as they do on GitHub. ASCII `\w` dropped them,
+  // which reported a correct link to an accented heading as a MISSING ANCHOR.
+  test("keeps non-ASCII letters and digits", () => {
+    expect(slug("Café notes")).toBe("café-notes");
+    expect(slug("Café résumé")).toBe("café-résumé");
+    expect(slug("日本語 の見出し")).toBe("日本語-の見出し");
+    expect(slug("Cafe\u0301 ٣")).toBe("cafe\u0301-٣");
+  });
+
+  // Symbols and "other" numbers are punctuation to GitHub, in any script.
+  test("drops non-ASCII punctuation and symbols", () => {
+    expect(slug("Ship it 🚀 “now”")).toBe("ship-it--now");
+    expect(slug("x² + ½ y")).toBe("x---y");
+  });
+
+  // GitHub slugs the heading's rendered text, and a link renders as its text alone.
+  test("a markdown link contributes its text, not its target", () => {
+    expect(slug("See [the plan](plan.md)")).toBe("see-the-plan");
+    expect(slug("[One](a.md#x) and [two](https://example.com/b_c)")).toBe(
+      "one-and-two"
+    );
+    expect(slug('See [the plan](plan.md "A title")')).toBe("see-the-plan");
+  });
+
+  test("brackets that are not a link are just punctuation", () => {
+    expect(slug("Options [draft] (later)")).toBe("options-draft-later");
+  });
+});
+
+describe("slug — what looks like a link but is not one", () => {
+  test("a link inside a code span keeps its target", () => {
+    expect(slug("Use `[x](y)` syntax")).toBe("use-xy-syntax");
+  });
+
+  test("escaped brackets are not a link", () => {
+    expect(slug("\\[not link\\](x) y")).toBe("not-linkx-y");
+  });
+
+  test("a real link beside a code span is still reduced to its text", () => {
+    expect(slug("`a` and [the plan](plan.md)")).toBe("a-and-the-plan");
   });
 });
 
@@ -207,8 +242,34 @@ describe("headingSlugsOf", () => {
     expect([...headingSlugsOf(md)]).toEqual(["real"]);
   });
 
-  test("de-duplicates identical headings", () => {
-    expect([...headingSlugsOf("## Same\n## Same\n")]).toEqual(["same"]);
+  // GitHub numbers a repeated heading's anchor in document order, so `#same-1` is real.
+  test("numbers repeated headings -1, -2, … in document order", () => {
+    expect([...headingSlugsOf("## Same\n## Same\n### Same\n")]).toEqual([
+      "same",
+      "same-1",
+      "same-2",
+    ]);
+  });
+
+  // A numbered repeat can land on an anchor a later or earlier heading owns outright; the
+  // count moves on until the anchor is free, exactly as github-slugger does.
+  test("a numbered repeat skips an anchor another heading already took", () => {
+    expect([...headingSlugsOf("## Notes\n## Notes 1\n## Notes\n")]).toEqual([
+      "notes",
+      "notes-1",
+      "notes-2",
+    ]);
+  });
+
+  test("a fenced repeat does not consume a number", () => {
+    const md = "## Notes\n\n```md\n## Notes\n```\n\n## Notes\n";
+    expect([...headingSlugsOf(md)]).toEqual(["notes", "notes-1"]);
+  });
+
+  test("slugs a heading's link text, not its target", () => {
+    expect([...headingSlugsOf("## See [the plan](plan.md)\n")]).toEqual([
+      "see-the-plan",
+    ]);
   });
 
   // REGRESSION: `headingSlugsOf` used to scan RAW text, so a `# comment` inside a fenced block
@@ -632,6 +693,27 @@ describe("parseFrontmatter", () => {
     );
     expect(fields.get("tags")).toBe("- parsing - exit-codes");
     expect(yamlList(fields.get("tags"))).toEqual(["parsing", "exit-codes"]);
+  });
+
+  // A block scalar's header is not part of its value. The lint tells an author
+  // to fold a description holding `: `, so the folded form has to read back as
+  // the sentence and not as `>- The sentence`.
+  test("reads a folded or literal block scalar without its header", () => {
+    const fields = parseFrontmatter(
+      'description: >-\n  Board tours: a landscape of "tools"\n  and paths. # not a comment\n' +
+        "note: > # a comment\n  One\n  two.\nkept: |\n  line one\n  line two\ntype: rule"
+    );
+    expect(fields.get("description")).toBe(
+      'Board tours: a landscape of "tools" and paths. # not a comment'
+    );
+    expect(fields.get("note")).toBe("One two.");
+    expect(fields.get("kept")).toBe("line one\nline two");
+    expect(fields.get("type")).toBe("rule");
+  });
+
+  test("a lone `>` or `|` with nothing under it is still the value it was", () => {
+    expect(parseFrontmatter("a: >\nb: x").get("a")).toBe(">");
+    expect(parseFrontmatter("a: > b").get("a")).toBe("> b");
   });
 
   test("strips a trailing `# comment`", () => {
@@ -1156,6 +1238,37 @@ describe("runDocsLint — anchors", () => {
     const res = lint(config(root));
     expect(res.problems).toHaveLength(1);
     expect(res.problems[0]).toContain("MISSING ANCHOR");
+  });
+
+  // The three headings of issue #208: each anchor below is the one GitHub renders.
+  test("accented, linked and repeated headings resolve to GitHub's anchors", () => {
+    const root = wiki({
+      "index.md": page(
+        { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
+        "# Catalog\n\n- [A](./a.md)\n- [accent](./a.md#café-notes)\n- [repeat](./a.md#notes-1)\n"
+      ),
+      "a.md": page(
+        OK_FM,
+        "# A\n\n[accent](#café-notes), [link](#see-the-plan), [first](#notes), [second](#notes-1)\n\n## Café notes\n\n## See [the plan](a.md)\n\n## Notes\n\n## Notes\n"
+      ),
+    });
+    expect(lint(config(root)).problems).toEqual([]);
+  });
+
+  test("the old, wrong anchors for those headings are now MISSING ANCHOR", () => {
+    const root = wiki({
+      "index.md": page(
+        { type: "index", title: "Catalog", tags: "[index]", updated: DATE },
+        "# Catalog\n\n- [A](./a.md)\n"
+      ),
+      "a.md": page(
+        OK_FM,
+        "# A\n\n[a](#caf-notes) [b](#see-the-planamd) [c](#notes-2)\n\n## Café notes\n\n## See [the plan](a.md)\n\n## Notes\n\n## Notes\n"
+      ),
+    });
+    const res = lint(config(root));
+    expect(res.problems).toHaveLength(3);
+    for (const p of res.problems) expect(p).toContain("MISSING ANCHOR");
   });
 
   test("the double-hyphen slug rule is applied to real anchors", () => {
@@ -2113,5 +2226,19 @@ describe("runDocsLint — nonPageDirs", () => {
     // control: without the exclusion the same tree is full of problems
     const control = lint(config(wiki(files)));
     expect(control.problems.length).toBeGreaterThan(0);
+  });
+});
+
+describe("leavesRoot — is this relative path outside the folder it is relative to?", () => {
+  test("`..` and `../x` leave; a name that only begins with two dots does not (#209)", () => {
+    expect(leavesRoot("..")).toBe(true);
+    expect(leavesRoot(join("..", "x.md"))).toBe(true);
+    expect(leavesRoot(join("..notes", "x.md"))).toBe(false);
+    expect(leavesRoot("...draft.md")).toBe(false);
+    expect(leavesRoot(join("a", "b.md"))).toBe(false);
+  });
+
+  test("an absolute path leaves", () => {
+    expect(leavesRoot(join(tmpdir(), "x.md"))).toBe(true);
   });
 });

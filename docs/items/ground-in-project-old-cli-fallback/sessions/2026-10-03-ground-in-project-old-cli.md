@@ -65,7 +65,7 @@ Two optional notes are left as they are: the listing does not look in an 8.x
 tree's `docs/projects/*/sessions/`, which the fallback's folder listing covers,
 and `ls -t` ranks by checkout time after a fresh clone. The same zsh glob in the
 `project-summary` command is filed as
-[its own item](../../project-summary-zsh-glob-and-old-cli.md).
+[its own item](../../project-summary-zsh-glob-and-old-cli/item.md).
 
 ---
 

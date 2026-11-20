@@ -35,6 +35,7 @@ import {
   OUTSIDE_REPOSITORY,
   checkLinks,
   collectDocsLint,
+  leavesRoot,
   parseFrontmatter,
   stripInlineComment,
   walkMarkdown,
@@ -150,11 +151,7 @@ export function linkBoundary(ctx: Ctx): string {
   const top = out.success ? new TextDecoder().decode(out.stdout).trim() : "";
   if (top && existsSync(top)) {
     const rel = relative(realpathSync(top), realpathSync(ctx.repoRoot));
-    const nested =
-      rel !== "" &&
-      rel !== ".." &&
-      !rel.startsWith(`..${sep}`) &&
-      !isAbsolute(rel);
+    const nested = rel !== "" && !leavesRoot(rel);
     if (nested)
       boundary = resolve(ctx.repoRoot, ...rel.split(sep).map(() => ".."));
   }
@@ -217,7 +214,7 @@ export function templateTest(ctx: Ctx): (path: string) => boolean {
     if (seeded.size === 0) return false;
     const abs = isAbsolute(path) ? path : join(ctx.repoRoot, path);
     const rel = relative(ctx.docsRoot, abs);
-    if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return false;
+    if (rel === "" || leavesRoot(rel)) return false;
     // A seeded PAGE is recorded like a template and read like a document: its
     // links are checked. Skipping it here would switch that off.
     if (SEEDED_PAGES.has(rel.split(sep).join("/"))) return false;
@@ -1065,6 +1062,82 @@ function generatedProblems(
   return [];
 }
 
+/** A colon a YAML parser reads as ending a mapping key: after some text, and
+ *  before a space or the end of its line. `3:1` and `https://…` hold neither. */
+const KEY_COLON = /\S.*:(\s|$)/;
+
+/** A plain scalar's line without its comment. Quotes inside a plain scalar do
+ *  not hide a `#`, which is why this is not `stripInlineComment`. */
+const plain = (line: string) => line.replace(/(^|\s)#.*$/, "");
+
+/**
+ * The top-level values of a frontmatter block that `parseFrontmatter` joins
+ * into one string and a strict YAML parser refuses, as `[key, what is wrong]`.
+ *
+ * Two shapes, both of a value that wraps or sits under its key:
+ *
+ * - a plain value holding `: ` on any line (or a colon ending one). A strict
+ *   parser takes the text before the colon as a mapping key, and a key may not
+ *   run over two lines;
+ * - a value that opens with a quote and has more text after the quote closes.
+ *
+ * A value the parser would read as something else that is still valid YAML is
+ * NOT reported: a block sequence, a flow collection, a block scalar, and a
+ * nested mapping — every line at the value's own indent is `key: value`.
+ */
+export function scalarFaults(block: string): [string, string][] {
+  const faults: [string, string][] = [];
+  const lines = block.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const kv = /^([A-Za-z_][\w-]*):(.*)$/.exec(lines[i] as string);
+    if (!kv) continue;
+    // The value's lines: what follows the key on its own line, then every
+    // indented line under it. Blank and comment-only lines are not content.
+    const value = [kv[2] as string];
+    while (i + 1 < lines.length && /^(\s|$)/.test(lines[i + 1] as string))
+      value.push(lines[++i] as string);
+    const content = value.filter((l) => !/^\s*(#|$)/.test(l));
+    const first = (content[0] ?? "").trimStart();
+
+    if (first.startsWith('"') || first.startsWith("'")) {
+      const text = [first, ...content.slice(1)].join("\n");
+      const rest = afterClosingQuote(text);
+      // Still open, or a quoted KEY of a nested mapping: `"a b": c`.
+      if (rest === null || /^\s*:(\s|$)/.test(rest)) continue;
+      if (rest.split("\n").some((l) => plain(l).trim() !== ""))
+        faults.push([kv[1] as string, "continues after its closing quote"]);
+      continue;
+    }
+    // A sequence, a flow collection, a block scalar, an anchor, alias or tag.
+    if (/^([[{|>&*!%@`]|[-?](\s|$))/.test(first)) continue;
+
+    const text = content.map(plain);
+    if (!text.some((l) => KEY_COLON.test(l))) continue;
+    // Beside the key, the value is one scalar; under it, the lines at the
+    // first line's indent are either all `key: value` or none of them is.
+    const indent = (l: string) => l.length - l.trimStart().length;
+    const beside = value[0] === content[0];
+    const base = beside ? [] : text.filter((l) => indent(l) <= indent(text[0] as string));
+    if (!beside && base.every((l) => KEY_COLON.test(l))) continue;
+    if (text.length > 1)
+      faults.push([kv[1] as string, 'holds ": " in a plain multi-line value']);
+  }
+  return faults;
+}
+
+/** What follows the closing quote of a scalar that opens `text`, or null while
+ *  it is still open: `\"` escapes a double quote, `''` a single one. */
+function afterClosingQuote(text: string): string | null {
+  const quote = text[0];
+  for (let i = 1; i < text.length; i++) {
+    const c = text[i];
+    if (quote === '"' && c === "\\") i++;
+    else if (quote === "'" && c === "'" && text[i + 1] === "'") i++;
+    else if (c === quote) return text.slice(i + 1);
+  }
+  return null;
+}
+
 /**
  * Frontmatter that this repo's lenient parser accepts and a real YAML parser
  * would not.
@@ -1083,6 +1156,9 @@ function generatedProblems(
  * value, other YAML tools keep the first or refuse the document, so the value
  * the lint validated may not be the one the next tool reads. Reported here, in
  * the one pass that reads both tiers, so a document is reported once.
+ *
+ * And a value wrapped over indented lines has two shapes of its own that the
+ * parser joins into a sentence and a strict one refuses: see `scalarFaults`.
  */
 export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
   const excluded = excluder(ctx);
@@ -1101,6 +1177,8 @@ export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
     // Only a key at column 0 is top-level; a nested key, a list item or a
     // continuation line is indented.
     const keyLines = new Map<string, number[]>();
+    // Keys the single-line rule below reported: one report per value.
+    const reported = new Set<string>();
     for (const [i, line] of (m[1] as string).split("\n").entries()) {
       const key = /^([A-Za-z_][\w-]*):/.exec(line)?.[1];
       if (key) keyLines.set(key, [...(keyLines.get(key) ?? []), i + 2]);
@@ -1117,11 +1195,18 @@ export function frontmatterSyntaxProblems(ctx: Ctx): string[] {
       if (!value) continue;
       // Quoted, a flow collection, or a mapping — all unambiguous.
       if (/^["'[{]/.test(value)) continue;
-      if (/:\s/.test(value))
+      if (/:\s/.test(value)) {
+        reported.add(kv[1] as string);
         problems.push(
           `BAD SCALAR     ${rel}: \`${kv[1]}\` contains ": " unquoted  (a real YAML parser reads this as a nested mapping)`
         );
+      }
     }
+    for (const [key, fault] of scalarFaults(m[1] as string))
+      if (!reported.has(key))
+        problems.push(
+          `BAD SCALAR     ${rel}: \`${key}\` ${fault}  (a strict YAML parser rejects this: fold it, \`${key}: >-\`, or quote the whole value)`
+        );
     for (const [key, lines] of keyLines)
       if (lines.length > 1)
         problems.push(

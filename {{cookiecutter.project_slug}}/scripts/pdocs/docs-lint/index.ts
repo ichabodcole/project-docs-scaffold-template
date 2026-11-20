@@ -153,12 +153,25 @@ export function walkMarkdown(
 
 // GitHub heading -> anchor slug: lowercase, drop punctuation (keeping spaces/hyphens),
 // spaces -> hyphens. "Beating / detune" -> "beating--detune".
+//
+// An in-tree port of github-slugger, which pdocs cannot depend on. What survives is what
+// its generated regex keeps: letters, marks, decimal and letter numbers, connector
+// punctuation (`_`), in any script — so "Café notes" -> "café-notes". Symbols and other
+// numbers ("²", "½") go, as on GitHub.
+//
+// GitHub slugs the heading's rendered text, so an inline link is reduced to its text first:
+// "See [the plan](plan.md)" -> "see-the-plan". A code span and a backslash escape are
+// matched first and kept, because neither holds a link: "Use `[x](y)` syntax" ->
+// "use-xy-syntax".
 export function slug(h: string): string {
   return h
+    .replace(/(`+)[\s\S]*?\1|\\.|\[([^\]]*)\]\([^)]*\)/g, (m, _ticks, text) =>
+      text === undefined ? m : text
+    )
     .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
+    .replace(/[^\p{L}\p{M}\p{Nd}\p{Nl}\p{Pc}\p{Alphabetic} -]/gu, "")
     .trim()
-    .replace(/\s/g, "-");
+    .replace(/ /g, "-");
 }
 
 /**
@@ -169,12 +182,25 @@ export function slug(h: string): string {
  * FALSE NEGATIVE, which is the one direction a gate must never fail in. `stripCode` is
  * length-preserving and only collapses newlines *inside* a fence, so headings before and
  * after one still begin a line.
+ *
+ * A repeated heading is numbered in document order, as GitHub does: the second "Notes" is
+ * `notes-1`, the third `notes-2`. The count belongs to the base slug and skips any anchor
+ * already taken, so "Notes", "Notes 1", "Notes" yields `notes`, `notes-1`, `notes-2`.
  */
 export function headingSlugsOf(text: string): Set<string> {
   const s = new Set<string>();
+  const repeats = new Map<string, number>();
   for (const line of stripFences(text).split("\n")) {
     const heading = /^#+\s+(.*)$/.exec(line)?.[1];
-    if (heading !== undefined) s.add(slug(heading));
+    if (heading === undefined) continue;
+    const base = slug(heading);
+    let anchor = base;
+    while (s.has(anchor)) {
+      const n = (repeats.get(base) ?? 0) + 1;
+      repeats.set(base, n);
+      anchor = `${base}-${n}`;
+    }
+    s.add(anchor);
   }
   return s;
 }
@@ -315,13 +341,22 @@ export function unquoteScalar(v: string): string {
  * their key and dropping trailing `# comments`. This is what makes the checks
  * formatting-agnostic: Prettier rewrites a long flow sequence into an indented multi-line
  * block, which a line-anchored regex cannot see.
+ *
+ * A block scalar (`description: >-` over indented lines) is read as its lines, without the
+ * header: folded with spaces under `>`, kept one per line under `|`. Nothing in it is a
+ * comment or a quote. Blank lines are dropped and the header's indicators are ignored, which
+ * is all a one-paragraph description needs.
  */
 export function parseFrontmatter(fm: string): Map<string, string> {
   const out = new Map<string, string>();
   let key: string | null = null;
   let buf: string[] = [];
   const flush = () => {
-    if (key)
+    if (!key) return;
+    const header = stripInlineComment(buf[0] as string).trim();
+    if (buf.length > 1 && /^[|>][-+0-9]*$/.test(header))
+      out.set(key, buf.slice(1).join(header.startsWith("|") ? "\n" : " "));
+    else
       out.set(
         key,
         unquoteScalar(stripInlineComment(buf.join(" ").trim()).trim())
@@ -400,10 +435,21 @@ export interface BrokenLink {
   outside?: true;
 }
 
+/**
+ * Does `rel`, the output of `relative(root, path)`, leave `root`?
+ *
+ * `..` and `../x` leave. A name that only BEGINS with two dots (`..notes`,
+ * `...draft.md`) does not, which a bare `startsWith("..")` gets wrong. An
+ * absolute `rel` leaves too: `relative` returns one across Windows drives.
+ * The empty string, the root itself, is the caller's to decide.
+ */
+export function leavesRoot(rel: string): boolean {
+  return rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel);
+}
+
 /** Is `path` under `root`, going by how the two are spelled? */
 function within(root: string, path: string): boolean {
-  const rel = relative(root, path);
-  return rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+  return !leavesRoot(relative(root, path));
 }
 
 /** What a caller appends to a `MISSING FILE` whose `outside` is set. */

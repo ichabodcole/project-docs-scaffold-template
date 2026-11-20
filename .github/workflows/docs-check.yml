@@ -49,7 +49,7 @@ jobs:
           # Pinned to the version this repo develops against. Floating on
           # `latest` lets a runtime release turn the gate red with no commit
           # behind it, which trains people to ignore it.
-          bun-version: 1.4.0
+          bun-version: 1.4.4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:

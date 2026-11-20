@@ -280,6 +280,17 @@ fields, not folders. Projects still on the older layout (`projects/`,
 
 ## Version History
 
+### 4.6.0 (2026-11-17)
+
+**`project-summary` runs in zsh and on an 8.x tree.** Both changes alter what
+the command does.
+
+- **`/project-docs:project-summary`** finds session notes instead of globbing
+  their folders, so the listing no longer aborts in zsh on a tree where either
+  folder holds no sessions.
+- It falls back to listing `docs/` when the CLI is missing or refuses `view` (an
+  8.x tree), and tells the user `update-project-docs` would migrate the tree.
+
 ### 4.5.0 (2026-10-03)
 
 **The check and upgrade-skill fixes from adopter feedback.** Every change but

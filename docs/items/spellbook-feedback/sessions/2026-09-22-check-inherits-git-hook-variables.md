@@ -1,7 +1,7 @@
 ---
 type: session
 title: pdocs check inherits git's hook variables — 2026-09-22
-description:
+description: >-
   The three defects the Spellbook branch's re-review found on develop are fixed:
   check strips git's repository variables from its own spawns, report records
   come from findings rather than rows, and two unguarded behaviours have tests

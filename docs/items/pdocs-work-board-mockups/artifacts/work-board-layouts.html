@@ -1,0 +1,2486 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mockup — pdocs work board, three shell layouts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script>
+      tailwind.config = { darkMode: "class" };
+    </script>
+
+    <!--
+      THEME — copied unchanged from work-board-mockup.html, with this file's
+      layout pieces added at the end. This file compares where things sit, not
+      how they look: same type scale (16/14/12), same 4/8 spacing, neutrals
+      plus one emerald accent, pills only for draft, high, blocked and
+      blocker done.
+    -->
+    <style type="text/tailwindcss">
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      [x-cloak] {
+        display: none !important;
+      }
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      /* ---- Typography ---- */
+      .page-title {
+        @apply text-base leading-6 font-semibold text-slate-100;
+      }
+      .section-title {
+        @apply text-xs leading-5 font-medium text-slate-400 uppercase tracking-wider;
+      }
+      .text-body {
+        @apply text-sm leading-6 text-slate-200;
+      }
+      .text-muted {
+        @apply text-sm leading-6 text-slate-400;
+      }
+      .text-faint {
+        @apply text-xs leading-5 text-slate-400;
+      }
+      .text-mono {
+        @apply text-xs leading-5 text-slate-400 mono;
+      }
+      .link {
+        @apply text-slate-200 underline decoration-slate-600 underline-offset-4
+               hover:text-white hover:decoration-slate-400 transition-colors;
+      }
+
+      /* ---- Surfaces ---- */
+      .panel {
+        @apply bg-slate-900 rounded-md;
+      }
+      .rule-t {
+        @apply border-t border-slate-800;
+      }
+
+      /* ---- Buttons ---- */
+      .btn {
+        @apply text-xs leading-5 px-3 py-1 rounded-md font-medium transition-colors
+               inline-flex items-center justify-center gap-2 whitespace-nowrap;
+      }
+      .btn-primary {
+        @apply btn bg-emerald-700 text-white hover:bg-emerald-600;
+      }
+      .btn-outline {
+        @apply btn border border-slate-600 text-slate-200 hover:bg-slate-800;
+      }
+      .btn-ghost {
+        @apply btn text-slate-400 hover:text-slate-100 hover:bg-slate-800;
+      }
+      .btn-text {
+        @apply text-xs leading-5 py-1 text-slate-400 hover:text-slate-100 transition-colors whitespace-nowrap;
+      }
+      .btn-disabled {
+        @apply btn bg-slate-800 text-slate-500 cursor-not-allowed;
+      }
+      .select {
+        @apply bg-slate-950 border border-slate-700 text-xs leading-5 text-slate-200
+               pl-2 pr-1 py-1 rounded-md cursor-pointer
+               focus:outline-none focus:border-slate-400;
+      }
+      .input {
+        @apply bg-slate-950 border border-slate-700 text-xs leading-5 text-slate-200
+               px-2 py-1 rounded-md placeholder-slate-400
+               focus:outline-none focus:border-slate-400;
+      }
+      .seg {
+        @apply text-xs leading-5 px-3 py-1 rounded-md text-slate-400 hover:text-slate-100 transition-colors;
+      }
+      .seg-on {
+        @apply bg-slate-800 text-white;
+      }
+
+      /* ---- Navigation ---- */
+      .nav-item {
+        @apply w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm leading-5 transition-colors text-left;
+      }
+      .nav-item-active {
+        @apply bg-slate-800 text-white;
+      }
+      .nav-item-inactive {
+        @apply text-slate-400 hover:text-white hover:bg-slate-800/50;
+      }
+
+      /* ---- A row: a title, then one line of meta ---- */
+      .rows {
+        @apply border-t border-slate-800;
+      }
+      .wb-row {
+        @apply flex items-start gap-4 py-3 border-b border-slate-800;
+      }
+      .wb-title {
+        @apply block text-left text-sm leading-5 font-medium text-slate-100
+               hover:underline decoration-slate-500 underline-offset-4;
+      }
+      .meta {
+        @apply flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-slate-400;
+      }
+      .meta-sep {
+        @apply text-slate-600 select-none;
+      }
+      /* Plain parts with a middle dot between them. The dot belongs to the part
+         that follows it and is clipped at the start of a line, so a wrapped
+         line never begins or ends with one. */
+      .meta-text {
+        @apply flex flex-wrap items-center gap-y-1 min-w-0;
+        margin-left: -20px;
+        clip-path: inset(0 0 0 20px);
+      }
+      .meta-text > * {
+        position: relative;
+        padding-left: 20px;
+      }
+      .meta-text > *::before {
+        content: "·";
+        position: absolute;
+        left: 8px;
+        @apply text-slate-600;
+      }
+      .lc {
+        @apply inline-flex items-center gap-2 text-slate-300 whitespace-nowrap;
+      }
+      .group-head {
+        @apply flex items-baseline gap-2 pb-2 text-xs leading-5;
+      }
+
+      /* ---- Pills: only for what needs the eye ---- */
+      .pill {
+        @apply inline-flex items-center gap-2 text-xs leading-5 px-2 rounded-full border whitespace-nowrap;
+      }
+      .pill-draft {
+        @apply pill border-dashed border-amber-500/60 text-amber-300;
+      }
+      .pill-high {
+        @apply pill border-amber-500/60 text-amber-300 bg-amber-400/10;
+      }
+      .pill-blocked {
+        @apply pill border-rose-500/60 text-rose-300 bg-rose-500/10;
+      }
+      .pill-stale {
+        @apply pill border-dashed border-slate-500 text-slate-300;
+      }
+      .pill-note {
+        @apply pill border-slate-700 text-slate-300;
+      }
+
+      /* ---- Lifecycle (dot, bar segment): a neutral ramp, accent for started ---- */
+      .dot {
+        @apply inline-block w-2 h-2 rounded-full shrink-0;
+      }
+      .bar {
+        @apply flex h-1 rounded-full overflow-hidden bg-slate-800;
+      }
+      .lc-triage {
+        @apply bg-slate-500;
+      }
+      .lc-backlog {
+        @apply bg-slate-600;
+      }
+      .lc-ready {
+        @apply bg-slate-200;
+      }
+      .lc-active {
+        @apply bg-emerald-400;
+      }
+      .lc-review {
+        @apply bg-emerald-700;
+      }
+      .lc-done {
+        @apply bg-slate-400;
+      }
+      .lc-dropped {
+        @apply bg-slate-700;
+      }
+      .lc-planned {
+        @apply bg-slate-200;
+      }
+      .lc-closed {
+        @apply bg-slate-400;
+      }
+
+      /* ---- Board pieces ---- */
+      .wb-card {
+        @apply bg-slate-900 border border-slate-800 rounded-md p-3 space-y-2;
+      }
+      .col-head {
+        @apply flex items-center gap-2 pb-3 text-xs leading-5 font-medium text-slate-300;
+      }
+      .count {
+        @apply text-xs leading-5 text-slate-400 mono;
+      }
+      .empty {
+        @apply text-sm leading-6 text-slate-400 py-6;
+      }
+      .cmd {
+        @apply mono text-xs leading-5 text-slate-300 bg-slate-900 rounded-md px-3 py-2 break-all;
+      }
+      .proto {
+        @apply text-xs leading-5 px-2 rounded border border-amber-700/60 text-amber-300 bg-amber-950/40;
+      }
+
+      /* ---- Attention inbox ---- */
+      .attn-row {
+        @apply block px-4 py-3 border-b border-slate-800 cursor-pointer transition-colors
+               hover:bg-slate-900 focus:outline-none focus-visible:bg-slate-900;
+      }
+      .rail-count {
+        @apply inline-flex items-center justify-center min-w-[24px] h-6 px-1 rounded-full
+               bg-slate-800 text-xs font-semibold text-slate-100 mono;
+      }
+      .menu {
+        @apply absolute left-0 top-full mt-1 z-20 w-52 py-1 bg-slate-900 border border-slate-700 rounded-md shadow-lg;
+      }
+      .menu-item {
+        @apply block w-full text-left text-xs leading-5 px-3 py-2 text-slate-200 hover:bg-slate-800;
+      }
+
+      .scroll-y {
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+      }
+      code {
+        @apply mono text-[1em] text-slate-200 bg-slate-800/70 px-1 rounded;
+      }
+
+      /* ---- Layout prototype additions ---- */
+      /* The selected row or card, while the inspector shows it. The shadow
+         widens the ground by 12px each side without moving the text. */
+      .wb-row.is-selected {
+        background: #0f172a;
+        box-shadow: -12px 0 0 #0f172a, 12px 0 0 #0f172a;
+      }
+      .wb-card.is-selected {
+        @apply border-slate-500;
+      }
+      /* One attention row: label and count, one line, one action, Snooze. */
+      .attn-line {
+        @apply flex items-center gap-4 py-3 border-b border-slate-800;
+      }
+      .menu-right {
+        @apply left-auto right-0;
+      }
+      .popover {
+        @apply absolute left-0 top-full mt-2 z-30 w-[420px] bg-slate-900 border border-slate-700 rounded-md shadow-lg;
+      }
+      /* Tabs inside a view (layout C). */
+      .tabs {
+        @apply flex gap-6 border-b border-slate-800 mb-6;
+      }
+      .tab {
+        @apply text-sm leading-5 py-2 -mb-px border-b-2 border-transparent text-slate-400
+               hover:text-slate-100 transition-colors whitespace-nowrap;
+      }
+      .tab-on {
+        @apply border-emerald-400 text-white;
+      }
+      /* A board column folded to a slim labelled rail (layout B). */
+      .col-rail {
+        @apply w-10 h-full min-h-[240px] flex flex-col items-center gap-3 py-3 rounded-md
+               border border-slate-800 text-xs leading-5 text-slate-400;
+      }
+      .col-rail-btn {
+        @apply text-slate-300 hover:bg-slate-900 hover:text-slate-100 transition-colors cursor-pointer;
+      }
+      /* The candidates tray docked under the board (layout B). */
+      .tray-bar {
+        @apply px-8 h-10 shrink-0 flex items-center gap-4;
+      }
+      .tray-row {
+        @apply flex items-center gap-4 py-2 border-b border-slate-800;
+      }
+      .crumb {
+        @apply flex items-center gap-2 min-w-0 text-sm leading-5 text-slate-400;
+      }
+      .fields {
+        @apply text-xs leading-5 grid grid-cols-[88px_1fr] gap-x-4 gap-y-2;
+      }
+
+      /* ---- Layout D (Combined) ----
+         Its own pieces, so A, B and C stay as they were. In D emerald marks
+         the active state only: primary buttons and the tab underline are
+         neutral, "ready" is a mid slate, and counts are plain muted numbers. */
+      [data-d] .lc-ready {
+        @apply bg-slate-500;
+      }
+      [data-d] .lc-backlog,
+      [data-d] .lc-triage {
+        @apply bg-slate-700;
+      }
+      [data-d] .lc-planned {
+        @apply bg-slate-500;
+      }
+      /* One panel padding, shared by the centre and the inspector: 24px. */
+      .d-pad {
+        @apply px-6;
+      }
+      .d-band {
+        @apply shrink-0 px-6 pt-2 border-b border-slate-800;
+      }
+      .d-count {
+        @apply text-xs leading-5 font-normal text-slate-400;
+      }
+      .d-head {
+        @apply flex items-center gap-2 pb-1 text-xs leading-5 font-medium text-slate-300;
+      }
+      .d-row {
+        @apply flex items-center gap-4 py-2 px-3 border-b border-slate-800 cursor-pointer;
+      }
+      .d-line {
+        @apply flex items-center gap-4 h-11 px-3 border-b border-slate-800 cursor-pointer;
+      }
+      /* A list's rules and highlights run 12px past the text on both sides. */
+      .d-list {
+        @apply border-t border-slate-800 -mx-3;
+      }
+      .d-row:hover,
+      .d-line:hover {
+        @apply bg-slate-900;
+      }
+      .d-row.is-on,
+      .d-line.is-on {
+        @apply bg-slate-800;
+      }
+      .d-row.is-static {
+        @apply cursor-default bg-transparent;
+      }
+      .d-row-title {
+        @apply block text-left text-sm leading-5 font-medium text-slate-100;
+      }
+      .d-title {
+        @apply text-sm leading-5 font-semibold text-slate-100;
+      }
+      .d-btn-primary {
+        @apply btn bg-slate-200 text-slate-900 hover:bg-white;
+      }
+      .d-tab {
+        @apply text-sm leading-5 pt-1 pb-1.5 -mb-px border-b-2 border-transparent text-slate-400
+               hover:text-slate-100 transition-colors whitespace-nowrap inline-flex items-baseline gap-2 rounded-t;
+      }
+      .d-tab-on {
+        @apply border-slate-200 text-white;
+      }
+      .d-key {
+        @apply mono text-xs leading-5 px-1 rounded border border-slate-700 text-slate-400;
+      }
+      .d-ran {
+        @apply shrink-0 h-9 px-6 flex items-center gap-3 border-t border-slate-800 text-xs leading-5;
+      }
+      /* Long strings break only where dMeta/dBreak put a <wbr>: after / and -. */
+      .d-fields dd {
+        overflow-wrap: normal;
+        word-break: normal;
+        @apply min-w-0 text-slate-200;
+      }
+      /* A row's one write and Snooze: shown on hover and keyboard focus only. */
+      .d-hover {
+        opacity: 0;
+      }
+      .d-row:hover .d-hover,
+      .d-line:hover .d-hover,
+      .d-hover:focus-visible,
+      .d-hover:focus-within,
+      .d-hover.is-open {
+        opacity: 1;
+      }
+      .menu-up {
+        @apply top-auto bottom-full mt-0 mb-1;
+      }
+      /* Where a write landed: a brief highlight. */
+      @keyframes d-flash {
+        from {
+          background-color: #475569;
+        }
+        to {
+          background-color: transparent;
+        }
+      }
+      .d-flash {
+        animation: d-flash 1.6s ease-out;
+      }
+    </style>
+
+    <script>
+      // Snapshot of this repository's docs tree, copied unchanged from
+      // work-board-mockup.html (taken 2026-11-17). Not live.
+      const DATA = /*DATA-BEGIN*/{"snapshot":"2026-11-17","project":"project-docs","counts":{"unstarted":69,"started":3,"completed":101},"activeCycle":"2026-11-check-fixes-and-board-research","plannedCycle":"2026-10-v3-migration-feedback","cycles":[{"slug":"2026-11-check-fixes-and-board-research","path":"docs/cycles/2026-11-check-fixes-and-board-research.md","title":"Check fixes and the board and touchpoint research","description":"Two research threads, the work board and the feature touchpoint, beside the pdocs check fixes adopters reported in November.","lifecycle":"active","status":"stable","started":"2026-11-17","appetite":"Stop when both write-ups reach a recommendation and the three check fixes ship in a scaffold release.","after":[],"by":"claude-fable-5-2","closable":false},{"slug":"2026-10-v3-migration-feedback","path":"docs/cycles/2026-10-v3-migration-feedback.md","title":"v3.0 migration adopter feedback","description":"Fixes to the v2.10-to-v3.0 migration and its guide from the operator-mono, media-forge and story-loom upgrades.","lifecycle":"planned","status":"draft","started":"2026-10-03","appetite":"Stop when the nine items land, with the migration re-pin and a plugin release.","after":["2026-10-check-and-upgrade-fixes","2026-11-check-fixes-and-board-research"],"by":"claude-opus-5-5","closable":false}],"features":[{"slug":"document-versioning-ui-references","path":"docs/features/document-versioning-ui-references/feature.md","title":"Document Versioning UI References","description":"Add HTML mockups to the document-versioning recipe, because prose descriptions of dialogs produce inconsistent implementations.","lifecycle":"backlog","status":"stable","filed":"2026-03-11"},{"slug":"grapevine-v1.7","path":"docs/features/grapevine-v1.7/feature.md","title":"Grapevine V1.7 — Human as First-Class Participant","description":"Promote the human from observer to participant: the watch surface becomes a control plane rather than a read-only view.","lifecycle":"backlog","status":"stable","filed":"2026-05-27"},{"slug":"skill-surface-cleanup","path":"docs/features/skill-surface-cleanup/feature.md","title":"Skill surface cleanup","description":"Resolve the Phase 4 skill audit's leftovers: duplicated triggers and skills, paths that exist only in this repository, and outputs with no document type.","lifecycle":"backlog","status":"draft","filed":"2026-09-26"},{"slug":"feature-touchpoints","path":"docs/features/feature-touchpoints/feature.md","title":"Feature touchpoints","description":"Agents raise the feature question at the two moments it matters, when work is filed and when finished work is archived.","lifecycle":"backlog","status":"draft","filed":"2026-11-17"},{"slug":"pdocs-work-board","path":"docs/features/pdocs-work-board/feature.md","title":"pdocs work board","description":"A live dashboard an agent opens to show where project-docs work stands, what needs triage and what is active, with a skill and a small app behind it.","lifecycle":"backlog","status":"draft","filed":"2026-11-17"}],"items":[{"slug":"plugin-relative-paths-in-consumers","id":"01a0da5f-881","path":"docs/items/plugin-relative-paths-in-consumers.md","title":"Skills name plugin paths that exist only in this repository","description":"dev-kickoff and slide-deck-author name plugins/project-docs/skills/..., a path a consuming project does not have.","kind":"bug","lifecycle":"backlog","priority":"high","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"update-deps-terminal-tool","id":"01a0da5f-896","path":"docs/items/update-deps-terminal-tool.md","title":"update-deps declares a Terminal tool no environment has","description":"update-deps lists Terminal in allowed_tools, which no current environment provides.","kind":"bug","lifecycle":"backlog","priority":"high","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"respell-split-paths","id":"01a10389-7ed","path":"docs/items/respell-split-paths.md","title":"Stop the respell option rewriting a path split across lines","description":"The v3.0 respell option rewrites a retired folder path that a comment wraps onto the next line as the bare folder, producing a path that never exists.","kind":"bug","lifecycle":"ready","priority":"high","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"#201","from":null,"filed":"2026-10-03","blockedBy":[]},{"slug":"v30-preflight-tool-written-folders","id":"01a10389-621","path":"docs/items/v30-preflight-tool-written-folders.md","title":"Handle tool-written folders in the v3.0 preflight","description":"The v3.0 preflight stops once per file for folders a project's tools keep writing into, and the guide has no pattern for a standing output stream.","kind":"task","lifecycle":"ready","priority":"high","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"#200","from":null,"filed":"2026-10-03","blockedBy":[]},{"slug":"check-rejects-non-strict-yaml-frontmatter","id":"01a1eaa7-441","path":"docs/items/check-rejects-non-strict-yaml-frontmatter.md","title":"Report frontmatter a strict YAML parser rejects","description":"pdocs check passes a plain multi-line value holding a colon and a space, or one that starts with a quote, which strict YAML parsers refuse to read.","kind":"bug","lifecycle":"ready","priority":"high","parent":null,"cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":"#207","from":null,"filed":"2026-11-17","blockedBy":[]},{"slug":"dedupe-investigate-this-trigger","id":"01a0da5f-878","path":"docs/items/dedupe-investigate-this-trigger.md","title":"De-duplicate the \"investigate this\" trigger","description":"create-investigation and investigation-methodology both trigger on \"investigate this\".","kind":"chore","lifecycle":"backlog","priority":"medium","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"fold-document-validation-into-docs-curator","id":"01a0da5f-86b","path":"docs/items/fold-document-validation-into-docs-curator.md","title":"Fold document-validation into docs-curator","description":"document-validation has one reader, docs-curator; one file would stop the lifecycle rules drifting in two places.","kind":"chore","lifecycle":"backlog","priority":"medium","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"generalize-or-retire-unit-test-writer","id":"01a0da5f-885","path":"docs/items/generalize-or-retire-unit-test-writer.md","title":"Generalize or retire the unit-test-writer agent","description":"Its description targets the Operator monorepo while the plugin README says any project.","kind":"chore","lifecycle":"backlog","priority":"medium","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"merge-generate-proposal-into-create-project","id":"01a0da5f-874","path":"docs/items/merge-generate-proposal-into-create-project.md","title":"Merge generate-proposal into create-project","description":"Three things create a proposal; with features, generate-proposal is create-project from a write-up plus a filled body.","kind":"chore","lifecycle":"backlog","priority":"medium","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"move-pdocs-cli-reference-out-of-create-project","id":"01a0da5f-87c","path":"docs/items/move-pdocs-cli-reference-out-of-create-project.md","title":"Move the pdocs CLI reference out of create-project","description":"Every skill uses the CLI reference at create-project/references/pdocs.md; it belongs somewhere skill-neutral.","kind":"chore","lifecycle":"backlog","priority":"medium","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"narrow-review-docs-to-the-library","id":"01a0da5f-86f","path":"docs/items/narrow-review-docs-to-the-library.md","title":"Narrow review-docs to the library","description":"review-docs and sweep-project both judge whether a project is done; review-docs should review library accuracy only.","kind":"chore","lifecycle":"backlog","priority":"medium","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"register-blueprint-and-recipe-outputs","id":"01a0da5f-889","path":"docs/items/register-blueprint-and-recipe-outputs.md","title":"Give implementation-blueprint and project-recipe outputs a type","description":"docs/implementation-blueprint.md and docs/PROJECT-RECIPE.md have no type, so the 9.0.0 lint reports NO FRONTMATTER and ORPHAN.","kind":"bug","lifecycle":"backlog","priority":"medium","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"respell-flags-code-files","id":"01a0ee56-066","path":"docs/items/respell-flags-code-files.md","title":"The respell option flags hits in code rather than rewriting them","description":"The migration's respell option rewrote docs/investigations to docs/items in code that scaffolds documents, which would run and do the wrong thing, since an investigation is now an item plus a write-up.","kind":"task","lifecycle":"ready","priority":"medium","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"grapevine project-docs-v9 #17","from":null,"filed":"2026-09-29","blockedBy":[]},{"slug":"relink-legacy-archive-links","id":"01a0ff09-ea7","path":"docs/items/relink-legacy-archive-links.md","title":"Repair legacy link rot that linting the archive exposes","description":"Linting _archive/ in 9.x surfaces years of broken links on a long-lived project, and pdocs has no tool to repair them.","kind":"task","lifecycle":"ready","priority":"medium","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"#195","from":null,"filed":"2026-10-02","blockedBy":[]},{"slug":"v30-config-patch-array-layout","id":"01a10389-b4c","path":"docs/items/v30-config-patch-array-layout.md","title":"Keep the v3.0 config patch's arrays formatter-clean","description":"The v3.0 config patch keeps a shrunk array's multi-line layout, so a project's formatter rejects .project-docs.json at the commit gate.","kind":"bug","lifecycle":"ready","priority":"medium","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"#195 (comment)","from":null,"filed":"2026-10-03","blockedBy":[]},{"slug":"research-items-parent-feature","id":"01a1eaa7-44f","path":"docs/items/research-items-parent-feature.md","title":"Keep a feature's finished items in view until the feature is done","description":"Archiving a done item whose parent feature is still open removes it from the feature's view, and a finished research item leaves nothing open that points at the build it recommended.","kind":"task","lifecycle":"backlog","priority":"medium","parent":"feature-touchpoints","cycle":null,"status":"stable","archived":false,"source":"#210","from":null,"filed":"2026-11-17","blockedBy":[]},{"slug":"merge-html-mockup-prototyping-copies","id":"01a0da5f-867","path":"docs/items/merge-html-mockup-prototyping-copies.md","title":"Keep one html-mockup-prototyping skill","description":"project-docs and toolbox both ship html-mockup-prototyping; they differ only in where the file goes and both load under one name.","kind":"chore","lifecycle":"backlog","priority":"low","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"move-slide-deck-skill-to-toolbox","id":"01a0da5f-863","path":"docs/items/move-slide-deck-skill-to-toolbox.md","title":"Consider moving the slide-deck skill into the toolbox plugin","description":"Decide whether generate-slide-deck and slide-deck-author belong in the toolbox plugin rather than project-docs.","kind":"chore","lifecycle":"backlog","priority":"low","parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"migration-records-per-project","id":"01a0e3c5-8ab","path":"docs/items/migration-records-per-project.md","title":"Migration state and move records are shared across projects in one repository","description":"The v2.10-to-v3.0 state and move records live in the shared .git/ keyed by base and docs root only, so two docs projects in one repository (or a --force re-run from a reset) mix their records.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md","filed":"2026-09-27","blockedBy":[]},{"slug":"migration-rerun-summary-counts","id":"01a0e3c5-8b0","path":"docs/items/migration-rerun-summary-counts.md","title":"A completing re-run's summary counts only its own plan","description":"After a stop, the run that completes v2.10-to-v3.0 prints '0 move(s), 0 document(s) written', counting only its own plan rather than the migration's.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/spellbook-feedback-round-2/sessions/2026-09-27-v3-migration-spellbook-round-2.md","filed":"2026-09-27","blockedBy":[]},{"slug":"excluded-entity-keeps-retired-frontmatter","id":"01a0ea5f-135","path":"docs/items/excluded-entity-keeps-retired-frontmatter.md","title":"An excluded entity's entry document keeps its retired frontmatter","description":"A feature or item whose entry document lint.exclude names moves but keeps type: proposal or a backlog shape, and the run does not say so.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md","filed":"2026-09-28","blockedBy":[]},{"slug":"gitignore-whole-folder-wildcard-widens","id":"01a0ea5f-13a","path":"docs/items/gitignore-whole-folder-wildcard-widens.md","title":"A whole-folder wildcard in .gitignore widens silently","description":"docs/projects/** and docs/projects/* become features and items wildcards that ignore every future entity, while the bare docs/projects/ is flagged.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md","filed":"2026-09-28","blockedBy":[]},{"slug":"ignore-drop-reorders-negation","id":"01a0ea5f-13f","path":"docs/items/ignore-drop-reorders-negation.md","title":"Dropping an old ignore line can move a negation's anchor","description":"When the adopter already added the new spelling after a negation, drop mode moves it to where the old line stood and the negation's meaning flips.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-respells-formatter-ignores/sessions/2026-09-28-ignore-files-and-excluded-documents.md","filed":"2026-09-28","blockedBy":[]},{"slug":"migration-mirror-pins-to-scaffold-tag","id":"01a0eacd-1a1","path":"docs/items/migration-mirror-pins-to-scaffold-tag.md","title":"Pin the migration's lint mirror to the scaffold it installs","description":"The v3.0 migration's positional-rule and artifact-field tests compare against this repository's current lint, not the SCAFFOLD_TAG scaffold the run installs, so a future lint change would invite fixing the mirror to a lint the migration never uses.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md","filed":"2026-09-28","blockedBy":[]},{"slug":"migration-nested-entry-files","id":"01a0eacd-1a6","path":"docs/items/migration-nested-entry-files.md","title":"A nested feature.md or item.md is neither fixed nor named in advance","description":"A nested entry file gets MISPLACED ENTITY from the 9.x lint only at verify, and one with a retired type is retyped to the entity type, contrary to the guide's wording.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md","filed":"2026-09-28","blockedBy":[]},{"slug":"migration-polish-nits","id":"01a0eb75-55c","path":"docs/items/migration-polish-nits.md","title":"Two small migration nits: comment headings and a broken-config message","description":"An HTML comment holding a line of === gives a synthesized title of \u003c!--, and phase 4 says owned files are written as the project's Prettier prints them when a broken config made every result null.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/link-respell-misaligns-tables/sessions/2026-09-28-migration-polish-round.md","filed":"2026-09-28","blockedBy":[]},{"slug":"migration-retype-drops-only-lifecycle","id":"01a0eacd-1ab","path":"docs/items/migration-retype-drops-only-lifecycle.md","title":"Retyping to a type other than artifact drops only lifecycle","description":"When the migration retypes a document to report, write-up or another non-artifact type, it removes lifecycle but keeps other keys that type does not allow.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-retypes-positional-artifacts/sessions/2026-09-28-positional-retype.md","filed":"2026-09-28","blockedBy":[]},{"slug":"owned-paths-pinned-to-payload","id":"01a0ebb2-2e0","path":"docs/items/owned-paths-pinned-to-payload.md","title":"Pin the migration's owned paths to what the scaffold ships","description":"OWNED_PATHS is hand-listed, so a release that adds an owned category README is neither refreshed nor compared and the pin test still passes; pre-release tags also compare as NaN.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-recognises-9x-releases/sessions/2026-09-28-owned-releases-up-to-the-pin.md","filed":"2026-09-28","blockedBy":[]},{"slug":"phase-10-reading-gaps","id":"01a0eb1d-89e","path":"docs/items/phase-10-reading-gaps.md","title":"Phase 10 readings it does not try","description":"Phase 10 gives no suggestion for a link to an _archive/ path whose target was later un-archived, a target archived below the category level, or a link with a query string or %20 encoding.","kind":"task","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/phase-10-root-relative-and-archived-links/sessions/2026-09-28-root-and-archived-link-readings.md","filed":"2026-09-28","blockedBy":[]},{"slug":"prettier-fallback-note-polish","id":"01a0ea0f-3ad","path":"docs/items/prettier-fallback-note-polish.md","title":"Polish the migration's Prettier fallback note","description":"The plan-time note that explains a Prettier fallback misses a space, reports a Prettier missing a dependency as absent, and counts ignored blocks as failures.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/migration-frontmatter-prettier-shape/sessions/2026-09-28-prettier-shaped-frontmatter.md","filed":"2026-09-28","blockedBy":[]},{"slug":"migration-wording-leftovers","id":"01a0ec63-5e7","path":"docs/items/migration-wording-leftovers.md","title":"Migration wording that predates refreshes","description":"The v3.0 preflight's success line says v2.10 tree when refreshing a 9.x tree, and this repository's root AGENTS.md still says its docs use the pre-9.0.0 folders.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/document-patch-refresh-of-a-v3-tree/sessions/2026-09-29-upgrade-cases-and-pointers.md","filed":"2026-09-29","blockedBy":[]},{"slug":"preflight-messages-name-next-step","id":"01a0ee55-c89","path":"docs/items/preflight-messages-name-next-step.md","title":"Preflight messages name the rename shape, the backlinks, and a near-miss proposal","description":"A slug collision says nothing about how to rename or where the inbound links are, and a project whose proposal is named \u003cslug>-proposal.md silently becomes a born done item.","kind":"task","lifecycle":"ready","priority":"low","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"grapevine project-docs-v9 #17","from":null,"filed":"2026-09-29","blockedBy":[]},{"slug":"process-report-guidance","id":"01a0ee55-c93","path":"docs/items/process-report-guidance.md","title":"Say where a process report goes now","description":"The migration guide says to delete process reports, but SCHEMA.md and the reports guidance don't say that a docs-review or project-summary report belongs in the PR or session, not the tree.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":"grapevine project-docs-v9 #17","from":null,"filed":"2026-09-29","blockedBy":[]},{"slug":"report-owner-named-explicitly","id":"01a0ee55-545","path":"docs/items/report-owner-named-explicitly.md","title":"The v3.0 preflight lets a report name its owner when it links to two investigations","description":"A report linked with two investigations stops the preflight, and the only fix is editing its prose, because the rule decides only when the report links to exactly one.","kind":"task","lifecycle":"ready","priority":"low","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-29","blockedBy":[]},{"slug":"synthesized-title-from-h1","id":"01a0ee55-c8e","path":"docs/items/synthesized-title-from-h1.md","title":"Synthesized titles come from the slug when an H1 exists","description":"Story-loom got titles like 'Agent cli conformance' and 'Mcp follow ups' from folder slugs, where the document's H1 would have been right.","kind":"bug","lifecycle":"ready","priority":"low","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"grapevine project-docs-v9 #17","from":null,"filed":"2026-09-29","blockedBy":[]},{"slug":"update-skill-retests-before-running","id":"01a0ec63-5e2","path":"docs/items/update-skill-retests-before-running.md","title":"update-project-docs re-tests each migration just before running it","description":"Step 3 lists the migrations that apply once, up front, and Step 4 runs the list, so a row an earlier script made unnecessary still runs.","kind":"task","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/document-patch-refresh-of-a-v3-tree/sessions/2026-09-29-upgrade-cases-and-pointers.md","filed":"2026-09-29","blockedBy":[]},{"slug":"prettier-reflow-monorepo-and-overrides","id":"01a0fa1b-453","path":"docs/items/prettier-reflow-monorepo-and-overrides.md","title":"The link reflow misses monorepo ignore files and parser overrides","description":"pdocs reads .gitignore and .prettierignore only from the docs project's root, not the git top level, and asks Prettier for file info without resolving config overrides.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/catalog-line-wraps-into-a-list/sessions/2026-10-01-pdocs-small-fixes.md","filed":"2026-10-01","blockedBy":[]},{"slug":"catalog-bulk-fill-and-index-intro","id":"01a0ff09-eac","path":"docs/items/catalog-bulk-fill-and-index-intro.md","title":"Respell the index intro's retired folders in v3.0","description":"After v3.0, docs/index.md's intro still lists the retired workbench folders; the migration should respell it while it matches the scaffold's text.","kind":"task","lifecycle":"ready","priority":"low","parent":null,"cycle":"2026-10-v3-migration-feedback","status":"stable","archived":false,"source":"#196","from":null,"filed":"2026-10-02","blockedBy":[]},{"slug":"template-header-and-seed-check-polish","id":"01a0fc3d-997","path":"docs/items/template-header-and-seed-check-polish.md","title":"Template header and seed check polish","description":"Optional leftovers from the template-header review: a span-stop test, a header after a stray backtick, and clearer check-mirror output for a stale or missing seed entry.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/template-header-left-in-documents/sessions/2026-10-02-template-header-warning.md","filed":"2026-10-02","blockedBy":[]},{"slug":"v26-migration-merges-existing-archive","id":"01a0ff09-e92","path":"docs/items/v26-migration-merges-existing-archive.md","title":"Merge archive/ into an existing _archive/ in the v2.6 migration","description":"The v2.5-to-v2.6 script nests archive/ inside an _archive/ that already exists, and its sed respells every /archive/ substring.","kind":"bug","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":"#191","from":null,"filed":"2026-10-02","blockedBy":[]},{"slug":"v27-codemod-common-status-wording","id":"01a0ff09-e9c","path":"docs/items/v27-codemod-common-status-wording.md","title":"Map common Status wording in the v2.7 codemod","description":"The v2.7 codemod leaves lifecycle blank for common Status wording such as Open, Backlog, RESOLVED and Graduated.","kind":"task","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":"#193","from":null,"filed":"2026-10-02","blockedBy":[]},{"slug":"workflow-docs-cold-read-polish","id":"01a0fc4c-ca1","path":"docs/items/workflow-docs-cold-read-polish.md","title":"Polish the smaller workflow-doc gaps a cold read found","description":"Minor and older gaps from the 9.4.0 cold reads: cycle close dates, docs commit timing, the pdocs alias, help text and placeholder names.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-10-02","blockedBy":[]},{"slug":"check-output-polish","id":"01a103f7-71d","path":"docs/items/check-output-polish.md","title":"Polish the remaining check output gaps","description":"Optional leftovers from the check dedupe review: repeated MISSING FILE rows, a bare SCHEMA.md path, a lost MISSING type hint and an untested workbench rule.","kind":"chore","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":"items/check-dedupes-library-tier-problems/sessions/2026-10-03-check-problems-once.md","filed":"2026-10-03","blockedBy":[]},{"slug":"pdocs-catalog-command","id":"01a1038e-8d5","path":"docs/items/pdocs-catalog-command.md","title":"Fill and resync the catalog with pdocs catalog","description":"A pdocs catalog command that adds missing library pages to docs/index.md and resyncs stale hooks, for projects adopting the catalog.","kind":"task","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":"#196","from":"item/catalog-bulk-fill-and-index-intro","filed":"2026-10-03","blockedBy":[]},{"slug":"pdocs-relink-command","id":"01a1038e-8cf","path":"docs/items/pdocs-relink-command.md","title":"Repair broken links from rename history with pdocs relink","description":"A pdocs relink command that repairs MISSING FILE links from the move record and git rename history, unique matches only, and reports the rest.","kind":"task","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"draft","archived":false,"source":"#195","from":"item/relink-legacy-archive-links","filed":"2026-10-03","blockedBy":[]},{"slug":"stale-lifecycle-playbooks-after-upgrade","id":"01a10418-32d","path":"docs/items/stale-lifecycle-playbooks-after-upgrade.md","title":"Help a project notice a stale lifecycle playbook","description":"After an upgrade, a lifecycle-override playbook can name retired paths or a merge rule the landing policy now beats, and nothing points it out.","kind":"task","lifecycle":"backlog","priority":"low","parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":"items/finalize-branch-playbook-vs-landing-policy/sessions/2026-10-03-playbook-vs-landing-policy.md","filed":"2026-10-03","blockedBy":[]},{"slug":"grapevine-backlog","id":"01a0da55-e3a","path":"docs/items/grapevine-backlog/item.md","title":"Grapevine backlog","description":"Work recorded in grapevine-backlog before it had an item.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-05-27","blockedBy":[]},{"slug":"finalize-branch-step-2-density","id":"01a0da55-e3a","path":"docs/items/finalize-branch-step-2-density.md","title":"`finalize-branch` Step 2 is 149 lines of argument for a short procedure","description":"finalize-branch Step 2 is 149 lines, most of it justification an executing agent has to read past to find the instruction.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-02","blockedBy":[]},{"slug":"root-level-conventions-check-semantics","id":"01a0da55-e3a","path":"docs/items/root-level-conventions-check-semantics.md","title":"`Root-Level Conventions`: \"if the check finds nothing\" is ambiguous across the two rows","description":"update-project-docs Step 6 checks whether a convention heading exists, not whether its content is current, so a drifted convention passes.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-02","blockedBy":[]},{"slug":"sweep-project-reference-boundary-gaps","id":"01a0da55-e3a","path":"docs/items/sweep-project-reference-boundary-gaps.md","title":"`sweep-project` reference boundary class misses three real terminators","description":"The boundary class in sweep-project's discovery pattern stops one false match and lets several others through.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-02","blockedBy":[]},{"slug":"task-agent-tool-name-drift","id":"01a0da55-e3a","path":"docs/items/task-agent-tool-name-drift.md","title":"`Task` vs `Agent`: stale dispatch-tool name across skills and agents","description":"What is left after 4.0.0: the cosmetic `\u003cuses Task tool>` narration in the examples of the agents' descriptions.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-02","blockedBy":[]},{"slug":"plugin-skills-hardcode-flat-docs-paths","id":"01a0da55-e3a","path":"docs/items/plugin-skills-hardcode-flat-docs-paths.md","title":"Plugin skills hardcode the flat `docs/` folders, which a restructure would invalidate","description":"What is left after 4.0.0: the hand-written DEV_KICKOFF.md and artifacts, which skills still place by literal path rather than through pdocs.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-04","blockedBy":[]},{"slug":"user-defined-document-types","id":"01a0da55-e3a","path":"docs/items/user-defined-document-types.md","title":"User-defined folders and document types","description":"Let a project declare its own folders and types in .project-docs.json and have the lint and pdocs new honour them.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-04","blockedBy":[]},{"slug":"lint-beyond-the-docs-root","id":"01a0da55-e3a","path":"docs/items/lint-beyond-the-docs-root/item.md","title":"Lint beyond the docs root","description":"Let pdocs see documents outside its one docs root, such as a monorepo's app READMEs carrying the same frontmatter.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-25","blockedBy":[]},{"slug":"project-docs-skill-scope","id":"01a0e970-e69","path":"docs/items/project-docs-skill-scope.md","title":"Which skills belong in project-docs","description":"Write down the rule that a project-docs skill exists because of a project-docs lifecycle touch point, and sort every skill in the plugin into keep, move, merge or retire by it.","kind":"research","lifecycle":"backlog","priority":null,"parent":"skill-surface-cleanup","cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-28","blockedBy":[]},{"slug":"record-owned-files-at-install","id":"01a0e94f-68f","path":"docs/items/record-owned-files-at-install.md","title":"Record each owned file's hash at install","description":"Migrations judge an owned file edited by comparing it to a hand-derived list of past releases; a hash recorded at install, as .pdocs-seed.json does for templates, would replace the list for trees installed on 9.x and later.","kind":"task","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-28","blockedBy":[]},{"slug":"schema-over-claims","id":"01a0e94f-694","path":"docs/items/schema-over-claims.md","title":"Correct SCHEMA.md's over-claims, and look for others","description":"SCHEMA.md says every document under docs/ carries frontmatter, which its own later sections and the file itself contradict; the owned guidance pages may make other claims broader than what is true.","kind":"chore","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-28","blockedBy":[]},{"slug":"skills-that-extend-project-docs","id":"01a0e977-ee9","path":"docs/items/skills-that-extend-project-docs.md","title":"Skills that use project-docs without living in it","description":"How a skill keeps what must be fixed while a project extends the rest, as anthill's touch-point wiki pages do, and how a skill outside the plugin can build on project-docs without being coupled to it.","kind":"research","lifecycle":"backlog","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-09-28","blockedBy":[]},{"slug":"anchor-link-encoding-and-case","id":"01a1eb3b-d87","path":"docs/items/anchor-link-encoding-and-case.md","title":"Decode and lowercase a link's anchor before checking it","description":"The anchor in a link is compared raw, so a percent-encoded or upper-case anchor GitHub resolves is reported as MISSING ANCHOR.","kind":"bug","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/heading-anchors-match-github/sessions/2026-11-17-heading-anchors.md","filed":"2026-11-17","blockedBy":[]},{"slug":"ask-feature-question-when-filing-research","id":"01a1eb29-7e1","path":"docs/items/ask-feature-question-when-filing-research.md","title":"Ask the feature question when research is filed","description":"create-investigation and the investigator agent file research with no parent and never ask whether it is the start of a build.","kind":"task","lifecycle":"backlog","priority":null,"parent":"feature-touchpoints","cycle":null,"status":"draft","archived":false,"source":null,"from":"item/feature-or-item-touchpoint","filed":"2026-11-17","blockedBy":[]},{"slug":"feature-question-advisory","id":"01a1eb29-7ef","path":"docs/items/feature-question-advisory.md","title":"Add the feature-question advisory to pdocs new item","description":"pdocs new item says nothing when research is filed with no parent, so a filer that loads no skill never meets the feature question.","kind":"task","lifecycle":"backlog","priority":null,"parent":"feature-touchpoints","cycle":null,"status":"draft","archived":false,"source":null,"from":"item/feature-or-item-touchpoint","filed":"2026-11-17","blockedBy":[]},{"slug":"heading-anchor-inline-markup","id":"01a1eb3b-d75","path":"docs/items/heading-anchor-inline-markup.md","title":"Slug a heading's rendered text, not its markup","description":"The lint's heading slug keeps underscore emphasis, reference links, images, HTML tags and entities that GitHub removes, and trims after stripping, so some valid anchors are reported missing.","kind":"bug","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/heading-anchors-match-github/sessions/2026-11-17-heading-anchors.md","filed":"2026-11-17","blockedBy":[]},{"slug":"heading-detection-phantoms-and-misses","id":"01a1eb3b-d7e","path":"docs/items/heading-detection-phantoms-and-misses.md","title":"Find the headings GitHub finds","description":"The lint counts headings inside tilde fences, HTML comments and frontmatter, and misses setext, indented, blockquoted and CRLF headings, so anchor numbering can pass a link GitHub does not have.","kind":"bug","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/heading-anchors-match-github/sessions/2026-11-17-heading-anchors.md","filed":"2026-11-17","blockedBy":[]},{"slug":"readmes-research-expecting-build-gets-feature","id":"01a1eb29-7f9","path":"docs/items/readmes-research-expecting-build-gets-feature.md","title":"Say in the READMEs that research expecting a build gets a feature at filing","description":"Three READMEs read research item first as no feature, so research that leads to a build is filed with no parent.","kind":"chore","lifecycle":"backlog","priority":null,"parent":"feature-touchpoints","cycle":null,"status":"draft","archived":false,"source":null,"from":"item/feature-or-item-touchpoint","filed":"2026-11-17","blockedBy":[]},{"slug":"ci-migration-test-git-hang-cause","id":"01a104d4-dda","path":"docs/items/ci-migration-test-git-hang-cause/item.md","title":"Find why fixture git hangs in the migration tests on CI","description":"On CI, fixture git init and commit in the v2.6 migration tests intermittently hang past 10 s on pushes to main, after the spawn hardening; the cause is unknown.","kind":"research","lifecycle":"active","priority":"medium","parent":null,"cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":null,"from":"item/v26-migration-test-git-hang","filed":"2026-10-03","blockedBy":[]},{"slug":"cross-agent-skill-portability","id":"01a0da55-e3a","path":"docs/items/cross-agent-skill-portability/item.md","title":"Cross-Agent Skill Portability and Distribution","description":"Whether skills distributed only through the Claude Code marketplace can be made to run under other agent harnesses.","kind":"research","lifecycle":"active","priority":null,"parent":null,"cycle":null,"status":"stable","archived":false,"source":null,"from":null,"filed":"2026-02-25","blockedBy":[]},{"slug":"pdocs-work-board-mockups","id":"01a1eacc-032","path":"docs/items/pdocs-work-board-mockups/item.md","title":"Mock up the work board in a few variations","description":"HTML mockups of the project-docs work board, from a light version to a robust one, to choose a direction from.","kind":"task","lifecycle":"active","priority":null,"parent":"pdocs-work-board","cycle":null,"status":"draft","archived":false,"source":null,"from":"item/pdocs-board-landscape","filed":"2026-11-17","blockedBy":[{"id":"01a0e970-e72","slug":"pdocs-board-landscape","title":"A work board for project-docs: what we have, the landscape, and what to build","lifecycle":"done"}]},{"slug":"project-summary-zsh-glob-and-old-cli","id":"01a1040e-e8e","path":"docs/items/project-summary-zsh-glob-and-old-cli/item.md","title":"Guard project-summary's session glob and view call","description":"The project-summary command globs session folders that zsh refuses when they are empty, and runs pdocs view with no fallback for an 8.x CLI.","kind":"bug","lifecycle":"done","priority":"medium","parent":null,"cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":null,"from":"items/ground-in-project-old-cli-fallback/sessions/2026-10-03-ground-in-project-old-cli.md","filed":"2026-10-03","blockedBy":[]},{"slug":"feature-or-item-touchpoint","id":"01a1eab2-ae6","path":"docs/items/feature-or-item-touchpoint/item.md","title":"Find where an agent should ask whether work needs a feature","description":"An agent asked to file a research item files it with no parent and never asks whether the work is a feature, because the rule sits in READMEs it does not read at that moment.","kind":"research","lifecycle":"done","priority":"medium","parent":"feature-touchpoints","cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":null,"from":null,"filed":"2026-11-17","blockedBy":[]},{"slug":"heading-anchors-match-github","id":"01a1eaa7-446","path":"docs/items/heading-anchors-match-github/item.md","title":"Match GitHub's heading anchors in the link check","description":"The lint's heading slug drops accented letters, keeps link targets and never numbers repeats, so pdocs check reports anchors GitHub renders as missing.","kind":"bug","lifecycle":"done","priority":"medium","parent":null,"cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":"#208","from":null,"filed":"2026-11-17","blockedBy":[]},{"slug":"pin-bun-1-4-4","id":"01a1eb22-83a","path":"docs/items/pin-bun-1-4-4/item.md","title":"Pin Bun 1.4.4 in CI","description":"CI pins Bun 1.4.0, whose spawnSync can miss a child's exit and hang a test; 1.4.4 fixes it.","kind":"chore","lifecycle":"done","priority":"medium","parent":null,"cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":null,"from":"item/ci-migration-test-git-hang-cause","filed":"2026-11-17","blockedBy":[]},{"slug":"dot-dot-name-inside-docs-root","id":"01a1eaa7-44a","path":"docs/items/dot-dot-name-inside-docs-root/item.md","title":"Treat a name starting with two dots as inside the docs root","description":"Two outside-the-root tests use a bare startsWith on two dots, so a folder named ..notes is refused by pdocs new and judged differently by two lint rules.","kind":"bug","lifecycle":"done","priority":"low","parent":null,"cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":"#209","from":null,"filed":"2026-11-17","blockedBy":[]},{"slug":"pdocs-board-landscape","id":"01a0e970-e72","path":"docs/items/pdocs-board-landscape/item.md","title":"A work board for project-docs: what we have, the landscape, and what to build","description":"Inventory our document types and states, survey how other tools visualize the same things, and recommend what a project-docs work board includes and leaves out.","kind":"research","lifecycle":"done","priority":null,"parent":"pdocs-work-board","cycle":"2026-11-check-fixes-and-board-research","status":"stable","archived":false,"source":null,"from":null,"filed":"2026-09-28","blockedBy":[]}],"ready":["respell-split-paths","v30-preflight-tool-written-folders","check-rejects-non-strict-yaml-frontmatter","respell-flags-code-files","relink-legacy-archive-links","v30-config-patch-array-layout","preflight-messages-name-next-step","report-owner-named-explicitly","synthesized-title-from-h1","catalog-bulk-fill-and-index-intro"],"unreviewed":38,"advisories":[{"id":"archive-threshold","message":"88 finished items are not archived, over the threshold of 25 (checks.archive.threshold). Consider archiving them to shorten this view. Archiving preserves their records and updates links."},{"id":"work-item-review","message":"1 item started has no reviewed document (`status: stable`): item/pdocs-work-board-mockups (draft, active)."}],"portfolioLoose":null,"sampleInbox":[{"slug":"check-rejects-non-strict-yaml-frontmatter","id":"01a1eaa7-441","path":"docs/items/check-rejects-non-strict-yaml-frontmatter.md","title":"Report frontmatter a strict YAML parser rejects","description":"pdocs check passes a plain multi-line value holding a colon and a space, or one that starts with a quote, which strict YAML parsers refuse to read.","kind":"bug","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":"#207","from":null,"filed":"2026-11-17","blockedBy":[],"triaged":{"lifecycle":"ready","priority":"high","parent":null}},{"slug":"heading-anchors-match-github","id":"01a1eaa7-446","path":"docs/items/heading-anchors-match-github.md","title":"Match GitHub's heading anchors in the link check","description":"The lint's heading slug drops accented letters, keeps link targets and never numbers repeats, so pdocs check reports anchors GitHub renders as missing.","kind":"bug","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":"#208","from":null,"filed":"2026-11-17","blockedBy":[],"triaged":{"lifecycle":"ready","priority":"medium","parent":null}},{"slug":"dot-dot-name-inside-docs-root","id":"01a1eaa7-44a","path":"docs/items/dot-dot-name-inside-docs-root.md","title":"Treat a name starting with two dots as inside the docs root","description":"Two outside-the-root tests use a bare startsWith on two dots, so a folder named ..notes is refused by pdocs new and judged differently by two lint rules.","kind":"bug","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":"#209","from":null,"filed":"2026-11-17","blockedBy":[],"triaged":{"lifecycle":"ready","priority":"low","parent":null}},{"slug":"research-items-parent-feature","id":"01a1eaa7-44f","path":"docs/items/research-items-parent-feature.md","title":"Keep a feature's finished items in view until the feature is done","description":"Archiving a done item whose parent feature is still open removes it from the feature's view, and a finished research item leaves nothing open that points at the build it recommended.","kind":"task","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":"#210","from":null,"filed":"2026-11-17","blockedBy":[],"triaged":{"lifecycle":"backlog","priority":"medium","parent":"feature-touchpoints"}},{"slug":"feature-or-item-touchpoint","id":"01a1eab2-ae6","path":"docs/items/feature-or-item-touchpoint.md","title":"Find where an agent should ask whether work needs a feature","description":"An agent asked to file a research item files it with no parent and never asks whether the work is a feature, because the rule sits in READMEs it does not read at that moment.","kind":"research","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":null,"filed":"2026-11-17","blockedBy":[],"triaged":{"lifecycle":"ready","priority":"medium","parent":"feature-touchpoints"}},{"slug":"check-output-polish","id":"01a103f7-71d","path":"docs/items/check-output-polish.md","title":"Polish the remaining check output gaps","description":"Optional leftovers from the check dedupe review: repeated MISSING FILE rows, a bare SCHEMA.md path, a lost MISSING type hint and an untested workbench rule.","kind":"chore","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/check-dedupes-library-tier-problems/sessions/2026-10-03-check-problems-once.md","filed":"2026-10-03","blockedBy":[],"triaged":{"lifecycle":"backlog","priority":"low","parent":null}},{"slug":"stale-lifecycle-playbooks-after-upgrade","id":"01a10418-32d","path":"docs/items/stale-lifecycle-playbooks-after-upgrade.md","title":"Help a project notice a stale lifecycle playbook","description":"After an upgrade, a lifecycle-override playbook can name retired paths or a merge rule the landing policy now beats, and nothing points it out.","kind":"task","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/finalize-branch-playbook-vs-landing-policy/sessions/2026-10-03-playbook-vs-landing-policy.md","filed":"2026-10-03","blockedBy":[],"triaged":{"lifecycle":"backlog","priority":"low","parent":null}},{"slug":"project-summary-zsh-glob-and-old-cli","id":"01a1040e-e8e","path":"docs/items/project-summary-zsh-glob-and-old-cli.md","title":"Guard project-summary's session glob and view call","description":"The project-summary command globs session folders that zsh refuses when they are empty, and runs pdocs view with no fallback for an 8.x CLI.","kind":"bug","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"items/ground-in-project-old-cli-fallback/sessions/2026-10-03-ground-in-project-old-cli.md","filed":"2026-10-03","blockedBy":[],"triaged":{"lifecycle":"ready","priority":"medium","parent":null}},{"slug":"ci-migration-test-git-hang-cause","id":"01a104d4-dda","path":"docs/items/ci-migration-test-git-hang-cause.md","title":"Find why fixture git hangs in the migration tests on CI","description":"On CI, fixture git init and commit in the v2.6 migration tests intermittently hang past 10 s on pushes to main, after the spawn hardening; the cause is unknown.","kind":"research","lifecycle":"triage","priority":null,"parent":null,"cycle":null,"status":"draft","archived":false,"source":null,"from":"item/v26-migration-test-git-hang","filed":"2026-10-03","blockedBy":[],"triaged":{"lifecycle":"ready","priority":"medium","parent":null}}]}/*DATA-END*/;
+
+      const LIFECYCLES = ["triage", "backlog", "ready", "active", "review", "done", "dropped"];
+      const PRI = { high: 0, medium: 1, low: 2 };
+      const esc = (s) =>
+        String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      const clone = (v) => JSON.parse(JSON.stringify(v));
+
+      const STATES = [
+        { id: "now", label: "1 · Now" },
+        { id: "cycle", label: "2 · Cycle" },
+        { id: "selected", label: "3 · Cycle, item selected" },
+        { id: "adding", label: "4 · Cycle, adding items" },
+        { id: "attention", label: "5 · Attention" },
+        { id: "about", label: "6 · About this layout" },
+      ];
+
+      const STATES_D = [
+        { id: "now", label: "1 · Now" },
+        { id: "cycle", label: "2 · Cycle" },
+        { id: "selected", label: "3 · Cycle, item selected" },
+        { id: "candidates", label: "4 · Cycle, candidates" },
+        { id: "inbox", label: "5 · Inbox" },
+        { id: "triage", label: "6 · Triage" },
+        { id: "feature", label: "7 · Feature" },
+        { id: "about", label: "8 · About this layout" },
+      ];
+      const br = (s) => esc(s).replace(/([\/-])/g, "$1<wbr>");
+
+      const ABOUT_D = {
+        name: "D — Combined",
+        sections: [
+          {
+            title: "The seven shell rules",
+            lines: [
+              ["1 · Three regions", "Nav, centre, inspector. At most two scrollers. Nothing floats, docks or overlays, except the small Snooze menu and the cycle chooser under the cycle's title."],
+              ["2 · One column", "The centre is a list, or one container's page: a header band and one grouped list. Lists cap at 900px with the inspector closed and fill what is left when it is open."],
+              ["3 · Drill or inspect", "Containers drill in, items inspect. A cycle or feature replaces the centre, with a plain back link. An item opens the inspector."],
+              ["4 · Tabs", "A container's secondary lists are tabs. Cycle has In this cycle and Candidates. No split mode, no Done button."],
+              ["5 · The band", "The header band holds page-level state and the page's one primary action."],
+              ["6 · Writes", "The inspector carries every write for the selected item. A row carries only the write its list exists for, on hover and focus: Bring in on candidates. Take out is inspector-only."],
+              ["7 · Inbox", "Attention has one name, one home (the nav page) and the only count in the nav."],
+            ],
+          },
+          {
+            title: "Taken from",
+            lines: [
+              ["A — Inspector", "The shell: nav, one centre column, the inspector that pushes, the Inbox as a nav page, the cycle as a grouped list."],
+              ["C — Drill-in", "Tabs for a container's second list, drill-in for containers, previous and next through the list you came from."],
+              ["B — Board with a tray", "Only the one-line candidate row. No board, no tray, no popover."],
+            ],
+          },
+          {
+            title: "What D still costs",
+            lines: [
+              ["Candidates hide the cycle", "You cannot see the cycle's list while choosing candidates. The tab counts and the Added just now group are the only feedback."],
+              ["No board", "State is read from group headings. Nothing shows the spread of a large cycle at a glance."],
+              ["Rule 5 is untested", "No page here has a primary action in its band: both writes belong to an item. Robust's Plan next cycle would put its checklist and Start cycle there. Not built."],
+              ["Triage in 435px", "The decision form lives in the inspector, so at 1280px an item's description and its form share a column about 390px wide."],
+              ["Two small floats", "The Snooze menu and the cycle chooser both float. Rule 1 allows the first; the second is this build's own exception."],
+              ["Snapshot", "The data is a snapshot of docs/ taken 2026-11-17 with the sample triage inbox. Not live."],
+            ],
+          },
+        ],
+      };
+
+      const ABOUT = {
+        d: { name: "", lines: [] }, // D has its own About page (ABOUT_D)
+        a: {
+          name: "A — Inspector",
+          lines: [
+            ["Left nav", "Where you are. Five entries. Inbox carries the attention count, and attention shows nowhere else."],
+            ["Centre", "The list you are working in, capped at 900px. Cycle is a list grouped by state, with done folded to one line."],
+            ["Right inspector", "The selected item and nothing else. Closed until you select; it pushes the centre narrower and never covers it."],
+            ["Add items", "A mode, not a region. The centre splits into the cycle and its candidates until you press Done."],
+            ["What it costs", "No board: state is read from group headings, not columns. What needs you is one click away, not in view."],
+            ["When it gets awkward", "Adding items with the inspector open at 1280px leaves two panes of about 300px each. A cycle of 40 items is a long scroll with no columns to scan."],
+          ],
+        },
+        b: {
+          name: "B — Board with a tray",
+          lines: [
+            ["Left nav", "Four views. No Inbox entry."],
+            ["Centre", "The kanban at full width. Empty columns and done fold to rails; opening done folds another column, so the board never scrolls sideways."],
+            ["Tray", "Candidates, docked under the board. One bar when closed, about 40% of the height when pulled up."],
+            ["Right inspector", "The same as layout A: the selected item only, pushing the board narrower."],
+            ["Top-bar count", "What needs you, as a popover. It is the one thing that floats, and it closes on an outside click or Escape."],
+            ["What it costs, and when it gets awkward", "The most regions of the three: board, tray and inspector can all be open at once, and at 1280×800 that leaves the board about 620px by 270px. A cycle with items in four states gets columns about 130px wide beside the inspector."],
+          ],
+        },
+        c: {
+          name: "C — Drill-in, two columns",
+          lines: [
+            ["Left nav", "Four views. Nothing else ever sits beside the centre."],
+            ["Centre", "One thing at a time, capped at 900px: a list, or one item's page."],
+            ["Item page", "Selecting an item replaces the list with its page: a breadcrumb back, previous and next within the list you came from, fields with room. Back returns to the same scroll position and grouping."],
+            ["Cycle tabs", "In this cycle and Candidates are two tabs of one view, so adding items is a tab, not a mode."],
+            ["Inbox", "The first section of Now, above the active work."],
+            ["What it costs, and when it gets awkward", "You cannot see an item's details beside its list, so reading several candidates before bringing one in is a trip each (previous and next soften it). A long Inbox pushes the active work down the Now page."],
+          ],
+        },
+      };
+
+      document.addEventListener("alpine:init", () => {
+        Alpine.data("board", () => ({
+          // ---- prototype switcher ----
+          layout: "a",
+          groups: [
+            { id: "a", label: "A — Inspector" },
+            { id: "b", label: "B — Board with a tray" },
+            { id: "c", label: "C — Drill-in, two columns" },
+            { id: "d", label: "D — Combined" },
+          ],
+          get states() {
+            return this.layout === "d" ? STATES_D : STATES;
+          },
+          about: ABOUT,
+          aboutD: ABOUT_D,
+
+          // ---- where the app is ----
+          view: "now", // now · inbox (A) · triage · cycle · feature · item (C) · about
+          sel: null, // slug of the selected item: the inspector (A, B) or the item page (C)
+          from: null, // C: where the item page was opened from
+          adding: false, // A: the two-pane add mode
+          trayOpen: false, // B: the candidates tray
+          attnOpen: false, // B: the attention popover
+          cycleTab: "in", // C: in · cand
+          doneOpen: false,
+          nowHint: "now", // C only: Now and Attention are the same screen
+          nowBy: "cycle",
+
+          // ---- working copy of the snapshot ----
+          data: DATA,
+          items: [],
+          cycles: [],
+          inbox: [],
+          tri: {},
+          log: [],
+          ask: null,
+          handoff: null,
+          cycleSlug: DATA.activeCycle,
+          cand: { q: "", lifecycle: "all", feature: "all" },
+          // The "In between" capability: triage and cycle membership write,
+          // nothing else does.
+          can: { write: true, triage: true, membership: true, move: false, priority: false, proposals: false },
+
+          // Snooze is view state: it lives on the board and is never written to the docs.
+          snoozed: {},
+          snoozeMenu: null,
+          snoozedOpen: false,
+          snoozeChoices: [
+            { id: "tomorrow", label: "Until tomorrow", note: "until tomorrow" },
+            { id: "week", label: "For a week", note: "for a week" },
+            { id: "cycle", label: "Until the next cycle starts", note: "until the next cycle starts" },
+          ],
+
+          init() {
+            this.reset();
+          },
+          reset() {
+            this.items = clone(DATA.items);
+            this.cycles = clone(DATA.cycles);
+            this.log = [];
+            this.ask = null;
+            this.handoff = null;
+            this.snoozed = {};
+            this.snoozeMenu = null;
+            this.snoozedOpen = false;
+            this.cand = { q: "", lifecycle: "all", feature: "all" };
+            // The sample triage inbox (nine items), so the attention rows match
+            // the screenshots the layouts answer.
+            this.inbox = clone(DATA.sampleInbox);
+            const t = {};
+            for (const i of this.inbox) t[i.slug] = { disp: "ready", priority: "", parent: "", reason: "", done: null };
+            this.tri = t;
+            this.dLast = null;
+            this.dAdded = [];
+            this.dFlash = null;
+            this.dDecidedOpen = false;
+          },
+
+          // ---- the switcher: shortcuts into the working prototype ----
+          // The lit state button is derived from where the app is, so reaching a
+          // state by clicking in the UI lights the same button.
+          get stateId() {
+            if (this.layout === "d") return this.dStateId;
+            if (this.view === "about") return "about";
+            if (this.layout === "b" && this.attnOpen) return "attention";
+            if (this.layout === "a" && this.view === "inbox") return "attention";
+            if (this.view === "now") return this.layout === "c" ? this.nowHint : "now";
+            if (this.view === "item") return this.from && this.from.view === "cycle" && this.from.tab === "in" ? "selected" : null;
+            if (this.view === "cycle") {
+              if (this.layout === "a" && this.adding) return "adding";
+              if (this.layout === "b" && this.trayOpen) return "adding";
+              if (this.layout === "c" && this.cycleTab === "cand") return "adding";
+              if (this.sel && this.layout !== "c") return "selected";
+              return "cycle";
+            }
+            return null;
+          },
+          selectLayout(id) {
+            // Keep the same state when the layout changes, so they compare like for like.
+            let s = this.stateId;
+            const fromD = this.layout === "d";
+            this.layout = id;
+            // D names two states differently and has two that A, B and C lack.
+            const map = id === "d" ? { adding: "candidates", attention: "inbox" } : { candidates: "adding", inbox: "attention" };
+            if (s && map[s]) s = map[s];
+            if (id === "d") return this.dApply(s || (["triage", "feature"].includes(this.view) ? this.view : "now"));
+            if (s === "triage" || s === "feature") return this.go(s);
+            if (s) this.applyState(s);
+            else this.go(!fromD && (this.view === "triage" || this.view === "feature") ? this.view : "now");
+          },
+          applyState(id) {
+            if (this.layout === "d") return this.dApply(id);
+            this.closeTransient();
+            this.sel = null;
+            this.from = null;
+            this.adding = false;
+            this.trayOpen = false;
+            this.cycleTab = "in";
+            this.doneOpen = false;
+            this.nowHint = "now";
+            this.cycleSlug = DATA.activeCycle;
+            const L = this.layout;
+            if (id === "now") this.view = "now";
+            else if (id === "about") this.view = "about";
+            else if (id === "cycle") this.view = "cycle";
+            else if (id === "selected") {
+              this.view = "cycle";
+              const i = this.col(this.cycleSlug, "active")[0] || this.inCycle(this.cycleSlug)[0];
+              if (i) this.select(i, this.cycleList, "Cycle");
+              return;
+            } else if (id === "adding") {
+              this.view = "cycle";
+              if (L === "a") this.adding = true;
+              else if (L === "b") this.trayOpen = true;
+              else this.cycleTab = "cand";
+            } else if (id === "attention") {
+              if (L === "a") this.view = "inbox";
+              else if (L === "b") {
+                this.view = "cycle";
+                this.attnOpen = true;
+              } else {
+                this.view = "now";
+                this.nowHint = "attention";
+              }
+            }
+            this.toTop();
+          },
+
+          // ---- navigation ----
+          closeTransient() {
+            this.snoozeMenu = null;
+            this.attnOpen = false;
+            this.ask = null;
+            this.handoff = null;
+          },
+          toTop() {
+            this.$nextTick(() => {
+              if (this.$refs.centre) this.$refs.centre.scrollTop = 0;
+            });
+          },
+          go(v) {
+            this.closeTransient();
+            this.view = v;
+            this.sel = null;
+            this.from = null;
+            this.adding = false;
+            this.nowHint = "now";
+            this.toTop();
+          },
+          get viewTitle() {
+            const v = this.view === "item" && this.from ? this.from.view : this.view;
+            return { now: "Now", inbox: "Inbox", triage: "Triage", cycle: "Cycle", feature: "Feature", about: "About this layout" }[v];
+          },
+          navOn(v) {
+            return (this.view === "item" && this.from ? this.from.view : this.view) === v;
+          },
+          // Selecting an item. A and B open the inspector beside the work. C
+          // goes to the item's page and remembers the list and scroll position.
+          select(i, list, label) {
+            this.closeTransient();
+            if (this.layout === "c") {
+              this.from = {
+                view: this.view,
+                tab: this.cycleTab,
+                label,
+                list: list.map((x) => x.slug),
+                scroll: this.$refs.centre ? this.$refs.centre.scrollTop : 0,
+              };
+              this.sel = i.slug;
+              this.view = "item";
+              this.toTop();
+            } else this.sel = i.slug;
+          },
+          get selected() {
+            return this.items.find((i) => i.slug === this.sel) || null;
+          },
+          get fromIndex() {
+            return this.from ? this.from.list.indexOf(this.sel) : -1;
+          },
+          step(n) {
+            const next = this.from.list[this.fromIndex + n];
+            if (!next) return;
+            this.sel = next;
+            this.handoff = null;
+            this.toTop();
+          },
+          back() {
+            if (!this.from) return;
+            const f = this.from;
+            this.view = f.view;
+            this.cycleTab = f.tab;
+            this.sel = null;
+            this.from = null;
+            this.handoff = null;
+            this.$nextTick(() => {
+              if (this.$refs.centre) this.$refs.centre.scrollTop = f.scroll;
+            });
+          },
+          escape() {
+            if (this.layout === "d") return this.dEscape();
+            if (this.snoozeMenu) this.snoozeMenu = null;
+            else if (this.attnOpen) this.attnOpen = false;
+            else if (this.view === "item") this.back();
+            else if (this.sel) this.sel = null;
+          },
+          setCycle(slug) {
+            this.cycleSlug = slug;
+            this.doneOpen = false;
+          },
+
+          // ---- lookups (as in the main mockup) ----
+          cycle(slug) {
+            return this.cycles.find((c) => c.slug === slug);
+          },
+          get activeCycle() {
+            return this.cycles.find((c) => c.lifecycle === "active") || null;
+          },
+          get readyNow() {
+            return this.activeCycle ? this.col(this.activeCycle.slug, "ready") : [];
+          },
+          get currentCycle() {
+            return this.cycle(this.cycleSlug);
+          },
+          feature(slug) {
+            return DATA.features.find((f) => f.slug === slug);
+          },
+          sorted(list) {
+            return [...list].sort(
+              (a, b) => (PRI[a.priority] ?? 3) - (PRI[b.priority] ?? 3) || a.title.localeCompare(b.title),
+            );
+          },
+          inCycle(slug) {
+            return this.items.filter((i) => i.cycle === slug);
+          },
+          col(slug, lifecycle) {
+            return this.sorted(this.items.filter((i) => i.cycle === slug && i.lifecycle === lifecycle));
+          },
+          ofFeature(slug) {
+            return this.items.filter((i) => i.parent === slug);
+          },
+          isOpen(i) {
+            return !["done", "dropped"].includes(i.lifecycle);
+          },
+          bar(list) {
+            const total = list.length || 1;
+            return LIFECYCLES.map((l) => ({ l, n: list.filter((i) => i.lifecycle === l).length }))
+              .filter((s) => s.n)
+              .map((s) => ({ ...s, pct: (s.n / total) * 100 }));
+          },
+          openBlockers(i) {
+            return i.blockedBy.filter((b) => b.lifecycle !== "done" && b.lifecycle !== "dropped");
+          },
+          get started() {
+            return this.sorted(this.items.filter((i) => ["active", "review"].includes(i.lifecycle)));
+          },
+          get nowGroups() {
+            const key = this.nowBy === "cycle" ? "cycle" : "parent";
+            const out = [];
+            for (const i of this.started) {
+              const k = i[key] || "";
+              let g = out.find((x) => x.key === k);
+              if (!g) {
+                const label =
+                  this.nowBy === "cycle"
+                    ? k
+                      ? this.cycle(k)?.title || k
+                      : "In no cycle"
+                    : k
+                      ? this.feature(k)?.title || k
+                      : "In no feature";
+                out.push((g = { key: k, label, ref: k ? (this.nowBy === "cycle" ? "cycle/" : "feature/") + k : "", items: [] }));
+              }
+              g.items.push(i);
+            }
+            return out.sort((a, b) => (a.key ? 0 : 1) - (b.key ? 0 : 1));
+          },
+          get nowList() {
+            return [...this.nowGroups.flatMap((g) => g.items), ...this.readyNow];
+          },
+          get candidates() {
+            const q = this.cand.q.trim().toLowerCase();
+            return this.sorted(
+              this.items.filter(
+                (i) =>
+                  !i.cycle &&
+                  ["backlog", "ready"].includes(i.lifecycle) &&
+                  (this.cand.lifecycle === "all" || i.lifecycle === this.cand.lifecycle) &&
+                  (this.cand.feature === "all" ||
+                    (this.cand.feature === "none" ? !i.parent : i.parent === this.cand.feature)) &&
+                  (!q || (i.title + " " + i.slug).toLowerCase().includes(q)),
+              ),
+            ).sort((a, b) => (a.lifecycle === "ready" ? 0 : 1) - (b.lifecycle === "ready" ? 0 : 1));
+          },
+          get candidateTotal() {
+            return this.items.filter((i) => !i.cycle && ["backlog", "ready"].includes(i.lifecycle)).length;
+          },
+          get candidateCount() {
+            const n = this.candidates.length;
+            return n === this.candidateTotal ? String(n) : n + " of " + this.candidateTotal;
+          },
+          get inboxOpen() {
+            return this.inbox.filter((i) => !this.tri[i.slug].done);
+          },
+
+          // ---- the cycle as a grouped list (A, C) ----
+          // Started work first; empty groups are left out; done is last and folded.
+          get cycleGroups() {
+            const g = ["active", "review", "ready", "backlog"]
+              .map((l) => ({ l, items: this.col(this.cycleSlug, l), fold: false }))
+              .filter((x) => x.items.length);
+            const done = this.col(this.cycleSlug, "done");
+            if (done.length) g.push({ l: "done", items: done, fold: true });
+            return g;
+          },
+          get cycleList() {
+            return this.cycleGroups.flatMap((g) => g.items);
+          },
+          get cycleFinished() {
+            const all = this.inCycle(this.cycleSlug);
+            return all.filter((i) => !this.isOpen(i)).length + " of " + all.length + " finished";
+          },
+          get cycleWidth() {
+            if (this.layout === "b") return "";
+            return this.layout === "a" && this.adding ? "max-w-[1200px]" : "max-w-[900px]";
+          },
+          get rowWrites() {
+            return this.layout === "c" || (this.layout === "a" && this.adding);
+          },
+
+          // ---- the cycle as a board that fits (B) ----
+          // A column with no items is a rail. Done is a rail until opened, and
+          // while it is open the first other column with items folds to a rail.
+          get boardCols() {
+            const n = (l) => this.col(this.cycleSlug, l).length;
+            const doneOpen = this.doneOpen && n("done") > 0;
+            const others = ["backlog", "ready", "review", "active"].filter((l) => n(l));
+            const yielded = doneOpen && others.length > 1 ? others[0] : null;
+            return ["backlog", "ready", "active", "review", "done"].map((l) => ({
+              l,
+              n: n(l),
+              mode: !n(l) ? "empty" : l === yielded || (l === "done" && !doneOpen) ? "rail" : "full",
+            }));
+          },
+          toggleCol(l) {
+            this.doneOpen = l === "done";
+          },
+
+          // ---- attention (the main mockup's getter, unchanged) ----
+          get attention() {
+            const a = [];
+            const blocked = this.items.filter((i) => this.isOpen(i) && this.openBlockers(i).length);
+            const stale = this.items.filter(
+              (i) => this.isOpen(i) && i.blockedBy.length && !this.openBlockers(i).length,
+            );
+            const one = (list, what) => (list.length === 1 ? list[0].title : list.length + " items") + what;
+            if (this.inboxOpen.length)
+              a.push({
+                id: "triage",
+                label: "Waiting in triage",
+                n: this.inboxOpen.length,
+                desc: "Filed items nobody has decided on yet.",
+                go: "triage",
+                action: this.can.triage ? { label: "Triage" } : null,
+              });
+            const pc = this.cycle(DATA.plannedCycle);
+            if (pc && pc.lifecycle === "planned" && pc.status !== "stable")
+              a.push({
+                id: "planned-cycle",
+                label: "Planned cycle not reviewed",
+                n: 1,
+                desc: pc.title + " is still a draft proposal.",
+                go: "cycle",
+                cycle: pc.slug,
+                action: this.can.proposals ? { label: "Review plan" } : null,
+              });
+            if (blocked.length)
+              a.push({
+                id: "blocked",
+                tone: "rose",
+                label: "Blocked",
+                n: blocked.length,
+                desc: one(blocked, " waiting on unfinished work."),
+                item: blocked[0],
+              });
+            if (stale.length)
+              a.push({
+                id: "stale-blocker",
+                label: "Blocker already done",
+                n: stale.length,
+                desc: one(stale, " still listing a blocker that is finished."),
+                item: stale[0],
+              });
+            const draftStarted = this.started.filter((i) => i.status !== "stable");
+            if (draftStarted.length)
+              a.push({
+                id: "draft-started",
+                label: "Started on a draft",
+                n: draftStarted.length,
+                desc: one(draftStarted, " started before its document was reviewed."),
+                item: draftStarted[0],
+              });
+            if (DATA.unreviewed)
+              a.push({
+                id: "unreviewed",
+                label: "Finished, never reviewed",
+                n: DATA.unreviewed,
+                desc: "Done items whose documents were never marked reviewed.",
+                ask: "Audit the finished items that were never marked reviewed.",
+              });
+            const arch = DATA.advisories.find((x) => x.id === "archive-threshold");
+            if (arch)
+              a.push({
+                id: "archive",
+                label: "Finished, not archived",
+                n: parseInt(arch.message, 10),
+                desc: "Over the archive threshold of 25.",
+                ask: "The board says to archive: archive the finished items.",
+              });
+            return a;
+          },
+          get attentionOpen() {
+            return this.attention.filter((a) => !this.snoozed[a.id]);
+          },
+          get attentionSnoozed() {
+            return this.attention.filter((a) => this.snoozed[a.id]);
+          },
+          // A row's label opens what it refers to: a view, an item, or the line
+          // to say to the agent.
+          attend(a) {
+            if (a.go) {
+              this.go(a.go);
+              if (a.cycle) this.setCycle(a.cycle);
+            } else if (a.item) this.select(a.item, [a.item], this.layout === "c" ? "Now" : "Inbox");
+            else if (a.ask) {
+              this.closeTransient();
+              this.askAgent(a.ask);
+            }
+          },
+          act(a) {
+            if (a.id === "triage") this.go("triage");
+          },
+          snooze(a, choice) {
+            this.snoozed[a.id] = choice.id;
+            this.snoozeMenu = null;
+          },
+          wake(id) {
+            delete this.snoozed[id];
+            if (!Object.keys(this.snoozed).length) this.snoozedOpen = false;
+          },
+          snoozeLabel(id) {
+            const c = this.snoozeChoices.find((x) => x.id === this.snoozed[id]);
+            return c ? "Snoozed " + c.note : "";
+          },
+
+          // ---- one line of meta under a title (the main mockup's, unchanged) ----
+          meta(i, o = {}) {
+            const t = [];
+            const p = [];
+            const hot = ["high", "urgent"].includes(i.priority);
+            if (o.lifecycle) t.push(`<span class="lc"><span class="dot lc-${esc(i.lifecycle)}"></span>${esc(i.lifecycle)}</span>`);
+            t.push(`<span>${esc(i.kind)}</span>`);
+            if (!o.noPriority && i.priority && !hot) t.push(`<span>${esc(i.priority)}</span>`);
+            if (i.parent && !o.noParent) t.push(`<span class="mono">${esc(i.parent)}</span>`);
+            if (i.archived) t.push(`<span>archived</span>`);
+            if (i.added) t.push(`<span>added this session</span>`);
+            if (!o.noPriority && hot) p.push(`<span class="pill-high">${esc(i.priority)}</span>`);
+            if (i.status !== "stable") p.push(`<span class="pill-draft" title="status: ${esc(i.status)} — its content has not been reviewed">draft</span>`);
+            if (i.blockedBy.length) {
+              const open = this.openBlockers(i);
+              p.push(
+                open.length
+                  ? `<span class="pill-blocked" title="blocked by ${esc(open.map((b) => b.slug || b.id).join(", "))}">blocked</span>`
+                  : `<span class="pill-stale" title="every blocker is done">blocker done</span>`,
+              );
+            }
+            return `<span class="meta-text">${t.join("")}</span>` + p.join("");
+          },
+
+          // ---- handoff, asking, and the two membership writes ----
+          openDoc(path) {
+            this.handoff = path;
+            this.ask = null;
+          },
+          askAgent(text) {
+            this.ask = text;
+            this.handoff = null;
+          },
+          run(cmd) {
+            this.log.push(cmd);
+            this.ask = null;
+            this.handoff = null;
+          },
+          get lastCmd() {
+            return this.log[this.log.length - 1] || null;
+          },
+          canBring(i) {
+            return !i.cycle && ["backlog", "ready"].includes(i.lifecycle);
+          },
+          canTake(i) {
+            return !!i.cycle && this.isOpen(i);
+          },
+          memberCmd(i) {
+            return this.canBring(i)
+              ? `pdocs set item/${i.slug} --cycle ${this.cycleSlug}`
+              : `pdocs set item/${i.slug} --unset cycle`;
+          },
+          bringIn(i) {
+            i.cycle = this.cycleSlug;
+            i.added = true;
+            this.run(`pdocs set item/${i.slug} --cycle ${this.cycleSlug}`);
+          },
+          takeOut(i) {
+            i.cycle = null;
+            i.added = false;
+            this.run(`pdocs set item/${i.slug} --unset cycle`);
+          },
+
+          // =====================================================================
+          // LAYOUT D — Combined. Its own view state, sharing the data above.
+          // =====================================================================
+          dView: "now", // now · inbox · triage · cycle · feature · featurePage · about
+          dTab: "in", // cycle: in · cand
+          dCycle: DATA.activeCycle,
+          dFeature: null,
+          dSel: null, // key of the highlighted row: "i:<slug>", "t:<slug>" (triage) or "a:<attention id>"
+          dOpen: false, // the inspector shows the highlighted row's item
+          dMenu: false, // the cycle chooser under the cycle's title
+          dDoneOpen: false,
+          dDecidedOpen: false,
+          dAdded: [], // slugs brought in during this visit to the Cycle page
+          dPeek: null, // set when the Inbox sent you to another cycle: how to get back
+          dLast: null, // the last write: { label, cmd, note, undo }
+          dFlash: null,
+          dFlashTimer: null,
+          dCopied: false,
+          dNowBy: "cycle",
+
+          get dStateId() {
+            const v = this.dView;
+            if (v === "featurePage") return "feature";
+            if (v !== "cycle") return v;
+            if (this.dTab === "cand") return "candidates";
+            return this.dInspecting ? "selected" : "cycle";
+          },
+          dApply(id) {
+            this.snoozeMenu = null;
+            this.dMenu = false;
+            this.dSel = null;
+            this.dOpen = false;
+            this.dTab = "in";
+            this.dPeek = null;
+            this.dCycle = DATA.activeCycle;
+            this.dFeature = null;
+            this.dDoneOpen = false;
+            this.dAdded = [];
+            if (id === "selected") {
+              this.dView = "cycle";
+              const first = this.dList.find((r) => r.item.lifecycle === "active") || this.dList[0];
+              if (first) this.dPick(first.key);
+            } else if (id === "candidates") {
+              this.dView = "cycle";
+              this.dTab = "cand";
+            } else this.dView = id;
+            this.dTop();
+          },
+          dTop() {
+            this.$nextTick(() => {
+              if (this.$refs.dScroll) this.$refs.dScroll.scrollTop = 0;
+            });
+          },
+          // The nav. Leaving a cycle the Inbox sent you to puts the Cycle page
+          // back on the cycle it showed before.
+          dGo(v) {
+            this.snoozeMenu = null;
+            this.dMenu = false;
+            if (this.dPeek) {
+              this.dCycle = this.dPeek.prev;
+              this.dPeek = null;
+            }
+            this.dView = v;
+            this.dTab = "in";
+            this.dSel = null;
+            this.dOpen = false;
+            this.dAdded = [];
+            this.dFeature = null;
+            this.dTop();
+          },
+          dNavOn(v) {
+            return v === "feature" ? this.dView === "feature" || this.dView === "featurePage" : this.dView === v;
+          },
+          get dTitle() {
+            return { now: "Now", inbox: "Inbox", triage: "Triage", feature: "Features", about: "About this layout" }[this.dView] || "";
+          },
+          get dIsBox() {
+            return this.dView === "cycle" || this.dView === "featurePage";
+          },
+
+          // ---- the container page: one template for a cycle and a feature ----
+          get dCycleItems() {
+            return this.items.filter((i) => i.cycle === this.dCycle);
+          },
+          dSummary(list) {
+            return list.filter((i) => !this.isOpen(i)).length + " of " + list.length + " finished";
+          },
+          get dBox() {
+            if (this.dView === "featurePage" && this.dFeature) {
+              const f = this.feature(this.dFeature);
+              const its = this.ofFeature(f.slug);
+              return {
+                title: f.title,
+                lifecycle: f.lifecycle,
+                summary: (its.length ? this.dSummary(its) : "No items yet") + (f.status !== "stable" ? " · draft" : ""),
+                noteLabel: "",
+                note: f.description,
+                items: its,
+                back: "Features",
+              };
+            }
+            const c = this.cycle(this.dCycle);
+            const its = this.dCycleItems;
+            return {
+              title: c.title,
+              lifecycle: c.lifecycle,
+              summary: this.dSummary(its) + " · " + (c.lifecycle === "active" ? "started " + c.started : c.lifecycle) + (c.status !== "stable" ? " · draft" : ""),
+              noteLabel: "Appetite. ",
+              note: c.appetite,
+              items: its,
+              back: this.dPeek ? this.dPeek.label : null,
+            };
+          },
+          // Green leads, then finished, then what has not started.
+          dBar(list) {
+            const total = list.length || 1;
+            return ["active", "review", "done", "ready", "backlog", "triage", "dropped"]
+              .map((l) => ({ l, n: list.filter((i) => i.lifecycle === l).length }))
+              .filter((s) => s.n)
+              .map((s) => ({ ...s, pct: (s.n / total) * 100 }));
+          },
+          // Empty groups are left out. Items brought in during this visit sit in
+          // their own group at the top. Done is last, one folded line.
+          get dGroups() {
+            const added = this.dView === "cycle" ? this.dAdded.filter((s) => this.items.some((i) => i.slug === s && i.cycle === this.dCycle)) : [];
+            const rest = this.dBox.items.filter((i) => !added.includes(i.slug));
+            const g = [];
+            if (added.length) g.push({ l: "added", label: "Added just now", items: added.map((s) => this.items.find((i) => i.slug === s)) });
+            for (const l of ["active", "review", "ready", "backlog", "triage"]) {
+              const items = this.sorted(rest.filter((i) => i.lifecycle === l));
+              if (items.length) g.push({ l, label: l, items });
+            }
+            const done = this.sorted(rest.filter((i) => i.lifecycle === "done"));
+            if (done.length) g.push({ l: "done", label: "done", items: done, fold: true });
+            return g;
+          },
+          get dNowGroups() {
+            const by = this.dNowBy === "cycle" ? "cycle" : "parent";
+            const out = [];
+            for (const i of this.started) {
+              const k = i[by] || "";
+              let g = out.find((x) => x.key === k);
+              if (!g) {
+                const label =
+                  this.dNowBy === "cycle"
+                    ? k
+                      ? this.activeCycle && k === this.activeCycle.slug
+                        ? "In this cycle"
+                        : this.cycle(k)?.title || k
+                      : "In no cycle"
+                    : k
+                      ? this.feature(k)?.title || k
+                      : "In no feature";
+                out.push((g = { key: k, label, items: [] }));
+              }
+              g.items.push(i);
+            }
+            return out.sort((a, b) => (a.key ? 0 : 1) - (b.key ? 0 : 1));
+          },
+          get dDecided() {
+            return this.inbox.filter((i) => this.tri[i.slug].done);
+          },
+
+          // ---- Inbox: two groups, one stated behaviour per row ----
+          get dInboxRows() {
+            const order = ["triage", "planned-cycle", "blocked", "draft-started", "stale-blocker"];
+            return this.attentionOpen
+              .map((a) => ({
+                ...a,
+                group: order.includes(a.id) ? "decision" : "housekeeping",
+                does: a.id === "triage" ? "Go to Triage →" : a.id === "planned-cycle" ? "Go to the planned cycle →" : a.item ? "Show item" : null,
+              }))
+              .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id) || 0);
+          },
+          get dInboxGroups() {
+            const rows = this.dInboxRows;
+            return [
+              { id: "decision", label: "Needs a decision", rows: rows.filter((a) => a.group === "decision") },
+              { id: "housekeeping", label: "Housekeeping", rows: rows.filter((a) => a.group === "housekeeping").sort((a, b) => 0) },
+            ].filter((g) => g.rows.length);
+          },
+          get dInboxCount() {
+            return this.dInboxRows.filter((a) => a.group === "decision").length;
+          },
+          dAttend(a) {
+            this.snoozeMenu = null;
+            if (a.id === "triage") this.dGo("triage");
+            else if (a.id === "planned-cycle") {
+              // Shows the planned cycle without changing which cycle the Cycle
+              // page is on: the back link, or leaving, restores it.
+              const prev = this.dCycle;
+              this.dGo("cycle");
+              this.dPeek = { prev, label: "Inbox" };
+              this.dCycle = a.cycle;
+            } else if (a.item) this.dPick("a:" + a.id);
+          },
+          dBack() {
+            if (this.dView === "featurePage") {
+              this.dView = "feature";
+              this.dFeature = null;
+              this.dSel = null;
+              this.dOpen = false;
+              this.dTop();
+            } else if (this.dPeek) this.dGo("inbox");
+          },
+          dOpenFeature(slug) {
+            this.dFeature = slug;
+            this.dView = "featurePage";
+            this.dSel = null;
+            this.dOpen = false;
+            this.dTop();
+          },
+
+          // ---- selection: one current list, a highlighted row, and the inspector ----
+          get dList() {
+            const v = this.dView;
+            const rows = (list, p) => list.map((i) => ({ key: p + i.slug, item: i }));
+            if (v === "now") return rows(this.dNowGroups.flatMap((g) => g.items), "i:");
+            if (v === "cycle" && this.dTab === "cand") return rows(this.candidates, "i:");
+            if (v === "cycle" || v === "featurePage") return rows(this.dGroups.filter((g) => !g.fold || this.dDoneOpen).flatMap((g) => g.items), "i:");
+            if (v === "triage") return rows(this.inboxOpen, "t:");
+            if (v === "inbox") return this.dInboxRows.filter((a) => a.item).map((a) => ({ key: "a:" + a.id, item: a.item }));
+            return [];
+          },
+          get dIndex() {
+            return this.dList.findIndex((r) => r.key === this.dSel);
+          },
+          // Only ever an item whose row is in the current list, so the inspector
+          // can never show something with no highlighted row.
+          get dSelected() {
+            const r = this.dList[this.dIndex];
+            return r ? r.item : null;
+          },
+          get dInspecting() {
+            return this.dOpen && !!this.dSelected;
+          },
+          get dTri() {
+            return this.dSel && this.dSel.startsWith("t:") && this.dSelected ? this.tri[this.dSelected.slug] : null;
+          },
+          dPick(key) {
+            this.snoozeMenu = null;
+            this.dMenu = false;
+            this.dSel = key;
+            this.dOpen = true;
+            this.dCopied = false;
+          },
+          dMove(n) {
+            const L = this.dList;
+            if (!L.length) return;
+            let i = this.dIndex;
+            i = i < 0 ? (n > 0 ? 0 : L.length - 1) : Math.min(L.length - 1, Math.max(0, i + n));
+            this.dSel = L[i].key;
+            this.dCopied = false;
+            this.dFocus();
+          },
+          // Keep the highlighted row in view and give it the keyboard focus, so
+          // Enter acts on it. With `soft`, only when focus has nowhere else to be.
+          dFocus(soft) {
+            this.$nextTick(() => {
+              const a = document.activeElement;
+              if (soft && a && a !== document.body && a.isConnected && a.offsetParent) return;
+              const el = [...document.querySelectorAll("[data-d] [data-key]")].find((e) => e.dataset.key === this.dSel && e.offsetParent);
+              if (!el) return;
+              el.scrollIntoView({ block: "nearest" });
+              const f = el.querySelector("[data-d-focus]");
+              if (f) f.focus({ preventScroll: true });
+            });
+          },
+          // Run a change. If it took the highlighted row out of the list, the
+          // highlight lands on the row that took its place, or the inspector closes.
+          dLeave(fn) {
+            const idx = this.dIndex;
+            fn();
+            if (idx < 0) return;
+            const L = this.dList;
+            if (L.some((r) => r.key === this.dSel)) return;
+            if (L.length) {
+              this.dSel = L[Math.min(idx, L.length - 1)].key;
+              this.dFocus(true);
+            } else {
+              this.dSel = null;
+              this.dOpen = false;
+            }
+          },
+          // Escape unwinds one thing at a time: a menu, then the inspector.
+          dEscape() {
+            if (this.snoozeMenu) this.snoozeMenu = null;
+            else if (this.dMenu) this.dMenu = false;
+            else if (this.dOpen) {
+              this.dOpen = false;
+              this.dFocus();
+            }
+          },
+          dKeydown(e) {
+            if (this.layout !== "d" || e.metaKey || e.ctrlKey || e.altKey) return;
+            const tag = e.target.tagName;
+            if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+            const k = e.key;
+            if (k === "ArrowDown" || k === "j") {
+              e.preventDefault();
+              this.dMove(1);
+            } else if (k === "ArrowUp" || k === "k") {
+              e.preventDefault();
+              this.dMove(-1);
+            } else if (k === "Enter" && tag !== "BUTTON" && this.dSelected) this.dOpen = true;
+            else if (k === "b" && this.dSelected && this.canBring(this.dSelected)) this.dBring(this.dSelected);
+            else if (k === "t" && this.dInspecting && this.canTake(this.dSelected)) this.dTake(this.dSelected);
+          },
+          dSetCycle(slug) {
+            this.dMenu = false;
+            this.dPeek = null; // chosen on purpose: it is now the Cycle page's cycle
+            this.dLeave(() => (this.dCycle = slug));
+            this.dTop();
+          },
+          dSetTab(t) {
+            this.dTab = t;
+            this.dSel = null;
+            this.dOpen = false;
+            this.dTop();
+          },
+          dToggleDone() {
+            this.dLeave(() => (this.dDoneOpen = !this.dDoneOpen));
+          },
+
+          // ---- rendering ----
+          // One line of plain meta. Pills only for high and blocked; draft and
+          // "blocker done" are plain words. Feature slugs are sans.
+          dMeta(i, o = {}) {
+            const t = [];
+            const p = [];
+            const hot = ["high", "urgent"].includes(i.priority);
+            if (o.lifecycle) t.push(`<span class="lc !text-slate-400"><span class="dot lc-${esc(i.lifecycle)}"></span>${esc(i.lifecycle)}</span>`);
+            if (o.review && i.lifecycle === "review") t.push(`<span class="lc !text-slate-400"><span class="dot lc-review"></span>in review</span>`);
+            t.push(`<span>${esc(i.kind)}</span>`);
+            if (i.priority && !hot) t.push(`<span>${esc(i.priority)}</span>`);
+            if (i.parent && !o.noParent) t.push(`<span>${br(i.parent)}</span>`);
+            if (i.status !== "stable") t.push(`<span title="status: ${esc(i.status)} — its content has not been reviewed">draft</span>`);
+            if (i.blockedBy.length && !this.openBlockers(i).length) t.push(`<span title="every blocker is done">blocker done</span>`);
+            if (hot) p.push(`<span class="pill-high">${esc(i.priority)}</span>`);
+            if (this.openBlockers(i).length) p.push(`<span class="pill-blocked">blocked</span>`);
+            return `<span class="meta-text ${o.nowrap ? "!flex-nowrap whitespace-nowrap" : ""}">${t.join("")}</span>` + p.join("");
+          },
+          // The inspector's fields. Empty ones are left out; priority and status
+          // are already in the meta line; path and id sit behind Copy path.
+          dFields(i) {
+            const f = [];
+            if (i.cycle) f.push(["cycle", `<span class="mono">${br(i.cycle)}</span>`]);
+            if (i.parent) f.push(["feature", br(i.parent)]);
+            if (i.source) f.push(["source", `<span class="mono">${br(i.source)}</span>`]);
+            if (i.from) f.push(["from", `<span class="mono">${br(i.from)}</span>`]);
+            f.push(["filed", `<span class="mono">${esc(i.filed)}</span>`]);
+            if (i.blockedBy.length)
+              f.push([
+                "blocked by",
+                i.blockedBy
+                  .map((b) => `<span class="lc !text-slate-200 !whitespace-normal"><span class="dot lc-${esc(b.lifecycle || "backlog")}"></span><span>${br(b.slug || b.id)} <span class="text-slate-400">${esc(b.lifecycle || "unknown")}</span></span></span>`)
+                  .join(""),
+              ]);
+            return f;
+          },
+          dCopy(i) {
+            try {
+              navigator.clipboard?.writeText(i.path)?.catch(() => {});
+            } catch (e) {}
+            this.dCopied = true;
+          },
+
+          // ---- writes: the command that ran, an Undo, and where it landed ----
+          // (In markup, test `!!dLast.undo`: Alpine calls an expression that
+          // evaluates to a function.)
+          dRan(cmd, undo, note) {
+            this.log.push(cmd);
+            this.dLast = { label: "ran", cmd, note: note || "", undo };
+          },
+          dUndo() {
+            const u = this.dLast;
+            if (!u || !u.undo) return;
+            let cmd;
+            this.dLeave(() => (cmd = u.undo()));
+            this.log.push(cmd);
+            this.dLast = { label: "undone with", cmd, note: "", undo: null };
+          },
+          // Highlight the row if it is in view, else the tab it went to.
+          dLand(slug, tab) {
+            const key = this.dList.some((r) => r.key === "i:" + slug) ? "i:" + slug : this.dView === "cycle" ? "tab:" + tab : null;
+            this.dFlashOn(key);
+          },
+          dFlashOn(key) {
+            clearTimeout(this.dFlashTimer);
+            this.dFlash = null;
+            this.$nextTick(() => {
+              this.dFlash = key;
+              this.dFlashTimer = setTimeout(() => (this.dFlash = null), 1700);
+            });
+          },
+          dBring(i) {
+            const slug = i.slug;
+            const c = this.dCycle;
+            this.dLeave(() => {
+              i.cycle = c;
+              if (!this.dAdded.includes(slug)) this.dAdded.push(slug);
+            });
+            this.dRan(`pdocs set item/${slug} --cycle ${c}`, () => {
+              i.cycle = null;
+              this.dAdded = this.dAdded.filter((s) => s !== slug);
+              this.dLand(slug, "cand");
+              return `pdocs set item/${slug} --unset cycle`;
+            });
+            this.dLand(slug, "in");
+          },
+          dTake(i) {
+            const slug = i.slug;
+            const c = i.cycle;
+            this.dLeave(() => {
+              i.cycle = null;
+              this.dAdded = this.dAdded.filter((s) => s !== slug);
+            });
+            this.dRan(`pdocs set item/${slug} --unset cycle`, () => {
+              i.cycle = c;
+              this.dLand(slug, "in");
+              return `pdocs set item/${slug} --cycle ${c}`;
+            });
+            this.dLand(slug, "cand");
+          },
+          dTriCmd(i) {
+            const f = this.tri[i.slug];
+            if (f.disp === "drop") return `pdocs set item/${i.slug} --lifecycle dropped`;
+            return `pdocs set item/${i.slug} --lifecycle ${f.disp}` + (f.priority ? ` --priority ${f.priority}` : "") + (f.parent ? ` --parent feature/${f.parent}` : "");
+          },
+          // Apply the decision. The item leaves the queue, so the selection
+          // advances to the next waiting item.
+          dApplyTriage(i) {
+            const f = this.tri[i.slug];
+            const cmd = this.dTriCmd(i);
+            const label =
+              f.disp === "drop"
+                ? "dropped" + (f.reason ? " · " + f.reason : "")
+                : "accepted to " + f.disp + (f.priority ? " · " + f.priority : "") + (f.parent ? " · " + f.parent : "");
+            this.dLeave(() => (f.done = { cmd, label, lifecycle: f.disp === "drop" ? "dropped" : f.disp }));
+            this.dRan(
+              cmd,
+              () => {
+                f.done = null;
+                this.dFlashOn("t:" + i.slug);
+                return `pdocs set item/${i.slug} --lifecycle triage`;
+              },
+              f.disp === "drop" && f.reason ? "reason for the agent to record: “" + f.reason + "”" : "",
+            );
+            this.dFlashOn("decided");
+          },
+          dHandoff(i) {
+            this.dLast = { label: "opens in Scriptorium:", cmd: "open, then show --doc " + i.path, note: "", undo: null };
+          },
+        }));
+      });
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  </head>
+
+  <body class="bg-slate-950 text-slate-200 h-screen overflow-hidden">
+    <div x-data="board" class="h-screen flex flex-col" @keydown.escape.window="escape()">
+      <!-- ============ SWITCHER — amber prototype chrome. Row 1: layout. Row 2: state. ============ -->
+      <div data-proto class="shrink-0 z-50 bg-[#2a1a08] border-b border-amber-800/40">
+        <div class="px-4 pt-2 pb-0 flex items-center gap-1">
+          <span class="section-title !text-amber-500 pr-2">Layout</span>
+          <template x-for="g in groups" :key="g.id">
+            <button
+              @click="selectLayout(g.id)"
+              :data-layout="g.id"
+              :class="layout === g.id
+                ? 'bg-amber-700/60 text-amber-100 border-amber-600/60'
+                : 'text-amber-400/80 border-transparent hover:text-amber-300 hover:bg-amber-800/30'"
+              class="text-xs px-3 py-1.5 rounded-t border border-b-0 font-medium transition-colors whitespace-nowrap"
+              x-text="g.label"
+            ></button>
+          </template>
+          <span class="ml-auto text-[11px] text-amber-400/80 truncate min-w-0 pl-2">Layouts differ in where things sit, not in what they do or how they look. All four are the “In between” version.</span>
+        </div>
+        <div class="px-4 py-1.5 flex items-center gap-1.5 bg-amber-900/30">
+          <template x-for="s in states" :key="s.id">
+            <button
+              @click="applyState(s.id)"
+              :data-state="s.id"
+              :class="stateId === s.id
+                ? 'bg-amber-600 text-white border-amber-600'
+                : 'bg-slate-800 text-slate-300 border-slate-600 hover:border-slate-400 hover:text-slate-100'"
+              class="text-xs px-2.5 py-1 rounded border font-medium transition-colors whitespace-nowrap"
+              x-text="s.label"
+            ></button>
+          </template>
+          <button @click="reset()" data-reset class="ml-auto text-xs px-2.5 py-1 rounded border border-amber-700/60 text-amber-300 hover:bg-amber-800/30 whitespace-nowrap" title="Restores the snapshot and clears every snooze">Reset data</button>
+        </div>
+      </div>
+
+      <!-- ============ APP SHELL: nav · centre · (A, B) inspector ============ -->
+      <div x-show="layout !== 'd'" class="flex flex-1 min-h-0">
+        <!-- Left: navigation. Its one job: where you are. -->
+        <aside class="w-48 shrink-0 border-r border-slate-800 flex flex-col" data-nav>
+          <div class="px-4 h-14 shrink-0 border-b border-slate-800 flex flex-col justify-center">
+            <div class="text-sm leading-5 font-semibold text-slate-100">Work board</div>
+            <div class="text-mono" x-text="data.project"></div>
+          </div>
+          <nav class="p-2 space-y-1">
+            <button @click="go('now')" data-nav-item="now" class="nav-item" :class="navOn('now') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="activity" class="w-4 h-4 pointer-events-none"></i><span>Now</span>
+              <span class="count ml-auto" x-text="started.length"></span>
+            </button>
+            <button x-show="layout === 'a'" @click="go('inbox')" data-nav-item="inbox" class="nav-item" :class="navOn('inbox') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="inbox" class="w-4 h-4 pointer-events-none"></i><span>Inbox</span>
+              <span class="count ml-auto" x-text="attentionOpen.length"></span>
+            </button>
+            <button @click="go('triage')" data-nav-item="triage" class="nav-item" :class="navOn('triage') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="list-checks" class="w-4 h-4 pointer-events-none"></i><span>Triage</span>
+              <span class="count ml-auto" x-text="inboxOpen.length"></span>
+            </button>
+            <button @click="go('cycle')" data-nav-item="cycle" class="nav-item" :class="navOn('cycle') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="columns-3" class="w-4 h-4 pointer-events-none"></i><span>Cycle</span>
+              <span class="count ml-auto" x-text="cycles.filter(c => ['active','planned'].includes(c.lifecycle)).length"></span>
+            </button>
+            <button @click="go('feature')" data-nav-item="feature" class="nav-item" :class="navOn('feature') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="layers" class="w-4 h-4 pointer-events-none"></i><span>Feature</span>
+              <span class="count ml-auto" x-text="data.features.length"></span>
+            </button>
+          </nav>
+          <div class="mt-auto p-4 border-t border-slate-800 space-y-3">
+            <div class="text-xs leading-5 text-slate-400">
+              Snapshot of <code>docs/</code> taken <span x-text="data.snapshot"></span>. Not live.
+            </div>
+            <button @click="go('about')" class="text-xs leading-5 link text-left">About this layout</button>
+          </div>
+        </aside>
+
+        <!-- Centre: the work. Nothing is ever drawn over it except B's attention popover. -->
+        <main class="flex-1 min-w-0 flex flex-col" data-centre>
+          <header class="px-8 h-14 shrink-0 border-b border-slate-800 flex items-center gap-4">
+            <h1 class="page-title whitespace-nowrap" x-text="viewTitle"></h1>
+
+            <!-- B: attention is a count in the top bar, with an anchored popover -->
+            <div x-show="layout === 'b'" x-cloak class="relative" @click.outside="if (!$event.target.closest('[data-proto]')) attnOpen = false">
+              <button data-attn-button class="btn-outline" :class="attnOpen && 'bg-slate-800'" :aria-expanded="attnOpen" @click="attnOpen = !attnOpen; snoozeMenu = null" title="What needs you" aria-label="What needs you">
+                <i data-lucide="bell" class="w-3 h-3 pointer-events-none"></i><span class="mono" x-text="attentionOpen.length"></span>
+              </button>
+              <div x-show="attnOpen" x-cloak class="popover" data-attn-popover>
+                <div class="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                  <div class="text-sm leading-5 font-semibold text-slate-100">Needs you</div>
+                  <span class="count" x-text="attentionOpen.length"></span>
+                </div>
+                <div x-show="!attentionOpen.length" class="px-4 py-4 text-sm leading-6 text-slate-400">Nothing needs you right now.</div>
+                <template x-for="a in attentionOpen" :key="a.id">
+                  <div class="attn-line px-4" :data-attn="a.id">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="dot bg-rose-400" x-show="a.tone === 'rose'"></span>
+                        <button class="wb-title" data-attn-open @click="attend(a)" x-text="a.label"></button>
+                        <span class="count" x-text="a.n"></span>
+                      </div>
+                      <div class="text-faint truncate" x-text="a.desc" :title="a.desc"></div>
+                    </div>
+                    <button x-show="a.action" data-attn-action class="btn-outline shrink-0" @click="act(a)" x-text="a.action ? a.action.label : ''"></button>
+                    <div class="relative shrink-0" @click.outside="if (snoozeMenu === a.id) snoozeMenu = null">
+                      <button data-attn-snooze class="btn-text" @click="snoozeMenu = snoozeMenu === a.id ? null : a.id" :aria-expanded="snoozeMenu === a.id">Snooze</button>
+                      <div x-show="snoozeMenu === a.id" x-cloak class="menu menu-right">
+                        <template x-for="c in snoozeChoices" :key="c.id">
+                          <button class="menu-item" data-snooze-choice @click="snooze(a, c)" x-text="c.label"></button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="attentionSnoozed.length" data-snoozed>
+                  <button class="w-full flex items-center gap-2 px-4 py-2 text-xs leading-5 text-slate-400 hover:text-slate-100 transition-colors" data-snoozed-toggle @click="snoozedOpen = !snoozedOpen" :aria-expanded="snoozedOpen">
+                    <span x-text="'Snoozed (' + attentionSnoozed.length + ')'"></span>
+                    <span class="ml-auto" x-text="snoozedOpen ? 'Hide' : 'Show'"></span>
+                  </button>
+                  <div x-show="snoozedOpen" class="px-4 pb-3 grid gap-2">
+                    <template x-for="a in attentionSnoozed" :key="a.id">
+                      <div class="flex items-center gap-3">
+                        <div class="flex-1 min-w-0 text-xs leading-5 text-slate-400 truncate"><span class="text-slate-300" x-text="a.label"></span> <span class="mono" x-text="a.n"></span> · <span x-text="snoozeLabel(a.id)"></span></div>
+                        <button data-attn-wake class="btn-ghost shrink-0" @click="wake(a.id)">Wake</button>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <span class="ml-auto text-faint truncate min-w-0">no watch mode: polls <code>pdocs view</code> every few seconds</span>
+          </header>
+
+          <div x-ref="centre" data-scroll class="flex-1 min-h-0 overflow-y-auto scroll-y px-8 py-8">
+            <!-- ================= INBOX (A: its own page · C: first section of Now) ================= -->
+            <section x-show="(layout === 'a' && view === 'inbox') || (layout === 'c' && view === 'now')" x-cloak class="max-w-[900px]" :class="view === 'now' && 'pb-8'" data-attn-list>
+              <div class="flex items-center gap-3 pb-2">
+                <div class="section-title" x-text="layout === 'c' ? 'Inbox' : 'Needs you'"></div>
+                <span class="count" x-text="attentionOpen.length"></span>
+              </div>
+              <div class="rows">
+                <div x-show="!attentionOpen.length" class="text-sm leading-6 text-slate-400 py-3 border-b border-slate-800">Nothing needs you right now.</div>
+                <template x-for="a in attentionOpen" :key="a.id">
+                  <div class="attn-line" :data-attn="a.id">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="dot bg-rose-400" x-show="a.tone === 'rose'"></span>
+                        <button class="wb-title" data-attn-open @click="attend(a)" x-text="a.label"></button>
+                        <span class="count" x-text="a.n"></span>
+                      </div>
+                      <div class="text-faint truncate" x-text="a.desc" :title="a.desc"></div>
+                    </div>
+                    <button x-show="a.action" data-attn-action class="btn-outline shrink-0" @click="act(a)" x-text="a.action ? a.action.label : ''"></button>
+                    <div class="relative shrink-0" @click.outside="if (snoozeMenu === a.id) snoozeMenu = null">
+                      <button data-attn-snooze class="btn-text" @click="snoozeMenu = snoozeMenu === a.id ? null : a.id" :aria-expanded="snoozeMenu === a.id">Snooze</button>
+                      <div x-show="snoozeMenu === a.id" x-cloak class="menu menu-right">
+                        <template x-for="c in snoozeChoices" :key="c.id">
+                          <button class="menu-item" data-snooze-choice @click="snooze(a, c)" x-text="c.label"></button>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+              <div x-show="attentionSnoozed.length" data-snoozed>
+                <button class="w-full flex items-center gap-2 py-2 text-xs leading-5 text-slate-400 hover:text-slate-100 transition-colors" data-snoozed-toggle @click="snoozedOpen = !snoozedOpen" :aria-expanded="snoozedOpen">
+                  <span x-text="'Snoozed (' + attentionSnoozed.length + ')'"></span>
+                  <span x-text="snoozedOpen ? 'Hide' : 'Show'"></span>
+                </button>
+                <div x-show="snoozedOpen" class="grid gap-2 pb-2">
+                  <template x-for="a in attentionSnoozed" :key="a.id">
+                    <div class="flex items-center gap-3">
+                      <div class="flex-1 min-w-0 text-xs leading-5 text-slate-400 truncate"><span class="text-slate-300" x-text="a.label"></span> <span class="mono" x-text="a.n"></span> · <span x-text="snoozeLabel(a.id)"></span></div>
+                      <button data-attn-wake class="btn-ghost shrink-0" @click="wake(a.id)">Wake</button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <div x-show="layout === 'a'" class="text-faint pt-3">Snooze hides a row on this board only. It never writes to the docs.</div>
+            </section>
+
+            <!-- ================= NOW ================= -->
+            <section x-show="view === 'now'" x-cloak class="max-w-[900px] space-y-8">
+              <div>
+                <template x-if="activeCycle">
+                  <div class="space-y-3">
+                    <div class="flex items-baseline gap-3">
+                      <div class="section-title">Active cycle</div>
+                      <span class="count ml-auto" x-text="inCycle(activeCycle.slug).length + ' items'"></span>
+                    </div>
+                    <button class="wb-title !text-base !leading-6 !font-semibold" @click="go('cycle'); setCycle(activeCycle.slug)" x-text="activeCycle.title"></button>
+                    <div class="bar">
+                      <template x-for="s in bar(inCycle(activeCycle.slug))" :key="s.l">
+                        <div :class="'lc-' + s.l" :style="'width:' + s.pct + '%'" :title="s.n + ' ' + s.l"></div>
+                      </template>
+                    </div>
+                    <div class="meta gap-x-4">
+                      <template x-for="s in bar(inCycle(activeCycle.slug))" :key="s.l">
+                        <span class="lc !text-slate-400"><span class="dot" :class="'lc-' + s.l"></span><span x-text="s.n + ' ' + s.l"></span></span>
+                      </template>
+                    </div>
+                    <p class="text-sm leading-6 text-slate-400"><span class="text-slate-300">Appetite.</span> <span x-text="activeCycle.appetite"></span></p>
+                  </div>
+                </template>
+              </div>
+
+              <div>
+                <div class="flex items-center gap-3 pb-3">
+                  <div class="section-title">Active and in review</div>
+                  <span class="count" x-text="started.length"></span>
+                  <div class="ml-auto flex gap-1">
+                    <button class="seg" :class="nowBy === 'cycle' && 'seg-on'" @click="nowBy = 'cycle'">by cycle</button>
+                    <button class="seg" :class="nowBy === 'feature' && 'seg-on'" @click="nowBy = 'feature'">by feature</button>
+                  </div>
+                </div>
+                <div x-show="!started.length" class="empty rule-t">Nothing is active or in review.</div>
+                <div class="grid gap-8">
+                  <template x-for="g in nowGroups" :key="g.key">
+                    <div>
+                      <div class="group-head">
+                        <span class="font-medium text-slate-300" x-text="g.label"></span>
+                        <span class="mono text-slate-400 truncate min-w-0" x-text="g.ref"></span>
+                        <span class="count ml-auto" x-text="g.items.length"></span>
+                      </div>
+                      <div class="rows">
+                        <template x-for="i in g.items" :key="i.slug">
+                          <div class="wb-row" :class="sel === i.slug && 'is-selected'" :data-item="i.slug">
+                            <div class="flex-1 min-w-0 space-y-1">
+                              <button class="wb-title" data-item-open @click="select(i, nowList, 'Now')" x-text="i.title"></button>
+                              <div class="meta" x-html="meta(i, { lifecycle: true })"></div>
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <div x-show="readyNow.length">
+                <div class="flex items-center gap-3 pb-2">
+                  <div class="section-title">Ready in the active cycle</div>
+                  <span class="count" x-text="readyNow.length"></span>
+                </div>
+                <div class="rows">
+                  <template x-for="i in readyNow" :key="i.slug">
+                    <div class="wb-row" :class="sel === i.slug && 'is-selected'" :data-item="i.slug">
+                      <div class="flex-1 min-w-0 space-y-1">
+                        <button class="wb-title" data-item-open @click="select(i, nowList, 'Now')" x-text="i.title"></button>
+                        <div class="meta" x-html="meta(i)"></div>
+                      </div>
+                      <span class="text-mono shrink-0" x-text="i.source || ''"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </section>
+
+            <!-- ================= TRIAGE and FEATURE: placeholders ================= -->
+            <section x-show="view === 'triage'" x-cloak class="max-w-[900px] rule-t py-12 space-y-2">
+              <div class="text-sm leading-6 text-slate-200">Triage is unchanged from the main mockup.</div>
+              <div class="text-sm leading-6 text-slate-400 max-w-2xl">It is a single list in the centre in all three layouts: each waiting item with its description, a disposition, and Apply. <span x-text="inboxOpen.length"></span> sample items are waiting. See <code>work-board-mockup.html</code>, “In between”, state 2.</div>
+            </section>
+            <section x-show="view === 'feature'" x-cloak class="max-w-[900px] rule-t py-12 space-y-2">
+              <div class="text-sm leading-6 text-slate-200">Feature is unchanged from the main mockup.</div>
+              <div class="text-sm leading-6 text-slate-400 max-w-2xl">A feature list and one feature's items grouped by state, for the <span x-text="data.features.length"></span> open features. See <code>work-board-mockup.html</code>, “In between”, state 4.</div>
+            </section>
+
+            <!-- ================= CYCLE: the quiet header, shared by all three ================= -->
+            <section x-show="view === 'cycle'" x-cloak class="space-y-3 pb-8" :class="cycleWidth" data-cycle-head>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <button class="wb-title !text-base !leading-6 !font-semibold" @click="openDoc(currentCycle.path)" x-text="currentCycle.title"></button>
+                <span x-show="currentCycle.status !== 'stable'" class="pill-draft">draft</span>
+                <div class="ml-auto flex items-center gap-1">
+                  <template x-for="c in cycles" :key="c.slug">
+                    <button class="seg flex items-center gap-2" :class="cycleSlug === c.slug && 'seg-on'" :data-cycle="c.lifecycle" :title="c.title" @click="setCycle(c.slug)">
+                      <span class="dot" :class="'lc-' + c.lifecycle"></span><span x-text="c.lifecycle"></span>
+                    </button>
+                  </template>
+                  <button x-show="layout === 'a' && !adding" data-add class="btn-outline ml-3" @click="adding = true">
+                    <i data-lucide="plus" class="w-3 h-3 pointer-events-none"></i>Add items
+                  </button>
+                  <button x-show="layout === 'a' && adding" data-add-done class="btn-primary ml-3" @click="adding = false">Done</button>
+                </div>
+              </div>
+              <div class="bar">
+                <template x-for="s in bar(inCycle(cycleSlug))" :key="s.l">
+                  <div :class="'lc-' + s.l" :style="'width:' + s.pct + '%'" :title="s.n + ' ' + s.l"></div>
+                </template>
+              </div>
+              <div class="text-faint"><span x-text="cycleFinished"></span> · closes on scope, not a date · <span class="mono" x-text="'started ' + currentCycle.started"></span></div>
+              <p class="text-sm leading-6 text-slate-400"><span class="text-slate-300">Appetite.</span> <span x-text="currentCycle.appetite"></span></p>
+            </section>
+
+            <!-- ================= CYCLE as a grouped list (A, C) ================= -->
+            <section x-show="view === 'cycle' && layout !== 'b'" x-cloak :class="cycleWidth">
+              <!-- C: two tabs inside the view -->
+              <div x-show="layout === 'c'" class="tabs">
+                <button class="tab" :class="cycleTab === 'in' && 'tab-on'" data-tab="in" @click="cycleTab = 'in'" x-text="'In this cycle (' + inCycle(cycleSlug).length + ')'"></button>
+                <button class="tab" :class="cycleTab === 'cand' && 'tab-on'" data-tab="cand" @click="cycleTab = 'cand'" x-text="'Candidates (' + candidateTotal + ')'"></button>
+              </div>
+
+              <div class="flex gap-8 items-start">
+                <!-- the cycle's items, grouped by state -->
+                <div x-show="layout === 'a' || cycleTab === 'in'" class="flex-1 min-w-0 space-y-6" data-cycle-list>
+                  <div x-show="layout === 'a' && adding" class="flex items-center gap-2 h-7">
+                    <div class="section-title">In this cycle</div>
+                    <span class="count" x-text="inCycle(cycleSlug).length"></span>
+                  </div>
+                  <div x-show="!inCycle(cycleSlug).length" class="empty rule-t">Nothing is in this cycle yet.</div>
+                  <template x-for="g in cycleGroups" :key="g.l">
+                    <div :data-group="g.l">
+                      <div x-show="!g.fold" class="col-head !pb-2">
+                        <span class="dot" :class="'lc-' + g.l"></span><span x-text="g.l"></span>
+                        <span class="count" x-text="g.items.length"></span>
+                      </div>
+                      <button x-show="g.fold" class="col-head !pb-2 hover:text-slate-100 transition-colors" data-done-toggle @click="doneOpen = !doneOpen" :aria-expanded="doneOpen">
+                        <span class="dot" :class="'lc-' + g.l"></span><span x-text="g.l + ' (' + g.items.length + ')'"></span>
+                        <span class="text-slate-400 font-normal" x-text="doneOpen ? 'Hide' : 'Show'"></span>
+                      </button>
+                      <div class="rows" x-show="!g.fold || doneOpen">
+                        <template x-for="i in g.items" :key="i.slug">
+                          <div class="wb-row" :class="sel === i.slug && 'is-selected'" :data-item="i.slug">
+                            <div class="flex-1 min-w-0 space-y-1">
+                              <button class="wb-title" data-item-open @click="select(i, cycleList, 'Cycle')" x-text="i.title"></button>
+                              <div class="meta" x-html="meta(i)"></div>
+                            </div>
+                            <button x-show="rowWrites && isOpen(i)" data-take-out class="btn-text shrink-0" @click="takeOut(i)">Take out</button>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+
+                <!-- candidates: A's second pane while adding, C's second tab -->
+                <div x-show="(layout === 'a' && adding) || (layout === 'c' && cycleTab === 'cand')" class="flex-1 min-w-0 space-y-3" data-candidates>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <div x-show="layout === 'a'" class="flex items-center gap-2 h-7 mr-auto">
+                      <div class="section-title">Candidates</div>
+                      <span class="count" x-text="candidateCount"></span>
+                    </div>
+                    <input class="input w-40 min-w-0" :class="layout === 'c' && 'mr-auto !w-64'" placeholder="filter" x-model="cand.q" aria-label="Filter candidates" data-cand-filter />
+                    <select class="select" x-model="cand.lifecycle" aria-label="Lifecycle">
+                      <option value="all">any state</option>
+                      <option value="ready">ready</option>
+                      <option value="backlog">backlog</option>
+                    </select>
+                    <select class="select max-w-[160px]" x-model="cand.feature" aria-label="Feature">
+                      <option value="all">any feature</option>
+                      <option value="none">no feature</option>
+                      <template x-for="f in data.features" :key="f.slug"><option :value="f.slug" x-text="f.slug"></option></template>
+                    </select>
+                  </div>
+                  <div class="rows">
+                    <div x-show="!candidates.length" class="empty">No candidate matches.</div>
+                    <template x-for="i in candidates" :key="i.slug">
+                      <div class="wb-row" :class="sel === i.slug && 'is-selected'" :data-item="i.slug">
+                        <div class="flex-1 min-w-0 space-y-1">
+                          <button class="wb-title" data-item-open @click="select(i, candidates, 'Cycle · Candidates')" x-text="i.title"></button>
+                          <div class="meta" x-html="meta(i, { lifecycle: true })"></div>
+                        </div>
+                        <button data-bring-in class="btn-outline shrink-0" @click="bringIn(i)">Bring in</button>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ================= CYCLE as a board that fits (B) ================= -->
+            <section x-show="view === 'cycle' && layout === 'b'" x-cloak data-board class="flex gap-3 items-stretch">
+              <template x-for="c in boardCols" :key="c.l">
+                <div :class="c.mode === 'full' ? 'flex-1 min-w-0 max-w-sm' : 'shrink-0'" :data-col="c.l" :data-mode="c.mode">
+                  <div x-show="c.mode === 'full'">
+                    <div class="col-head">
+                      <span class="dot" :class="'lc-' + c.l"></span><span x-text="c.l"></span>
+                      <span class="count" x-text="c.n"></span>
+                      <button x-show="c.l === 'done'" class="btn-text !py-0 ml-auto" data-done-fold @click="doneOpen = false">Fold</button>
+                    </div>
+                    <div class="space-y-2">
+                      <template x-for="i in (c.mode === 'full' ? col(cycleSlug, c.l) : [])" :key="i.slug">
+                        <div class="wb-card break-words" :class="sel === i.slug && 'is-selected'" :data-item="i.slug">
+                          <button class="wb-title" data-item-open @click="select(i, cycleList, 'Cycle')" x-text="i.title"></button>
+                          <div class="meta" x-html="meta(i)"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <button x-show="c.mode === 'rail'" class="col-rail col-rail-btn" data-rail-open @click="toggleCol(c.l)" :title="'Show ' + c.l + ' (' + c.n + ')'" :aria-label="'Show ' + c.l + ', ' + c.n + ' items'">
+                    <span class="dot" :class="'lc-' + c.l"></span>
+                    <span class="count !text-slate-200" x-text="c.n"></span>
+                    <span class="[writing-mode:vertical-rl]" x-text="c.l"></span>
+                  </button>
+                  <div x-show="c.mode === 'empty'" class="col-rail" :title="'No ' + c.l + ' items'">
+                    <span class="dot" :class="'lc-' + c.l"></span>
+                    <span class="count" x-text="c.n"></span>
+                    <span class="[writing-mode:vertical-rl]" x-text="c.l"></span>
+                  </div>
+                </div>
+              </template>
+            </section>
+
+            <!-- ================= ITEM PAGE (C only) ================= -->
+            <section x-show="view === 'item'" x-cloak class="max-w-[900px]" data-item-page>
+              <template x-if="view === 'item' && selected && from">
+                <div class="space-y-6">
+                  <div class="flex items-center gap-4">
+                    <nav class="crumb flex-1" aria-label="Breadcrumb">
+                      <button class="link shrink-0 inline-flex items-center gap-2" data-back @click="back()">
+                        <i data-lucide="arrow-left" class="w-4 h-4 pointer-events-none"></i><span x-text="from.label"></span>
+                      </button>
+                      <span class="meta-sep">/</span>
+                      <span class="truncate" x-text="selected.title"></span>
+                    </nav>
+                    <div class="flex items-center gap-1 shrink-0" x-show="from.list.length > 1">
+                      <span class="count pr-2" x-text="(fromIndex + 1) + ' of ' + from.list.length"></span>
+                      <button class="btn-outline disabled:opacity-40 disabled:cursor-not-allowed" data-prev :disabled="fromIndex <= 0" @click="step(-1)">Previous</button>
+                      <button class="btn-outline disabled:opacity-40 disabled:cursor-not-allowed" data-next :disabled="fromIndex >= from.list.length - 1" @click="step(1)">Next</button>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <h2 class="page-title" data-item-title x-text="selected.title"></h2>
+                    <div class="meta" x-html="meta(selected, { lifecycle: true })"></div>
+                  </div>
+
+                  <div class="flex gap-12 items-start rule-t pt-6">
+                    <div class="flex-1 min-w-0 space-y-6">
+                      <p class="text-sm leading-6 text-slate-200" x-text="selected.description"></p>
+                      <div class="space-y-2" x-show="canBring(selected) || canTake(selected)">
+                        <button x-show="canBring(selected)" data-bring-in class="btn-primary" @click="bringIn(selected)" x-text="'Bring into the ' + currentCycle.lifecycle + ' cycle'"></button>
+                        <button x-show="canTake(selected)" data-take-out class="btn-outline" @click="takeOut(selected)">Take out of its cycle</button>
+                        <div class="cmd" x-text="'$ ' + memberCmd(selected)"></div>
+                      </div>
+                      <div class="space-y-2">
+                        <button class="btn-outline" @click="openDoc(selected.path)">
+                          <i data-lucide="external-link" class="w-3 h-3 pointer-events-none"></i>Open in Scriptorium
+                        </button>
+                        <div class="text-faint">The board never edits prose. It hands the document over.</div>
+                      </div>
+                    </div>
+                    <dl class="fields w-[340px] shrink-0">
+                      <dt class="text-slate-400">path</dt><dd class="mono text-slate-200 break-all" x-text="selected.path"></dd>
+                      <dt class="text-slate-400">id</dt><dd class="mono text-slate-200" x-text="selected.id"></dd>
+                      <dt class="text-slate-400">priority</dt><dd class="text-slate-200" x-text="selected.priority || '—'"></dd>
+                      <dt class="text-slate-400">cycle</dt><dd class="mono text-slate-200 break-all" x-text="selected.cycle || '—'"></dd>
+                      <dt class="text-slate-400">parent</dt><dd class="mono text-slate-200 break-all" x-text="selected.parent ? 'feature/' + selected.parent : '—'"></dd>
+                      <dt class="text-slate-400">source</dt><dd class="mono text-slate-200" x-text="selected.source || '—'"></dd>
+                      <dt class="text-slate-400">from</dt><dd class="mono text-slate-200 break-all" x-text="selected.from || '—'"></dd>
+                      <dt class="text-slate-400">filed</dt><dd class="mono text-slate-200" x-text="selected.filed"></dd>
+                      <dt class="text-slate-400">status</dt><dd class="text-slate-200" x-text="selected.status === 'stable' ? 'stable: its content was reviewed' : selected.status + ': its content has not been reviewed'"></dd>
+                      <dt class="text-slate-400">blocked by</dt>
+                      <dd>
+                        <span x-show="!selected.blockedBy.length" class="text-slate-400">—</span>
+                        <template x-for="b in selected.blockedBy" :key="b.id">
+                          <div class="flex flex-wrap items-center gap-2 text-slate-200"><span class="dot" :class="'lc-' + (b.lifecycle || 'backlog')"></span><span class="mono break-all" x-text="b.slug || b.id"></span><span class="text-slate-400" x-text="b.lifecycle || 'unknown'"></span></div>
+                        </template>
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+              </template>
+            </section>
+
+            <!-- ================= ABOUT THIS LAYOUT ================= -->
+            <section x-show="view === 'about'" x-cloak class="max-w-[900px] space-y-6">
+              <div class="text-base leading-6 font-semibold text-slate-100" x-text="about[layout].name"></div>
+              <div class="rows">
+                <template x-for="(l, n) in about[layout].lines" :key="n">
+                  <div class="grid grid-cols-12 gap-4 py-3 border-b border-slate-800 text-sm leading-6">
+                    <div class="col-span-3 text-slate-100" x-text="l[0]"></div>
+                    <div class="col-span-9 text-slate-300" x-text="l[1]"></div>
+                  </div>
+                </template>
+              </div>
+              <div class="text-faint">All three: each region has one job, attention is never a permanent column, empty groups fold, and nothing scrolls sideways at 1280px.</div>
+            </section>
+          </div>
+
+          <!-- ============ B: the candidates tray, docked under the board ============ -->
+          <div x-show="layout === 'b' && view === 'cycle'" x-cloak data-tray class="shrink-0 min-h-0 flex flex-col border-t border-slate-800" :class="trayOpen && 'basis-2/5'">
+            <div class="tray-bar">
+              <button class="flex items-center gap-2 text-sm leading-5 text-slate-300 hover:text-white transition-colors" data-tray-toggle @click="trayOpen = !trayOpen" :aria-expanded="trayOpen">
+                <span x-show="!trayOpen"><i data-lucide="chevron-up" class="w-4 h-4 pointer-events-none"></i></span>
+                <span x-show="trayOpen"><i data-lucide="chevron-down" class="w-4 h-4 pointer-events-none"></i></span>
+                <span class="font-medium text-slate-100">Candidates</span>
+                <span class="meta-sep">·</span>
+                <span class="count" x-text="candidateCount"></span>
+              </button>
+              <div x-show="trayOpen" class="ml-auto flex items-center gap-2 min-w-0">
+                <input class="input w-40 min-w-0" placeholder="filter" x-model="cand.q" aria-label="Filter candidates" data-cand-filter />
+                <select class="select" x-model="cand.lifecycle" aria-label="Lifecycle">
+                  <option value="all">any state</option>
+                  <option value="ready">ready</option>
+                  <option value="backlog">backlog</option>
+                </select>
+                <select class="select max-w-[160px]" x-model="cand.feature" aria-label="Feature">
+                  <option value="all">any feature</option>
+                  <option value="none">no feature</option>
+                  <template x-for="f in data.features" :key="f.slug"><option :value="f.slug" x-text="f.slug"></option></template>
+                </select>
+              </div>
+            </div>
+            <div x-show="trayOpen" class="flex-1 min-h-0 overflow-y-auto scroll-y px-8 rule-t" data-tray-rows>
+              <div x-show="!candidates.length" class="empty">No candidate matches.</div>
+              <template x-for="i in candidates" :key="i.slug">
+                <div class="tray-row" :class="sel === i.slug && 'bg-slate-900'" :data-item="i.slug">
+                  <button class="wb-title truncate flex-1 min-w-0" data-item-open @click="select(i, candidates, 'Candidates')" x-text="i.title"></button>
+                  <div class="meta !flex-nowrap shrink-0 whitespace-nowrap" x-html="meta(i, { lifecycle: true, noParent: true })"></div>
+                  <button data-bring-in class="btn-text !py-0 !text-slate-200 hover:!text-white shrink-0" @click="bringIn(i)">Bring in</button>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- ============ STATUS BAR: last write, ask, or handoff ============ -->
+          <footer class="shrink-0 border-t border-slate-800 px-8 h-10 flex items-center gap-3 text-xs leading-5" data-status>
+            <template x-if="handoff">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-slate-400 shrink-0">Opens in Scriptorium:</span>
+                <span class="mono text-slate-200 truncate" x-text="'open, then show --doc ' + handoff"></span>
+              </div>
+            </template>
+            <template x-if="ask">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-slate-400 shrink-0">Say in chat:</span>
+                <span class="text-slate-100 truncate" x-text="'“' + ask + '”'"></span>
+              </div>
+            </template>
+            <template x-if="!ask && !handoff && lastCmd">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-slate-400 shrink-0">ran</span>
+                <span class="mono text-slate-200 truncate" x-text="'$ ' + lastCmd"></span>
+              </div>
+            </template>
+            <template x-if="!ask && !handoff && !lastCmd">
+              <span class="text-slate-400 truncate">No writes yet. Bring in and Take out each run one <span class="mono">pdocs set</span> call and show it here.</span>
+            </template>
+            <span x-show="log.length" class="ml-auto count shrink-0" data-writes x-text="log.length + (log.length === 1 ? ' write' : ' writes')"></span>
+          </footer>
+        </main>
+
+        <!-- ============ Right: the inspector (A, B). One job: the selected item. ============
+             A flex sibling of the centre, so it pushes the centre narrower and
+             never sits on top of it. Closed until something is selected. -->
+        <aside x-show="layout !== 'c' && selected" x-cloak data-inspector class="w-[400px] shrink-0 border-l border-slate-800 flex flex-col min-h-0" aria-label="Selected item">
+          <template x-if="layout !== 'c' && selected">
+            <div class="flex-1 min-h-0 overflow-y-auto scroll-y p-6 space-y-4">
+              <div class="flex items-start gap-3">
+                <div class="flex-1 text-base leading-6 font-semibold text-slate-100" data-item-title x-text="selected.title"></div>
+                <button class="btn-ghost !px-2" data-inspector-close @click="sel = null; handoff = null" aria-label="Close" title="Close (Esc)"><i data-lucide="x" class="w-4 h-4 pointer-events-none"></i></button>
+              </div>
+              <div class="text-mono break-all" x-text="selected.path"></div>
+              <div class="meta" x-html="meta(selected, { lifecycle: true })"></div>
+              <div class="text-sm leading-6 text-slate-200" x-text="selected.description"></div>
+
+              <dl class="fields rule-t pt-4">
+                <dt class="text-slate-400">id</dt><dd class="mono text-slate-200" x-text="selected.id"></dd>
+                <dt class="text-slate-400">priority</dt><dd class="text-slate-200" x-text="selected.priority || '—'"></dd>
+                <dt class="text-slate-400">cycle</dt><dd class="mono text-slate-200 break-all" x-text="selected.cycle || '—'"></dd>
+                <dt class="text-slate-400">parent</dt><dd class="mono text-slate-200 break-all" x-text="selected.parent ? 'feature/' + selected.parent : '—'"></dd>
+                <dt class="text-slate-400">source</dt><dd class="mono text-slate-200" x-text="selected.source || '—'"></dd>
+                <dt class="text-slate-400">from</dt><dd class="mono text-slate-200 break-all" x-text="selected.from || '—'"></dd>
+                <dt class="text-slate-400">filed</dt><dd class="mono text-slate-200" x-text="selected.filed"></dd>
+                <dt class="text-slate-400">status</dt><dd class="text-slate-200" x-text="selected.status === 'stable' ? 'stable: its content was reviewed' : selected.status + ': its content has not been reviewed'"></dd>
+                <dt class="text-slate-400">blocked by</dt>
+                <dd>
+                  <span x-show="!selected.blockedBy.length" class="text-slate-400">—</span>
+                  <template x-for="b in selected.blockedBy" :key="b.id">
+                    <div class="flex flex-wrap items-center gap-2 text-slate-200"><span class="dot" :class="'lc-' + (b.lifecycle || 'backlog')"></span><span class="mono break-all" x-text="b.slug || b.id"></span><span class="text-slate-400" x-text="b.lifecycle || 'unknown'"></span></div>
+                  </template>
+                </dd>
+              </dl>
+
+              <div class="rule-t pt-4 space-y-2" x-show="canBring(selected) || canTake(selected)">
+                <button x-show="canBring(selected)" data-bring-in class="btn-primary" @click="bringIn(selected)" x-text="'Bring into the ' + currentCycle.lifecycle + ' cycle'"></button>
+                <button x-show="canTake(selected)" data-take-out class="btn-outline" @click="takeOut(selected)">Take out of its cycle</button>
+                <div class="cmd !bg-slate-900" x-text="'$ ' + memberCmd(selected)"></div>
+              </div>
+
+              <div class="rule-t pt-4 space-y-2">
+                <button class="btn-outline" @click="openDoc(selected.path)">
+                  <i data-lucide="external-link" class="w-3 h-3 pointer-events-none"></i>Open in Scriptorium
+                </button>
+                <div class="text-faint">The board never edits prose. It hands the document over.</div>
+              </div>
+            </div>
+          </template>
+        </aside>
+      </div>
+
+      <!-- ============ LAYOUT D — Combined ============
+           Three regions at most: nav · centre · inspector. The centre is a
+           pinned header band over one scroller; the inspector is the other
+           scroller. Nothing floats but the Snooze menu and the cycle chooser. -->
+      <div x-show="layout === 'd'" x-cloak data-d class="flex flex-1 min-h-0" @keydown.window="dKeydown($event)">
+        <!-- Nav: where you are. The Inbox count is the only number. -->
+        <aside class="w-48 shrink-0 border-r border-slate-800 flex flex-col" data-d-nav>
+          <div class="px-4 h-14 shrink-0 border-b border-slate-800 flex flex-col justify-center">
+            <div class="text-sm leading-5 font-semibold text-slate-100">Work board</div>
+            <div class="text-mono" x-text="data.project"></div>
+          </div>
+          <nav class="p-2 space-y-1">
+            <button @click="dGo('now')" data-d-nav-item="now" class="nav-item" :class="dNavOn('now') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="activity" class="w-4 h-4 pointer-events-none"></i><span>Now</span>
+            </button>
+            <button @click="dGo('inbox')" data-d-nav-item="inbox" class="nav-item" :class="dNavOn('inbox') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="inbox" class="w-4 h-4 pointer-events-none"></i><span>Inbox</span>
+              <span class="d-count ml-auto" data-d-inbox-count x-show="dInboxCount" x-text="dInboxCount"></span>
+            </button>
+            <button @click="dGo('triage')" data-d-nav-item="triage" class="nav-item" :class="dNavOn('triage') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="list-checks" class="w-4 h-4 pointer-events-none"></i><span>Triage</span>
+            </button>
+            <button @click="dGo('cycle')" data-d-nav-item="cycle" class="nav-item" :class="dNavOn('cycle') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="columns-3" class="w-4 h-4 pointer-events-none"></i><span>Cycle</span>
+            </button>
+            <button @click="dGo('feature')" data-d-nav-item="feature" class="nav-item" :class="dNavOn('feature') ? 'nav-item-active' : 'nav-item-inactive'">
+              <i data-lucide="layers" class="w-4 h-4 pointer-events-none"></i><span>Feature</span>
+            </button>
+          </nav>
+          <div class="mt-auto p-4">
+            <button @click="dGo('about')" class="text-xs leading-5 link text-left">About this layout</button>
+          </div>
+        </aside>
+
+        <!-- Centre: one column. A pinned band, then one list. -->
+        <main class="flex-1 min-w-0 flex flex-col" data-d-centre>
+          <!-- The band: page-level state. Every line is one line, so it keeps its
+               height and its left edge when the inspector opens. -->
+          <div class="d-band" data-d-band>
+            <div :class="dInspecting ? '' : 'max-w-[900px]'">
+              <div class="flex items-center gap-3 h-6 min-w-0">
+                <button x-show="dIsBox && dBox.back" class="btn-text shrink-0" data-d-back @click="dBack()" x-text="'← ' + dBox.back"></button>
+                <h1 x-show="!dIsBox" class="page-title whitespace-nowrap" data-d-page-title x-text="dTitle"></h1>
+                <span x-show="dView === 'triage'" class="d-count" x-text="inboxOpen.length + ' waiting' + (dDecided.length ? ' · ' + dDecided.length + ' decided' : '')"></span>
+                <div x-show="dView === 'now'" class="flex gap-1">
+                  <button class="seg !py-0" :class="dNowBy === 'cycle' && 'seg-on'" @click="dLeave(() => (dNowBy = 'cycle'))">by cycle</button>
+                  <button class="seg !py-0" :class="dNowBy === 'feature' && 'seg-on'" @click="dLeave(() => (dNowBy = 'feature'))">by feature</button>
+                </div>
+                <span x-show="dIsBox" class="dot" :class="'lc-' + dBox.lifecycle" :title="dBox.lifecycle"></span>
+                <h1 x-show="dView === 'featurePage'" class="page-title truncate min-w-0" data-d-box-title x-text="dBox.title"></h1>
+                <!-- the cycle's title is the cycle switcher -->
+                <div x-show="dView === 'cycle'" class="relative min-w-0 flex" @click.outside="dMenu = false">
+                  <button class="page-title min-w-0 inline-flex items-center gap-2 hover:text-white" data-d-cycle-title @click="dMenu = !dMenu; snoozeMenu = null" :aria-expanded="dMenu" title="Choose a cycle">
+                    <span class="truncate" x-text="dBox.title"></span>
+                    <i data-lucide="chevron-down" class="w-4 h-4 shrink-0 text-slate-400 pointer-events-none"></i>
+                  </button>
+                  <div x-show="dMenu" x-cloak class="menu !w-96" data-d-cycle-menu>
+                    <template x-for="c in cycles" :key="c.slug">
+                      <button class="menu-item flex items-center gap-2" :class="c.slug === dCycle && 'bg-slate-800'" :data-d-cycle="c.lifecycle" @click="dSetCycle(c.slug)">
+                        <span class="dot" :class="'lc-' + c.lifecycle"></span>
+                        <span class="text-slate-400 w-14 shrink-0" x-text="c.lifecycle"></span>
+                        <span class="truncate" x-text="c.title"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+              <div x-show="dIsBox" class="flex items-center gap-3 h-5 min-w-0">
+                <div class="bar w-32 shrink-0">
+                  <template x-for="s in dBar(dBox.items)" :key="s.l">
+                    <div :class="'lc-' + s.l" :style="'width:' + s.pct + '%'" :title="s.n + ' ' + s.l"></div>
+                  </template>
+                </div>
+                <span class="text-xs leading-5 text-slate-400 truncate" data-d-summary x-text="dBox.summary"></span>
+              </div>
+              <div x-show="dIsBox" class="text-xs leading-5 text-slate-400 truncate" :title="dBox.note"><span x-text="dBox.noteLabel"></span><span x-text="dBox.note"></span></div>
+              <div x-show="dView === 'cycle'" class="flex gap-6">
+                <button class="d-tab" :class="[dTab === 'in' && 'd-tab-on', dFlash === 'tab:in' && 'd-flash']" data-d-tab="in" @click="dSetTab('in')">In this cycle<span class="d-count" x-text="dCycleItems.length || ''"></span></button>
+                <button class="d-tab" :class="[dTab === 'cand' && 'd-tab-on', dFlash === 'tab:cand' && 'd-flash']" data-d-tab="cand" @click="dSetTab('cand')">Candidates<span class="d-count" x-text="candidateTotal || ''"></span></button>
+              </div>
+              <div x-show="dView !== 'cycle'" class="h-3"></div>
+            </div>
+          </div>
+
+          <div x-ref="dScroll" data-d-scroll class="flex-1 min-h-0 overflow-y-auto scroll-y d-pad">
+            <div :class="dInspecting ? '' : 'max-w-[900px]'">
+              <!-- ================= D · NOW: only about work ================= -->
+              <div x-show="dView === 'now'" class="pt-8 pb-8 flex flex-col gap-8">
+                <template x-if="activeCycle">
+                  <div class="space-y-1" data-d-now-cycle>
+                    <div class="d-head">Active cycle</div>
+                    <button class="d-row-title !text-base !leading-6 !font-semibold hover:underline decoration-slate-500 underline-offset-4" data-d-now-open-cycle @click="dGo('cycle'); dCycle = activeCycle.slug" x-text="activeCycle.title"></button>
+                    <div class="flex items-center gap-3 h-5">
+                      <div class="bar w-32 shrink-0">
+                        <template x-for="s in dBar(inCycle(activeCycle.slug))" :key="s.l">
+                          <div :class="'lc-' + s.l" :style="'width:' + s.pct + '%'" :title="s.n + ' ' + s.l"></div>
+                        </template>
+                      </div>
+                      <span class="text-xs leading-5 text-slate-400" x-text="dSummary(inCycle(activeCycle.slug))"></span>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="!started.length" class="text-sm leading-6 text-slate-400">Nothing is active or in review.</div>
+                <template x-for="g in dNowGroups" :key="g.key">
+                  <div>
+                    <div class="d-head"><span x-text="g.label"></span><span class="d-count" x-text="g.items.length"></span></div>
+                    <div class="d-list">
+                      <template x-for="i in g.items" :key="i.slug">
+                        <div class="d-row" :class="dSel === 'i:' + i.slug && 'is-on'" :data-key="'i:' + i.slug" @click="dPick('i:' + i.slug)">
+                          <div class="flex-1 min-w-0">
+                            <button class="d-row-title" data-d-focus x-text="i.title"></button>
+                            <div class="meta" x-html="dMeta(i, { review: true, noParent: dNowBy === 'feature' })"></div>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- ================= D · INBOX: two groups, one behaviour per row ================= -->
+              <div x-show="dView === 'inbox'" class="pt-8 pb-8 flex flex-col gap-8">
+                <div x-show="!dInboxRows.length" class="text-sm leading-6 text-slate-400">Nothing needs you right now.</div>
+                <template x-for="g in dInboxGroups" :key="g.id">
+                  <div :data-d-inbox-group="g.id">
+                    <div class="d-head"><span x-text="g.label"></span><span class="d-count" x-text="g.rows.length"></span></div>
+                    <div class="d-list">
+                      <template x-for="a in g.rows" :key="a.id">
+                        <div class="d-row" :class="{ 'is-on': dSel === 'a:' + a.id, 'is-static': !a.does }" :data-key="'a:' + a.id" :data-d-attn="a.id" @click="dAttend(a)">
+                          <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                              <span class="dot bg-rose-400" x-show="a.tone === 'rose'"></span>
+                              <span class="d-row-title" x-text="a.label"></span>
+                              <span class="d-count" x-text="a.n"></span>
+                            </div>
+                            <div class="text-xs leading-5 text-slate-400 truncate" x-text="a.does ? a.desc : a.desc + ' Ask the agent: “' + a.ask + '”'" :title="a.does ? a.desc : a.ask"></div>
+                          </div>
+                          <div class="relative shrink-0 d-hover" :class="snoozeMenu === a.id && 'is-open'" @click.stop @click.outside="if (snoozeMenu === a.id) snoozeMenu = null">
+                            <button data-d-snooze class="btn-text" @click="snoozeMenu = snoozeMenu === a.id ? null : a.id; dMenu = false" :aria-expanded="snoozeMenu === a.id">Snooze</button>
+                            <div x-show="snoozeMenu === a.id" x-cloak class="menu menu-right" :class="g.id === 'housekeeping' && 'menu-up'" data-d-snooze-menu>
+                              <template x-for="c in snoozeChoices" :key="c.id">
+                                <button class="menu-item" data-d-snooze-choice @click="snooze(a, c)" x-text="c.label"></button>
+                              </template>
+                            </div>
+                          </div>
+                          <button x-show="a.does" class="btn-text !text-slate-200 hover:!text-white shrink-0 w-44 text-right" data-d-does data-d-focus @click.stop="dAttend(a)" x-text="a.does"></button>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+                <div x-show="attentionSnoozed.length" data-d-snoozed>
+                  <button class="d-head hover:text-slate-100 transition-colors" data-d-snoozed-toggle @click="snoozedOpen = !snoozedOpen" :aria-expanded="snoozedOpen">
+                    <span x-text="'Snoozed'"></span><span class="d-count" x-text="attentionSnoozed.length"></span><span class="d-count" x-text="snoozedOpen ? 'Hide' : 'Show'"></span>
+                  </button>
+                  <div x-show="snoozedOpen" class="d-list">
+                    <template x-for="a in attentionSnoozed" :key="a.id">
+                      <div class="d-line !cursor-default hover:!bg-transparent">
+                        <div class="flex-1 min-w-0 text-sm leading-5 text-slate-300 truncate"><span x-text="a.label"></span> <span class="d-count" x-text="a.n"></span></div>
+                        <span class="d-count" x-text="snoozeLabel(a.id)"></span>
+                        <button data-d-wake class="btn-text !text-slate-200" @click="wake(a.id)">Wake</button>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================= D · TRIAGE: the queue; the decision form is in the inspector ================= -->
+              <div x-show="dView === 'triage'" class="pt-8 pb-8 flex flex-col gap-6">
+                <div x-show="!inboxOpen.length" class="text-sm leading-6 text-slate-400">Triage is empty.</div>
+                <div x-show="inboxOpen.length" data-d-queue>
+                  <div class="d-head"><span>Waiting</span><span class="d-count" x-text="inboxOpen.length"></span></div>
+                  <div class="d-list">
+                    <template x-for="i in inboxOpen" :key="i.slug">
+                      <div class="d-line" :class="[dSel === 't:' + i.slug && 'is-on', dFlash === 't:' + i.slug && 'd-flash']" :data-key="'t:' + i.slug" @click="dPick('t:' + i.slug)">
+                        <button class="d-row-title truncate flex-1 min-w-0" data-d-focus x-text="i.title"></button>
+                        <div class="meta w-40 shrink-0 overflow-hidden"><span class="meta-text !flex-nowrap whitespace-nowrap"><span x-text="i.kind"></span><span x-show="i.source" x-text="i.source"></span></span></div>
+                        <span class="d-count w-20 shrink-0 text-right" x-text="i.filed"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+                <div x-show="dDecided.length" data-d-decided>
+                  <button class="d-head hover:text-slate-100 transition-colors rounded" :class="dFlash === 'decided' && 'd-flash'" data-d-decided-toggle @click="dDecidedOpen = !dDecidedOpen" :aria-expanded="dDecidedOpen">
+                    <span>Decided</span><span class="d-count" x-text="dDecided.length"></span><span class="d-count" x-text="dDecidedOpen ? 'Hide' : 'Show'"></span>
+                  </button>
+                  <div x-show="dDecidedOpen" class="d-list">
+                    <template x-for="i in dDecided" :key="i.slug">
+                      <div class="d-line !cursor-default hover:!bg-transparent">
+                        <div class="flex-1 min-w-0 text-sm leading-5 text-slate-300 truncate" x-text="i.title"></div>
+                        <span class="d-count shrink-0" x-text="tri[i.slug].done ? tri[i.slug].done.label : ''"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ================= D · A CONTAINER'S LIST: a cycle (tab 1) or a feature ================= -->
+              <div x-show="(dView === 'cycle' && dTab === 'in') || dView === 'featurePage'" class="pt-8 pb-8 flex flex-col gap-6" data-d-box-list>
+                <div x-show="!dGroups.length" class="text-sm leading-6 text-slate-400" x-text="dView === 'cycle' ? 'Nothing is in this cycle yet.' : 'No item names this feature as its parent.'"></div>
+                <template x-for="g in dGroups" :key="g.l">
+                  <div :data-d-group="g.l">
+                    <div x-show="!g.fold" class="d-head">
+                      <span class="dot" x-show="g.l !== 'added'" :class="'lc-' + g.l"></span><span x-text="g.label"></span><span class="d-count" x-text="g.items.length"></span>
+                    </div>
+                    <button x-show="g.fold" class="d-head hover:text-slate-100 transition-colors" data-d-done @click="dToggleDone()" :aria-expanded="dDoneOpen">
+                      <span class="dot" :class="'lc-' + g.l"></span><span x-text="g.label"></span><span class="d-count" x-text="g.items.length"></span><span class="d-count" x-text="dDoneOpen ? 'Hide' : 'Show'"></span>
+                    </button>
+                    <div x-show="!g.fold || dDoneOpen" class="d-list">
+                      <template x-for="i in g.items" :key="i.slug">
+                        <div class="d-row" :class="[dSel === 'i:' + i.slug && 'is-on', dFlash === 'i:' + i.slug && 'd-flash']" :data-key="'i:' + i.slug" @click="dPick('i:' + i.slug)">
+                          <div class="flex-1 min-w-0">
+                            <button class="d-row-title" data-d-focus x-text="i.title"></button>
+                            <div class="meta" x-html="dMeta(i, { lifecycle: g.l === 'added', noParent: dView === 'featurePage' })"></div>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- ================= D · CANDIDATES (tab 2): one-line rows, the filter on one row ================= -->
+              <div x-show="dView === 'cycle' && dTab === 'cand'" class="pb-8" data-d-candidates>
+                <div class="sticky top-0 z-10 bg-slate-950 flex items-center gap-2 py-3 border-b border-slate-800" data-d-filter>
+                  <input class="input flex-1 min-w-0" placeholder="filter" x-model="cand.q" aria-label="Filter candidates" />
+                  <select class="select" x-model="cand.lifecycle" aria-label="Lifecycle">
+                    <option value="all">any state</option>
+                    <option value="ready">ready</option>
+                    <option value="backlog">backlog</option>
+                  </select>
+                  <select class="select max-w-[160px]" x-model="cand.feature" aria-label="Feature">
+                    <option value="all">any feature</option>
+                    <option value="none">no feature</option>
+                    <template x-for="f in data.features" :key="f.slug"><option :value="f.slug" x-text="f.slug"></option></template>
+                  </select>
+                </div>
+                <div x-show="!candidates.length" class="text-sm leading-6 text-slate-400 py-6">No candidate matches.</div>
+<div class="-mx-3">
+                <template x-for="i in candidates" :key="i.slug">
+                  <div class="d-line" :class="[dSel === 'i:' + i.slug && 'is-on', dFlash === 'i:' + i.slug && 'd-flash']" :data-key="'i:' + i.slug" @click="dPick('i:' + i.slug)">
+                    <button class="d-row-title truncate flex-1 min-w-0" data-d-focus x-text="i.title"></button>
+                    <div class="meta !flex-nowrap w-60 shrink-0 overflow-hidden" x-html="dMeta(i, { lifecycle: true, noParent: true, nowrap: true })"></div>
+                    <button class="btn-outline shrink-0 d-hover" data-d-bring-row @click.stop="dBring(i)">Bring in</button>
+                  </div>
+                </template>
+                </div>
+              </div>
+
+              <!-- ================= D · FEATURES: a list of containers; clicking one drills in ================= -->
+              <div x-show="dView === 'feature'" class="pt-8 pb-8" data-d-features>
+                <div class="d-list">
+                  <template x-for="f in data.features" :key="f.slug">
+                    <div class="d-row" :data-d-feature="f.slug" @click="dOpenFeature(f.slug)">
+                      <div class="flex-1 min-w-0">
+                        <button class="d-row-title" x-text="f.title"></button>
+                        <div class="meta">
+                          <span class="meta-text">
+                            <span class="lc !text-slate-400"><span class="dot" :class="'lc-' + f.lifecycle"></span><span x-text="f.lifecycle"></span></span>
+                            <span x-text="ofFeature(f.slug).length ? ofFeature(f.slug).filter(i => isOpen(i)).length + ' open' : 'no items'"></span>
+                            <span x-show="ofFeature(f.slug).some(i => !isOpen(i))" x-text="ofFeature(f.slug).filter(i => !isOpen(i)).length + ' finished'"></span>
+                            <span x-show="f.status !== 'stable'">draft</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="bar w-32 shrink-0">
+                        <template x-for="s in dBar(ofFeature(f.slug))" :key="s.l">
+                          <div :class="'lc-' + s.l" :style="'width:' + s.pct + '%'"></div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- ================= D · ABOUT ================= -->
+              <div x-show="dView === 'about'" class="pt-8 pb-8 flex flex-col gap-8" data-d-about>
+                <template x-for="(s, n) in aboutD.sections" :key="n">
+                  <div>
+                    <div class="d-head" x-text="s.title"></div>
+                    <div class="d-list">
+                      <template x-for="(l, m) in s.lines" :key="m">
+                        <div class="grid grid-cols-12 gap-4 py-2 px-3 border-b border-slate-800 text-sm leading-6">
+                          <div class="col-span-3 text-slate-100" x-text="l[0]"></div>
+                          <div class="col-span-9 text-slate-300" x-text="l[1]"></div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- After a write only: the command that ran, and Undo. -->
+          <div x-show="dLast" x-cloak class="d-ran" data-d-ran>
+            <span class="text-slate-400 shrink-0" x-text="dLast ? dLast.label : ''"></span>
+            <span class="mono text-slate-200 truncate" data-d-ran-cmd x-text="dLast ? (dLast.label === 'opens in Scriptorium:' ? '' : '$ ') + dLast.cmd : ''"></span>
+            <span class="text-slate-400 truncate" x-show="dLast && dLast.note" x-text="dLast ? dLast.note : ''"></span>
+            <button x-show="dLast && !!dLast.undo" class="btn-text !text-slate-200 hover:!text-white ml-auto shrink-0" data-d-undo @click="dUndo()">Undo</button>
+          </div>
+        </main>
+
+        <!-- Inspector: the selected item, and every write for it. A flex sibling
+             of the centre, so it pushes and never covers. -->
+        <aside x-show="dInspecting" x-cloak data-d-inspector class="shrink-0 border-l border-slate-800 flex flex-col min-h-0" style="width: clamp(400px, 34%, 480px)" aria-label="Selected item">
+          <template x-if="dInspecting">
+            <div class="flex-1 min-h-0 overflow-y-auto scroll-y p-6" data-d-inspector-body>
+              <div class="space-y-4" data-d-inspector-content>
+                <div class="flex items-center gap-1 -mt-2 -mr-2">
+                  <span class="d-count mr-auto" data-d-pos x-text="(dIndex + 1) + ' of ' + dList.length"></span>
+                  <button class="btn-ghost !px-2 disabled:opacity-40 disabled:cursor-not-allowed" data-d-prev :disabled="dIndex <= 0" @click="dMove(-1)" aria-label="Previous" title="Previous (K or ↑)"><i data-lucide="chevron-up" class="w-4 h-4 pointer-events-none"></i></button>
+                  <button class="btn-ghost !px-2 disabled:opacity-40 disabled:cursor-not-allowed" data-d-next :disabled="dIndex >= dList.length - 1" @click="dMove(1)" aria-label="Next" title="Next (J or ↓)"><i data-lucide="chevron-down" class="w-4 h-4 pointer-events-none"></i></button>
+                  <button class="btn-ghost !px-2" data-d-close @click="dOpen = false" aria-label="Close" title="Close (Esc)"><i data-lucide="x" class="w-4 h-4 pointer-events-none"></i></button>
+                </div>
+                <div class="space-y-1">
+                  <div class="d-title" data-d-title x-text="dSelected.title"></div>
+                  <div class="meta" x-html="dMeta(dSelected, { lifecycle: true, noParent: true })"></div>
+                </div>
+                <p class="text-sm leading-6 text-slate-300" x-text="dSelected.description"></p>
+
+                <dl class="fields d-fields rule-t pt-4">
+                  <template x-for="f in dFields(dSelected)" :key="f[0]">
+                    <div class="contents"><dt class="text-slate-400" x-text="f[0]"></dt><dd x-html="f[1]"></dd></div>
+                  </template>
+                </dl>
+                <div class="flex items-center gap-4">
+                  <button class="btn-text" data-d-copy @click="dCopy(dSelected)" :title="dSelected.path + ' · id ' + dSelected.id" x-text="dCopied ? 'Copied' : 'Copy path'"></button>
+                  <button class="btn-text" data-d-handoff @click="dHandoff(dSelected)">Open in Scriptorium</button>
+                </div>
+
+                <!-- the two membership writes, each with its key -->
+                <div class="rule-t pt-4 flex items-center gap-3" x-show="canBring(dSelected) || canTake(dSelected)">
+                  <button x-show="canBring(dSelected)" data-d-bring class="d-btn-primary" @click="dBring(dSelected)" x-text="'Bring into the ' + cycle(dCycle).lifecycle + ' cycle'"></button>
+                  <span x-show="canBring(dSelected)" class="d-key">B</span>
+                  <button x-show="canTake(dSelected)" data-d-take class="btn-outline" @click="dTake(dSelected)">Take out of its cycle</button>
+                  <span x-show="canTake(dSelected)" class="d-key">T</span>
+                </div>
+
+                <!-- triage: the decision form, under the item's details -->
+                <template x-if="dTri">
+                  <div class="rule-t pt-4 space-y-3" data-d-triage>
+                    <div class="flex flex-wrap gap-1">
+                      <button class="seg" :class="dTri.disp === 'backlog' && 'seg-on'" data-d-disp="backlog" @click="dTri.disp = 'backlog'">Accept to backlog</button>
+                      <button class="seg" :class="dTri.disp === 'ready' && 'seg-on'" data-d-disp="ready" @click="dTri.disp = 'ready'">Accept to ready</button>
+                      <button class="seg" :class="dTri.disp === 'drop' && 'seg-on'" data-d-disp="drop" @click="dTri.disp = 'drop'">Drop</button>
+                    </div>
+                    <div class="flex gap-2" x-show="dTri.disp !== 'drop'">
+                      <select class="select" x-model="dTri.priority" aria-label="Priority" data-d-priority>
+                        <option value="">no priority</option>
+                        <option value="high">high</option>
+                        <option value="medium">medium</option>
+                        <option value="low">low</option>
+                      </select>
+                      <select class="select flex-1 min-w-0" x-model="dTri.parent" aria-label="Parent feature">
+                        <option value="">no parent feature</option>
+                        <template x-for="f in data.features" :key="f.slug"><option :value="f.slug" x-text="f.slug"></option></template>
+                      </select>
+                    </div>
+                    <input x-show="dTri.disp === 'drop'" class="input w-full" x-model="dTri.reason" placeholder="Reason for dropping" aria-label="Reason for dropping" data-d-reason />
+                    <button class="d-btn-primary" data-d-apply @click="dApplyTriage(dSelected)">Apply</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </aside>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("alpine:initialized", () => {
+        lucide.createIcons();
+        let pending = false;
+        const observer = new MutationObserver(() => {
+          if (pending) return;
+          pending = true;
+          requestAnimationFrame(() => {
+            lucide.createIcons();
+            pending = false;
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+    </script>
+  </body>
+</html>

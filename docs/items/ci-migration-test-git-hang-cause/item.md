@@ -5,17 +5,19 @@ description:
   On CI, fixture git init and commit in the v2.6 migration tests intermittently
   hang past 10 s on pushes to main, after the spawn hardening; the cause is
   unknown.
-status: draft
-lifecycle: triage
+status: stable
+lifecycle: active
 id: 01a104d4-ddac-760f-abcf-d1e591a24a65
 kind: research
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 from: 01a0fdc5-e8e1-7032-b536-05bd4834600a
+priority: medium
+cycle: 2026-11-check-fixes-and-board-research
 ---
 
 # Find why fixture git hangs in the migration tests on CI
 
-[The test-hang fix](./v26-migration-test-git-hang/item.md) bounded fixture git
+[The test-hang fix](../v26-migration-test-git-hang/item.md) bounded fixture git
 calls at 10 s and passed the maintenance and gc settings, but the hang came
 back. CI run 37172149263, the push of main at `d4ff2ee` (2026-10-04), failed
 four tests in `migrate-v2.6-to-v2.7.test.ts`:
@@ -34,6 +36,10 @@ lock or stdin the spawn inherits, contention between the four parallel test
 workers, or something specific to the push-to-main runs. The answer decides
 whether to fix the spawn, serialize these files, or retry.
 
+Timeboxed to one working session. If the cause is not found by then, the first
+box below is met by recording what was ruled out and what to instrument next,
+and the item closes on that.
+
 ## Definition of done
 
 - [ ] The cause is found and recorded, or the investigation's evidence rules out
@@ -43,4 +49,4 @@ whether to fix the spawn, serialize these files, or retry.
 
 ## Related Documents
 
-- [A v2.6 migration test's git add hangs until the test budget kills it](./v26-migration-test-git-hang/item.md)
+- [A v2.6 migration test's git add hangs until the test budget kills it](../v26-migration-test-git-hang/item.md)

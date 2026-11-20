@@ -42,6 +42,7 @@ import {
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import type { Command, Invocation } from "../cli.ts";
 import {
+  leavesRoot,
   parseFrontmatter,
   stripInlineComment,
   yamlList,
@@ -638,11 +639,12 @@ export function frontmatterShapes(block: string): Map<string, "list" | "scalar">
 
 /** A plain scalar this repository's lenient parser AND a real YAML parser will
  *  read the same way. `frontmatterSyntaxProblems` fails an unquoted `": "`, and
- *  a description is exactly where one turns up. */
+ *  a description is exactly where one turns up. A colon that ENDS the value is
+ *  the same mapping to a real parser. */
 export function scalar(value: string): string {
   const risky =
     value === "" ||
-    /:\s/.test(value) ||
+    /:(\s|$)/.test(value) ||
     /\s#/.test(value) ||
     // A leading YAML indicator character changes what the value IS.
     /^[-?:,[\]{}#&*!|>'"%@`]/.test(value) ||
@@ -899,7 +901,7 @@ function resolveFrom(
     if (!existsSync(abs) || !statSync(abs).isFile()) continue;
     if (model === null) return { abs };
     const within = relative(ctx.docsRoot, abs);
-    if (within.startsWith("..") || within === "")
+    if (leavesRoot(within) || within === "")
       throw new UsageError(
         `--from: \`${from}\` is outside the docs root — \`from:\` names a document under it.`
       );

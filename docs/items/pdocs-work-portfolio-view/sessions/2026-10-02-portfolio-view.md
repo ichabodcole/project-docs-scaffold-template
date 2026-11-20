@@ -115,8 +115,8 @@ not being truncated. Cole approved the fixes.
 
 - The [cycle filename lookup](../../pdocs-cycle-filename-lookup/item.md) rebases
   onto this. Both re-padded the views table in SCHEMA and the pdocs reference.
-- The [pdocs-board-landscape](../../pdocs-board-landscape.md) research can use
-  this view as input.
+- The [pdocs-board-landscape](../../pdocs-board-landscape/item.md) research can
+  use this view as input.
 
 ---
 

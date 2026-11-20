@@ -64,6 +64,19 @@ const FIXTURE_CONFIG = {
 };
 const CREATABLE = ROWS.filter((r) => r.creatable);
 
+/** Descriptions a plain YAML scalar cannot hold, or holds as something else. */
+const STRICT_YAML_DESCRIPTIONS = [
+  "Part one: part two, long enough to wrap onto a second line in the file, which takes more than eighty columns.",
+  '"Never write the active version" is the right default but an absolute today; long enough to wrap onto a second line.',
+  "'Never' is the right default.",
+  "We tested three things:",
+  "A value with a # in it, and a trailing one #",
+  "[brackets], {braces}, a | pipe and a - dash",
+  "> not a folded block",
+  "Ratios of 3:1 and up, at https://example.com/a:b — nothing a plain scalar cannot hold, but long enough to wrap.",
+  'An "inner" quote: and a back\\slash',
+];
+
 const roots: string[] = [];
 afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });
@@ -792,6 +805,27 @@ describe("pdocs new — frontmatter", () => {
     expect(body).not.toContain("YYYY-MM-DD }");
   });
 
+  // What a strict parser makes of the written file, before and after the
+  // formatter the `next:` hint names has wrapped it (#207).
+  test("a description a plain scalar cannot hold is written so a strict YAML parser reads it back", async () => {
+    const config = await prettier.resolveConfig(join(REPO_ROOT, "docs/index.md"));
+    for (const [i, description] of STRICT_YAML_DESCRIPTIONS.entries()) {
+      const root = tree();
+      const r = run(["new", "item", `case-${i}`, "--kind", "task", "--root", root, "--description", description]);
+      expect([description, r.stderr]).toEqual([description, ""]);
+      const written = readFileSync(join(root, `docs/items/case-${i}.md`), "utf8");
+      const formatted = await prettier.format(written, { ...config, parser: "markdown" });
+      for (const text of [written, formatted]) {
+        const block = /^---\n([\s\S]*?)\n---/.exec(text)?.[1] as string;
+        expect([description, (Bun.YAML.parse(block) as { description: unknown }).description]).toEqual([
+          description,
+          description,
+        ]);
+        expect(parseFrontmatter(block).get("description")).toBe(description);
+      }
+    }
+  });
+
   test("a description with a colon is quoted, so a real YAML parser agrees", () => {
     const root = tree();
     run([
@@ -1374,6 +1408,16 @@ describe("pdocs new item", () => {
     expect(bad.stderr).toContain("lint.scopes");
     expect(newItem(root, "x", "--kind", "task", "--scope", "cli").code).toBe(ExitCode.Success);
     expect(fields(root, "docs/items/x.md").get("scope")).toBe("cli");
+  });
+
+  test("--from accepts a folder whose name only begins with two dots (#209)", () => {
+    const root = workTree();
+    mkdirSync(join(root, "docs/..notes"), { recursive: true });
+    writeFileSync(join(root, "docs/..notes/x.md"), "# X\n");
+    const r = newItem(root, "from-dots", "--kind", "chore", "--from", "docs/..notes/x.md");
+    expect(r.stderr).toBe("");
+    expect(r.code).toBe(ExitCode.Success);
+    expect(fields(root, "docs/items/from-dots.md").get("from")).toBe("..notes/x.md");
   });
 
   test("--from writes `from:` AND the Related link — one flag, both jobs", () => {
