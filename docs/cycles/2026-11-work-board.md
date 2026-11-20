@@ -83,3 +83,5 @@ placeholder line into a real cycle.
 
 - feature/view-entries-carry-board-fields (landed 2026-11-19)
 - feature/board-model-and-selection-rules (landed 2026-11-19)
+- feature/board-server-and-pdocs-bridge (open)
+- feature/research-items-parent-feature (open)

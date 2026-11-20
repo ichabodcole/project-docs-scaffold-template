@@ -5,8 +5,8 @@ description:
   A daemon an agent can open, query and stop, which reads a project only through
   its own pdocs CLI, refuses a CLI too old to serve it, and accepts exactly two
   kinds of write.
-status: draft
-lifecycle: ready
+status: stable
+lifecycle: active
 id: 01a1f70e-fbe5-718b-8d2d-d1af33d3f266
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-19 }
@@ -24,8 +24,9 @@ that finds the project's `scripts/pdocs/cli.ts`, spawns it and parses its JSON
 (`lib/compat.ts`); the composed snapshot (`lib/snapshot.ts`); the two write
 kinds and their Undo (`lib/writes.ts`); and the daemon and agent verbs
 (`scripts/server.ts`, `scripts/cli.ts`: `open`, `status`, `stop`). It serves a
-placeholder page until the shell is built. `work-board` is added to the Codex
-exclusion in `scripts/build-skills-dist.sh`.
+placeholder page until the shell is built. The snapshot has four parts, typed as
+`Snapshot` in `app/model.ts`, and `work-board` is already excluded from the
+Codex package.
 
 This is Phase 2 of the [plan](../features/pdocs-work-board/plan.md). It merges
 after [the view fields](./view-entries-carry-board-fields/item.md), which its

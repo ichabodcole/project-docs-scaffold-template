@@ -6,7 +6,7 @@ description:
   feature's view, and a finished research item leaves nothing open that points
   at the build it recommended.
 status: stable
-lifecycle: backlog
+lifecycle: active
 id: 01a1eaa7-44f9-7007-849c-b966874e830e
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
