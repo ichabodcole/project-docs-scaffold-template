@@ -140,7 +140,7 @@ The comparison in full:
 
 | Question                        | In the skill (`plugins/project-docs/skills/work-board/`)                                                                                                                                                                                                                                                                                                                            | Under pdocs (`scripts/pdocs/board/`, mirrored to the payload)                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| How it reaches the data         | Spawns `bun <root>/scripts/pdocs/cli.ts view … --json` and parses the envelope. The CLI defaults its root to its own repository (`cli.ts` line 310), so no `--root` is passed. A poll costs three spawns at about 0.05 s each (foundations report, timings).                                                                                                                        | Imports `treeContext` from `cli.ts` and `collectWork` and the `view*` functions from `work.ts`, about 53 ms in process. Writes still spawn `set`.                                                                                                                                                                                                                                                                                                                  |
+| How it reaches the data         | Spawns `bun <root>/scripts/pdocs/cli.ts view … --json` and parses the envelope. The CLI defaults its root to its own repository (`cli.ts` line 310), so no `--root` is passed. A poll costs three spawns and one more per current cycle, at about 0.05 s each (foundations report, timings).                                                                                        | Imports `treeContext` from `cli.ts` and `collectWork` and the `view*` functions from `work.ts`, about 53 ms in process. Writes still spawn `set`.                                                                                                                                                                                                                                                                                                                  |
 | What the missing fields cost    | `ViewEntry` lacks `description`, `from` and `source` (`view.ts` lines 42 to 62), and a cycle entry lacks `appetite` and `started` (checked: `view cycle 2026-11-work-board --json`). Phase 1 adds them: one function, its tests and the mirror. Until a project has that release, the board refuses to open there.                                                                  | Nothing. `WorkEntity` already has `from`, and `fields` holds the whole frontmatter (`work.ts` lines 41 to 75).                                                                                                                                                                                                                                                                                                                                                     |
 | Version skew                    | The plugin's app against the project's CLI. Pre-9.0.0 projects have no `view` (it arrived in 9.0.0: `git tag --contains` on the commit that added `commands/view.ts`). Projects on 9.0.0 to 9.4.1 lack the fields. The board detects both from the JSON itself and stops with "run `update-project-docs`". A project still on 8.0.0 is the first kind.                              | The app and the data code always match, because they ship together. The skill text (plugin) can describe a board that the project's scaffold does not have yet, and every pre-release project has no board at all. The skill has to detect that `scripts/pdocs/board/` exists.                                                                                                                                                                                     |
 | What it adds to an adopter      | Nothing in their repository.                                                                                                                                                                                                                                                                                                                                                        | A server, front-end files and a vendored script under their `scripts/pdocs/`, for every adopter, used or not. Their formatter and typecheck can claim the new `.html`, `.css` and `.ts` files: `update-project-docs` already has to tell adopters to exclude `scripts/pdocs/` from Prettier, Biome and ESLint (its SKILL.md, lines 336 to 344).                                                                                                                    |
@@ -176,13 +176,22 @@ plugins/project-docs/skills/work-board/
   app/vendor/alpine.min.js   a pinned Alpine 3 release, vendored, no CDN
 ```
 
-- **Reads per poll:** `view board --features --all`, `view portfolio` and
-  `view unreviewed`. `--all` brings archived items, so a blocker that was
-  archived still resolves to its lifecycle. The Cycle and Feature pages add
-  `view cycle <slug>` or `view feature <slug>` while they are open. The browser
-  polls `GET /api/snapshot` every 4 s and again after each write. The server
-  caches a snapshot for 1 s and sends a hash with it, so an unchanged snapshot
-  is not re-rendered.
+- **Reads per poll:** `view board --features --all`, `view portfolio`,
+  `view unreviewed`, and `view cycle <slug>` for each current cycle that
+  `view portfolio` lists. `--all` brings archived items, so a blocker that was
+  archived still resolves to its lifecycle. A cycle's `status` is in none of the
+  first three reads: a portfolio row has no `status`, and the board lists no
+  cycles. The Inbox needs it for every planned cycle, so each poll reads it from
+  `view cycle <slug>`.
+- **The snapshot has four parts:** `board`, `portfolio` and `unreviewed`, each
+  the `data` of its read, and `cycles`, the `cycle` entry of each
+  `view cycle <slug>` read. A planned cycle with no entry in `cycles` counts as
+  not reviewed.
+- **Reads a page adds:** the Cycle and Feature pages add `view cycle <slug>` or
+  `view feature <slug>` while they are open.
+- **Polling:** the browser polls `GET /api/snapshot` every 4 s and again after
+  each write. The server caches a snapshot for 1 s and sends a hash with it, so
+  an unchanged snapshot is not re-rendered.
 - **Writes:** `POST /api/write` takes one of three bodies: `triage`,
   `membership` or `restore` (Undo). `lib/writes.ts` turns each into one argv for
   `set` and rejects anything else. Undo is built from the `changes[].before`
@@ -282,9 +291,13 @@ the two write kinds. It serves a placeholder page until Phase 4.
   an entry lacks the `description` key, it predates Phase 1. Name the project's
   version from `--version --json` when that parses. Phase 1's release number is
   unknown until it ships, and a feature check needs no constant to keep in step.
-- Create `lib/snapshot.ts`: compose the three poll reads into one object and
-  hash it. Keep composing separate from spawning, so tests feed it recorded
-  JSON.
+- Create `lib/snapshot.ts`: compose the poll reads into one object and hash it.
+  The object has four parts, typed as `Snapshot` in `app/model.ts`: `board`,
+  `portfolio`, `unreviewed`, and `cycles`. Fill `cycles` on every poll with the
+  `cycle` entry of `view cycle <slug>` for each cycle in `portfolio.cycles`. If
+  one of those reads fails, leave that cycle out: the model then counts a
+  planned cycle as not reviewed. Keep composing separate from spawning, so tests
+  feed it recorded JSON.
 - Create `lib/writes.ts`:
   - `triage`: `ref`, `lifecycle` in `backlog`, `ready` or `dropped`, and
     optional `priority`, `parent` (written as `feature/<slug>`) and `reviewed`
@@ -308,9 +321,9 @@ the two write kinds. It serves a placeholder page until Phase 4.
   in a temp folder from a copy of this repository's non-test `scripts/pdocs/`
   and a small `docs/` tree. Two stub CLIs stand in for old projects: one exits 2
   on `view`, one returns 9.4.1-shaped entries.
-- `scripts/build-skills-dist.sh`: add `work-board` to the Codex exclusion `case`
-  in this phase, the first that creates the skill folder, so the app is never
-  copied into `dist/codex-project-docs/` (Decisions). Rebuild `dist/`.
+- `scripts/build-skills-dist.sh` already has `work-board` in the Codex exclusion
+  `case`: it landed with Phase 3. Do not add it again. The app is never copied
+  into `dist/codex-project-docs/` (Decisions). Rebuild `dist/`.
 
 **Validation:**
 
@@ -352,14 +365,15 @@ UI phases only bind them.
     snapshot. An unknown id counts as open, so a missing blocker never reads as
     "blocker done".
   - **Inbox rows** (`attention` and `dInboxRows`): waiting in triage; one row
-    per planned cycle whose `status` is not `stable` (this tree has two planned
-    cycles today, and the prototype assumed one); blocked; started on a draft;
-    blocker already done; finished, never reviewed (from `view unreviewed`); and
-    one row per advisory, by its `message` and `action`. The first five are
-    "Needs a decision" and the rest "Housekeeping". Only "Needs a decision"
-    counts toward the nav (`dInboxCount`). Rendering an advisory from its own
-    `message` and `action` keeps the Inbox correct whatever #210 changes in the
-    archive advisory.
+    per planned cycle whose `status` is not `stable`, read from the snapshot's
+    `cycles` part, where a cycle with no entry counts as not reviewed (this tree
+    has two planned cycles today, and the prototype assumed one); blocked;
+    started on a draft; blocker already done; finished, never reviewed (from
+    `view unreviewed`); and one row per advisory, by its `message` and `action`.
+    The first five are "Needs a decision" and the rest "Housekeeping". Only
+    "Needs a decision" counts toward the nav (`dInboxCount`). Rendering an
+    advisory from its own `message` and `action` keeps the Inbox correct
+    whatever #210 changes in the archive advisory.
   - **Snooze:** `tomorrow`, `week` or `cycle`, stored as
     `{ id, choice, at, activeCycle }`. A row wakes when the date passes or when
     the active cycle's slug differs from the one recorded. The UI keeps it in
@@ -388,9 +402,10 @@ UI phases only bind them.
 - [ ] `bun test plugins/project-docs/skills/work-board/app` passes. Each rule
       above has a test that fails when the rule is reverted in a disposable
       copy.
-- [ ] A test feeds the model a snapshot recorded from this repository
-      (`view board --features --all --json`, saved after Phase 1) and asserts
-      the Inbox has a triage row and an archive row.
+- [ ] A test feeds the model a four-part snapshot recorded from this repository
+      after Phase 1 and trimmed to a few entries
+      (`app/__fixtures__/repo-snapshot.json`), and asserts the Inbox has a
+      triage row and an archive row.
 - [ ] `npx tsc --noEmit` is clean.
 
 **Dependencies:** the Phase 1 field names, used in fixtures. No code dependency.
@@ -411,6 +426,10 @@ drawn, polled and navigable by keyboard. No writes yet.
   the markup from the prototype's `layout === 'd'` block (line 2104 onward),
   without the switcher chrome and the sample data.
 - Wire `board.ts` to `/api/*` with the token, through the Phase 3 functions.
+  Replace the snapshot object on every poll and never mutate it: the Phase 3
+  functions compare the list before a change with the list after
+  (`refresh(state, before, after)` in `app/selection.ts`), which needs both
+  snapshots intact.
 - Keep the seven shell rules in `ABOUT_D`: three regions; the inspector pushes
   the centre and never overlays it; containers drill in and items inspect; the
   cycle's lists are tabs; at most two floats (Snooze and the cycle chooser).

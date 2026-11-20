@@ -28,7 +28,7 @@ without its switcher and sample data.
 
 This is Phase 4 of the [plan](../features/pdocs-work-board/plan.md). It needs
 [the server](./board-server-and-pdocs-bridge.md) and
-[the model](./board-model-and-selection-rules.md).
+[the model](./board-model-and-selection-rules/item.md).
 
 ## Definition of done
 

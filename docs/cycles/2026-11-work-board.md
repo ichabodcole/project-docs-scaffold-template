@@ -39,7 +39,7 @@ Inbox row afterwards, so the two go together.
     — the five fields the board needs in `pdocs view` JSON. First.
   - [item/board-server-and-pdocs-bridge](../items/board-server-and-pdocs-bridge.md)
     and
-    [item/board-model-and-selection-rules](../items/board-model-and-selection-rules.md)
+    [item/board-model-and-selection-rules](../items/board-model-and-selection-rules/item.md)
     — the server and the pure model. They share no files and can run side by
     side, in separate worktrees.
   - [item/board-shell-and-five-pages](../items/board-shell-and-five-pages.md),
@@ -82,3 +82,4 @@ placeholder line into a real cycle.
 -->
 
 - feature/view-entries-carry-board-fields (landed 2026-11-19)
+- feature/board-model-and-selection-rules (landed 2026-11-19)

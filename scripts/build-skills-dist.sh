@@ -280,6 +280,11 @@ for skill_dir in "$PLUGINS_DIR/project-docs/skills"/*/; do
         dev-discovery|dev-kickoff|finalize-branch|ground-in-project|review-docs)
             continue
             ;;
+        # The work board is an app inside a skill. It stays out of the Codex
+        # package until someone tries it there.
+        work-board)
+            continue
+            ;;
     esac
     cp -R "$skill_dir" "$codex_dest/skills/$skill_name"
     codex_skill_count=$((codex_skill_count + 1))
