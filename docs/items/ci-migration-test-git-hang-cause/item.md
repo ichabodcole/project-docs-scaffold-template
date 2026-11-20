@@ -12,7 +12,7 @@ kind: research
 generated: { by: claude-opus-5-5, at: 2026-10-03 }
 from: 01a0fdc5-e8e1-7032-b536-05bd4834600a
 priority: medium
-cycle: 2026-11-check-fixes-and-board-research
+cycle: 2026-11-work-board
 ---
 
 # Find why fixture git hangs in the migration tests on CI

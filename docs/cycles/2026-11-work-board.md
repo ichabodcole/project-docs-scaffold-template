@@ -6,7 +6,7 @@ description:
   finished items in view until the feature is done.
 tags: [pdocs, work-board]
 status: draft
-lifecycle: planned
+lifecycle: active
 started: 2026-11-19
 appetite:
   "Stop when the board opens on this repository's own docs with its five pages,
