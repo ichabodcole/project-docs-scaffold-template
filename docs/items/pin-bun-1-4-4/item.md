@@ -30,4 +30,4 @@ box waits on ten clean CI runs after the pin lands.
 
 - [x] `docs-check.yml` sets `bun-version: 1.4.4`.
 - [x] `npm run check` passes locally on Bun 1.4.4.
-- [ ] The first `docs-check` run on the pinned version passes.
+- [x] The first `docs-check` run on the pinned version passes.

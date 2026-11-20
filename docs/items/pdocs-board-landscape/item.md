@@ -30,7 +30,7 @@ mean read-only: some interaction may belong, such as choosing which items to
 bring into a cycle an agent has proposed.
 
 Question: what should a project-docs work board be? The answer feeds the
-[mockups](../pdocs-work-board-mockups.md), which turn it into variations to
+[mockups](../pdocs-work-board-mockups/item.md), which turn it into variations to
 choose from. This item does not design the board.
 
 Prior art to read first: `tusk-board` (a live task board built in this

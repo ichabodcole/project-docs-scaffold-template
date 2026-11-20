@@ -21,8 +21,8 @@ it should hold, and the mockups come next.
 
 What should a project-docs work board be: what does it show, what does it let
 you do, and what does it leave to other tools? The answer feeds the
-[mockups](../pdocs-work-board-mockups.md), and after them a skill and a small
-application.
+[mockups](../pdocs-work-board-mockups/item.md), and after them a skill and a
+small application.
 
 The board is a dashboard, not a document editor. Scriptorium reviews a document
 line by line; the board sits above that. It need not be read-only.
@@ -208,8 +208,9 @@ Spellbook kit would then be a dependency to copy or share.
 ## Next Steps
 
 1. Review this write-up, and the in-and-out tables above in particular.
-2. Mock up the three versions ([mockups item](../pdocs-work-board-mockups.md))
-   on this tree's real data.
+2. Mock up the three versions
+   ([mockups item](../pdocs-work-board-mockups/item.md)) on this tree's real
+   data.
 3. File the CLI gaps the chosen version needs, under the feature. Candidates: a
    triage view, lifecycle-level grouping, a candidates query, blocker state, and
    for the robust version transition rules and a batch write.
@@ -234,6 +235,6 @@ confirmed; `set` on features and cycles was not exercised.
 
 - [The research item](./item.md)
 - [pdocs work board](../../features/pdocs-work-board/feature.md)
-- [Mock up the work board in a few variations](../pdocs-work-board-mockups.md)
+- [Mock up the work board in a few variations](../pdocs-work-board-mockups/item.md)
 - [Work board visualization landscape](./reports/2026-11-17-work-board-visualization-landscape-report.md)
 - [Work board foundations](./reports/2026-11-17-work-board-foundations-report.md)
