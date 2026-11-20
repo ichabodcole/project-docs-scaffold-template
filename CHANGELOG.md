@@ -1,5 +1,15 @@
 # Changelog
 
+## [9.4.2](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.4.1...project-docs-scaffold-template-v9.4.2) (2026-11-20)
+
+
+### Bug Fixes
+
+* **pdocs:** match GitHub's heading anchors in the link check ([66a0859](https://github.com/ichabodcole/project-docs-scaffold-template/commit/66a085975e81ddc04e3363055f9d9b1a52633570)), closes [#208](https://github.com/ichabodcole/project-docs-scaffold-template/issues/208)
+* **pdocs:** report frontmatter a strict YAML parser rejects ([c643785](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c643785cd003b73bb921803090cd2f1cd6e0a529)), closes [#207](https://github.com/ichabodcole/project-docs-scaffold-template/issues/207)
+* **pdocs:** treat a name starting with two dots as inside the docs root ([aa5d64f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/aa5d64f477c5debdb5fc7a29bd83badb158bb1c9)), closes [#209](https://github.com/ichabodcole/project-docs-scaffold-template/issues/209)
+* **project-docs:** project-summary finds session notes and falls back without view ([1e3e665](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1e3e6651d9469f142f8c190d2f2505e88521795d))
+
 ## [9.4.1](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.4.0...project-docs-scaffold-template-v9.4.1) (2026-10-04)
 
 
