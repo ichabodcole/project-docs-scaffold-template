@@ -76,6 +76,15 @@ const cycle = doc({
   generated: "{ by: test, at: 2026-09-01 }",
 });
 
+/** What the fixture writes for the fields a board reads off a view entry. */
+const BOARD_FIELDS = {
+  description: "Sign in: the high one.",
+  from: "feature/auth",
+  source: "#207",
+  appetite: "Stop when sign-in works: nothing more.",
+  started: "2026-09-01",
+};
+
 function tree(): string {
   const root = mkdtempSync(join(tmpdir(), "pdocs-view-"));
   roots.push(root);
@@ -88,19 +97,37 @@ function tree(): string {
     "docs/features/auth/feature.md": feature("active", { scope: "cli" }),
     "docs/features/old/feature.md": feature("done", {}, "2026-08-01"),
     "docs/features/shipped/feature.md": feature("done", { released_in: "9.0.0" }),
-    "docs/cycles/2026-09-x.md": cycle,
+    // The one cycle with an `appetite` and a `started`; `2026-10-y` has neither.
+    "docs/cycles/2026-09-x.md": cycle.replace(
+      "lifecycle: active\n",
+      `lifecycle: active\nstarted: 2026-09-01\nappetite: ${JSON.stringify(BOARD_FIELDS.appetite)}\n`
+    ),
     "docs/cycles/2026-10-y.md": cycle.replace("lifecycle: active", "lifecycle: planned"),
     // unstarted, in a deliberately scrambled order
     "docs/items/b-none.md": item("b-none", "backlog", {}, "2026-09-03"),
     "docs/items/a-low.md": item("a-low", "triage", { priority: "low" }),
     "docs/items/c-urgent-late.md": item("c-urgent-late", "ready", { priority: "urgent" }, "2026-09-05"),
     "docs/items/d-urgent-early.md": item("d-urgent-early", "ready", { priority: "urgent" }, "2026-09-02"),
-    "docs/items/e-high.md": item("e-high", "backlog", { priority: "high", parent: "feature/auth", cycle: "2026-09-x" }),
+    // e-high and h-done carry the board's fields (`description`, `from`,
+    // `source`); every other item has only the helper's description.
+    "docs/items/e-high.md": item("e-high", "backlog", {
+      priority: "high",
+      parent: "feature/auth",
+      cycle: "2026-09-x",
+      description: JSON.stringify(BOARD_FIELDS.description),
+      from: BOARD_FIELDS.from,
+      source: JSON.stringify(BOARD_FIELDS.source),
+    }),
     // started
     "docs/items/f-active.md": item("f-active", "active", { parent: "feature/auth", cycle: "2026-09-x", scope: "cli" }),
     "docs/items/g-review/item.md": item("g-review", "review", { scope: "lint" }),
     // terminal
-    "docs/items/h-done.md": item("h-done", "done", { cycle: "2026-10-y" }),
+    "docs/items/h-done.md": item("h-done", "done", {
+      cycle: "2026-10-y",
+      description: JSON.stringify(BOARD_FIELDS.description),
+      from: BOARD_FIELDS.from,
+      source: JSON.stringify(BOARD_FIELDS.source),
+    }),
     "docs/items/i-dropped.md": item("i-dropped", "dropped", { cycle: "2026-10-y" }),
     "docs/items/j-released.md": item("j-released", "done", { released_in: "9.0.0" }),
     "docs/items/_archive/k-archived.md": item("k-archived", "done", {}, "2026-07-01"),
@@ -273,6 +300,130 @@ describe("pdocs view", () => {
     expect(shown).toContain(full.slice(0, shown.find((s) => full.startsWith(s))!.length));
     expect(full.startsWith(shown.find((s) => full.startsWith(s))!)).toBe(true);
     expect(JSON.stringify(data("board"))).toContain(full);
+  });
+
+  // The fields a caller outside the repository draws a board from: it reads
+  // them off the entry, never off the file.
+  describe("entries carry the board's fields", () => {
+    type E = Record<string, unknown> & { slug: string };
+    const { description, from, source, appetite, started } = BOARD_FIELDS;
+    const find = (list: E[], slug: string) => {
+      const e = list.find((x) => x.slug === slug);
+      if (!e) throw new Error(`no entry \`${slug}\``);
+      return e;
+    };
+    const KEYS = ["description", "from", "source", "appetite", "started"];
+    /** Every entry has all five keys, each a string or `null`: never missing. */
+    const expectKeys = (list: E[]) => {
+      expect(list.length).toBeGreaterThan(0);
+      for (const e of list)
+        for (const k of KEYS) {
+          expect(e).toHaveProperty(k);
+          expect(e[k] === null || typeof e[k] === "string").toBe(true);
+        }
+    };
+    const carried = { description, from, source, appetite: null, started: null };
+    const bare = { description: "An item.", from: null, source: null, appetite: null, started: null };
+
+    test("board --features --all", () => {
+      const groups = data("board", "--features", "--all").groups as Record<string, E[]>;
+      const all = Object.values(groups).flat();
+      expectKeys(all);
+      expect(find(all, "e-high")).toMatchObject(carried);
+      expect(find(all, "h-done")).toMatchObject(carried);
+      expect(find(all, "f-active")).toMatchObject(bare);
+      // an archived item, and a feature: `appetite` and `started` are a cycle's
+      expect(find(all, "k-archived")).toMatchObject(bare);
+      expect(find(all, "auth")).toMatchObject({ ...bare, description: "A feature." });
+    });
+
+    test("backlog", () => {
+      const items = data("backlog").items as E[];
+      expectKeys(items);
+      expect(find(items, "e-high")).toMatchObject(carried);
+      expect(find(items, "b-none")).toMatchObject(bare);
+    });
+
+    test("feature <slug>", () => {
+      const d = data("feature", "auth");
+      expectKeys([d.feature, ...d.items]);
+      expect(d.feature).toMatchObject({ ...bare, description: "A feature." });
+      expect(find(d.items, "e-high")).toMatchObject(carried);
+      expect(find(d.items, "f-active")).toMatchObject(bare);
+    });
+
+    test("cycle <slug>: the cycle entry carries `appetite` and `started`", () => {
+      const x = data("cycle", "2026-09-x");
+      expectKeys([x.cycle, ...x.items]);
+      expect(x.cycle).toMatchObject({
+        description: "A cycle.",
+        from: null,
+        source: null,
+        appetite,
+        started,
+      });
+      expect(find(x.items, "e-high")).toMatchObject(carried);
+      expect(find(x.items, "f-active")).toMatchObject(bare);
+      // a cycle that has neither
+      const y = data("cycle", "2026-10-y");
+      expectKeys([y.cycle, ...y.items]);
+      expect(y.cycle).toMatchObject({ description: "A cycle.", appetite: null, started: null });
+    });
+
+    test("unreviewed", () => {
+      const items = data("unreviewed").items as E[];
+      expectKeys(items);
+      expect(find(items, "h-done")).toMatchObject(carried);
+      expect(find(items, "j-released")).toMatchObject(bare);
+    });
+
+    test("a field that is missing or empty is `null`; an item's `appetite` and `started` are never read", () => {
+      const root = tree();
+      const noDescription = item("n-bare", "backlog").replace("description: An item.\n", "");
+      expect(noDescription).not.toContain("description");
+      writeFileSync(join(root, "docs/items/n-bare.md"), noDescription);
+      writeFileSync(
+        join(root, "docs/items/o-empty.md"),
+        item("o-empty", "backlog", {
+          description: '""',
+          from: "",
+          source: "''",
+          appetite: "not a cycle's",
+          started: "2026-09-01",
+        })
+      );
+      const r = run(["view", "backlog", "--root", root, "--format", "json"]);
+      expect(r.code).toBe(ExitCode.Success);
+      const items = JSON.parse(r.stdout).data.items as E[];
+      const none = { description: null, from: null, source: null, appetite: null, started: null };
+      expect(find(items, "n-bare")).toMatchObject(none);
+      expect(find(items, "o-empty")).toMatchObject(none);
+    });
+
+    test("prose that begins and ends with a quoted phrase keeps its quotes", () => {
+      const root = tree();
+      writeFileSync(
+        join(root, "docs/items/p-quoted.md"),
+        item("p-quoted", "backlog", {
+          description: JSON.stringify('"pdocs view" versus "pdocs find"'),
+          source: `'"single" then "double"'`,
+        })
+      );
+      const r = run(["view", "backlog", "--root", root, "--format", "json"]);
+      expect(r.code).toBe(ExitCode.Success);
+      expect(find(JSON.parse(r.stdout).data.items as E[], "p-quoted")).toMatchObject({
+        description: '"pdocs view" versus "pdocs find"',
+        source: '"single" then "double"',
+      });
+    });
+
+    test("text output carries none of them", () => {
+      for (const args of [["board", "--features", "--all"], ["backlog"], ["cycle", "2026-09-x"], ["unreviewed"]]) {
+        const r = run(["view", ...args, "--root", ROOT, "--format", "text"]);
+        expect(r.code).toBe(ExitCode.Success);
+        for (const v of [description, source, appetite]) expect(r.stdout).not.toContain(v);
+      }
+    });
   });
 });
 

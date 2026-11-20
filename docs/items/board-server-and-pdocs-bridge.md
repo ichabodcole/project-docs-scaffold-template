@@ -6,7 +6,7 @@ description:
   its own pdocs CLI, refuses a CLI too old to serve it, and accepts exactly two
   kinds of write.
 status: draft
-lifecycle: backlog
+lifecycle: ready
 id: 01a1f70e-fbe5-718b-8d2d-d1af33d3f266
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-19 }
@@ -28,7 +28,7 @@ placeholder page until the shell is built. `work-board` is added to the Codex
 exclusion in `scripts/build-skills-dist.sh`.
 
 This is Phase 2 of the [plan](../features/pdocs-work-board/plan.md). It merges
-after [the view fields](./view-entries-carry-board-fields.md), which its
+after [the view fields](./view-entries-carry-board-fields/item.md), which its
 end-to-end test needs.
 
 ## Definition of done

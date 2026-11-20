@@ -35,7 +35,7 @@ Inbox row afterwards, so the two go together.
   Cycle, Feature) and two writes (a triage decision, cycle membership), each one
   `pdocs set` call. Seven items, one per phase of its
   [plan](../features/pdocs-work-board/plan.md):
-  - [item/view-entries-carry-board-fields](../items/view-entries-carry-board-fields.md)
+  - [item/view-entries-carry-board-fields](../items/view-entries-carry-board-fields/item.md)
     — the five fields the board needs in `pdocs view` JSON. First.
   - [item/board-server-and-pdocs-bridge](../items/board-server-and-pdocs-bridge.md)
     and
@@ -80,3 +80,5 @@ One line per branch, appended by `init-branch` as it opens them:
 lands. Leave this section empty until the first branch; do not carry a
 placeholder line into a real cycle.
 -->
+
+- feature/view-entries-carry-board-fields (landed 2026-11-19)
