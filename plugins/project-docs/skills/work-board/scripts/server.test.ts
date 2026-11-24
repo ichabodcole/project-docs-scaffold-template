@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { entry, portfolioEntry } from "../app/test-support.ts";
 import type { PdocsResult } from "../lib/pdocs.ts";
 import { failed, ok, OLD_ENTRY } from "../lib/test-support.ts";
-import { createBoard, idleExpired, IDLE_LIMIT_MS, TOKEN_HEADER, tokenMatches } from "./server.ts";
+import { createBoard, idleExpired, IDLE_LIMIT_MS, serveBoard, TOKEN_HEADER, tokenMatches } from "./server.ts";
 
 const TOKEN = "a".repeat(64);
 const PORT = 4173;
@@ -162,14 +162,160 @@ describe("who may call", () => {
     for (const given of [null, "", TOKEN.slice(1), `${TOKEN}a`, "b".repeat(64)]) expect(tokenMatches(given, TOKEN)).toBe(false);
   });
 
-  test("the page needs no token and carries nothing of the project", async () => {
+  test("anything outside `/api/` that the shell does not serve is not found, and spawns nothing", async () => {
     const h = harness();
-    const res = await h.request("/?token=whatever", { headers: { [TOKEN_HEADER]: "" } });
-    expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/html");
-    expect(await res.text()).toContain("Work board");
-    expect(h.calls).toEqual([]);
     expect((await h.request("/etc/passwd")).status).toBe(404);
+    expect((await h.request("/app/model.ts")).status).toBe(404);
+    expect(h.calls).toEqual([]);
+  });
+});
+
+describe("the shell", () => {
+  // A real listener: Bun serves the page and what it links through `routes`.
+  async function served(
+    fn: (base: string, h: ReturnType<typeof harness>, server: ReturnType<typeof serveBoard>) => Promise<void>
+  ): Promise<void> {
+    const h = harness();
+    const server = serveBoard(h.board);
+    try {
+      await fn(`http://127.0.0.1:${server.port}`, h, server);
+    } finally {
+      await server.stop();
+    }
+  }
+  /** Every script and stylesheet the page links, fetched. */
+  async function assets(base: string, html: string): Promise<string[]> {
+    const paths = [...html.matchAll(/(?:src|href)="(\/[^"]+)"/g)].map((m) => m[1]!);
+    expect(paths.some((path) => path.endsWith(".js"))).toBe(true);
+    expect(paths.some((path) => path.endsWith(".css"))).toBe(true);
+    return Promise.all(
+      paths.map(async (path) => {
+        const res = await fetch(new URL(path, base));
+        expect(res.status).toBe(200);
+        return res.text();
+      })
+    );
+  }
+
+  test("`/` is the app, needs no token, and carries no token and nothing of the project", async () => {
+    await served(async (base, h) => {
+      const res = await fetch(`${base}/?token=${TOKEN}`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toContain("text/html");
+      const html = await res.text();
+      expect(html).toContain("<title>Work board</title>");
+      expect(html).toContain('x-data="board"');
+      expect(html).toContain('name="referrer" content="no-referrer"');
+      const all = [html, ...(await assets(base, html))].join("\n");
+      expect(all.includes(TOKEN_HEADER)).toBe(true);
+      expect(all.includes("Alpine")).toBe(true);
+      // Nothing was read to serve it, so nothing of the project can be in it.
+      expect(h.calls).toEqual([]);
+      for (const secret of [TOKEN, "/project", "Title of ", "docs/items/"]) expect(all.includes(secret)).toBe(false);
+    });
+  });
+
+  test("the page and what it links ask for nothing outside this server", async () => {
+    await served(async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      const all = [html, ...(await assets(base, html))].join("\n");
+      // A URL in a comment or a licence note is not a request; a loader or a link is.
+      expect(html).not.toMatch(/(?:src|href)="(?:https?:)?\/\//);
+      expect(/@import|url\(\s*["']?https?:/.test(all)).toBe(false);
+      expect(/cdn\.tailwindcss|jsdelivr|unpkg|googleapis/.test(all)).toBe(false);
+    });
+  });
+
+  test("the page and its chunks say what they are and send no referrer; the page is never cached", async () => {
+    await served(async (base) => {
+      const res = await fetch(`${base}/`);
+      const html = await res.text();
+      expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      const paths = [...html.matchAll(/(?:src|href)="(\/[^"]+)"/g)].map((m) => m[1]!);
+      for (const path of paths) {
+        const chunk = await fetch(`${base}${path}`);
+        expect(chunk.status).toBe(200);
+        expect(chunk.headers.get("x-content-type-options")).toBe("nosniff");
+        expect(chunk.headers.get("referrer-policy")).toBe("no-referrer");
+        expect(chunk.headers.get("content-type")).toMatch(/^text\/(javascript|css)/);
+      }
+      const head = await fetch(`${base}/`, { method: "HEAD" });
+      expect(head.status).toBe(200);
+      expect(await head.text()).toBe("");
+    });
+  });
+
+  test("the page answers only GET and HEAD, and only as the board's own host", async () => {
+    await served(async (base, h, server) => {
+      const port = server.port;
+      const ask = (path: string, method: string, host: string) =>
+        server.fetch(new Request(`${base}${path}`, { method, headers: { host } }));
+      const html = await (await ask("/", "GET", `127.0.0.1:${port}`)).text();
+      expect(html).toContain('x-data="board"');
+      const chunk = /src="(\/[^"]+)"/.exec(html)![1]!;
+      for (const path of ["/", chunk]) {
+        expect((await ask(path, "GET", `127.0.0.1:${port}`)).status).toBe(200);
+        for (const method of ["POST", "PUT", "DELETE"]) expect((await ask(path, method, `127.0.0.1:${port}`)).status).toBe(405);
+        for (const host of ["evil.example", `localhost:${port}`, "127.0.0.1:9", ""]) {
+          const res = await ask(path, "GET", host);
+          expect(res.status).toBe(403);
+          expect(await res.text()).not.toContain("x-data");
+        }
+      }
+      expect((await fetch(`${base}/`, { method: "POST" })).status).toBe(405);
+      expect((await ask("/etc/passwd", "GET", `127.0.0.1:${port}`)).status).toBe(404);
+      expect((await ask("/app/model.ts", "GET", `127.0.0.1:${port}`)).status).toBe(404);
+      expect(h.calls).toEqual([]);
+    });
+  });
+
+  test("a board takes the port it asks for when that is free, and the port answers again after a restart", async () => {
+    const probe = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("") });
+    const free = probe.port ?? 0;
+    await probe.stop(true);
+    for (let round = 0; round < 2; round++) {
+      const h = harness();
+      const server = serveBoard(h.board, free);
+      try {
+        expect(server.port).toBe(free);
+        expect(h.board.options.port).toBe(free);
+        expect((await fetch(`http://127.0.0.1:${free}/api/snapshot`, { headers: { [TOKEN_HEADER]: TOKEN } })).status).toBe(200);
+      } finally {
+        await server.stop();
+      }
+    }
+  });
+
+  test("a port that is taken falls back to any free one, and the board answers there", async () => {
+    const squatter = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => new Response("someone else") });
+    const taken = squatter.port ?? 0;
+    const h = harness();
+    const server = serveBoard(h.board, taken);
+    try {
+      expect(server.port).not.toBe(taken);
+      expect(server.port).toBeGreaterThan(0);
+      expect(h.board.options.port).toBe(server.port);
+      expect((await fetch(`http://127.0.0.1:${server.port}/api/snapshot`, { headers: { [TOKEN_HEADER]: TOKEN } })).status).toBe(200);
+      expect(await (await fetch(`http://127.0.0.1:${server.port}/`)).text()).toContain('x-data="board"');
+      expect(await (await fetch(`http://127.0.0.1:${taken}/`)).text()).toBe("someone else");
+    } finally {
+      await server.stop();
+      await squatter.stop(true);
+    }
+  });
+
+  test("serving the page does not count as the board's page calling, and the API still needs the token", async () => {
+    await served(async (base, h) => {
+      const start = h.board.lastRequest();
+      h.tick(5000);
+      await fetch(`${base}/`);
+      expect(h.board.lastRequest()).toBe(start);
+      expect((await fetch(`${base}/api/snapshot`)).status).toBe(401);
+      expect((await fetch(`${base}/api/snapshot?token=${TOKEN}`)).status).toBe(401);
+      expect((await fetch(`${base}/api/snapshot`, { headers: { [TOKEN_HEADER]: TOKEN } })).status).toBe(200);
+    });
   });
 });
 

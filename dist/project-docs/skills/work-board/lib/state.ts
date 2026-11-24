@@ -56,6 +56,16 @@ export function rootKey(root: string): string {
   return createHash("sha256").update(real).digest("hex").slice(0, 16);
 }
 
+/**
+ * The port a project's board asks for first: the same one every time, taken
+ * from the root's key, in the range no service is assigned (49152 to 65535).
+ * The page's origin then survives a restart, and with it what the browser
+ * keeps for the board. The token is still new on every start.
+ */
+export function preferredPort(root: string): number {
+  return 49152 + (Number.parseInt(rootKey(root).slice(0, 8), 16) % 16384);
+}
+
 export const pointerPath = (root: string): string => join(stateDir(), `${rootKey(root)}.json`);
 export const logPath = (root: string): string => join(stateDir(), `${rootKey(root)}.log`);
 

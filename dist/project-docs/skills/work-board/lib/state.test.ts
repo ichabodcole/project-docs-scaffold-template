@@ -25,6 +25,7 @@ import {
   readPointer,
   removeLog,
   removePointer,
+  preferredPort,
   rootKey,
   stateDir,
   StateError,
@@ -206,5 +207,24 @@ describe("the log", () => {
     expect(existsSync(target)).toBe(false);
     mkdirSync(logPath("/another/project"));
     expect(() => openLog("/another/project")).toThrow(StateError);
+  });
+});
+
+describe("the port a project's board asks for first", () => {
+  test("is the same every time for one root, and in the range no service is assigned", () => {
+    const root = tempDir("work-board-port-");
+    const port = preferredPort(root);
+    expect(preferredPort(root)).toBe(port);
+    expect(Number.isInteger(port)).toBe(true);
+    expect(port).toBeGreaterThanOrEqual(49152);
+    expect(port).toBeLessThanOrEqual(65535);
+  });
+
+  test("comes from the root's key, so two paths to one root agree and two roots differ", () => {
+    const root = tempDir("work-board-port-");
+    expect(preferredPort(join(root, "."))).toBe(preferredPort(root));
+    expect(preferredPort(root)).toBe(49152 + (Number.parseInt(rootKey(root).slice(0, 8), 16) % 16384));
+    const ports = new Set(["a", "b", "c", "d", "e", "f"].map((name) => preferredPort(`/no/such/project-${name}`)));
+    expect(ports.size).toBeGreaterThan(1);
   });
 });

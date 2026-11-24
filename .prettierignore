@@ -23,3 +23,8 @@ CHANGELOG.md
 # `agent-cli-conformance`, which is pinned in devDependencies. Scoped to that one
 # directory: the other skills under `.claude/skills/` are this repo's own.
 .claude/skills/acc/
+
+# Vendored scripts — copied unchanged from their package, so a re-copy does not
+# churn a diff. `app/vendor/alpine.min.js` comes from `alpinejs`, which is pinned
+# in devDependencies.
+**/app/vendor/

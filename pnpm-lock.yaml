@@ -24,6 +24,9 @@ importers:
       agent-cli-conformance:
         specifier: git+https://github.com/ichabodcole/agent-cli-conformance.git#v0.1.13
         version: https://codeload.github.com/ichabodcole/agent-cli-conformance/tar.gz/cc868614e440b871876af47806f4244a8eeff4b8
+      alpinejs:
+        specifier: 3.17.5
+        version: 3.17.5
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -1123,6 +1126,9 @@ packages:
   '@vue/reactivity@3.5.30':
     resolution: {integrity: sha512-179YNgKATuwj9gB+66snskRDOitDiuOZqkYia7mHKJaidOMo/WJxHKF8DuGc4V4XbYTJANlfEKb0yxTQotnx4Q==}
 
+  '@vue/reactivity@3.5.46':
+    resolution: {integrity: sha512-+FHtYTvGxgFoX3oRs7soz6JHizGv50Q26WJN6PWtXuTLXRfkfUpDUTRuoTA/kiZVVt8NMeMpsPQLh9h++ReUjQ==}
+
   '@vue/runtime-core@3.5.30':
     resolution: {integrity: sha512-e0Z+8PQsUTdwV8TtEsLzUM7SzC7lQwYKePydb7K2ZnmS6jjND+WJXkmmfh/swYzRyfP1EY3fpdesyYoymCzYfg==}
 
@@ -1136,6 +1142,9 @@ packages:
 
   '@vue/shared@3.5.30':
     resolution: {integrity: sha512-YXgQ7JjaO18NeK2K9VTbDHaFy62WrObMa6XERNfNOkAhD1F1oDSf3ZJ7K6GqabZ0BvSDHajp8qfS5Sa2I9n8uQ==}
+
+  '@vue/shared@3.5.46':
+    resolution: {integrity: sha512-P1WePbdzHrcIciWtmY2Im9EFhdakd3rZxYqvalOa3SfoxtF35Q8Uhmj1tKn6bWP4utcOpN8ao6BoJUItq0Uf+g==}
 
   '@vueuse/core@13.9.0':
     resolution: {integrity: sha512-ts3regBQyURfCE2BcytLqzm8+MmLlo5Ln/KLoxDVcsZ2gzIwVNnQpQOL/UKV8alUqjSZOlpFZcRNsLRqj+OzyA==}
@@ -1185,6 +1194,9 @@ packages:
 
   alien-signals@3.1.2:
     resolution: {integrity: sha512-d9dYqZTS90WLiU0I5c6DHj/HcKkF8ZyGN3G5x8wSbslulz70KOxaqCT0hQCo9KOyhVqzqGojvNdJXoTumZOtcw==}
+
+  alpinejs@3.17.5:
+    resolution: {integrity: sha512-XewMqRC6zjy8iaUPn86dxjvooAsNai3hUtQbdn0A5H2w7Jt10xHGZ1SczN5+Dvp3UKkuSEt9moy/UaUWOwKdnQ==}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -4215,6 +4227,10 @@ snapshots:
     dependencies:
       '@vue/shared': 3.5.30
 
+  '@vue/reactivity@3.5.46':
+    dependencies:
+      '@vue/shared': 3.5.46
+
   '@vue/runtime-core@3.5.30':
     dependencies:
       '@vue/reactivity': 3.5.30
@@ -4234,6 +4250,8 @@ snapshots:
       vue: 3.5.30(typescript@5.9.3)
 
   '@vue/shared@3.5.30': {}
+
+  '@vue/shared@3.5.46': {}
 
   '@vueuse/core@13.9.0(vue@3.5.30(typescript@5.9.3))':
     dependencies:
@@ -4287,6 +4305,10 @@ snapshots:
       commander: 15.0.0
 
   alien-signals@3.1.2: {}
+
+  alpinejs@3.17.5:
+    dependencies:
+      '@vue/reactivity': 3.5.46
 
   ansi-regex@5.0.1: {}
 

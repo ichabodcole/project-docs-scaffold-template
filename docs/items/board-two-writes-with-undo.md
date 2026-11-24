@@ -5,7 +5,7 @@ description:
   The triage decision and cycle membership write through one pdocs set call
   each, show the command that ran, and can be undone.
 status: draft
-lifecycle: backlog
+lifecycle: ready
 id: 01a1f70e-fcfb-71a7-a8c7-2b9c09152e10
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-19 }
@@ -30,7 +30,13 @@ or more than 100 writes followed) shows "Undo no longer available" and removes
 the Undo control (the plan's Undo contract).
 
 This is Phase 5 of the [plan](../features/pdocs-work-board/plan.md). It needs
-[the shell](./board-shell-and-five-pages.md).
+[the shell](./board-shell-and-five-pages/item.md).
+
+At 1024px wide with the inspector open, one-line rows on Triage and Candidates
+keep about 15 characters of title, because their side columns are fixed-width
+([session](./board-shell-and-five-pages/sessions/2026-11-24-board-shell.md)).
+The triage decision is made in the inspector beside that list, so this item
+makes those rows readable at that width.
 
 ## Definition of done
 

@@ -6,6 +6,9 @@
 // into the project.
 
 import { randomBytes, timingSafeEqual } from "node:crypto";
+// The shell. Bun bundles the page, its stylesheet and its scripts when the
+// page is first asked for: nothing is built ahead, and nothing is committed.
+import page from "../app/index.html";
 import { featureArgs, cycleArgs, readSnapshot, type SnapshotResult } from "../lib/snapshot.ts";
 import {
   findRoot,
@@ -15,7 +18,7 @@ import {
   type PdocsFailure,
   type PdocsRunner,
 } from "../lib/pdocs.ts";
-import { HOST, removeLog, removePointer, writePointer } from "../lib/state.ts";
+import { HOST, preferredPort, removeLog, removePointer, writePointer } from "../lib/state.ts";
 import {
   buildRestore,
   parseWrite,
@@ -86,21 +89,6 @@ function pdocsRefusal(failure: PdocsFailure, extra: Record<string, unknown> = {}
   const { ok: _ok, ...error } = failure;
   return json(status, { ok: false, error, ...extra });
 }
-
-// Stands in until the shell is built.
-const PLACEHOLDER = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Work board</title>
-  </head>
-  <body>
-    <h1>Work board</h1>
-    <p>The board's server is running. Its pages are not built yet.</p>
-  </body>
-</html>
-`;
 
 /** An Undo this server handed out: its body, and what its write left behind. */
 interface IssuedUndo {
@@ -251,13 +239,9 @@ export function createBoard(options: BoardOptions): Board {
     }
     if (!url) return refuse(403, "forbidden", "this server answers only as " + `${HOST}:${options.port}.`);
     const { pathname } = url;
-    if (!pathname.startsWith("/api/")) {
-      if (pathname !== "/") return refuse(404, "not_found", "no such page.");
-      if (req.method !== "GET" && req.method !== "HEAD") return refuse(405, "usage", "GET only.");
-      return new Response(PLACEHOLDER, {
-        headers: { ...HEADERS, "content-type": "text/html; charset=utf-8", "referrer-policy": "no-referrer" },
-      });
-    }
+    // The page and its assets are served by `serveBoard`'s routes and never
+    // reach here. They carry nothing of the project: all of it comes from `/api/`.
+    if (!pathname.startsWith("/api/")) return refuse(404, "not_found", "no such page.");
 
     const refusal = foreign(req, url.host);
     if (refusal) {
@@ -311,6 +295,90 @@ export function createBoard(options: BoardOptions): Board {
 
 // ---- the daemon --------------------------------------------------------------
 
+/** A listening board: the port it got, its request handler, and how to stop it. */
+export interface Served {
+  port: number;
+  fetch(req: Request): Promise<Response>;
+  stop(): Promise<void>;
+}
+
+const SHELL_HEADERS = { "x-content-type-options": "nosniff", "referrer-policy": "no-referrer" };
+
+/**
+ * Listen on 127.0.0.1 only, on `preferred` when it is free and on any free
+ * port when it is not.
+ *
+ * Bun's HTML route bundles the page on first request, but it answers every
+ * method and every Host and takes no headers. So the route lives on a second
+ * loopback listener that only this process calls, and the board's own
+ * listener passes the page and its chunks through after checking the request:
+ * GET or HEAD, addressed to the board's own host. What that inner listener
+ * holds is the app's code and nothing of the project. Never in `development`
+ * mode, which would add a reload socket and serve source maps.
+ */
+export function serveBoard(board: Board, preferred = 0): Served {
+  const inner = Bun.serve({
+    hostname: HOST,
+    port: 0,
+    development: false,
+    routes: { "/": page },
+    fetch: () => new Response(null, { status: 404 }),
+  });
+
+  const shell = async (req: Request, pathname: string): Promise<Response> => {
+    const expected = `${HOST}:${board.options.port}`;
+    if (req.headers.get("host") !== expected)
+      return refuse(403, "forbidden", "this server answers only as " + expected + ".");
+    if (req.method !== "GET" && req.method !== "HEAD") return refuse(405, "usage", "GET or HEAD only.");
+    const from = await fetch(`http://${HOST}:${inner.port}${pathname}`, { method: req.method });
+    if (from.status !== 200) {
+      await from.body?.cancel();
+      return refuse(404, "not_found", "no such page.");
+    }
+    return new Response(req.method === "HEAD" ? null : from.body, {
+      headers: {
+        ...SHELL_HEADERS,
+        "content-type": from.headers.get("content-type") ?? "application/octet-stream",
+        // The page is read fresh every time; a chunk's name is a hash of its content.
+        "cache-control": pathname === "/" ? "no-store" : (from.headers.get("cache-control") ?? "no-store"),
+      },
+    });
+  };
+
+  const handle = async (req: Request): Promise<Response> => {
+    let pathname: string | null = null;
+    try {
+      pathname = new URL(req.url).pathname;
+    } catch {
+      // A Host that makes no URL: the board refuses it.
+    }
+    if (pathname === null || pathname.startsWith("/api/")) return board.fetch(req);
+    try {
+      return await shell(req, pathname);
+    } catch {
+      return refuse(500, "internal", "the board's server failed on this request.");
+    }
+  };
+
+  const listen = (port: number) => Bun.serve({ hostname: HOST, port, development: false, fetch: handle });
+  let outer: ReturnType<typeof listen>;
+  try {
+    outer = listen(preferred);
+  } catch {
+    // Taken by something else: any free port will do.
+    outer = listen(0);
+  }
+  const port = outer.port ?? 0;
+  board.options.port = port;
+  return {
+    port,
+    fetch: handle,
+    stop: async () => {
+      await Promise.all([outer.stop(true), inner.stop(true)]);
+    },
+  };
+}
+
 function main(argv: string[]): void {
   const at = argv.indexOf("--root");
   const found = findRoot(at === -1 ? process.cwd() : (argv[at + 1] ?? ""));
@@ -329,16 +397,18 @@ function main(argv: string[]): void {
     port: 0,
     log,
   });
-  const server = Bun.serve({ hostname: HOST, port: 0, fetch: board.fetch });
-  const port = server.port ?? 0;
-  board.options.port = port;
+  // The same port for this project every time, so the page's origin, and what
+  // the browser keeps for it, survive a restart.
+  const wanted = preferredPort(root);
+  const server = serveBoard(board, wanted);
+  const port = server.port;
 
   const shutdown = (why: string): void => {
     log(`stop ${why}`);
     run.killAll();
     removePointer(root, process.pid);
     removeLog(root);
-    void server.stop(true);
+    void server.stop();
     process.exit(0);
   };
   process.on("SIGTERM", () => shutdown("on request"));
@@ -354,7 +424,7 @@ function main(argv: string[]): void {
     root,
     started: new Date().toISOString(),
   });
-  log(`start pid ${process.pid} on ${HOST}:${port} for ${root}`);
+  log(`start pid ${process.pid} on ${HOST}:${port} for ${root}${port === wanted ? "" : ` (port ${wanted} was taken)`}`);
 }
 
 if (import.meta.main) main(process.argv.slice(2));

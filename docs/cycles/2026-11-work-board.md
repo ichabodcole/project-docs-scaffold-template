@@ -42,7 +42,7 @@ Inbox row afterwards, so the two go together.
     [item/board-model-and-selection-rules](../items/board-model-and-selection-rules/item.md)
     — the server and the pure model. They share no files and can run side by
     side, in separate worktrees.
-  - [item/board-shell-and-five-pages](../items/board-shell-and-five-pages.md),
+  - [item/board-shell-and-five-pages](../items/board-shell-and-five-pages/item.md),
     then
     [item/board-two-writes-with-undo](../items/board-two-writes-with-undo.md),
     then
@@ -85,3 +85,4 @@ placeholder line into a real cycle.
 - feature/board-model-and-selection-rules (landed 2026-11-19)
 - feature/board-server-and-pdocs-bridge (landed 2026-11-19)
 - feature/research-items-parent-feature (landed 2026-11-24)
+- feature/board-shell-and-five-pages (landed 2026-11-24)

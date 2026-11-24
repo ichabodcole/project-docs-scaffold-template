@@ -214,7 +214,10 @@ plugins/project-docs/skills/work-board/
   opened URL and require it as a header on every `/api/*` call. The token is
   never accepted from the query string. Check `Origin` and `Host` against the
   bound port. Build argv as arrays (no shell). Check each `ref` against the
-  current snapshot before spawning.
+  current snapshot before spawning. The server asks first for a port derived
+  from the root's hash, in 49152 to 65535, so a project's board has the same
+  address on every start; if that port is taken it uses any free one. The token
+  is new on every start either way.
 - **Lifetime:** keep a pointer file and a log in a state folder that belongs to
   the user alone: `$XDG_RUNTIME_DIR/pdocs-work-board` when that variable is set,
   else `<os.tmpdir()>/pdocs-work-board-<uid>`. Both files are keyed by a hash of
@@ -222,7 +225,8 @@ plugins/project-docs/skills/work-board/
   real directory, owned by the user, with mode 0700, or every verb refuses.
   Never write a file into the adopter's repository. The server exits after 30
   minutes with no request from the board's own page, and on `stop`; both remove
-  the pointer and the log.
+  the pointer and the log. A page in a hidden tab stops polling, so a forgotten
+  tab does not keep the server alive.
 
 ## Phases
 
@@ -394,7 +398,9 @@ UI phases only bind them.
   - **Snooze:** `tomorrow`, `week` or `cycle`, stored as
     `{ id, choice, at, activeCycle }`. A row wakes when the date passes or when
     the active cycle's slug differs from the one recorded. The UI keeps it in
-    `localStorage`, keyed by root. It never reaches the server.
+    `localStorage`, keyed by root. It never reaches the server. A snooze
+    survives a restart because the board comes back on the same port; it is lost
+    only when that port was taken and the fallback port is used.
 - Create `app/selection.ts`, test first in `app/selection.test.ts`, from
   `dList`, `dSelected`, `dMove`, `dLeave` and `dEscape`:
   - Only a row in the current list can be selected, so the inspector never shows

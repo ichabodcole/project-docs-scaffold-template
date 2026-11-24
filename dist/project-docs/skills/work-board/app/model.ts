@@ -345,6 +345,12 @@ export function triageQueue(s: Snapshot): ViewEntry[] {
 
 const HOUSEKEEPING: InboxKind[] = ["unreviewed", "advisory"];
 
+/** Short labels for the advisories the board knows by id. */
+const ADVISORY_LABELS: Record<string, string | undefined> = {
+  "archive-threshold": "Finished, not archived",
+  "work-item-review": "In the cycle, not reviewed",
+};
+
 const one = (list: readonly ViewEntry[], what: string): string =>
   (list.length === 1 ? (list[0]!.title ?? list[0]!.slug) : `${list.length} items`) + what;
 
@@ -439,18 +445,21 @@ export function attention(s: Snapshot): InboxRow[] {
       target: { type: "ask", line: "Audit the finished items that were never marked reviewed." },
     });
 
-  // An advisory is shown in its own words, so the row stays right whatever a
-  // later CLI release puts in it.
-  for (const a of advisories(s))
+  // A known advisory gets a short label, with its message under it. Any other
+  // is shown in its own words, so the row stays right whatever a later CLI
+  // release adds. The line to say to the agent is the same either way.
+  for (const a of advisories(s)) {
+    const label = ADVISORY_LABELS[a.id];
     rows.push({
       id: `advisory:${a.id}`,
       kind: "advisory",
-      label: a.message,
+      label: label ?? a.message,
       n: Array.isArray(a.refs) ? a.refs.length : null,
-      desc: a.action ?? "",
+      desc: label ? a.message : (a.action ?? ""),
       does: null,
       target: { type: "ask", line: a.action ? `${a.message} ${a.action}` : a.message },
     });
+  }
 
   return rows.map((r) => ({ ...r, group: HOUSEKEEPING.includes(r.kind) ? "housekeeping" : "decision" }));
 }

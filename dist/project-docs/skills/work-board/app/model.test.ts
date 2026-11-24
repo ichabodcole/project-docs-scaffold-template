@@ -405,13 +405,21 @@ describe("Inbox rows", () => {
     expect(attention(snapshot()).some((r) => r.id === "unreviewed")).toBe(false);
   });
 
-  test("one row per advisory, carrying its own message and action", () => {
+  test("one row per advisory: a known one has a short label over its message", () => {
     const rows = attention(full()).filter((r) => r.kind === "advisory");
     expect(rows.map((r) => [r.label, r.desc, r.n])).toEqual([
-      ["90 finished items are not archived.", "Offer a selection.", 2],
-      ["6 items have no reviewed document.", "Show the user each item.", null],
+      ["Finished, not archived", "90 finished items are not archived.", 2],
+      ["In the cycle, not reviewed", "6 items have no reviewed document.", null],
     ]);
+    // The line to say to the agent is the advisory's own words, whole.
     expect(rows[0]!.target).toEqual({ type: "ask", line: "90 finished items are not archived. Offer a selection." });
+  });
+
+  test("an advisory the board does not know is shown in its own words: message, then action", () => {
+    const s = snapshot({ advisories: [{ id: "new-in-a-later-cli", message: "Something is off.", action: "Do this." }] });
+    const row = attention(s)[0]!;
+    expect(row).toMatchObject({ label: "Something is off.", desc: "Do this.", group: "housekeeping" });
+    expect(row.target).toEqual({ type: "ask", line: "Something is off. Do this." });
   });
 
   test("an advisory with no action is shown by its message alone", () => {
@@ -554,8 +562,9 @@ describe("a snapshot recorded from this repository", () => {
     expect(triage).toMatchObject({ group: "decision", n: 1 });
     const archive = rows.find((r) => r.id === "advisory:archive-threshold")!;
     expect(archive.group).toBe("housekeeping");
-    expect(archive.label).toMatch(/^\d+ finished items are not archived/);
-    expect(archive.desc).toContain("pdocs archive");
+    expect(archive.label).toBe("Finished, not archived");
+    expect(archive.desc).toMatch(/^\d+ finished items are not archived/);
+    expect(archive.target.type === "ask" && archive.target.line).toContain("pdocs archive");
     expect(archive.n).toBe(3);
   });
 
