@@ -48,7 +48,7 @@ until the feature is done.
 
 - [Find where an agent should ask whether work needs a feature](../../items/feature-or-item-touchpoint/item.md)
   (research, first).
-- [Keep a feature's finished items in view until the feature is done](../../items/research-items-parent-feature.md).
+- [Keep a feature's finished items in view until the feature is done](../../items/research-items-parent-feature/item.md).
 - [Ask the feature question when research is filed](../../items/ask-feature-question-when-filing-research.md).
 - [Add the feature-question advisory to pdocs new item](../../items/feature-question-advisory.md).
 - [Say in the READMEs that research expecting a build gets a feature at filing](../../items/readmes-research-expecting-build-gets-feature.md).

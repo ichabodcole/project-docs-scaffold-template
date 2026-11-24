@@ -190,10 +190,25 @@ bun scripts/pdocs/cli.ts new report provider-survey --owner item/auth-providers
 
 When the write-up is finished, set the item `done` (the `create-investigation`
 skill and the `investigator` agent do this when research concludes outside a
-branch). If it recommends building something, file the items with
-`--from item/<slug>`, or write the feature with
-`--from docs/items/<slug>/write-up.md` (a feature takes a path, not a reference,
-and links it from its Related section).
+branch).
+
+**Research that recommends a build needs a parent feature; research that
+recommends none does not.** File the build before the research item is archived,
+so something open still points at it:
+
+1. Pick the feature: the research item's `parent` if it has one, else an
+   existing feature the build belongs to, else a new one, written with
+   `--from docs/items/<slug>/write-up.md` (a feature takes a path, not a
+   reference, and links it from its Related section).
+2. File each build item under it:
+   `pdocs new item <build-slug> --kind task --parent feature/<feature> --from item/<slug>`.
+3. Put the research item under the same feature:
+   `pdocs set item/<slug> --parent feature/<feature>`.
+
+The research item is then archived with the feature's other finished items (see
+[Archiving](#archiving)). Research that ends in "do nothing", or was `dropped`,
+has no build to hold open: it needs no parent and is archived like any other
+item.
 
 ## Relationships are fields
 
@@ -228,8 +243,24 @@ every link to and from it. References by `id` keep working. Archiving is
 optional, and only `pdocs archive` does it; the lint reports anything in
 `_archive/` that is not `done` or `dropped`.
 
-`pdocs view board` leaves archived items out (`--all` puts them back). Once more
-than `checks.archive.threshold` finished items (default 25) are unarchived, it
-ends with an advisory that says how many and suggests archiving some; its JSON
-form (`--format json`) lists the candidates. Nothing moves until someone agrees
-to a selection. `docs/SCHEMA.md` describes the setting.
+`pdocs view board` leaves archived items out (`--all` puts them back). So two
+kinds of `done` item are asked about before they are archived, and
+`pdocs view board --format json` lists both in `askBeforeArchive`:
+
+- **A `done` item whose `parent` feature is still open** (`open-parent`). Ask
+  the user whether to archive it now or hold it until the feature is done. Held,
+  it stays out of `_archive/` and on the board beside the feature's open items;
+  archive it when the feature reaches `done` or `dropped`.
+- **A `done` research item with no build item under its feature**
+  (`research-no-open-build`). If its write-up recommends a build, file the build
+  first (see [Research items](#research-items)); if it recommends none, archive
+  it.
+
+`pdocs archive` does not refuse either; it says so in its output when it has
+just moved one. `pdocs view feature <slug>` lists a feature's items archived or
+not.
+
+Once more than `checks.archive.threshold` finished items (default 25) are
+unarchived, it ends with an advisory that says how many and suggests archiving
+some; its JSON form (`--format json`) lists the candidates. Nothing moves until
+someone agrees to a selection. `docs/SCHEMA.md` describes the setting.

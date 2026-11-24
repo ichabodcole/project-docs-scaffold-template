@@ -28,9 +28,9 @@ bump, the plugin README, the `scaffold-update-checklist` pass, and a rebuilt
 
 This is Phase 6 of the [plan](../features/pdocs-work-board/plan.md). It needs
 [the writes](./board-two-writes-with-undo.md), and
-[#210](./research-items-parent-feature.md) landed, because the Inbox and Feature
-pages are checked again on its result. It ships in the same plugin release as
-[the re-pin](./repin-migration-for-board-fields.md).
+[#210](./research-items-parent-feature/item.md) landed, because the Inbox and
+Feature pages are checked again on its result. It ships in the same plugin
+release as [the re-pin](./repin-migration-for-board-fields.md).
 
 ## Definition of done
 

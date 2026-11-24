@@ -11,6 +11,9 @@ import {
   adviseArchive,
   adviseReview,
   advisoryLines,
+  type ArchiveQuestion,
+  archiveQuestionLines,
+  archiveQuestions,
   combineAdvisories,
   reviewItems,
   reviewViolations,
@@ -350,6 +353,9 @@ export const view: Command = {
           view: "board",
           reviewMode: ctx.config.checks.workItemReview.mode,
           groups: Object.fromEntries(GROUPS.map((g) => [g, board[g].map(entry)])),
+          // The `done` items a question comes before, whatever the threshold:
+          // under a feature that is still open, or research with no build item filed.
+          askBeforeArchive: archiveQuestions(model),
         };
         break;
       }
@@ -432,6 +438,7 @@ function printText(data: Record<string, unknown>, ids: string[]): void {
       console.log(`${group} (${items.length})`);
       for (const e of items) console.log(line(e, ids, width));
     }
+    for (const l of archiveQuestionLines((data.askBeforeArchive ?? []) as ArchiveQuestion[])) console.log(l);
     return;
   }
   const head = (data.feature ?? data.cycle) as ViewEntry | undefined;

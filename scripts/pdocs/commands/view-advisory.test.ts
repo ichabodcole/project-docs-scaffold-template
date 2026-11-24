@@ -657,3 +657,132 @@ describe("--all: one option, a meaning per view", () => {
     }
   });
 });
+
+// #210: a finished item is not always free to archive. `view board` names the
+// ones a question comes before — whatever the threshold — and the archive
+// advisory repeats them, so a workflow has a list to ask about.
+describe("askBeforeArchive: finished items a question comes before", () => {
+  const withParent = (body: string, parent: string | null, kind = "task") =>
+    body
+      .replace("kind: task", `kind: ${kind}`)
+      .replace("\n---\n", parent ? `\nparent: feature/${parent}\n---\n` : "\n---\n");
+
+  /** One open feature, one done feature, and items around them. */
+  function heldTree(extraDone = 0): string {
+    const root = tree({ items: { done: extraDone } });
+    const files: Record<string, string> = {
+      "docs/features/open/feature.md": featureDoc("open", "active"),
+      "docs/features/shut/feature.md": featureDoc("shut", "done"),
+      "docs/features/bare/feature.md": featureDoc("bare", "backlog"),
+      // Done under an open feature: the question is now or later.
+      "docs/items/held.md": withParent(itemDoc("held", "done", "2026-01-01"), "open"),
+      "docs/items/open-work.md": withParent(itemDoc("open-work", "ready"), "open"),
+      // Dropped under an open feature, done under a done one: no question.
+      "docs/items/cut.md": withParent(itemDoc("cut", "dropped"), "open"),
+      "docs/items/free.md": withParent(itemDoc("free", "done"), "shut"),
+      // Research: with a build item beside it, the question is the feature's.
+      "docs/items/r-built.md": withParent(itemDoc("r-built", "done", "2026-01-02"), "open", "research"),
+      // Research with no parent, and research whose feature has nothing open.
+      "docs/items/r-alone.md": withParent(itemDoc("r-alone", "done", "2026-01-03"), null, "research"),
+      "docs/items/r-bare.md": withParent(itemDoc("r-bare", "done", "2026-01-04"), "bare", "research"),
+      // Research under a finished feature, and dropped research: no question.
+      "docs/items/r-shut.md": withParent(itemDoc("r-shut", "done"), "shut", "research"),
+      "docs/items/r-cut.md": withParent(itemDoc("r-cut", "dropped"), null, "research"),
+    };
+    for (const [rel, body] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), body);
+    }
+    return root;
+  }
+
+  const EXPECTED = [
+    { ref: "item/held", reason: "open-parent", parent: "feature/open" },
+    { ref: "item/r-built", reason: "open-parent", parent: "feature/open" },
+    { ref: "item/r-alone", reason: "research-no-open-build", parent: null },
+    { ref: "item/r-bare", reason: "research-no-open-build", parent: "feature/bare" },
+  ];
+
+  test("view board lists them under the threshold, with no advisory", () => {
+    const root = heldTree();
+    const data = board(root);
+    expect(data.advisories).toEqual([]);
+    expect(data.askBeforeArchive).toEqual(EXPECTED);
+    // Nothing the view lists changes: the done items are all still there.
+    expect(data.groups.completed.map((e: { slug: string }) => e.slug)).toContain("held");
+  });
+
+  test("an empty list when no finished item needs a question", () => {
+    expect(board(tree({ items: { done: 2, ready: 1 } })).askBeforeArchive).toEqual([]);
+  });
+
+  test("an archived one is no longer asked about", () => {
+    const root = heldTree();
+    expect(run(root, ["archive", "item/held"]).code).toBe(ExitCode.Success);
+    expect(board(root).askBeforeArchive.map((q: { ref: string }) => q.ref)).not.toContain("item/held");
+  });
+
+  test("the archive advisory repeats them, in its message, its action and its JSON", () => {
+    const root = heldTree(3);
+    threshold(root, 2);
+    const data = board(root);
+    const a = data.advisories.find((x: { id: string }) => x.id === ARCHIVE_ADVISORY);
+    expect(a.askBeforeArchive).toEqual(EXPECTED);
+    // Still candidates: the question is the user's, not the CLI's.
+    for (const q of EXPECTED) expect(a.refs).toContain(q.ref);
+    expect(a.message).toContain("2 belong to a feature that is still open");
+    expect(a.message).toContain("2 are finished research with no build item under a feature");
+    expect(a.action).toContain("askBeforeArchive");
+    expect(a.action).toContain("hold it until its feature is done");
+  });
+
+  test("the advisory says nothing more when no candidate needs a question", () => {
+    const root = tree({ items: { done: 4 } });
+    threshold(root, 2);
+    const a = board(root).advisories[0];
+    expect(a.askBeforeArchive).toEqual([]);
+    expect(a.message).not.toContain("still open");
+    expect(a.action).not.toContain("askBeforeArchive");
+  });
+
+  test("text: one line counts them, after the groups, and names none", () => {
+    const root = heldTree();
+    const r = run(root, ["view", "board", "--format", "text"]);
+    expect(r.code).toBe(ExitCode.Success);
+    expect(r.stdout).toContain(
+      "ask before archiving (4): 2 under an open feature, 2 finished research with no build item; --format json lists them\n"
+    );
+    expect(r.stdout).not.toContain("item/held");
+    expect(run(tree({ items: { done: 1 } }), ["view", "board", "--format", "text"]).stdout).not.toContain(
+      "ask before archiving"
+    );
+  });
+
+  // The build counts once it is FILED, whatever became of it since: finished
+  // or archived, the research is the feature's question, not a missing build.
+  const reasonOf = (root: string, slug: string) =>
+    board(root).askBeforeArchive.find((q: { ref: string }) => q.ref === `item/${slug}`)?.reason;
+
+  test("research whose build item is done is its feature's question", () => {
+    const root = heldTree();
+    writeFileSync(join(root, "docs/items/open-work.md"), withParent(itemDoc("open-work", "done"), "open"));
+    expect(reasonOf(root, "r-built")).toBe("open-parent");
+  });
+
+  test("so is research whose build item is archived", () => {
+    const root = heldTree();
+    writeFileSync(join(root, "docs/items/build.md"), withParent(itemDoc("build", "done"), "bare"));
+    expect(reasonOf(root, "r-bare")).toBe("open-parent");
+    expect(run(root, ["archive", "item/build"]).code).toBe(ExitCode.Success);
+    expect(reasonOf(root, "r-bare")).toBe("open-parent");
+  });
+
+  test("a dropped build item is no build: the research still has none", () => {
+    const root = heldTree();
+    writeFileSync(join(root, "docs/items/build.md"), withParent(itemDoc("build", "dropped"), "bare"));
+    expect(reasonOf(root, "r-bare")).toBe("research-no-open-build");
+    // Nor is another research item.
+    writeFileSync(join(root, "docs/items/more.md"), withParent(itemDoc("more", "ready"), "bare", "research"));
+    expect(reasonOf(root, "r-bare")).toBe("research-no-open-build");
+  });
+});

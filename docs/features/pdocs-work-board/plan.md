@@ -57,7 +57,7 @@ project only by running that project's own `scripts/pdocs/cli.ts` and reading
 its JSON. Five fields the board needs are missing from that JSON today, so the
 first phase adds them to the CLI. The work runs in the
 [work board cycle](../../cycles/2026-11-work-board.md), beside
-[item #210](../../items/research-items-parent-feature.md).
+[item #210](../../items/research-items-parent-feature/item.md).
 
 ## Outcome & Success Criteria
 
@@ -709,4 +709,4 @@ Made by the owner on 2026-11-19, after reading this plan:
 - [Work board foundations](../../items/pdocs-board-landscape/reports/2026-11-17-work-board-foundations-report.md)
 - [Mock up the work board in a few variations](../../items/pdocs-work-board-mockups/item.md)
 - [The work board cycle](../../cycles/2026-11-work-board.md)
-- [Keep a feature's finished items in view until the feature is done](../../items/research-items-parent-feature.md)
+- [Keep a feature's finished items in view until the feature is done](../../items/research-items-parent-feature/item.md)

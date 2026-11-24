@@ -296,4 +296,4 @@ above.
 
 - [Find where an agent should ask whether work needs a feature](./item.md)
 - [Feature touchpoints](../../features/feature-touchpoints/feature.md)
-- [Keep a feature's finished items in view](../research-items-parent-feature.md)
+- [Keep a feature's finished items in view](../research-items-parent-feature/item.md)

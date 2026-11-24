@@ -50,6 +50,8 @@ conditional.
   (`released_in`)
 - A `pdocs view` ended with an **archive advisory** (`archive-threshold`):
   finished work has outgrown the view. Take **The Advisory Path** below
+- The user asks to archive finished items in a batch ("archive the done items")
+  with no advisory showing. Take **The Advisory Path** too
 - The user wants to audit finished items whose document was never marked
   reviewed (`pdocs view unreviewed`). Take **The Audit Path** below
 
@@ -150,7 +152,8 @@ Before starting, verify:
 Accept an explicit target — `feature/<slug>`, `item/<slug>` (or an item id, 8+
 characters), `cycle/<filename>` (`.md` optional), an **advisory selection**:
 references taken from a `pdocs view` archive advisory's `refs`, which the user
-has agreed to (or asked you to propose from), or an **audit request**: "audit
+has agreed to (or asked you to propose from), a **batch of finished items** the
+user asked to archive with no advisory showing, or an **audit request**: "audit
 unreviewed items", optionally narrowed ("the unreviewed items of cycle
 `<filename>`"). The target may come from the user directly, or be passed in by a
 calling skill (e.g. `finalize-branch` Step 6). If no target is given, **ask**.
@@ -183,7 +186,7 @@ pdocs view cycle <filename>                    # a cycle, its items, closable
 | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Doesn't resolve                                   | Refuse. `pdocs` names what it expected; list them (`pdocs find --type feature`, `pdocs view board`, `pdocs find --type cycle`) so the user can correct the name.     |
 | A feature or item already under `_archive/`       | Nothing to move. Reconcile if asked, report the state, and check `pdocs check` is clean — an archived entity must be `done` or `dropped` (`ARCHIVED NOT TERMINAL`).  |
-| An archive advisory's candidates                  | Take **The Advisory Path** below — the work is already finished, so reconciling is a sampled check rather than a full pass, and the rest is a selection to agree on. |
+| An archive advisory's candidates, or a batch      | Take **The Advisory Path** below — the work is already finished, so reconciling is a sampled check rather than a full pass, and the rest is a selection to agree on. |
 | An audit request (`pdocs view unreviewed`)        | Take **The Audit Path** below — nothing moves; the only change is a reviewed `status`, for what the user approves.                                                   |
 | A cycle, archived or not                          | Take **The Cycle Path** below instead — it replaces Steps 1 through 5b, and you rejoin at Step 6.                                                                    |
 | A feature                                         | Normal path. Its items are part of the evidence: a feature is not `done` while any of its items is still open.                                                       |
@@ -327,35 +330,76 @@ In JSON it is an entry of the view's `data.advisories[]` with
 `id: "archive-threshold"`: its `message` and `action` carry the same text, and
 its `types[]` the detail.
 
-1. **Read the candidates.** Each `types[]` entry has the type's `count`, the
-   `threshold`, and its `candidates`: bare references (`item/<slug>`), oldest
-   first by `generated.at`, the date each was **created**, not the date it
-   finished. Their `date`, `cycle` and `status` are on the view's own entries:
-   for `view board`, `data.groups.completed[]` and `data.groups.cancelled[]`,
-   matched by `slug`.
+**A batch with no advisory** ("archive the done items") takes the same steps.
+Its candidates are the entries of `data.groups.completed[]` and
+`data.groups.cancelled[]` in `pdocs view board --format json`, as `item/<slug>`.
 
-2. **Build the selection.** Pick specific references by a rule that works with
-   or without an active cycle — the oldest `count - threshold`, or everything
-   created before a date — or by cycle: the items of a `closed` cycle
-   (`pdocs find --cycle <filename>`).
+1. **Read the candidates.** With an advisory: each `types[]` entry has the
+   type's `count`, the `threshold`, and its `candidates`: bare references
+   (`item/<slug>`), oldest first by `generated.at`, the date each was
+   **created**, not the date it finished. Their `date`, `cycle` and `status` are
+   on the view's own entries: for `view board`, `data.groups.completed[]` and
+   `data.groups.cancelled[]`, matched by `slug`. Without one, those entries are
+   the candidates, and there is no `types[]`, `count` or `threshold` to read.
 
-3. **Flag its unreviewed drafts.** Archiving a finished item whose `status` is
+2. **Build the selection.** With an advisory, pick specific references by a rule
+   that works with or without an active cycle — the oldest `count - threshold`,
+   or everything created before a date — or by cycle: the items of a `closed`
+   cycle (`pdocs find --cycle <filename>`). Without one, the selection is what
+   the user named: "the done items" is every candidate, "the done items of cycle
+   X" only those.
+
+3. **Take out the items a question comes before, and ask about each.**
+   `data.askBeforeArchive` in `pdocs view board --format json` lists them,
+   whatever the threshold; the advisory carries the same list. Each entry has a
+   `ref`, a `parent` and a `reason`. Move every listed item that is **in the
+   selection** to a second list, the **asked items**. A listed item outside the
+   selection is not part of this run: do not ask about it. Steps 4 and 6 cover
+   both lists. Put each asked item to the user by name in step 7; it is archived
+   only on a yes to its own question, never on the selection's approval:
+   - **`open-parent`**: a `done` item whose feature is still open. Ask: archive
+     it now, or hold it until the feature is done? Say what archiving it does:
+     it leaves `pdocs view board` while the feature's other items are still
+     there. Without an answer, hold it.
+   - **`research-no-open-build`**: finished research with no build item under
+     its feature (the id says "open", but a build item in any state except
+     `dropped` counts, archived or not). Open its `write-up.md` and read the
+     recommendation.
+     - It recommends no build: quote the recommendation and ask "archive it?".
+     - There is no write-up, or it reaches no recommendation: ask the user
+       whether the research led to a build. Never read a missing write-up as "no
+       build".
+     - It recommends a build: do not archive it in this run until the build is
+       filed. Offer to file it: the build items under a feature, with
+       `pdocs new item <build-slug> --kind task --parent feature/<feature> --from item/<slug>`,
+       and the research item under the same feature with
+       `pdocs set item/<slug> --parent feature/<feature>`
+       (`docs/items/README.md`, "Research items"). Run `pdocs view board` again:
+       the item is now `open-parent`, so ask that question.
+
+   An item `askBeforeArchive` does not list needs neither question. If the JSON
+   has no `askBeforeArchive` key at all, the project's `pdocs` predates it: say
+   so, and apply the two rules by hand from each candidate's `parent` and
+   `kind`, reading the feature's state with `pdocs view feature <slug>`.
+
+4. **Flag its unreviewed drafts.** Archiving a finished item whose `status` is
    not `stable` takes it out of `pdocs view unreviewed`, the review audit's
-   list; only `--all` brings it back. Mark those items in the selection, and
-   when you propose it, offer to run **The Audit Path** on them first.
+   list; only `--all` brings it back. Mark those items in the selection and
+   among the asked items, and when you propose it, offer to run **The Audit
+   Path** on them first.
 
-4. **Check a sample at rung 1.** A terminal `lifecycle` is a claim, and
+5. **Check a sample at rung 1.** A terminal `lifecycle` is a claim, and
    **reconcile always** applies here too, in proportion. As Step 2a does with
-   completion marks, sample **three** entities from the selection — prefer the
-   largest — and confirm each at rung 1: the thing its definition of done names
-   exists. All three hold → accept the rest. Any one fails → take it out, and
-   let the user choose between checking every other entity and narrowing the
-   selection to what you checked.
+   completion marks, sample **three** entities from the selection, or all of
+   them if it has fewer than three — prefer the largest — and confirm each at
+   rung 1: the thing its definition of done names exists. All three hold →
+   accept the rest. Any one fails → take it out, and let the user choose between
+   checking every other entity and narrowing the selection to what you checked.
 
-5. **Scan the selection for prose, in one pass.** `pdocs archive` rewrites
+6. **Scan the selection for prose, in one pass.** `pdocs archive` rewrites
    links, not paths written in sentences — Step 3's concern, batched. Build one
-   alternation from the selection (`items/<slug>`, `features/<slug>`,
-   `cycles/<slug>` per reference) and grep once:
+   alternation from the selection and the asked items (`items/<slug>`,
+   `features/<slug>`, `cycles/<slug>` per reference) and grep once:
 
    ```bash
    ROOT=$(git rev-parse --show-toplevel)
@@ -368,15 +412,18 @@ its `types[]` the detail.
    rewritten by the move), and the selected entities' own files, then classify
    the rest with Step 3's table.
 
-6. **Propose it.** Show the selection as a list of references — for a long one,
+7. **Propose it.** Show the selection as a list of references — for a long one,
    a summary that pins the list exactly: the count, the rule, and every
    exception by name — with the flagged drafts, the sample's result, and every
-   live claim from the scan, so the user agrees to all of it together. A
-   selection the user already authorized in this conversation needs no second
-   approval, but what steps 3–5 found is new: show it either way. If they
-   decline all of it, nothing moves: rejoin at Step 6.
+   live claim from the scan, so the user agrees to all of it together. Beside
+   it, list every asked item from step 3, with its feature or its write-up's
+   recommendation, and its question. A selection the user already authorized in
+   this conversation needs no second approval, but what steps 3–6 found is new:
+   show it either way. That authorization never covers an asked item: it is
+   archived only on its own answer. If they decline all of it, nothing moves:
+   rejoin at Step 6.
 
-7. **Archive what was agreed, one reference at a time:**
+8. **Archive what was agreed, one reference at a time:**
 
    ```bash
    pdocs archive <type>/<slug>
@@ -384,10 +431,14 @@ its `types[]` the detail.
 
    Each run moves the entity and rewrites every link to and from it. Run
    `pdocs check` before the first and after the last; fix anything new it
-   reports, since this run caused it.
+   reports, since this run caused it. A run's `data.advisories[]` holds an
+   `archive-question` whenever it moved a listed item. For an asked item the
+   user answered "archive it", that is expected: do nothing more. For an item
+   that was never asked about, it is a miss: tell the user, and do what its
+   `action` says.
 
-8. **Rejoin at Step 6** and report what moved, what you left and why, and the
-   prose hits by kind.
+9. **Rejoin at Step 6** and report what moved, what you left and why, the items
+   held for an open feature, and the prose hits by kind.
 
 An invalid threshold, or a misspelt key in `checks.archive`, puts a `bad-config`
 advisory where the archive advisory would be, and `pdocs check` reports
@@ -684,6 +735,26 @@ Three further rules govern this step:
 Only when Step 2 concluded the entity is `done` or `dropped` — otherwise skip to
 Step 4, which will route you to 5a.
 
+**For an item, check first whether a question comes before the move:**
+
+```bash
+pdocs view board --format json     # data.askBeforeArchive
+```
+
+If the item's `item/<slug>` is listed there, Step 4 asks that entry's question
+in place of a plain "archive it?", as The Advisory Path's step 3 words it:
+`open-parent` is "archive it now, or hold it until the feature is done";
+`research-no-open-build` is settled by the write-up's recommendation, and a
+recommended build is filed before the item moves. If the JSON has no
+`askBeforeArchive` key at all, the project's `pdocs` predates it: say so, and
+apply the two rules by hand from the item's `parent` and `kind`, reading the
+feature's state and its other items with `pdocs view feature <slug>`.
+
+**For a feature, list the items held for it:** the entries of
+`pdocs view feature <slug> --format json` with `archived: false` and a
+`lifecycle` of `done` or `dropped`. Step 4 offers to archive them with the
+feature.
+
 `pdocs archive` rewrites every **link** to and from what it moves, in every
 document under the docs root and every tracked Markdown file outside it. Before
 asking, show the human what that will touch, and find what it will not:
@@ -741,6 +812,10 @@ what records that the work closed; moving it into `_archive/` is housekeeping on
 top of that. Say so when you present the choice — "nothing moves" is a complete
 outcome here, not a deferral.
 
+A `done` item under an open feature that the human chose to hold is a complete
+outcome too: it stays in `items/` until its feature is done, and the feature's
+own sweep offers it again.
+
 Not terminal → **Step 5a**. Terminal and the human chose the move → **Step 5b**.
 Terminal and the human declined → **Step 6**.
 
@@ -781,6 +856,9 @@ and prints the count. It refuses an entity that is not terminal and names its
 state; archiving one already archived is a no-op. **That is the whole move** —
 no `git mv`, no hand-written link rewrites.
 
+For a feature, run it once more for each held item the human agreed to archive
+with it (`pdocs archive item/<slug>`).
+
 Then act on the human's answers to the flagged prose from Step 3, and leave the
 rest.
 
@@ -801,6 +879,8 @@ State plainly:
   held it open if not — or that it was closable and the user kept it open
 - For an advisory run: the sample checked and its result, and the unreviewed
   drafts flagged and whether the audit ran on them first
+- Each item `askBeforeArchive` listed: its question, the user's answer, and
+  whether it was archived, held for its feature, or left until a build is filed
 - For an audit run: each item whose `status` changed (`draft` → `stable`), the
   evidence shown for it, and each item left — declined, `deprecated`, or its
   definition of done disputed — with the reason
@@ -828,11 +908,14 @@ instead):
 - [ ] Anything moved was moved by `pdocs archive`, after explicit confirmation
 - [ ] Prose mentions of the moved path were classified, and the live ones shown
       to the human
+- [ ] An item listed in `askBeforeArchive` was archived only after the user
+      answered its question
 
 **Advisory runs:**
 
 - [ ] The selection was a concrete list of references the user agreed to, taken
-      from the advisory's `refs`
+      from the advisory's `refs`, or from the board's finished groups for a
+      batch with no advisory
 - [ ] One batched prose scan covered the whole selection; its live hits were
       shown with the selection, before anything moved
 - [ ] Only agreed references were archived, each with `pdocs archive`
@@ -840,6 +923,10 @@ instead):
       moved
 - [ ] Unreviewed drafts among the candidates were flagged, and the audit offered
       for them first
+- [ ] Every item in `askBeforeArchive` was taken out of the selection and put to
+      the user by name; none was archived without its own answer, and no
+      research that recommends a build was archived before the build was filed
+      under a feature
 
 **Audit runs:**
 

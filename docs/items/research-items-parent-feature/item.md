@@ -6,7 +6,7 @@ description:
   feature's view, and a finished research item leaves nothing open that points
   at the build it recommended.
 status: stable
-lifecycle: active
+lifecycle: done
 id: 01a1eaa7-44f9-7007-849c-b966874e830e
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
@@ -51,12 +51,15 @@ Reported in
 
 ## Definition of done
 
-- [ ] When `sweep-project` archives done items, it lists the ones whose `parent`
+- [x] When `sweep-project` archives done items, it lists the ones whose `parent`
       feature is still open and asks whether to archive each now or hold it
       until the feature is done. Its archive advisory path does the same.
-- [ ] `docs/items/README.md` says when a done item under an open feature stays
+- [x] `docs/items/README.md` says when a done item under an open feature stays
       out of the archive, and which research items need a parent feature.
-- [ ] A research item that recommends a build is not archived until the build
-      has an open item under the same feature. `create-investigation` files
-      those items when it closes the research.
-- [ ] `triage-items` proposes a parent for a research item that has none.
+- [x] `sweep-project` does not archive a research item that recommends a build
+      until the build has an item under the same feature. `pdocs archive` does
+      not refuse, and says so when it has moved finished research with no build
+      item. `create-investigation` files those items when it closes the
+      research.
+- [x] `triage-items` proposes a parent for a research item that has none and
+      expects a build, and says why when it proposes none.

@@ -51,7 +51,7 @@ Inbox row afterwards, so the two go together.
   - [item/repin-migration-for-board-fields](../items/repin-migration-for-board-fields.md)
     — after a scaffold release carries the fields. It ships in the same plugin
     release as the skill.
-- **[item/research-items-parent-feature](../items/research-items-parent-feature.md)**
+- **[item/research-items-parent-feature](../items/research-items-parent-feature/item.md)**
   (#210) — a done item under an open feature stays in view until the feature is
   done.
 
@@ -84,4 +84,4 @@ placeholder line into a real cycle.
 - feature/view-entries-carry-board-fields (landed 2026-11-19)
 - feature/board-model-and-selection-rules (landed 2026-11-19)
 - feature/board-server-and-pdocs-bridge (landed 2026-11-19)
-- feature/research-items-parent-feature (open)
+- feature/research-items-parent-feature (landed 2026-11-24)

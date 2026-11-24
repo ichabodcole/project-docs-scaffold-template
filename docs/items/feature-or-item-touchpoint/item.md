@@ -75,7 +75,7 @@ To settle:
   for an existing feature to join.
 
 Related:
-[keep a feature's finished items in view](../research-items-parent-feature.md),
+[keep a feature's finished items in view](../research-items-parent-feature/item.md),
 the archiving half of the same gap.
 
 ## Definition of done
