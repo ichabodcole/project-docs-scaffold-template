@@ -5,7 +5,7 @@ description:
   A skill that lets an agent who has never seen the board open it, explain it,
   act on what the user asks from it and stop it, shipped in a plugin release.
 status: draft
-lifecycle: backlog
+lifecycle: ready
 id: 01a1f70e-fd57-7161-9b14-eb5927e17434
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-19 }
@@ -27,7 +27,7 @@ bump, the plugin README, the `scaffold-update-checklist` pass, and a rebuilt
 `dist/`.
 
 This is Phase 6 of the [plan](../features/pdocs-work-board/plan.md). It needs
-[the writes](./board-two-writes-with-undo.md), and
+[the writes](./board-two-writes-with-undo/item.md), and
 [#210](./research-items-parent-feature/item.md) landed, because the Inbox and
 Feature pages are checked again on its result. It ships in the same plugin
 release as [the re-pin](./repin-migration-for-board-fields.md).

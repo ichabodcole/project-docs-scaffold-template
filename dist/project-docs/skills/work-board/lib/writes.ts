@@ -196,10 +196,18 @@ export function setArgs(write: Write): string[] {
   return args;
 }
 
+/** The lifecycles an item can be brought into a cycle from, and the cycles it can join. */
+const BRINGABLE = ["backlog", "ready"] as const;
+const CURRENT_CYCLES = ["planned", "active"] as const;
+
 /**
  * Check a parsed write against the current snapshot and build its one call.
- * The `ref` must name a live item the snapshot lists, and a triage decision is
- * taken only on an item that is waiting in `triage`.
+ * The `ref` must name a live item the snapshot lists. A triage decision is
+ * taken only on an item that is waiting in `triage`. An item is brought in
+ * only from `backlog` or `ready`, with no cycle, into a planned or active
+ * cycle; and taken out only of a cycle it is in. The page may be a poll
+ * behind, so what it offered is checked again here. A restore is not: it puts
+ * back what its own write changed, and `undoStillApplies` guards it.
  */
 export function planWrite(write: Write, snapshot: Snapshot): Planned {
   const slug = write.ref.slice("item/".length);
@@ -211,13 +219,23 @@ export function planWrite(write: Write, snapshot: Snapshot): Planned {
       kind: "not_found",
       message: `\`${write.ref}\` is not an item on the board.`,
     };
+  const conflict = (message: string): Planned => ({ ok: false, status: 409, kind: "conflict", message });
   if (write.kind === "triage" && item.lifecycle !== "triage")
-    return {
-      ok: false,
-      status: 409,
-      kind: "conflict",
-      message: `\`${write.ref}\` is \`${item.lifecycle}\`, not waiting in triage.`,
-    };
+    return conflict(`\`${write.ref}\` is \`${item.lifecycle}\`, not waiting in triage.`);
+  if (write.kind === "membership") {
+    if (write.cycle === null) {
+      if (!item.cycle) return conflict(`\`${write.ref}\` is in no cycle.`);
+    } else {
+      const cycle = write.cycle;
+      if (!includes(BRINGABLE, item.lifecycle))
+        return conflict(`\`${write.ref}\` is \`${item.lifecycle}\`, not \`backlog\` or \`ready\`.`);
+      if (item.cycle) return conflict(`\`${write.ref}\` is already in cycle \`${item.cycle}\`.`);
+      const current = snapshot.portfolio.cycles.some(
+        (c) => c.slug === cycle && !c.archived && includes(CURRENT_CYCLES, c.lifecycle)
+      );
+      if (!current) return conflict(`\`${cycle}\` is not a planned or active cycle.`);
+    }
+  }
   const argv = setArgs(write);
   return { ok: true, argv, command: `pdocs ${argv.join(" ")}`, item };
 }

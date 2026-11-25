@@ -95,6 +95,70 @@ describe("cycle membership", () => {
     ]);
   });
 
+  const CYCLES = snapshot({
+    cycles: [
+      ["now", "active", "stable"],
+      ["next", "planned", "draft"],
+      ["old", "closed", "stable"],
+    ],
+    entries: [
+      entry({ slug: "waiting", lifecycle: "triage" }),
+      entry({ slug: "loose", lifecycle: "backlog" }),
+      entry({ slug: "set", lifecycle: "ready" }),
+      entry({ slug: "started", lifecycle: "active" }),
+      entry({ slug: "member", lifecycle: "ready", cycle: "now" }),
+      entry({ slug: "finished", lifecycle: "done", cycle: "now" }),
+    ],
+  });
+  const plan = (ref: string, cycle: string | null) => planWrite(parsed({ kind: "membership", ref, cycle }), CYCLES);
+  const conflict = (ref: string, cycle: string | null): string => {
+    const p = plan(ref, cycle);
+    expect(p.ok).toBe(false);
+    if (p.ok) return "";
+    expect([p.status, p.kind]).toEqual([409, "conflict"]);
+    return p.message;
+  };
+
+  test("a backlog or ready item with no cycle joins a planned or active cycle", () => {
+    for (const [ref, cycle] of [
+      ["item/loose", "now"],
+      ["item/set", "next"],
+    ] as const) {
+      const p = plan(ref, cycle);
+      expect(p.ok && p.command).toBe(`pdocs set ${ref} --cycle ${cycle}`);
+    }
+  });
+
+  test("an item that is not backlog or ready is not brought in: the page was a poll behind", () => {
+    expect(conflict("item/waiting", "now")).toBe("`item/waiting` is `triage`, not `backlog` or `ready`.");
+    expect(conflict("item/started", "now")).toContain("is `active`, not");
+  });
+
+  test("an item already in a cycle is not brought into another", () => {
+    expect(conflict("item/member", "next")).toBe("`item/member` is already in cycle `now`.");
+  });
+
+  test("a cycle that is closed, or that the snapshot does not list, takes no item", () => {
+    expect(conflict("item/loose", "old")).toBe("`old` is not a planned or active cycle.");
+    expect(conflict("item/loose", "nowhere")).toBe("`nowhere` is not a planned or active cycle.");
+  });
+
+  test("only an item in a cycle is taken out, finished or not", () => {
+    expect(plan("item/member", null).ok).toBe(true);
+    expect(plan("item/finished", null).ok).toBe(true);
+    expect(conflict("item/loose", null)).toBe("`item/loose` is in no cycle.");
+  });
+
+  test("a restore of membership is not held to these rules", () => {
+    const back = planWrite(parsed({ kind: "restore", ref: "item/member", changes: [{ key: "cycle", before: null }] }), CYCLES);
+    expect(back.ok && back.command).toBe("pdocs set item/member --unset cycle");
+    const again = planWrite(
+      parsed({ kind: "restore", ref: "item/started", changes: [{ key: "cycle", before: "old" }] }),
+      CYCLES
+    );
+    expect(again.ok && again.command).toBe("pdocs set item/started --cycle old");
+  });
+
   test("a cycle that is not a slug, or is missing, is refused", () => {
     for (const cycle of [undefined, "", "--unset", "a b", 7, "../x"])
       refused({ kind: "membership", ref: "item/settled", cycle });

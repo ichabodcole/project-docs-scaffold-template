@@ -25,6 +25,7 @@ import {
   startedItems,
   triageQueue,
   type InboxRow,
+  type PortfolioEntry,
   type Snapshot,
   type Snooze,
   type SnoozeChoice,
@@ -38,6 +39,8 @@ import {
   initialState,
   inspecting,
   move,
+  noteBroughtIn,
+  noteTakenOut,
   openInspector,
   pick,
   selected,
@@ -79,8 +82,12 @@ export type PollResult =
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
+/** Any 401 from the board's API: the server was started again, and this page holds the old token. */
+export const SESSION_ENDED = "This page's session ended. Open the board again with the `open` command.";
+
 /** Read one `/api/snapshot` response: its status and its parsed body. */
 export function readPoll(status: number, body: unknown): PollResult {
+  if (status === 401) return { kind: "problem", problem: { message: SESSION_ENDED, hint: null, blocking: false } };
   const data = isRecord(body) && isRecord(body.data) ? body.data : null;
   if (status === 200 && data && typeof data.hash === "string" && isRecord(data.snapshot))
     return { kind: "snapshot", hash: data.hash, snapshot: data.snapshot as unknown as Snapshot };
@@ -164,7 +171,7 @@ export function settle(state: BoardState, s: Snapshot): BoardState {
 
 // ---- keys --------------------------------------------------------------------
 
-export type KeyAction = "down" | "up" | "open" | "escape";
+export type KeyAction = "down" | "up" | "open" | "escape" | "bring" | "take";
 
 export interface KeyPress {
   key: string;
@@ -173,12 +180,17 @@ export interface KeyPress {
   altKey?: boolean;
   /** The tag name of the element the key was pressed in, upper case. */
   tag: string;
+  /** The key is being held down: this press is one of its repeats. */
+  repeat?: boolean;
 }
 
 /**
  * What a key press asks for, or `null`. Typing in a field moves nothing, and
  * Enter on a button is left to the button. Escape counts wherever it is
  * pressed. While the board is `blocked` there are no rows to move through.
+ * `b` and `t` ask for the two membership writes; whether one applies to the
+ * highlighted row is `keyIntent`'s to say. A held `b` or `t` asks once: each
+ * write moves the highlight on, so its repeats would write to the rows after.
  */
 export function keyAction(e: KeyPress, blocked = false): KeyAction | null {
   if (e.metaKey || e.ctrlKey || e.altKey) return null;
@@ -188,6 +200,9 @@ export function keyAction(e: KeyPress, blocked = false): KeyAction | null {
   if (e.key === "ArrowDown" || e.key === "j") return "down";
   if (e.key === "ArrowUp" || e.key === "k") return "up";
   if (e.key === "Enter" && e.tag !== "BUTTON") return "open";
+  if (e.repeat) return null;
+  if (e.key === "b") return "bring";
+  if (e.key === "t") return "take";
   return null;
 }
 
@@ -202,6 +217,10 @@ export function applyKey(state: BoardState, list: readonly Row[], action: KeyAct
       return openInspector(state, list);
     case "escape":
       return escape(state);
+    // A write changes nothing here: the board changes when its snapshot does.
+    case "bring":
+    case "take":
+      return state;
   }
 }
 
@@ -357,6 +376,472 @@ export const SNOOZE_CHOICES: Array<{ id: SnoozeChoice; label: string; note: stri
   { id: "cycle", label: "Until the next cycle starts", note: "until the next cycle starts" },
 ];
 
+// ---- the two writes ----------------------------------------------------------
+//
+// A triage decision and cycle membership, each one `POST /api/write`. Nothing
+// here changes the board: a write that ran shows when the next snapshot does,
+// so a refusal has nothing to roll back.
+
+export type Disposition = "backlog" | "ready" | "drop";
+
+/** The triage form, one per waiting item. `priority` and `parent` are "" for none. */
+export interface TriageForm {
+  disp: Disposition;
+  priority: string;
+  /** A feature's slug. */
+  parent: string;
+  /** "Content reviewed": adds `--status stable`. Off unless ticked. */
+  reviewed: boolean;
+  /** Why it is dropped. Never sent: it becomes a line for the agent to record. */
+  reason: string;
+}
+
+export const emptyForm = (): TriageForm => ({ disp: "ready", priority: "", parent: "", reviewed: false, reason: "" });
+
+/** The form of each waiting item the inspector has shown, by slug. Never changed in place. */
+export type Forms = Readonly<Record<string, TriageForm>>;
+
+/**
+ * The inspector moved from one waiting item (`was`) to another (`now`); `null`
+ * is no waiting item. The item it comes to has a form, and "content reviewed"
+ * is unticked every time, coming back to the same item included: a tick is for
+ * the decision being made now. What else was chosen stays while the user steps
+ * away and back.
+ */
+export function formsOnShow(forms: Forms, was: string | null, now: string | null): Forms {
+  if (now === null || now === was) return forms;
+  return { ...forms, [now]: { ...(forms[now] ?? emptyForm()), reviewed: false } };
+}
+
+/** Set one field of one item's form. An item with no form has none to set. */
+export function withField<K extends keyof TriageForm>(forms: Forms, slug: string, field: K, value: TriageForm[K]): Forms {
+  const form = forms[slug];
+  return form ? { ...forms, [slug]: { ...form, [field]: value } } : forms;
+}
+
+/** Drop an item's form whole: after its decision ran, and after that was undone. */
+export function withoutForm(forms: Forms, slug: string): Forms {
+  if (!(slug in forms)) return forms;
+  const { [slug]: _dropped, ...rest } = forms;
+  return rest;
+}
+
+/** A body `/api/write` takes from the page. An Undo is not built here: it is the server's own object. */
+export type WriteBody =
+  | { kind: "triage"; ref: string; lifecycle: string; priority?: string; parent?: string; reviewed?: true }
+  | { kind: "membership"; ref: string; cycle: string | null };
+
+/** What a write does to the page's own state once it has run. */
+export type Effect =
+  | { kind: "triage"; slug: string; title: string; label: string }
+  | { kind: "bring"; slug: string }
+  | { kind: "take"; slug: string };
+
+/** One write, ready to send: its body, what it will mean here, and a note for the bar. */
+export interface WriteIntent {
+  body: WriteBody;
+  effect: Effect;
+  note: string;
+}
+
+/** The decision the form holds, as one write. A drop sends its lifecycle and nothing else. */
+export function triageIntent(item: ViewEntry, form: TriageForm): WriteIntent {
+  const ref = `item/${item.slug}`;
+  const title = titleOf(item);
+  if (form.disp === "drop") {
+    const reason = form.reason.trim();
+    return {
+      body: { kind: "triage", ref, lifecycle: "dropped" },
+      effect: { kind: "triage", slug: item.slug, title, label: "dropped" + (reason ? ` · ${reason}` : "") },
+      note: reason ? `reason for the agent to record: “${reason}”` : "",
+    };
+  }
+  const body: WriteBody = { kind: "triage", ref, lifecycle: form.disp };
+  if (form.priority) body.priority = form.priority;
+  if (form.parent) body.parent = `feature/${form.parent}`;
+  if (form.reviewed) body.reviewed = true;
+  const label = [`accepted to ${form.disp}`, form.priority, form.parent].filter(Boolean).join(" · ");
+  return { body, effect: { kind: "triage", slug: item.slug, title, label }, note: "" };
+}
+
+export function bringIntent(item: ViewEntry, cycle: string): WriteIntent {
+  return {
+    body: { kind: "membership", ref: `item/${item.slug}`, cycle },
+    effect: { kind: "bring", slug: item.slug },
+    note: "",
+  };
+}
+
+export function takeIntent(item: ViewEntry): WriteIntent {
+  return {
+    body: { kind: "membership", ref: `item/${item.slug}`, cycle: null },
+    effect: { kind: "take", slug: item.slug },
+    note: "",
+  };
+}
+
+/** The cycle "Bring in" brings into: the Cycle page's cycle, while it is a current one. */
+export function bringTarget(state: BoardState, s: Snapshot): PortfolioEntry | null {
+  if (!state.cycle) return null;
+  return s.portfolio.cycles.find((c) => c.slug === state.cycle) ?? null;
+}
+
+/** A backlog or ready item in no cycle can be brought into a current cycle. */
+export function canBring(item: ViewEntry, cycle: PortfolioEntry | null): boolean {
+  if (!cycle || cycle.archived || !cycle.current) return false;
+  return !item.archived && !item.cycle && ["backlog", "ready"].includes(item.lifecycle ?? "");
+}
+
+/** An open item in a cycle can be taken out of it. */
+export function canTake(item: ViewEntry): boolean {
+  return !item.archived && !!item.cycle && isOpen(item);
+}
+
+/**
+ * The write a key asks for, or `null`. `t` takes out only the item the
+ * inspector is showing. `b` brings the highlighted row in. On the Cycle page
+ * the band names the cycle, so the highlight is enough; anywhere else `b`
+ * needs the inspector open, where the button names the cycle it brings into.
+ */
+export function keyIntent(state: BoardState, ctx: ListContext, action: KeyAction): WriteIntent | null {
+  if (action !== "bring" && action !== "take") return null;
+  const list = currentList(state, ctx);
+  const sel = selected(state, list);
+  if (!sel) return null;
+  const open = inspecting(state, list);
+  if (action === "bring") return state.view === "cycle" || open ? bringRow(state, ctx, sel.key) : null;
+  return open && canTake(sel.item) ? takeIntent(sel.item) : null;
+}
+
+/** "Bring in" on one row of the current list, highlighted or not; `null` when it cannot be brought in. */
+export function bringRow(state: BoardState, ctx: ListContext, key: string | null): WriteIntent | null {
+  const row = currentList(state, ctx).find((r) => r.key === key);
+  const target = bringTarget(state, ctx.snapshot);
+  return row && target && canBring(row.item, target) ? bringIntent(row.item, target.slug) : null;
+}
+
+/** "Apply" on the triage form: the decision on the item the inspector is showing. */
+export function formIntent(state: BoardState, ctx: ListContext, form: TriageForm | null): WriteIntent | null {
+  const list = currentList(state, ctx);
+  const sel = selected(state, list);
+  if (!form || !sel || !inspecting(state, list)) return null;
+  return sel.key.startsWith("t:") && sel.item.lifecycle === "triage" ? triageIntent(sel.item, form) : null;
+}
+
+// ---- one write at a time -----------------------------------------------------
+
+/** How long nothing more can be sent after a write has landed and the board has been redrawn. */
+export const SETTLE_MS = 600;
+
+/**
+ * Whether a write may be sent. One is `pending` from the click to the redraw
+ * that follows its answer; then nothing is taken until `until`. A write moves
+ * the highlight on, so a second click or key meant for the same control would
+ * otherwise land on the next item's.
+ */
+export interface Gate {
+  pending: boolean;
+  until: number;
+}
+
+export const IDLE_GATE: Gate = { pending: false, until: 0 };
+
+export function gateBusy(gate: Gate, now: number): boolean {
+  return gate.pending || now < gate.until;
+}
+
+/** Take the gate for one write, or `null`: one is pending, or one has only just landed. */
+export function gateTake(gate: Gate, now: number): Gate | null {
+  return gateBusy(gate, now) ? null : { pending: true, until: 0 };
+}
+
+/** The write landed and the board was redrawn at `now`. */
+export function gateRelease(now: number): Gate {
+  return { pending: false, until: now + SETTLE_MS };
+}
+
+export type WriteResult =
+  | { ok: true; command: string; /** The Undo, exactly as the server sent it. */ restore: unknown; advisories: string[] }
+  | { ok: false; status: number | null; message: string; hint: string | null; command: string | null };
+
+/** Read one `/api/write` response: its status and parsed body, or `null` for no answer. */
+export function readWrite(status: number | null, body: unknown): WriteResult {
+  if (status === null)
+    return { ok: false, status, message: "the board's server is not answering.", hint: null, command: null };
+  if (status === 401) return { ok: false, status, message: SESSION_ENDED, hint: null, command: null };
+  const data = isRecord(body) && isRecord(body.data) ? body.data : null;
+  if (status === 200 && data && typeof data.command === "string")
+    return {
+      ok: true,
+      command: data.command,
+      restore: data.restore ?? null,
+      advisories: (Array.isArray(data.advisories) ? data.advisories : []).flatMap((a: unknown) =>
+        isRecord(a) && typeof a.message === "string" && a.message ? [a.message] : []
+      ),
+    };
+  const error = isRecord(body) && isRecord(body.error) ? body.error : null;
+  const choices = error && Array.isArray(error.choices) ? error.choices.filter((c) => typeof c === "string") : [];
+  return {
+    ok: false,
+    status,
+    message:
+      error && typeof error.message === "string" && error.message
+        ? error.message
+        : status === 200
+          ? "the board's server sent an answer this page cannot read."
+          : `the board's server answered ${status}.`,
+    hint:
+      error && typeof error.hint === "string" && error.hint
+        ? error.hint
+        : choices.length
+          ? `choices: ${choices.join(", ")}`
+          : null,
+    command: isRecord(body) && typeof body.command === "string" ? body.command : null,
+  };
+}
+
+// ---- the line under the list --------------------------------------------------
+
+export const UNDO_GONE = "Undo no longer available";
+
+/** What the line under the list holds: the last write, with the one Undo there is. */
+export interface Last {
+  label: string;
+  text: string;
+  note: string;
+  /** The Undo on offer: the server's object, kept as it came, sent back as it is. */
+  restore: unknown;
+  /** What the write that Undo belongs to meant here, for the Undo to take back. */
+  effect: Effect | null;
+  /** The command line of the write that Undo belongs to. */
+  undoOf: string;
+}
+
+const shell = (command: string | null): string => (command ? `$ ${command}` : "");
+const hasUndo = (last: Last | null): last is Last => !!last && last.restore !== null && last.restore !== undefined;
+const REFUSED = "refused";
+
+/**
+ * The line after a write, given the line before it. One that ran shows its
+ * command and its own Undo, which replaces any earlier one: there is one
+ * slot. A refusal shows why, and keeps the earlier write's Undo on offer.
+ */
+export function afterWrite(result: WriteResult, intent: WriteIntent, prev: Last | null = null): Last {
+  if (!result.ok) {
+    const kept = hasUndo(prev) ? prev : null;
+    return {
+      label: REFUSED,
+      text: shell(result.command),
+      note: [result.message, result.hint].filter(Boolean).join(" "),
+      restore: kept ? kept.restore : null,
+      effect: kept ? kept.effect : null,
+      undoOf: kept ? kept.undoOf : "",
+    };
+  }
+  const text = shell(result.command);
+  return {
+    label: "ran",
+    text,
+    note: [intent.note, ...result.advisories].filter(Boolean).join(" · "),
+    restore: result.restore,
+    effect: intent.effect,
+    undoOf: text,
+  };
+}
+
+/** What Undo posts: the stored object itself, never one rebuilt from its parts. `null` when there is none. */
+export function undoBody(last: Last | null): unknown {
+  return hasUndo(last) ? last.restore : null;
+}
+
+/**
+ * The line after an Undo was sent. One that ran is used up. Any 409 means it
+ * can no longer be applied: the control goes. So does a 401: the token is new
+ * on every start, so a refused token is a server that started since the write
+ * and holds no Undo. Any other failure leaves the control. A line that is not
+ * "undone with" is about the write the Undo belongs to, whatever it said before.
+ */
+export function afterUndo(last: Last, result: WriteResult): Last {
+  if (result.ok)
+    return { label: "undone with", text: shell(result.command), note: "", restore: null, effect: null, undoOf: "" };
+  const about = { label: "ran", text: last.undoOf };
+  if (result.status === 409 || result.status === 401)
+    return { ...about, note: UNDO_GONE, restore: null, effect: null, undoOf: "" };
+  return { ...last, ...about, note: `Undo did not run: ${result.message}` };
+}
+
+/**
+ * A command on at most `max` lines of `cols` characters (its font is
+ * monospace), broken between words. When that is not enough the item ref is
+ * cut in the middle, by as little as makes it fit, and every flag stays whole.
+ * Only a line too narrow for the flags themselves loses its end. With `cols`
+ * unknown (0) the command is one line.
+ */
+export function commandLines(text: string, cols: number, max = 2): string[] {
+  if (!text) return [];
+  if (cols <= 0) return [text];
+  const wrap = (words: readonly string[]): string[] => {
+    const lines: string[] = [];
+    for (const word of words) {
+      const at = lines.length - 1;
+      if (at >= 0 && lines[at]!.length + 1 + word.length <= cols) lines[at] += ` ${word}`;
+      else lines.push(word);
+    }
+    return lines;
+  };
+  const fits = (lines: readonly string[]): boolean => lines.length <= max && lines.every((l) => l.length <= cols);
+  const words = text.split(" ").filter(Boolean);
+  let lines = wrap(words);
+  if (fits(lines)) return lines;
+  const at = words.findIndex((w) => w.startsWith("item/"));
+  if (at >= 0) {
+    const slug = words[at]!.slice("item/".length);
+    for (let keep = slug.length - 2; keep >= 2; keep--) {
+      const head = Math.ceil(keep / 2);
+      const cut = `item/${slug.slice(0, head)}…${slug.slice(slug.length - (keep - head))}`;
+      lines = wrap(words.map((w, n) => (n === at ? cut : w)));
+      if (fits(lines)) return lines;
+    }
+  }
+  // Too narrow even with the ref at its shortest: the end goes.
+  const clip = (l: string, more: boolean): string => (l.length > cols || more ? `${l.slice(0, cols - 1)}…` : l);
+  return lines.slice(0, max).map((l, n) => clip(l, n === max - 1 && lines.length > max));
+}
+
+/** What the template draws of the line. The restore object itself never goes to the template. */
+export interface LastView {
+  label: string;
+  /** The whole command, for the tooltip and for a copy. */
+  text: string;
+  /** The command as drawn, for the measured width. */
+  lines: string[];
+  note: string;
+  undo: boolean;
+  /** "Undo", or "Undo previous write" when the line shows a later refusal. */
+  undoLabel: string;
+  /** The command that Undo would take back, when it is not the one the line shows. */
+  undoTitle: string;
+  /** The line is a refusal: its note, the reason, is what must stay readable. */
+  refused: boolean;
+  /** There is no command on the line: the note has all of it. */
+  bare: boolean;
+}
+
+/** The line for the template, with its command fitted to `cols` characters a line. */
+export function lastView(last: Last | null, cols: number): LastView | null {
+  if (!last) return null;
+  const earlier = hasUndo(last) && last.label === REFUSED;
+  return {
+    label: last.label,
+    text: last.text,
+    lines: commandLines(last.text, cols),
+    note: last.note,
+    undo: hasUndo(last),
+    undoLabel: earlier ? "Undo previous write" : "Undo",
+    undoTitle: earlier ? last.undoOf : "",
+    refused: last.label === REFUSED,
+    bare: !last.text,
+  };
+}
+
+// ---- where a write lands ------------------------------------------------------
+
+/** One line of "Decided". */
+export interface Decided {
+  slug: string;
+  title: string;
+  label: string;
+}
+
+/** Record a triage decision, newest last, one line per item. */
+export function withDecided(list: readonly Decided[], effect: Effect): readonly Decided[] {
+  if (effect.kind !== "triage") return list;
+  return [...list.filter((d) => d.slug !== effect.slug), { slug: effect.slug, title: effect.title, label: effect.label }];
+}
+
+export function withoutDecided(list: readonly Decided[], slug: string): readonly Decided[] {
+  return list.filter((d) => d.slug !== slug);
+}
+
+/** The view state after a write ran: a brought-in item joins "Added just now". */
+export function applied(state: BoardState, effect: Effect): BoardState {
+  if (effect.kind === "bring") return noteBroughtIn(state, effect.slug);
+  if (effect.kind === "take") return noteTakenOut(state, effect.slug);
+  return state;
+}
+
+/** The view state after a write's Undo ran. */
+export function reverted(state: BoardState, effect: Effect): BoardState {
+  return effect.kind === "bring" ? noteTakenOut(state, effect.slug) : state;
+}
+
+/**
+ * What to flash after a write, or after its Undo: the item's row when the
+ * list shows it, else the Cycle page's tab it went to. A triage decision
+ * flashes "Decided", and its Undo the row that came back.
+ */
+export function landing(state: BoardState, ctx: ListContext, effect: Effect, undone: boolean): string | null {
+  if (effect.kind === "triage") return state.view !== "triage" ? null : undone ? `t:${effect.slug}` : "decided";
+  const tab = (effect.kind === "bring") !== undone ? "in" : "cand";
+  if (currentList(state, ctx).some((r) => r.key === `i:${effect.slug}`)) return `i:${effect.slug}`;
+  return state.view === "cycle" ? `tab:${tab}` : null;
+}
+
+// ---- what a write changes on the page ----------------------------------------
+
+/** Everything on the page a write or its Undo can change. */
+export interface Local {
+  state: BoardState;
+  decided: readonly Decided[];
+  forms: Forms;
+  last: Last | null;
+}
+
+/**
+ * The page after a write was answered. One that ran is recorded: "Decided" or
+ * "Added just now", and the decided item's form is dropped. A refusal applies
+ * no local effect: the board is as it was. Either way the form that was sent
+ * is unticked: a tick is for one decision.
+ */
+export function afterSend(local: Local, result: WriteResult, intent: WriteIntent): Local {
+  const last = afterWrite(result, intent, local.last);
+  const { effect } = intent;
+  if (!result.ok) {
+    const forms = effect.kind === "triage" ? withField(local.forms, effect.slug, "reviewed", false) : local.forms;
+    return { ...local, forms, last };
+  }
+  return {
+    state: applied(local.state, effect),
+    decided: withDecided(local.decided, effect),
+    forms: effect.kind === "triage" ? withoutForm(local.forms, effect.slug) : local.forms,
+    last,
+  };
+}
+
+/**
+ * The page after an Undo was answered. One that ran takes back what its write
+ * meant here, and drops the item's form so it opens fresh. One that did not
+ * run changes the line and nothing else.
+ */
+export function afterUndoSent(local: Local, result: WriteResult): Local {
+  if (!hasUndo(local.last)) return local;
+  const last = afterUndo(local.last, result);
+  const effect = result.ok ? local.last.effect : null;
+  if (!effect) return { ...local, last };
+  return {
+    state: reverted(local.state, effect),
+    decided: withoutDecided(local.decided, effect.slug),
+    forms: withoutForm(local.forms, effect.slug),
+    last,
+  };
+}
+
+/** The row the keyboard goes to after a write: the highlighted one, else the first. */
+export function focusKey(state: BoardState, ctx: ListContext): string | null {
+  const list = currentList(state, ctx);
+  return (selected(state, list) ?? list[0])?.key ?? null;
+}
+
 // ---- the view model ----------------------------------------------------------
 
 export interface ItemRow {
@@ -427,6 +912,8 @@ export interface Vm {
   };
   triage: {
     rows: Array<{ key: string; title: string; on: boolean; kind: string; source: string; filed: string }>;
+    /** Decided on this page since it loaded, and no longer waiting. */
+    decided: Decided[];
   };
   box: {
     empty: string;
@@ -438,6 +925,8 @@ export interface Vm {
     feature: string;
     features: string[];
     rows: ItemRow[];
+    /** There is a cycle to bring a candidate into. */
+    bring: boolean;
   };
   features: Array<{
     slug: string;
@@ -458,6 +947,17 @@ export interface Vm {
     fields: Field[];
     path: string;
     tip: string;
+    slug: string;
+    /** "Bring into <the cycle's title>", when the item can be brought in. */
+    bring: string | null;
+    /** The slug of that cycle, for the button's tooltip. */
+    bringTitle: string;
+    /** The item can be taken out of its cycle. */
+    take: boolean;
+    /** The item is waiting in triage: the inspector carries the decision form. */
+    triage: boolean;
+    /** The features the form offers as a parent. */
+    features: string[];
   };
 }
 
@@ -497,7 +997,12 @@ function inboxRowVm(r: InboxRow, state: BoardState): InboxRowVm {
 }
 
 /** Everything the template draws, for one state over one snapshot, given what is wrong, if anything. */
-export function viewModel(state: BoardState, ctx: ListContext, problem: Problem | null = null): Vm {
+export function viewModel(
+  state: BoardState,
+  ctx: ListContext,
+  problem: Problem | null = null,
+  decided: readonly Decided[] = []
+): Vm {
   const s = ctx.snapshot;
   const index = idIndex(s);
   const list = currentList(state, ctx);
@@ -537,7 +1042,7 @@ export function viewModel(state: BoardState, ctx: ListContext, problem: Problem 
     },
     now: { cycle: null, empty: false, groups: [] },
     inbox: { empty: false, groups: [], snoozed: [] },
-    triage: { rows: [] },
+    triage: { rows: [], decided: [] },
     box: { empty: "", groups: [] },
     cand: {
       q: state.cand.q,
@@ -545,6 +1050,7 @@ export function viewModel(state: BoardState, ctx: ListContext, problem: Problem 
       feature: state.cand.feature,
       features: s.portfolio.features.map((f) => f.slug),
       rows: [],
+      bring: bringTarget(state, s) !== null,
     },
     features: [],
     inspector: null,
@@ -579,7 +1085,10 @@ export function viewModel(state: BoardState, ctx: ListContext, problem: Problem 
 
   if (view === "triage") {
     const queue = triageQueue(s);
-    vm.band.count = `${queue.length} waiting`;
+    // A decided item still in the queue has not left it yet: it is drawn once, as waiting.
+    vm.triage.decided = decided.filter((d) => !queue.some((i) => i.slug === d.slug));
+    vm.band.count =
+      `${queue.length} waiting` + (vm.triage.decided.length ? ` · ${vm.triage.decided.length} decided` : "");
     vm.triage.rows = queue.map((i) => ({
       key: `t:${i.slug}`,
       title: titleOf(i),
@@ -660,6 +1169,7 @@ export function viewModel(state: BoardState, ctx: ListContext, problem: Problem 
   if (vm.inspecting && sel) {
     const at = list.indexOf(sel);
     const i = sel.item;
+    const target = bringTarget(state, s);
     vm.inspector = {
       position: `${at + 1} of ${list.length}`,
       first: at <= 0,
@@ -670,6 +1180,12 @@ export function viewModel(state: BoardState, ctx: ListContext, problem: Problem 
       fields: fields(s, i, index),
       path: i.path,
       tip: `${i.path} · id ${i.id ?? "none"}`,
+      slug: i.slug,
+      bring: target && canBring(i, target) ? `Bring into ${titleOf(target)}` : null,
+      bringTitle: target?.slug ?? "",
+      take: canTake(i),
+      triage: sel.key.startsWith("t:") && i.lifecycle === "triage",
+      features: vm.cand.features,
     };
   }
   return vm;

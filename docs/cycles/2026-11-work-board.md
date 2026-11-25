@@ -44,7 +44,7 @@ Inbox row afterwards, so the two go together.
     side, in separate worktrees.
   - [item/board-shell-and-five-pages](../items/board-shell-and-five-pages/item.md),
     then
-    [item/board-two-writes-with-undo](../items/board-two-writes-with-undo.md),
+    [item/board-two-writes-with-undo](../items/board-two-writes-with-undo/item.md),
     then
     [item/work-board-skill-and-packaging](../items/work-board-skill-and-packaging.md)
     — they share files and run in that order.
@@ -86,3 +86,4 @@ placeholder line into a real cycle.
 - feature/board-server-and-pdocs-bridge (landed 2026-11-19)
 - feature/research-items-parent-feature (landed 2026-11-24)
 - feature/board-shell-and-five-pages (landed 2026-11-24)
+- feature/board-two-writes-with-undo (landed 2026-11-25)

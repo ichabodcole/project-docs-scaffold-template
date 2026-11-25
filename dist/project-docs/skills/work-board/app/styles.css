@@ -255,6 +255,8 @@ button:disabled {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* One-line rows fold when the centre itself is narrow: see `.line-fold`. */
+  container-type: inline-size;
 }
 /* Lists cap at 900px with the inspector closed and fill what is left when it is open. */
 .cap {
@@ -602,6 +604,23 @@ button:disabled {
   flex-wrap: nowrap;
   overflow: hidden;
 }
+/* A one-line row in a narrow centre (a 1024px window with the inspector open):
+   its meta goes under the title, so the title keeps the line. */
+@container (max-width: 640px) {
+  .line-fold {
+    height: auto;
+    min-height: 44px;
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .line-fold > .meta {
+    order: 1;
+    flex: 0 0 100%;
+    width: auto;
+  }
+}
 .lc {
   display: inline-flex;
   align-items: center;
@@ -656,6 +675,65 @@ button:disabled {
   width: 176px;
   text-align: right;
 }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+.btn-primary {
+  background: var(--text);
+  color: var(--raised);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--white);
+}
+.btn-outline {
+  border: 1px solid var(--edge);
+  color: var(--text);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--line);
+}
+/* A cycle's title can be long: the button keeps to the inspector's width. */
+.btn-fit {
+  display: inline-block;
+  min-width: 0;
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A write is pending, or has only just landed: nothing that writes can be pressed. */
+.btn:disabled,
+.btn-text:disabled,
+.seg:disabled,
+.input:disabled,
+.select:disabled {
+  opacity: 0.4;
+}
+.check:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.key {
+  padding: 0 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--muted);
+}
 .btn-icon {
   display: inline-flex;
   align-items: center;
@@ -696,6 +774,22 @@ button:disabled {
 .select-feature {
   max-width: 160px;
 }
+.input-wide {
+  display: block;
+  width: 100%;
+}
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--soft);
+  cursor: pointer;
+}
+.check input {
+  accent-color: var(--soft);
+}
 .input:focus-visible,
 .select:focus-visible {
   outline: 2px solid var(--muted);
@@ -713,9 +807,11 @@ button:disabled {
   background: var(--ground);
   border-bottom: 1px solid var(--line);
 }
-/* Snooze on a row: shown on hover and keyboard focus only. */
+/* Snooze and "Bring in" on a row: shown on hover and keyboard focus only.
+   Hidden, they keep their place and take no click. */
 .on-hover {
   opacity: 0;
+  pointer-events: none;
 }
 .row:hover .on-hover,
 .line:hover .on-hover,
@@ -723,15 +819,16 @@ button:disabled {
 .on-hover:focus-within,
 .on-hover.is-open {
   opacity: 1;
+  pointer-events: auto;
 }
 
-/* ---- the line under the list ---- */
+/* ---- the lines under the list ---- */
 .ran {
   flex-shrink: 0;
-  height: 36px;
-  padding: 0 24px;
+  min-height: 36px;
+  padding: 8px 24px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   border-top: 1px solid var(--line);
   font-size: 12px;
@@ -741,9 +838,57 @@ button:disabled {
   flex-shrink: 0;
   color: var(--muted);
 }
-.ran-text {
+.ran-plain {
   color: var(--text);
   user-select: all;
+}
+/* The command takes what the label, the note and Undo leave. Its width does
+   not depend on its own text, so the glue can measure it and fit the lines. */
+.ran-text {
+  flex: 1 1 0%;
+  min-width: 0;
+  color: var(--text);
+  user-select: all;
+}
+.ran-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* A drop's reason for the agent to record, an advisory, or why a write was
+   refused. At most a third of the line; the whole of it is in its tooltip. */
+.ran-note {
+  flex: 0 1 auto;
+  max-width: 30%;
+  color: var(--muted);
+  user-select: all;
+}
+/* A refusal: the reason keeps more of the line, and the command gives way. */
+.ran.is-refused .ran-note {
+  max-width: 60%;
+}
+/* No command on the line: the note has all of it. */
+.ran.is-bare .ran-note {
+  flex: 1 1 0%;
+  max-width: none;
+}
+.ran-undo {
+  margin-left: auto;
+  padding: 0;
+}
+
+/* ---- where a write landed: a brief highlight ---- */
+@keyframes flash {
+  from {
+    background-color: var(--edge);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.flash {
+  animation: flash 1.6s ease-out;
 }
 
 /* ---- the inspector: a flex sibling of the centre, so it pushes ---- */
@@ -819,6 +964,25 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+/* The two membership writes, each with its key. */
+.writes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* The triage decision form. */
+.form > * + * {
+  margin-top: 12px;
+}
+.form-segs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.form-row {
+  display: flex;
+  gap: 8px;
 }
 
 /* ---- motion: none for those who ask for less ---- */

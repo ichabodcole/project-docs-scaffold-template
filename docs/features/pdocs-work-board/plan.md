@@ -321,7 +321,10 @@ the two write kinds. It serves a placeholder page until Phase 4.
     optional `priority`, `parent` (written as `feature/<slug>`) and `reviewed`
     (adds `--status stable`). One `set` call, matching `triage-items` step 5.
   - `membership`: `ref` and `cycle`, a slug to bring the item in or `null` to
-    take it out (`--unset cycle`).
+    take it out (`--unset cycle`). The server checks a fresh snapshot first and
+    answers 409 without running `set` unless the item is `backlog` or `ready`
+    with no cycle and the cycle is planned or active, or, to take it out, the
+    item is in a cycle.
   - `restore`: `ref` and a list of `{ key, before }`, named `changes`, limited
     to `lifecycle`, `priority`, `parent`, `status` and `cycle`. The server takes
     a `restore` only under the Undo contract in the Approach Summary: a body it

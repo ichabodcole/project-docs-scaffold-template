@@ -526,7 +526,9 @@ writes. Temp copy `a`.
 1. Open the board on `a` and the browser console.
 2. In the console, `fetch` `POST /api/write` (with the page's token, taken from
    `location`) with a `membership` body for a real item and
-   `cycle: "no-such-cycle"`.
+   `cycle: "no-such-cycle"`. The server refuses this itself with 409, before
+   `pdocs set` runs. For a refusal from `set`, move the active cycle's file out
+   of the copy between a poll and a click on "Bring in".
 3. Read the last-write bar and the item's row. Run
    `git -C "$SCRATCH/a" status --short`.
 

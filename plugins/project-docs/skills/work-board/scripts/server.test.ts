@@ -14,7 +14,11 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const BOARD = {
   view: "board",
   groups: {
-    unstarted: [entry({ slug: "waiting", lifecycle: "triage" }), entry({ slug: "settled", lifecycle: "backlog" })],
+    unstarted: [
+      entry({ slug: "waiting", lifecycle: "triage" }),
+      entry({ slug: "settled", lifecycle: "backlog" }),
+      entry({ slug: "spare", lifecycle: "backlog" }),
+    ],
   },
   advisories: [],
 };
@@ -466,12 +470,16 @@ describe("writes", () => {
       const first = ((await (await h.request("/api/write", { body: bring })).json()) as { data: { restore: unknown } })
         .data.restore;
       h.move("settled", { cycle: "c1" });
+      // The writes that follow are on another item: in, out, in, out.
       for (let i = 0; i < more; i++) {
+        const into = i % 2 === 0 ? "c1" : null;
         h.board.options.run = async (args) =>
           args[0] === "set"
-            ? ok({ path: "p", changes: [{ key: "cycle", before: `was-${i}`, after: "c1", changed: true }] })
+            ? ok({ path: "p", changes: [{ key: "cycle", before: into ? null : "c1", after: into, changed: true }] })
             : harnessRead(args, h);
-        expect((await h.request("/api/write", { body: bring })).status).toBe(200);
+        const body = { kind: "membership", ref: "item/spare", cycle: into };
+        expect((await h.request("/api/write", { body })).status).toBe(200);
+        h.move("spare", { cycle: into });
       }
       expect([more, (await h.request("/api/write", { body: first })).status]).toEqual([more, status]);
     }
@@ -537,6 +545,7 @@ describe("writes", () => {
     const h = harness({ set: ok({ path: "p", changes: [{ key: "cycle", before: null, after: "c1", changed: true }] }) });
     const res = await h.request("/api/write", { body: { kind: "membership", ref: "item/settled", cycle: "c1" } });
     expect(res.status).toBe(200);
+    h.move("settled", { cycle: "c1" });
     await h.request("/api/write", { body: { kind: "membership", ref: "item/settled", cycle: null } });
     expect(h.sets()).toEqual([
       ["set", "item/settled", "--cycle", "c1"],
@@ -574,15 +583,34 @@ describe("writes", () => {
 
   test("a refusal from set is passed on with its message and choices, and the command that ran", async () => {
     const h = harness({
-      set: { ok: false, kind: "usage", exit_code: 2, message: "no cycle file is named `nope.md`", choices: ["c1"] },
+      set: { ok: false, kind: "usage", exit_code: 2, message: "no cycle file is named `c1.md`", choices: ["c2"] },
     });
-    const res = await h.request("/api/write", { body: { kind: "membership", ref: "item/settled", cycle: "nope" } });
+    const res = await h.request("/api/write", { body: { kind: "membership", ref: "item/settled", cycle: "c1" } });
     expect(res.status).toBe(422);
     expect(await res.json()).toEqual({
       ok: false,
-      error: { kind: "usage", exit_code: 2, message: "no cycle file is named `nope.md`", choices: ["c1"] },
-      command: "pdocs set item/settled --cycle nope",
+      error: { kind: "usage", exit_code: 2, message: "no cycle file is named `c1.md`", choices: ["c2"] },
+      command: "pdocs set item/settled --cycle c1",
     });
+  });
+
+  test("membership the fresh snapshot does not allow is a 409, and set is never run", async () => {
+    const h = harness();
+    const refusals: Array<[object, string]> = [
+      [{ kind: "membership", ref: "item/waiting", cycle: "c1" }, "`item/waiting` is `triage`, not `backlog` or `ready`."],
+      [{ kind: "membership", ref: "item/settled", cycle: "nope" }, "`nope` is not a planned or active cycle."],
+      [{ kind: "membership", ref: "item/settled", cycle: null }, "`item/settled` is in no cycle."],
+    ];
+    for (const [body, message] of refusals) {
+      const res = await h.request("/api/write", { body });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ ok: false, error: { kind: "conflict", message } });
+    }
+    // The page showed the item as a candidate; a terminal has since put it in a cycle.
+    h.move("settled", { cycle: "c1" });
+    const stale = await h.request("/api/write", { body: { kind: "membership", ref: "item/settled", cycle: "c1" } });
+    expect(stale.status).toBe(409);
+    expect(h.sets()).toEqual([]);
   });
 
   test("strict review mode's exit 6 is a conflict", async () => {

@@ -2,14 +2,47 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  afterSend,
+  afterUndo,
+  afterUndoSent,
+  afterWrite,
+  applied,
   applyKey,
   applyPoll,
   attend,
+  bringIntent,
+  bringRow,
+  canBring,
+  canTake,
+  commandLines,
+  emptyForm,
+  focusKey,
+  formsOnShow,
+  gateBusy,
+  gateRelease,
+  gateTake,
+  IDLE_GATE,
+  keyIntent,
+  landing,
+  lastView,
+  readWrite,
+  reverted,
+  SESSION_ENDED,
+  SETTLE_MS,
+  takeIntent,
+  triageIntent,
+  UNDO_GONE,
+  undoBody,
+  withDecided,
+  withField,
+  withoutDecided,
+  withoutForm,
   closesInspector,
   bar,
   breakable,
   EMPTY_FEED,
   fields,
+  formIntent,
   handoffLine,
   keyAction,
   meta,
@@ -20,6 +53,9 @@ import {
   unreachable,
   viewModel,
   type Feed,
+  type Last,
+  type Local,
+  type TriageForm,
 } from "./client.ts";
 import { snooze, type Snapshot } from "./model.ts";
 import {
@@ -92,9 +128,9 @@ describe("the poll", () => {
   });
 
   test("any other refusal is a problem that does not block, in the server's words when it has some", () => {
-    expect(readPoll(401, { ok: false, error: { message: "the header is missing." } })).toEqual({
+    expect(readPoll(403, { ok: false, error: { message: "requests from another origin are refused." } })).toEqual({
       kind: "problem",
-      problem: { message: "the header is missing.", hint: null, blocking: false },
+      problem: { message: "requests from another origin are refused.", hint: null, blocking: false },
     });
     expect(readPoll(502, "<html>")).toEqual({
       kind: "problem",
@@ -175,9 +211,36 @@ describe("keys", () => {
     expect(press("Enter")).toBe("open");
     expect(press("Escape")).toBe("escape");
     expect(press("x")).toBeNull();
-    // Bound with the writes, not here.
-    expect(press("b")).toBeNull();
-    expect(press("t")).toBeNull();
+  });
+
+  test("b brings in and t takes out, from a row or a button, never from a field", () => {
+    expect(press("b")).toBe("bring");
+    expect(press("t")).toBe("take");
+    expect(press("b", "BUTTON")).toBe("bring");
+    for (const tag of ["INPUT", "SELECT", "TEXTAREA"]) {
+      expect(press("b", tag)).toBeNull();
+      expect(press("t", tag)).toBeNull();
+    }
+    expect(press("b", "BODY", { metaKey: true })).toBeNull();
+    expect(keyAction({ key: "b", tag: "BODY" }, true)).toBeNull();
+    expect(keyAction({ key: "t", tag: "BODY" }, true)).toBeNull();
+  });
+
+  test("a held b or t writes once: the repeats are nothing, while a held j keeps moving", () => {
+    expect(press("b", "BODY", { repeat: true })).toBeNull();
+    expect(press("t", "BODY", { repeat: true })).toBeNull();
+    expect(press("t", "BUTTON", { repeat: true })).toBeNull();
+    expect(press("b", "BODY", { repeat: false })).toBe("bring");
+    expect(press("j", "BODY", { repeat: true })).toBe("down");
+    expect(press("Escape", "BODY", { repeat: true })).toBe("escape");
+  });
+
+  test("b and t change no view state: the write is the glue's to send", () => {
+    const s = tree();
+    const state = pick({ ...initialState(s), view: "cycle" }, "i:a");
+    expect(applyKey(state, viewList(state, ctx(s)), "bring")).toBe(state);
+    expect(applyKey(state, viewList(state, ctx(s)), "take")).toBe(state);
+    expect(closesInspector(state, "take")).toBe(false);
   });
 
   test("typing in a field moves nothing, but Escape still counts", () => {
@@ -582,3 +645,675 @@ function deepFreeze<T>(value: T): T {
   }
   return value;
 }
+
+describe("the two writes", () => {
+  const s = tree();
+  const item = (slug: string) => Object.values(s.board.groups).flat().find((i) => i.slug === slug)!;
+  const form = (over: Partial<TriageForm> = {}): TriageForm => ({ ...emptyForm(), ...over });
+
+  test("the form starts on ready, with nothing chosen and content not reviewed", () => {
+    expect(emptyForm()).toEqual({ disp: "ready", priority: "", parent: "", reviewed: false, reason: "" });
+  });
+
+  test("an accept sends the lifecycle, and only what was chosen", () => {
+    expect(triageIntent(item("t"), form()).body).toEqual({ kind: "triage", ref: "item/t", lifecycle: "ready" });
+    expect(triageIntent(item("t"), form({ disp: "backlog", priority: "high", parent: "f1" })).body).toEqual({
+      kind: "triage",
+      ref: "item/t",
+      lifecycle: "backlog",
+      priority: "high",
+      parent: "feature/f1",
+    });
+  });
+
+  test("content reviewed is sent only when ticked", () => {
+    expect("reviewed" in triageIntent(item("t"), form()).body).toBe(false);
+    expect(triageIntent(item("t"), form({ reviewed: true })).body).toMatchObject({ reviewed: true });
+  });
+
+  test("a drop sends the lifecycle alone; its reason is a line for the agent, never part of the body", () => {
+    const intent = triageIntent(
+      item("t"),
+      form({ disp: "drop", priority: "high", parent: "f1", reviewed: true, reason: "  a duplicate  " })
+    );
+    expect(intent.body).toEqual({ kind: "triage", ref: "item/t", lifecycle: "dropped" });
+    expect(JSON.stringify(intent.body)).not.toContain("duplicate");
+    expect(intent.note).toBe("reason for the agent to record: “a duplicate”");
+    expect(intent.effect).toEqual({ kind: "triage", slug: "t", title: "Title of t", label: "dropped · a duplicate" });
+    expect(triageIntent(item("t"), form({ disp: "drop" })).note).toBe("");
+  });
+
+  test("what Decided says about an accept", () => {
+    expect(triageIntent(item("t"), form({ priority: "low", parent: "f1" })).effect).toMatchObject({
+      label: "accepted to ready · low · f1",
+    });
+    expect(triageIntent(item("t"), form({ disp: "backlog" })).effect).toMatchObject({ label: "accepted to backlog" });
+  });
+
+  test("bring in names the cycle; take out sends null", () => {
+    expect(bringIntent(item("e"), "c1")).toEqual({
+      body: { kind: "membership", ref: "item/e", cycle: "c1" },
+      effect: { kind: "bring", slug: "e" },
+      note: "",
+    });
+    expect(takeIntent(item("a"))).toEqual({
+      body: { kind: "membership", ref: "item/a", cycle: null },
+      effect: { kind: "take", slug: "a" },
+      note: "",
+    });
+  });
+
+  test("only a backlog or ready item with no cycle can be brought in, and only into a current cycle", () => {
+    const cycle = s.portfolio.cycles[0]!;
+    expect(canBring(item("e"), cycle)).toBe(true);
+    expect(canBring(item("e"), null)).toBe(false);
+    expect(canBring(item("e"), { ...cycle, archived: true })).toBe(false);
+    expect(canBring(item("c"), cycle)).toBe(false); // already in a cycle
+    expect(canBring(item("t"), cycle)).toBe(false); // waiting in triage
+    expect(canBring({ ...item("e"), lifecycle: "active" }, cycle)).toBe(false);
+  });
+
+  test("only an open item in a cycle can be taken out", () => {
+    expect(canTake(item("a"))).toBe(true);
+    expect(canTake(item("d"))).toBe(false); // done
+    expect(canTake(item("e"))).toBe(false); // in no cycle
+  });
+
+  test("b acts on the highlighted row; t only with the inspector open", () => {
+    const c = ctx(s);
+    const cand = { ...setTab({ ...initialState(s), view: "cycle" as const }, "cand"), sel: "i:e" };
+    expect(keyIntent(cand, c, "bring")?.body).toEqual({ kind: "membership", ref: "item/e", cycle: "c1" });
+    expect(keyIntent(cand, c, "take")).toBeNull();
+    expect(keyIntent({ ...cand, sel: null }, c, "bring")).toBeNull();
+    expect(keyIntent({ ...cand, cycle: null }, c, "bring")).toBeNull();
+
+    const inCycle = { ...initialState(s), view: "cycle" as const, sel: "i:a" };
+    expect(keyIntent(inCycle, c, "take")).toBeNull();
+    expect(keyIntent({ ...inCycle, open: true }, c, "take")?.body).toEqual({
+      kind: "membership",
+      ref: "item/a",
+      cycle: null,
+    });
+    expect(keyIntent({ ...inCycle, open: true }, c, "bring")).toBeNull();
+    expect(keyIntent({ ...inCycle, open: true }, c, "down")).toBeNull();
+  });
+
+  test("outside the Cycle page b needs the inspector open, where the button names the cycle", () => {
+    const c = ctx(s);
+    // `e` is backlog with no cycle, and no parent: give it one so a feature's page lists it.
+    const withParent = snapshot({
+      cycles: [
+        ["c1", "active", "stable"],
+        ["c2", "planned", "draft"],
+      ],
+      entries: [
+        entry({ slug: "f1", entity: "feature", lifecycle: "active" }),
+        entry({ slug: "e", lifecycle: "backlog", parent: "feature/f1" }),
+      ],
+    });
+    const fc = ctx(withParent);
+    const page: BoardState = { ...openFeature(initialState(withParent), "f1"), cycle: "c2", sel: "i:e" };
+    expect(keyIntent(page, fc, "bring")).toBeNull();
+    expect(keyIntent({ ...page, open: true }, fc, "bring")?.body).toEqual({
+      kind: "membership",
+      ref: "item/e",
+      cycle: "c2",
+    });
+    // On the Cycle page the band names the cycle, so the highlight is enough.
+    const cand = { ...setTab({ ...initialState(s), view: "cycle" as const }, "cand"), sel: "i:e" };
+    expect(keyIntent(cand, c, "bring")).not.toBeNull();
+  });
+});
+
+describe("a write starts from a row or from the inspector", () => {
+  const s = tree();
+  const c = ctx(s);
+
+  test("Bring in on a row needs no highlight, and is nothing for a row that is not a candidate", () => {
+    const cand = setTab({ ...initialState(s), view: "cycle" }, "cand");
+    expect(bringRow(cand, c, "i:e")?.body).toEqual({ kind: "membership", ref: "item/e", cycle: "c1" });
+    expect(bringRow(cand, c, "i:a")).toBeNull();
+    expect(bringRow(cand, c, null)).toBeNull();
+  });
+
+  test("Apply decides the waiting item the inspector shows, and nothing else", () => {
+    const triage = pick({ ...initialState(s), view: "triage" }, "t:t");
+    expect(formIntent(triage, c, emptyForm())?.body).toEqual({ kind: "triage", ref: "item/t", lifecycle: "ready" });
+    expect(formIntent(triage, c, null)).toBeNull();
+    expect(formIntent({ ...triage, open: false }, c, emptyForm())).toBeNull();
+    expect(formIntent(pick({ ...initialState(s), view: "cycle" }, "i:a"), c, emptyForm())).toBeNull();
+  });
+});
+
+describe("what a write answers", () => {
+  const restore = { kind: "restore", ref: "item/t", changes: [{ key: "lifecycle", before: "triage" }] };
+  const ok = {
+    ok: true,
+    data: { command: "pdocs set item/t --lifecycle ready", path: "docs/items/t.md", changes: [], advisories: [], restore },
+  };
+
+  test("a write that ran: its command, and the restore object exactly as it came", () => {
+    const r = readWrite(200, ok);
+    expect(r).toMatchObject({ ok: true, command: "pdocs set item/t --lifecycle ready", advisories: [] });
+    expect(r.ok && r.restore).toBe(restore);
+  });
+
+  test("advisories come back as their messages", () => {
+    const r = readWrite(200, { ok: true, data: { ...ok.data, advisories: [{ id: "x", message: "Mind this." }, "odd"] } });
+    expect(r.ok && r.advisories).toEqual(["Mind this."]);
+  });
+
+  test("a refusal from pdocs set: its message, its choices and the command that was tried", () => {
+    const r = readWrite(422, {
+      ok: false,
+      error: { kind: "usage", message: "no cycle `nope`.", choices: ["c1", "c2"], exit_code: 2 },
+      command: "pdocs set item/e --cycle nope",
+    });
+    expect(r).toEqual({
+      ok: false,
+      status: 422,
+      message: "no cycle `nope`.",
+      hint: "choices: c1, c2",
+      command: "pdocs set item/e --cycle nope",
+    });
+  });
+
+  test("a refusal with a hint, one with nothing readable, and no answer at all", () => {
+    expect(readWrite(409, { ok: false, error: { message: "not waiting in triage.", hint: "Reload." } })).toEqual({
+      ok: false,
+      status: 409,
+      message: "not waiting in triage.",
+      hint: "Reload.",
+      command: null,
+    });
+    expect(readWrite(500, null)).toMatchObject({ ok: false, status: 500, message: "the board's server answered 500." });
+    expect(readWrite(200, { ok: true })).toMatchObject({ ok: false, status: 200 });
+    expect(readWrite(null, null)).toMatchObject({ ok: false, status: null, message: "the board's server is not answering." });
+  });
+
+  const s = tree();
+  const t = Object.values(s.board.groups).flat().find((i) => i.slug === "t")!;
+  const intent = triageIntent(t, { ...emptyForm(), disp: "drop", reason: "dup" });
+  const ran = (): Last => afterWrite(readWrite(200, ok), intent);
+
+  const CMD = "$ pdocs set item/t --lifecycle ready";
+  const view = (last: Last | null) => lastView(last, 0);
+
+  test("the bar after a write: the command, the note, and an Undo", () => {
+    const last = ran();
+    expect(last.restore).toBe(restore);
+    expect(view(last)).toEqual({
+      label: "ran",
+      text: CMD,
+      lines: [CMD],
+      note: "reason for the agent to record: “dup”",
+      undo: true,
+      undoLabel: "Undo",
+      undoTitle: "",
+      refused: false,
+      bare: false,
+    });
+  });
+
+  test("advisories join the note; a write that changed nothing has no Undo", () => {
+    const last = afterWrite(
+      readWrite(200, { ok: true, data: { ...ok.data, restore: null, advisories: [{ id: "x", message: "Mind this." }] } }),
+      intent
+    );
+    expect(view(last)).toMatchObject({ note: "reason for the agent to record: “dup” · Mind this.", undo: false });
+  });
+
+  test("a refused write shows the refusal, with no Undo and no effect", () => {
+    const last = afterWrite(
+      readWrite(422, { ok: false, error: { message: "no cycle `nope`." }, command: "pdocs set item/e --cycle nope" }),
+      intent
+    );
+    expect(last.effect).toBeNull();
+    expect(view(last)).toMatchObject({
+      label: "refused",
+      text: "$ pdocs set item/e --cycle nope",
+      note: "no cycle `nope`.",
+      undo: false,
+      refused: true,
+      bare: false,
+    });
+    expect(view(afterWrite(readWrite(null, null), intent))).toMatchObject({
+      label: "refused",
+      text: "",
+      note: "the board's server is not answering.",
+      undo: false,
+      refused: true,
+      bare: true,
+    });
+    expect(
+      view(afterWrite(readWrite(422, { ok: false, error: { message: "no.", choices: ["a", "b"] } }), intent))?.note
+    ).toBe("no. choices: a, b");
+  });
+
+  const refusal = readWrite(409, { ok: false, error: { kind: "conflict", message: "is `triage`, not `backlog`." } });
+
+  test("a refusal keeps the earlier write's Undo, and says whose it is", () => {
+    const last = afterWrite(refusal, intent, ran());
+    expect(last.restore).toBe(restore);
+    expect(last.effect).toEqual(intent.effect);
+    expect(view(last)).toMatchObject({
+      label: "refused",
+      note: "is `triage`, not `backlog`.",
+      undo: true,
+      undoLabel: "Undo previous write",
+      undoTitle: CMD,
+    });
+    // A second refusal still holds it.
+    expect(view(afterWrite(refusal, intent, last))).toMatchObject({ undo: true, undoTitle: CMD });
+  });
+
+  test("a write that ran replaces the earlier Undo: there is one slot", () => {
+    const other = { kind: "restore", ref: "item/e", changes: [{ key: "cycle", before: null }] };
+    const next = afterWrite(
+      readWrite(200, { ok: true, data: { command: "pdocs set item/e --cycle c1", restore: other } }),
+      bringIntent(t, "c1"),
+      ran()
+    );
+    expect(next.restore).toBe(other);
+    expect(view(next)).toMatchObject({ text: "$ pdocs set item/e --cycle c1", undoLabel: "Undo", undoTitle: "" });
+  });
+
+  test("a refusal with nothing to undo before it offers no Undo", () => {
+    const spent = afterUndo(ran(), readWrite(200, { ok: true, data: { command: "pdocs set item/t --lifecycle triage" } }));
+    expect(view(afterWrite(refusal, intent, spent))).toMatchObject({ undo: false, undoLabel: "Undo" });
+    expect(view(afterWrite(refusal, intent, null))).toMatchObject({ undo: false });
+  });
+
+  test("Undo posts the stored object itself, or nothing", () => {
+    expect(undoBody(ran())).toBe(restore);
+    expect(undoBody(afterWrite(refusal, intent, ran()))).toBe(restore);
+    expect(undoBody(afterWrite(refusal, intent, null))).toBeNull();
+    expect(undoBody(null)).toBeNull();
+  });
+
+  test("an Undo that ran is used up: the bar says what undid it and offers no Undo", () => {
+    const last = afterUndo(ran(), readWrite(200, { ok: true, data: { command: "pdocs set item/t --lifecycle triage", restore: null } }));
+    expect(last.restore).toBeNull();
+    expect(view(last)).toMatchObject({
+      label: "undone with",
+      text: "$ pdocs set item/t --lifecycle triage",
+      note: "",
+      undo: false,
+      refused: false,
+    });
+  });
+
+  test("any 409 on Undo: no longer available, and the control goes", () => {
+    const gone = readWrite(409, { ok: false, error: { kind: "conflict", message: "the item changed." } });
+    const last = afterUndo(ran(), gone);
+    expect(last.restore).toBeNull();
+    expect(view(last)).toMatchObject({ label: "ran", text: CMD, note: UNDO_GONE, undo: false });
+    expect(UNDO_GONE).toBe("Undo no longer available");
+    // Undoing the previous write from under a refusal: the line is about that write again.
+    expect(view(afterUndo(afterWrite(refusal, intent, ran()), gone))).toMatchObject({
+      label: "ran",
+      text: CMD,
+      note: UNDO_GONE,
+      undo: false,
+      refused: false,
+    });
+  });
+
+  test("a refused token on Undo is a server started since the write: no longer available", () => {
+    const last = afterUndo(ran(), readWrite(401, { ok: false, error: { kind: "unauthorized", message: "wrong." } }));
+    expect(view(last)).toMatchObject({ label: "ran", note: UNDO_GONE, undo: false });
+    expect(view(afterUndo(ran(), readWrite(403, { ok: false, error: { message: "no." } })))).toMatchObject({ undo: true });
+  });
+
+  test("an Undo that failed any other way keeps the control and says why", () => {
+    const last = afterUndo(ran(), readWrite(null, null));
+    expect(last.restore).toBe(restore);
+    expect(view(last)).toMatchObject({
+      label: "ran",
+      text: CMD,
+      note: "Undo did not run: the board's server is not answering.",
+      undo: true,
+      undoLabel: "Undo",
+    });
+    expect(view(null)).toBeNull();
+  });
+});
+
+describe("a 401 from the board's API", () => {
+  const body = { ok: false, error: { kind: "unauthorized", message: "the `x-board-token` header is missing or wrong." } };
+
+  test("says the session ended and what to do, on a poll and on a write", () => {
+    expect(SESSION_ENDED).toBe("This page's session ended. Open the board again with the `open` command.");
+    expect(readPoll(401, body)).toEqual({
+      kind: "problem",
+      problem: { message: SESSION_ENDED, hint: null, blocking: false },
+    });
+    expect(readWrite(401, body)).toEqual({ ok: false, status: 401, message: SESSION_ENDED, hint: null, command: null });
+    expect(readWrite(401, null)).toMatchObject({ message: SESSION_ENDED });
+  });
+});
+
+describe("the command in the bar", () => {
+  const long =
+    "$ pdocs set item/anchor-link-encoding-and-case --lifecycle ready --priority high --parent feature/pdocs-work-board --status stable";
+
+  test("one line when it fits, or when the width is not known yet", () => {
+    expect(commandLines("$ pdocs set item/t --unset cycle", 40)).toEqual(["$ pdocs set item/t --unset cycle"]);
+    expect(commandLines(long, 0)).toEqual([long]);
+    expect(commandLines("", 40)).toEqual([]);
+  });
+
+  test("wraps between words to two lines before it cuts anything", () => {
+    const lines = commandLines(long, 70);
+    expect(lines).toEqual([
+      "$ pdocs set item/anchor-link-encoding-and-case --lifecycle ready",
+      "--priority high --parent feature/pdocs-work-board --status stable",
+    ]);
+    for (const l of lines) expect(l.length).toBeLessThanOrEqual(70);
+  });
+
+  test("when two lines are not enough, the item ref is cut in the middle and every flag stays", () => {
+    const lines = commandLines(long, 58);
+    expect(lines.length).toBe(2);
+    for (const l of lines) expect(l.length).toBeLessThanOrEqual(58);
+    const shown = lines.join(" ");
+    for (const flag of ["--lifecycle ready", "--priority high", "--parent feature/pdocs-work-board", "--status stable"])
+      expect(shown).toContain(flag);
+    expect(shown).toMatch(/^\$ pdocs set item\/anchor[a-z-]*…[a-z-]*case /);
+    expect(shown).not.toContain("anchor-link-encoding-and-case");
+  });
+
+  test("cuts no more of the ref than it must", () => {
+    const text = "$ pdocs set item/abcdefghijklmnopqrstuvwxyz --lifecycle dropped";
+    expect(commandLines(text, 43)).toEqual(["$ pdocs set item/abcdefghijklmnopqrstuvwxyz", "--lifecycle dropped"]);
+    // One column fewer: two characters of the slug make way for the ellipsis.
+    expect(commandLines(text, 42)).toEqual(["$ pdocs set item/abcdefghijkl…opqrstuvwxyz", "--lifecycle dropped"]);
+  });
+
+  test("a bar too narrow even for the flags cuts the end, as a last resort, and never more than two lines", () => {
+    const lines = commandLines(long, 20);
+    expect(lines.length).toBe(2);
+    for (const l of lines) expect(l.length).toBeLessThanOrEqual(20);
+    expect(lines[1]!.endsWith("…")).toBe(true);
+  });
+
+  test("the view carries the lines for the measured width, and the whole command beside them", () => {
+    const last: Last = { label: "ran", text: long, note: "", restore: null, effect: null, undoOf: "" };
+    expect(lastView(last, 70)).toMatchObject({ text: long, lines: commandLines(long, 70) });
+  });
+});
+
+describe("one write at a time, and a pause after it", () => {
+  test("a second write is refused while one is pending, and for 600 ms after it lands", () => {
+    expect(SETTLE_MS).toBe(600);
+    const first = gateTake(IDLE_GATE, 1000);
+    expect(first).not.toBeNull();
+    expect(gateTake(first!, 1001)).toBeNull();
+    expect(gateTake(first!, 99_999)).toBeNull(); // still pending, however long it takes
+    const landed = gateRelease(5000);
+    expect(gateBusy(landed, 5000)).toBe(true);
+    expect(gateTake(landed, 5500)).toBeNull();
+    expect(gateTake(landed, 5599)).toBeNull();
+    expect(gateBusy(landed, 5600)).toBe(false);
+    expect(gateTake(landed, 5600)).not.toBeNull();
+    expect(gateBusy(IDLE_GATE, 0)).toBe(false);
+  });
+});
+
+describe("the triage form store", () => {
+  const filled: TriageForm = { disp: "backlog", priority: "high", parent: "f1", reviewed: true, reason: "why" };
+
+  test("the inspector coming to an item gives it a form, with content not reviewed", () => {
+    expect(formsOnShow({}, null, "a")).toEqual({ a: emptyForm() });
+    const kept = formsOnShow({ a: filled }, "b", "a");
+    expect(kept.a).toEqual({ ...filled, reviewed: false });
+  });
+
+  test("coming back to the same item unticks it too; staying on it changes nothing", () => {
+    const forms = { a: filled };
+    expect(formsOnShow(forms, "a", "a")).toBe(forms);
+    const closed = formsOnShow(forms, "a", null);
+    expect(closed).toBe(forms);
+    expect(formsOnShow(closed, null, "a").a!.reviewed).toBe(false);
+  });
+
+  test("a field is set on one item's form only", () => {
+    const forms = formsOnShow(formsOnShow({}, null, "a"), "a", "b");
+    const next = withField(forms, "a", "reviewed", true);
+    expect(next.a!.reviewed).toBe(true);
+    expect(next.b).toBe(forms.b!);
+    expect(withField(forms, "zz", "priority", "high")).toBe(forms);
+  });
+
+  test("a form is dropped whole", () => {
+    expect(withoutForm({ a: filled, b: filled }, "a")).toEqual({ b: filled });
+    const forms = { a: filled };
+    expect(withoutForm(forms, "zz")).toBe(forms);
+  });
+});
+
+describe("what a write changes on the page", () => {
+  const s = tree();
+  const t = Object.values(s.board.groups).flat().find((i) => i.slug === "t")!;
+  const e = Object.values(s.board.groups).flat().find((i) => i.slug === "e")!;
+  const filled: TriageForm = { disp: "ready", priority: "high", parent: "f1", reviewed: true, reason: "" };
+  const start = (): Local => ({
+    state: { ...initialState(s), view: "cycle" },
+    decided: [],
+    forms: { t: filled, other: filled },
+    last: null,
+  });
+  const okAnswer = (command: string, restore: unknown = { kind: "restore", ref: "item/x", changes: [] }) =>
+    readWrite(200, { ok: true, data: { command, restore } });
+  const refusal = readWrite(409, { ok: false, error: { message: "no." } });
+
+  test("a triage decision that ran: Decided gains it, and its form is dropped", () => {
+    const next = afterSend(start(), okAnswer("pdocs set item/t --lifecycle ready"), triageIntent(t, filled));
+    expect(next.decided.map((d) => d.slug)).toEqual(["t"]);
+    expect(next.forms).toEqual({ other: filled });
+    expect(lastView(next.last, 0)).toMatchObject({ label: "ran", undo: true });
+  });
+
+  test("a bring in that ran joins Added just now", () => {
+    const next = afterSend(start(), okAnswer("pdocs set item/e --cycle c1"), bringIntent(e, "c1"));
+    expect(next.state.added).toEqual(["e"]);
+    expect(next.decided).toEqual([]);
+  });
+
+  test("a refusal applies no local effect: nothing decided, nothing added; the form stays but is unticked", () => {
+    const local = start();
+    const triage = afterSend(local, refusal, triageIntent(t, filled));
+    expect(triage.state).toBe(local.state);
+    expect(triage.decided).toBe(local.decided);
+    expect(triage.forms).toEqual({ t: { ...filled, reviewed: false }, other: filled });
+    expect(lastView(triage.last, 0)).toMatchObject({ label: "refused", undo: false });
+    const bring = afterSend(local, refusal, bringIntent(e, "c1"));
+    expect(bring.state).toBe(local.state);
+    expect(bring.forms).toBe(local.forms);
+  });
+
+  test("a refusal keeps the Undo of the write before it", () => {
+    const ranFirst = afterSend(start(), okAnswer("pdocs set item/e --cycle c1"), bringIntent(e, "c1"));
+    const then = afterSend(ranFirst, refusal, triageIntent(t, filled));
+    expect(undoBody(then.last)).toBe(undoBody(ranFirst.last));
+    expect(then.state.added).toEqual(["e"]);
+  });
+
+  test("an Undo that ran takes the decision back and drops the item's form, so it opens fresh", () => {
+    const decided = afterSend(start(), okAnswer("pdocs set item/t --lifecycle ready"), triageIntent(t, filled));
+    const again = { ...decided, forms: { ...decided.forms, t: filled } };
+    const undone = afterUndoSent(again, okAnswer("pdocs set item/t --lifecycle triage", null));
+    expect(undone.decided).toEqual([]);
+    expect(undone.forms).toEqual({ other: filled });
+    expect(lastView(undone.last, 0)).toMatchObject({ label: "undone with", undo: false });
+  });
+
+  test("an Undo of a bring in leaves Added just now; one that did not run changes nothing but the line", () => {
+    const brought = afterSend(start(), okAnswer("pdocs set item/e --cycle c1"), bringIntent(e, "c1"));
+    expect(afterUndoSent(brought, okAnswer("pdocs set item/e --unset cycle", null)).state.added).toEqual([]);
+    const failed = afterUndoSent(brought, readWrite(null, null));
+    expect(failed.state).toBe(brought.state);
+    expect(failed.decided).toBe(brought.decided);
+    expect(failed.forms).toBe(brought.forms);
+    expect(undoBody(failed.last)).toBe(undoBody(brought.last));
+    const gone = afterUndoSent(brought, refusal);
+    expect(gone.state).toBe(brought.state);
+    expect(undoBody(gone.last)).toBeNull();
+    const none = start();
+    expect(afterUndoSent(none, refusal)).toBe(none);
+  });
+});
+
+describe("where the keyboard goes after a write", () => {
+  const s = tree();
+  const c = ctx(s);
+
+  test("to the highlighted row, or the first row when none is highlighted", () => {
+    const cand = setTab({ ...initialState(s), view: "cycle" }, "cand");
+    expect(focusKey(cand, c)).toBe("i:e");
+    const onCycle: BoardState = { ...initialState(s), view: "cycle" };
+    expect(focusKey({ ...onCycle, sel: "i:b" }, c)).toBe("i:b");
+    expect(focusKey({ ...onCycle, sel: "i:gone" }, c)).toBe("i:a");
+    expect(focusKey({ ...initialState(s), view: "feature" }, c)).toBeNull();
+  });
+});
+
+describe("where a write lands", () => {
+  const s = tree();
+  const c = ctx(s);
+  const onCycle: BoardState = { ...initialState(s), view: "cycle" };
+
+  test("a brought-in item joins Added just now, and leaves it when taken out or undone", () => {
+    const brought = applied(onCycle, { kind: "bring", slug: "e" });
+    expect(brought.added).toEqual(["e"]);
+    expect(applied(brought, { kind: "take", slug: "e" }).added).toEqual([]);
+    expect(reverted(brought, { kind: "bring", slug: "e" }).added).toEqual([]);
+    expect(reverted(brought, { kind: "take", slug: "a" })).toBe(brought);
+    const triage = { kind: "triage", slug: "t", title: "T", label: "dropped" } as const;
+    expect(applied(onCycle, triage)).toBe(onCycle);
+    expect(reverted(onCycle, triage)).toBe(onCycle);
+  });
+
+  test("Added just now is drawn from the snapshot: the group appears once the item is in the cycle", () => {
+    const brought = applied(onCycle, { kind: "bring", slug: "e" });
+    expect(viewModel(brought, c).box.groups.some((g) => g.id === "added")).toBe(false);
+    const after = snapshot({
+      cycles: [["c1", "active", "stable"]],
+      entries: [entry({ slug: "e", lifecycle: "backlog", cycle: "c1" })],
+    });
+    const group = viewModel(brought, ctx(after)).box.groups[0]!;
+    expect(group).toMatchObject({ id: "added", label: "Added just now" });
+    expect(group.rows.map((r) => r.key)).toEqual(["i:e"]);
+  });
+
+  test("the flash goes to the row when it is in view, else to the tab it went to", () => {
+    const cand = setTab(onCycle, "cand");
+    expect(landing(cand, c, { kind: "bring", slug: "e" }, false)).toBe("i:e"); // still listed: the snapshot is old
+    expect(landing(onCycle, c, { kind: "bring", slug: "a" }, false)).toBe("i:a");
+    expect(landing(cand, c, { kind: "bring", slug: "a" }, false)).toBe("tab:in");
+    expect(landing(onCycle, c, { kind: "take", slug: "e" }, false)).toBe("tab:cand");
+    expect(landing(onCycle, c, { kind: "take", slug: "e" }, true)).toBe("tab:in");
+    expect(landing(cand, c, { kind: "bring", slug: "a" }, true)).toBe("tab:cand");
+    expect(landing({ ...initialState(s), view: "feature" }, c, { kind: "take", slug: "zz" }, false)).toBeNull();
+  });
+
+  test("a triage decision flashes Decided; its Undo flashes the row that came back", () => {
+    const triage = { kind: "triage", slug: "t", title: "T", label: "dropped" } as const;
+    const state: BoardState = { ...initialState(s), view: "triage" };
+    expect(landing(state, c, triage, false)).toBe("decided");
+    expect(landing(state, c, triage, true)).toBe("t:t");
+    expect(landing(onCycle, c, triage, false)).toBeNull();
+  });
+
+  test("Decided keeps one line per item, newest last, and Undo takes it out", () => {
+    const a = { kind: "triage", slug: "a", title: "A", label: "dropped" } as const;
+    const b = { kind: "triage", slug: "b", title: "B", label: "accepted to ready" } as const;
+    let list = withDecided(withDecided([], a), b);
+    expect(list.map((d) => d.slug)).toEqual(["a", "b"]);
+    list = withDecided(list, { ...a, label: "accepted to backlog" });
+    expect(list).toEqual([
+      { slug: "b", title: "B", label: "accepted to ready" },
+      { slug: "a", title: "A", label: "accepted to backlog" },
+    ]);
+    expect(withDecided(list, { kind: "bring", slug: "x" })).toBe(list);
+    expect(withoutDecided(list, "a").map((d) => d.slug)).toEqual(["b"]);
+  });
+});
+
+describe("the view model for the writes", () => {
+  const s = tree();
+  const c = ctx(s);
+  const decided = [
+    { slug: "x", title: "Title of x", label: "accepted to ready" },
+    { slug: "t", title: "Title of t", label: "dropped" },
+  ];
+
+  test("Triage counts what waits and what was decided, and lists the decided", () => {
+    const state: BoardState = { ...initialState(s), view: "triage" };
+    expect(viewModel(state, c).band.count).toBe("1 waiting");
+    expect(viewModel(state, c).triage.decided).toEqual([]);
+    const vm = viewModel(state, c, null, decided);
+    // `t` is still waiting in this snapshot, so it is not yet shown as decided.
+    expect(vm.triage.decided).toEqual([{ slug: "x", title: "Title of x", label: "accepted to ready" }]);
+    expect(vm.band.count).toBe("1 waiting · 1 decided");
+  });
+
+  test("the inspector on a waiting item carries the form; on anything else it does not", () => {
+    const vm = viewModel(pick({ ...initialState(s), view: "triage" }, "t:t"), c);
+    expect(vm.inspector).toMatchObject({ slug: "t", triage: true, bring: null, take: false, features: ["f1"] });
+    expect(viewModel(pick({ ...initialState(s), view: "cycle" }, "i:a"), c).inspector).toMatchObject({
+      slug: "a",
+      triage: false,
+      bring: null,
+      take: true,
+    });
+  });
+
+  test("a candidate's inspector names the cycle by its title; with no cycle there is nothing to bring into", () => {
+    const cand = pick(setTab({ ...initialState(s), view: "cycle" }, "cand"), "i:e");
+    const vm = viewModel(cand, c);
+    expect(vm.inspector).toMatchObject({
+      bring: "Bring into Title of c1",
+      bringTitle: "c1",
+      take: false,
+      triage: false,
+    });
+    expect(vm.cand.bring).toBe(true);
+    const none = viewModel({ ...cand, cycle: null }, c);
+    expect(none.inspector?.bring).toBeNull();
+    expect(none.cand.bring).toBe(false);
+  });
+});
+
+describe("the template and the writes", () => {
+  const html = readFileSync(join(import.meta.dir, "index.html"), "utf8");
+  const tag = (marker: string): string => html.match(new RegExp(`<[^>]*${marker}[^>]*>`))?.[0] ?? "";
+
+  test("every control that writes is disabled while a write is pending", () => {
+    const markers = ["data-apply", "data-bring-row", "data-bring", "data-take", "data-undo"];
+    // And every field of the form: a click meant for one item must not land on the next one's.
+    markers.push("data-priority", "data-parent", "data-reviewed", "data-reason");
+    for (const marker of markers) expect(tag(`${marker}(?![-\\w])`)).toContain(':disabled="busy"');
+    const segments = html.match(/<button[^>]*data-disp=[^>]*>/g) ?? [];
+    expect(segments.length).toBe(3);
+    for (const segment of segments) expect(segment).toContain(':disabled="busy"');
+  });
+
+  test("the handoff line has a row of its own, apart from the write bar", () => {
+    expect(tag("data-handoff-line")).not.toBe("");
+    expect(tag("data-handoff-line")).not.toContain("data-ran");
+  });
+
+  test("the disposition buttons are one named group", () => {
+    const group = tag("data-dispositions");
+    expect(group).toContain('role="group"');
+    expect(group).toContain("aria-label=");
+  });
+
+  test("the form's fields are fields, so no key typed in them is a shortcut", () => {
+    expect(tag("data-reason")).toStartWith("<input");
+    expect(tag("data-priority")).toStartWith("<select");
+    expect(tag("data-parent")).toStartWith("<select");
+    expect(tag("data-reviewed")).toStartWith("<input");
+  });
+});

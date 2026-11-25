@@ -316,9 +316,14 @@ describe("the two writes, against a fixture project", () => {
       { kind: "triage", ref: "item/settled-thing", lifecycle: "dropped" },
     ])
       expect((await write(body)).status).toBeWithin(400, 500);
-    const unknownCycle = await write({ kind: "membership", ref: "item/first-thing", cycle: "no-such-cycle" });
-    expect(unknownCycle.status).toBe(422);
-    expect(unknownCycle.body.error?.message).toContain("no-such-cycle");
+    // Membership the project's own state does not allow is refused before any set runs.
+    const unknownCycle = await write({ kind: "membership", ref: "item/settled-thing", cycle: "no-such-cycle" });
+    expect(unknownCycle.status).toBe(409);
+    expect(unknownCycle.body.error?.message).toBe("`no-such-cycle` is not a planned or active cycle.");
+    const waiting = await write({ kind: "membership", ref: "item/first-thing", cycle: "2026-11-a" });
+    expect(waiting.status).toBe(409);
+    expect(waiting.body.error?.message).toBe("`item/first-thing` is `triage`, not `backlog` or `ready`.");
+    expect((await write({ kind: "membership", ref: "item/settled-thing", cycle: null })).status).toBe(409);
     expect(gitStatus(root)).toBe("");
 
     // Accept to ready, with fields that were absent before.
@@ -376,21 +381,24 @@ describe("the two writes, against a fixture project", () => {
     expect(readFileSync(file, "utf8")).toBe(original);
 
     // Bring in, then Undo; then bring in, take out.
-    const bring = await write({ kind: "membership", ref: "item/first-thing", cycle: "2026-11-a" });
+    const settled = join(root, "docs/items/settled-thing.md");
+    const settledWas = readFileSync(settled, "utf8");
+    expect(settledWas).not.toMatch(/^cycle:/m);
+    const bring = await write({ kind: "membership", ref: "item/settled-thing", cycle: "2026-11-a" });
     expect(bring.status).toBe(200);
-    expect(readFileSync(file, "utf8")).toContain("cycle: 2026-11-a");
+    expect(readFileSync(settled, "utf8")).toContain("cycle: 2026-11-a");
     expect((await write(bring.body.data.restore)).status).toBe(200);
-    expect(readFileSync(file, "utf8")).toBe(original);
-    await write({ kind: "membership", ref: "item/first-thing", cycle: "2026-11-a" });
-    const out = await write({ kind: "membership", ref: "item/first-thing", cycle: null });
-    expect(out.body.data.command).toBe("pdocs set item/first-thing --unset cycle");
-    expect(readFileSync(file, "utf8")).toBe(original);
+    expect(readFileSync(settled, "utf8")).toBe(settledWas);
+    await write({ kind: "membership", ref: "item/settled-thing", cycle: "2026-11-a" });
+    const out = await write({ kind: "membership", ref: "item/settled-thing", cycle: null });
+    expect(out.body.data.command).toBe("pdocs set item/settled-thing --unset cycle");
+    expect(readFileSync(settled, "utf8")).toBe(settledWas);
 
     // The whole project is as it was: no changed file and no new one.
     expect(gitStatus(root)).toBe("");
     // Each write is one `pdocs set` in the log; the refusals spawned none.
     const log = readFileSync(o.log, "utf8");
-    expect(log.split("\n").filter((l) => l.includes(" spawn pdocs set ")).length).toBe(10);
+    expect(log.split("\n").filter((l) => l.includes(" spawn pdocs set ")).length).toBe(9);
     expect(o.log.startsWith(root)).toBe(false);
 
     board(root, state, "stop");

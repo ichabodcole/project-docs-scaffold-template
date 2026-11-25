@@ -131,8 +131,8 @@
               <span x-text="vm.band.box ? vm.band.box.noteLabel : ''"></span><span x-text="vm.band.box ? vm.band.box.note : ''"></span>
             </div>
             <div x-show="vm.view === 'cycle'" class="tabs" role="tablist" aria-label="This cycle's lists">
-              <button class="tab" role="tab" :aria-selected="vm.band.tab === 'in'" :class="vm.band.tab === 'in' && 'is-on'" data-tab="in" @click="setTab('in')">In this cycle<span class="count" x-text="vm.band.inCount || ''"></span></button>
-              <button class="tab" role="tab" :aria-selected="vm.band.tab === 'cand'" :class="vm.band.tab === 'cand' && 'is-on'" data-tab="cand" @click="setTab('cand')">Candidates<span class="count" x-text="vm.band.candCount || ''"></span></button>
+              <button class="tab" role="tab" :aria-selected="vm.band.tab === 'in'" :class="{ 'is-on': vm.band.tab === 'in', flash: flash === 'tab:in' }" data-tab="in" @click="setTab('in')">In this cycle<span class="count" x-text="vm.band.inCount || ''"></span></button>
+              <button class="tab" role="tab" :aria-selected="vm.band.tab === 'cand'" :class="{ 'is-on': vm.band.tab === 'cand', flash: flash === 'tab:cand' }" data-tab="cand" @click="setTab('cand')">Candidates<span class="count" x-text="vm.band.candCount || ''"></span></button>
             </div>
             <div x-show="vm.view !== 'cycle'" class="band-foot"></div>
           </div>
@@ -235,12 +235,26 @@
                 <div class="head"><span>Waiting</span><span class="count" x-text="vm.triage.rows.length"></span></div>
                 <div class="list">
                   <template x-for="r in vm.triage.rows" :key="r.key">
-                    <div class="line" :class="r.on && 'is-on'" :data-key="r.key" @click="pick(r.key)">
-                      <button class="row-title truncate grow" data-focus x-text="r.title"></button>
+                    <div class="line line-fold" :class="{ 'is-on': r.on, flash: flash === r.key }" :data-key="r.key" @click="pick(r.key)">
+                      <button class="row-title truncate grow" data-focus x-text="r.title" :title="r.title"></button>
                       <div class="meta meta-kind">
                         <span class="meta-text meta-nowrap"><span x-show="r.kind" x-text="r.kind"></span><span x-show="r.source" x-text="r.source"></span></span>
                       </div>
                       <span class="count line-date" x-text="r.filed"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <!-- Decided on this page since it loaded: folded, and not selectable. -->
+              <div x-show="vm.triage.decided.length" data-decided>
+                <button class="head head-button" :class="flash === 'decided' && 'flash'" data-decided-toggle @click="decidedOpen = !decidedOpen" :aria-expanded="decidedOpen">
+                  <span>Decided</span><span class="count" x-text="vm.triage.decided.length"></span><span class="count" x-text="decidedOpen ? 'Hide' : 'Show'"></span>
+                </button>
+                <div x-show="decidedOpen" class="list">
+                  <template x-for="d in vm.triage.decided" :key="d.slug">
+                    <div class="line is-static" :data-decided-row="d.slug">
+                      <div class="grow line-text truncate" x-text="d.title"></div>
+                      <span class="count truncate" x-text="d.label" :title="d.label"></span>
                     </div>
                   </template>
                 </div>
@@ -260,7 +274,7 @@
                   </button>
                   <div x-show="g.open" class="list">
                     <template x-for="r in g.rows" :key="r.key">
-                      <div class="row" :class="r.on && 'is-on'" :data-key="r.key" @click="pick(r.key)">
+                      <div class="row" :class="{ 'is-on': r.on, flash: flash === r.key }" :data-key="r.key" @click="pick(r.key)">
                         <div class="grow">
                           <button class="row-title" data-focus x-text="r.title"></button>
                           <div class="meta">
@@ -297,8 +311,8 @@
               <div x-show="!vm.cand.rows.length" class="muted empty">No candidate matches.</div>
               <div class="list list-plain">
                 <template x-for="r in vm.cand.rows" :key="r.key">
-                  <div class="line" :class="r.on && 'is-on'" :data-key="r.key" @click="pick(r.key)">
-                    <button class="row-title truncate grow" data-focus x-text="r.title"></button>
+                  <div class="line line-fold" :class="{ 'is-on': r.on, flash: flash === r.key }" :data-key="r.key" @click="pick(r.key)">
+                    <button class="row-title truncate grow" data-focus x-text="r.title" :title="r.title"></button>
                     <div class="meta meta-cand">
                       <span class="meta-text meta-nowrap">
                         <template x-for="(p, n) in r.meta.parts" :key="n">
@@ -307,6 +321,8 @@
                       </span>
                       <template x-for="p in r.meta.pills" :key="p.kind"><span class="pill" :class="'pill-' + p.kind" x-text="p.text"></span></template>
                     </div>
+                    <!-- The one write this list exists for, on hover and focus. -->
+                    <button x-show="vm.cand.bring" class="btn btn-outline on-hover" data-bring-row :disabled="busy" @click.stop="bringRow(r.key)">Bring in</button>
                   </div>
                 </template>
               </div>
@@ -341,15 +357,25 @@
           </div>
         </div>
 
-        <!-- One line under the list: a line to copy, or why the board is not
-             updating. The command a write ran, and its Undo, will sit here. -->
+        <!-- Under the list, each on a row of its own: why the board is not
+             updating; a line to say to the agent; and the last write, with the
+             command that ran and its Undo, or the refusal. -->
         <div x-show="problem && !vm.blocked && ready" class="ran" data-stale aria-live="polite">
           <span class="ran-label">not updating:</span>
-          <span class="ran-text truncate" x-text="problem ? problem.message : ''" :title="problem ? problem.message : ''"></span>
+          <span class="ran-plain truncate" x-text="problem ? problem.message : ''" :title="problem ? problem.message : ''"></span>
         </div>
-        <div x-show="last" class="ran" data-ran>
-          <span class="ran-label" x-text="last ? last.label : ''"></span>
-          <span class="ran-text mono truncate" data-ran-text x-text="last ? last.text : ''"></span>
+        <div x-show="handoffText" class="ran" data-handoff-line>
+          <span class="ran-label">opens in Scriptorium:</span>
+          <span class="ran-plain mono truncate" data-handoff-text x-text="handoffText" :title="handoffText"></span>
+        </div>
+        <div x-show="last" class="ran" :class="{ 'is-refused': last && last.refused, 'is-bare': last && last.bare }" data-ran aria-live="polite">
+          <span class="ran-label" data-ran-label x-text="last ? last.label : ''"></span>
+          <!-- The command, on two lines at most. A copy takes the whole of it. -->
+          <span x-show="last && !last.bare" class="ran-text mono" data-ran-text :title="last ? last.text : ''" @copy="copyCommand($event)">
+            <template x-for="(line, n) in last ? last.lines : []" :key="n"><span class="ran-line" x-text="line"></span></template>
+          </span>
+          <span x-show="last && last.note" class="ran-note truncate" data-ran-note x-text="last ? last.note : ''" :title="last ? last.note : ''"></span>
+          <button x-show="last && last.undo" class="btn-text btn-strong ran-undo" data-undo :disabled="busy" @click="undo()" x-text="last ? last.undoLabel : ''" :title="last ? last.undoTitle : ''"></button>
         </div>
       </main>
 
@@ -407,6 +433,43 @@
                 <button class="btn-text" data-copy @click="copy()" :title="vm.inspector.tip" x-text="copied ? 'Copied' : 'Copy path'"></button>
                 <button class="btn-text" data-handoff @click="handoff()">Open in Scriptorium</button>
               </div>
+
+              <!-- the two membership writes, each with its key -->
+              <div class="writes rule-top" x-show="vm.inspector.bring || vm.inspector.take" data-membership>
+                <button x-show="vm.inspector.bring" class="btn btn-primary btn-fit" data-bring :disabled="busy" @click="bringIn()" x-text="vm.inspector.bring" :title="vm.inspector.bringTitle"></button>
+                <span x-show="vm.inspector.bring" class="key">B</span>
+                <button x-show="vm.inspector.take" class="btn btn-outline" data-take :disabled="busy" @click="takeOut()">Take out of its cycle</button>
+                <span x-show="vm.inspector.take" class="key">T</span>
+              </div>
+
+              <!-- triage: the decision form, under the item's details -->
+              <template x-if="vm.inspector.triage && form">
+                <div class="form rule-top" data-triage>
+                  <div class="form-segs" role="group" aria-label="Decision" data-dispositions>
+                    <button class="seg" :class="form.disp === 'backlog' && 'is-on'" :aria-pressed="form.disp === 'backlog'" data-disp="backlog" :disabled="busy" @click="setForm('disp', 'backlog')">Accept to backlog</button>
+                    <button class="seg" :class="form.disp === 'ready' && 'is-on'" :aria-pressed="form.disp === 'ready'" data-disp="ready" :disabled="busy" @click="setForm('disp', 'ready')">Accept to ready</button>
+                    <button class="seg" :class="form.disp === 'drop' && 'is-on'" :aria-pressed="form.disp === 'drop'" data-disp="drop" :disabled="busy" @click="setForm('disp', 'drop')">Drop</button>
+                  </div>
+                  <div class="form-row" x-show="form.disp !== 'drop'">
+                    <select class="select" data-priority aria-label="Priority" :disabled="busy" @change="setForm('priority', $event.target.value)">
+                      <option value="" :selected="form.priority === ''">no priority</option>
+                      <option value="high" :selected="form.priority === 'high'">high</option>
+                      <option value="medium" :selected="form.priority === 'medium'">medium</option>
+                      <option value="low" :selected="form.priority === 'low'">low</option>
+                    </select>
+                    <select class="select grow" data-parent aria-label="Parent feature" :disabled="busy" @change="setForm('parent', $event.target.value)">
+                      <option value="" :selected="form.parent === ''">no parent feature</option>
+                      <template x-for="f in vm.inspector.features" :key="f"><option :value="f" :selected="form.parent === f" x-text="f"></option></template>
+                    </select>
+                  </div>
+                  <label class="check" x-show="form.disp !== 'drop'">
+                    <input type="checkbox" data-reviewed :checked="form.reviewed" :disabled="busy" @change="setForm('reviewed', $event.target.checked)" />
+                    <span>Content reviewed</span>
+                  </label>
+                  <input x-show="form.disp === 'drop'" class="input input-wide" data-reason placeholder="Reason for dropping" aria-label="Reason for dropping" :value="form.reason" :disabled="busy" @input="setForm('reason', $event.target.value)" />
+                  <div><button class="btn btn-primary" data-apply :disabled="busy" @click="apply()">Apply</button></div>
+                </div>
+              </template>
             </div>
           </div>
         </template>
