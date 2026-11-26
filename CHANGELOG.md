@@ -1,5 +1,17 @@
 # Changelog
 
+## [9.5.0](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.4.2...project-docs-scaffold-template-v9.5.0) (2026-11-26)
+
+
+### Features
+
+* **pdocs:** ask before archiving a feature's finished items ([d85eecb](https://github.com/ichabodcole/project-docs-scaffold-template/commit/d85eecb5e3a938b61624ab925639ad1db890577d))
+* **pdocs:** carry the board's fields on view entries ([1769c1f](https://github.com/ichabodcole/project-docs-scaffold-template/commit/1769c1fc55ed3d32fbc2a6749f03d67b56151fb8))
+* **work-board:** add the board server and the pdocs bridge ([4579c7c](https://github.com/ichabodcole/project-docs-scaffold-template/commit/4579c7c7c75ddd6dd52010ff212231d52ad7667b))
+* **work-board:** add the board's model and selection rules ([0d68052](https://github.com/ichabodcole/project-docs-scaffold-template/commit/0d68052d5bb9263b1a620dc163f562e26695c864))
+* **work-board:** add the shell and the five pages, read-only ([062d7cb](https://github.com/ichabodcole/project-docs-scaffold-template/commit/062d7cb9c72a06405f63c19e3cbba6159c6d0a19))
+* **work-board:** add the two writes, with Undo ([c9ea316](https://github.com/ichabodcole/project-docs-scaffold-template/commit/c9ea3167ce2039124a1237efced4760c38ec4ab0))
+
 ## [9.4.2](https://github.com/ichabodcole/project-docs-scaffold-template/compare/project-docs-scaffold-template-v9.4.1...project-docs-scaffold-template-v9.4.2) (2026-11-20)
 
 
