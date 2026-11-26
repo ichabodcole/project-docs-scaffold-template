@@ -87,3 +87,4 @@ placeholder line into a real cycle.
 - feature/research-items-parent-feature (landed 2026-11-24)
 - feature/board-shell-and-five-pages (landed 2026-11-24)
 - feature/board-two-writes-with-undo (landed 2026-11-25)
+- feature/work-board-skill-and-packaging (open)

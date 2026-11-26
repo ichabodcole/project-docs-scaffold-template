@@ -4,7 +4,7 @@ title: Re-pin the newest migration to the release with the board's fields
 description:
   The v3.0 migration installs the scaffold release whose pdocs view carries the
   board's fields, so update-project-docs is the fix the board names.
-status: draft
+status: stable
 lifecycle: backlog
 id: 01a1f70e-fdb2-71df-9713-22cf757e2749
 kind: chore
