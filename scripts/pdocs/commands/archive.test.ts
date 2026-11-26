@@ -496,3 +496,83 @@ describe("pdocs archive cycle/<slug>", () => {
     expect(p.exitCode).toBe(0);
   });
 });
+
+// #210: `pdocs archive` is the one command every archive runs through, so it
+// says when what it moved was a finished item a question comes before.
+describe("archive: a finished item a question comes before", () => {
+  const RESEARCH = "0190f501-0000-7000-8000-00000000000f";
+  const BUILD = "0190f502-0000-7000-8000-000000000010";
+
+  function withResearch(): string {
+    const root = tree();
+    const write = (rel: string, body: string) => {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), body);
+    };
+    write("docs/items/held.md", item(DONE.replace(/a$/, "1"), "done", "# Held", { parent: "feature/b" }));
+    write("docs/items/asked.md", item(RESEARCH, "done", "# Asked", { kind: "research" }));
+    return root;
+  }
+
+  test("a done item under an open feature: it moves, and the output says so", () => {
+    const root = withResearch();
+    const r = archive(root, "item/held");
+    expect(r.code).toBe(ExitCode.Success);
+    const { data } = JSON.parse(r.stdout);
+    expect(data.moved).toBe(true);
+    expect(existsSync(join(root, "docs/items/_archive/held.md"))).toBe(true);
+    expect(data.advisories).toHaveLength(1);
+    const a = data.advisories[0];
+    expect(a.id).toBe("archive-question");
+    expect(a.reason).toBe("open-parent");
+    expect(a.parent).toBe("feature/b");
+    expect(a.refs).toEqual(["item/held"]);
+    expect(a.message).toContain("feature/b");
+    expect(a.message).toContain("still `active`");
+    expect(a.action).toContain("hold it until its feature is done");
+  });
+
+  test("finished research with no build item: the action says what to file", () => {
+    const root = withResearch();
+    const r = run(["archive", "item/asked", "--root", root, "--format", "text"]);
+    expect(r.code).toBe(ExitCode.Success);
+    expect(r.stdout).toContain("advisory (archive-question): ");
+    expect(r.stdout).toContain("finished research");
+    expect(r.stdout).toContain("--parent feature/<slug> --from item/asked");
+  });
+
+  test("research with a build item under the same feature is its feature's question only", () => {
+    const root = withResearch();
+    writeFileSync(
+      join(root, "docs/items/asked.md"),
+      item(RESEARCH, "done", "# Asked", { kind: "research", parent: "feature/b" })
+    );
+    writeFileSync(join(root, "docs/items/build.md"), item(BUILD, "backlog", "# Build", { parent: "feature/b" }));
+    const { data } = JSON.parse(archive(root, "item/asked").stdout);
+    expect(data.advisories.map((a: { reason: string }) => a.reason)).toEqual(["open-parent"]);
+  });
+
+  test("research whose parent names no feature still moves, and is asked about", () => {
+    const root = withResearch();
+    writeFileSync(
+      join(root, "docs/items/asked.md"),
+      item(RESEARCH, "done", "# Asked", { kind: "research", parent: "feature/missing" })
+    );
+    const r = archive(root, "item/asked");
+    expect(r.code).toBe(ExitCode.Success);
+    const { data } = JSON.parse(r.stdout);
+    expect(data.moved).toBe(true);
+    expect(data.advisories[0].reason).toBe("research-no-open-build");
+    expect(data.advisories[0].parent).toBe("feature/missing");
+    expect(data.advisories[0].message).toContain("its parent, feature/missing, names no feature in this tree");
+    expect(data.advisories[0].message).not.toContain("has none");
+  });
+
+  test("nothing to say: an item with no open parent, a feature, a second run", () => {
+    const root = withResearch();
+    expect(JSON.parse(archive(root, "item/done-one").stdout).data.advisories).toEqual([]);
+    expect(JSON.parse(archive(root, "feature/a").stdout).data.advisories).toEqual([]);
+    archive(root, "item/held");
+    expect(JSON.parse(archive(root, "item/held").stdout).data.advisories).toEqual([]);
+  });
+});

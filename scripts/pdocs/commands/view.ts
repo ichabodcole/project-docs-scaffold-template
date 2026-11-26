@@ -11,6 +11,9 @@ import {
   adviseArchive,
   adviseReview,
   advisoryLines,
+  type ArchiveQuestion,
+  archiveQuestionLines,
+  archiveQuestions,
   combineAdvisories,
   reviewItems,
   reviewViolations,
@@ -45,6 +48,7 @@ export interface ViewEntry {
   slug: string;
   id: string | null;
   title: string | null;
+  description: string | null;
   /** OKF `status` as written: `draft`, `stable`, `deprecated`; `null` when missing. */
   status: string | null;
   kind: string | null;
@@ -59,7 +63,22 @@ export interface ViewEntry {
   releasedIn: string | null;
   archived: boolean;
   date: string | null;
+  /** What spawned it: a reference, as written. */
+  from: string | null;
+  /** Where intake from outside the tree came from, as written. */
+  source: string | null;
+  /** A cycle's `appetite`; `null` on an item or a feature. */
+  appetite: string | null;
+  /** A cycle's `started` date, as written; `null` on an item or a feature. */
+  started: string | null;
 }
+
+/**
+ * A frontmatter field as an entry carries it: `null` when missing or empty. The parser has
+ * already unquoted the value, so it is not unquoted again: a second pass would strip the
+ * quotes from prose that begins and ends with a quoted phrase.
+ */
+const field = (e: WorkEntity, key: string): string | null => e.fields.get(key)?.trim() || null;
 
 const entry = (e: WorkEntity): ViewEntry => ({
   path: e.path,
@@ -67,6 +86,7 @@ const entry = (e: WorkEntity): ViewEntry => ({
   slug: e.slug,
   id: e.id,
   title: e.title,
+  description: field(e, "description"),
   status: e.status,
   kind: e.kind,
   lifecycle: e.lifecycle,
@@ -80,6 +100,10 @@ const entry = (e: WorkEntity): ViewEntry => ({
   releasedIn: e.releasedIn,
   archived: e.archived,
   date: e.date,
+  from: e.from,
+  source: field(e, "source"),
+  appetite: e.entity === "cycle" ? field(e, "appetite") : null,
+  started: e.entity === "cycle" ? field(e, "started") : null,
 });
 
 /**
@@ -329,6 +353,9 @@ export const view: Command = {
           view: "board",
           reviewMode: ctx.config.checks.workItemReview.mode,
           groups: Object.fromEntries(GROUPS.map((g) => [g, board[g].map(entry)])),
+          // The `done` items a question comes before, whatever the threshold:
+          // under a feature that is still open, or research with no build item filed.
+          askBeforeArchive: archiveQuestions(model),
         };
         break;
       }
@@ -411,6 +438,7 @@ function printText(data: Record<string, unknown>, ids: string[]): void {
       console.log(`${group} (${items.length})`);
       for (const e of items) console.log(line(e, ids, width));
     }
+    for (const l of archiveQuestionLines((data.askBeforeArchive ?? []) as ArchiveQuestion[])) console.log(l);
     return;
   }
   const head = (data.feature ?? data.cycle) as ViewEntry | undefined;

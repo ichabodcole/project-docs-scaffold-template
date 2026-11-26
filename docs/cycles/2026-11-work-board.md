@@ -5,8 +5,8 @@ description:
   Build the pdocs work board at its in-between level, and keep a feature's
   finished items in view until the feature is done.
 tags: [pdocs, work-board]
-status: draft
-lifecycle: planned
+status: stable
+lifecycle: active
 started: 2026-11-19
 appetite:
   "Stop when the board opens on this repository's own docs with its five pages,
@@ -35,23 +35,23 @@ Inbox row afterwards, so the two go together.
   Cycle, Feature) and two writes (a triage decision, cycle membership), each one
   `pdocs set` call. Seven items, one per phase of its
   [plan](../features/pdocs-work-board/plan.md):
-  - [item/view-entries-carry-board-fields](../items/view-entries-carry-board-fields.md)
+  - [item/view-entries-carry-board-fields](../items/view-entries-carry-board-fields/item.md)
     — the five fields the board needs in `pdocs view` JSON. First.
-  - [item/board-server-and-pdocs-bridge](../items/board-server-and-pdocs-bridge.md)
+  - [item/board-server-and-pdocs-bridge](../items/board-server-and-pdocs-bridge/item.md)
     and
-    [item/board-model-and-selection-rules](../items/board-model-and-selection-rules.md)
+    [item/board-model-and-selection-rules](../items/board-model-and-selection-rules/item.md)
     — the server and the pure model. They share no files and can run side by
     side, in separate worktrees.
-  - [item/board-shell-and-five-pages](../items/board-shell-and-five-pages.md),
+  - [item/board-shell-and-five-pages](../items/board-shell-and-five-pages/item.md),
     then
-    [item/board-two-writes-with-undo](../items/board-two-writes-with-undo.md),
+    [item/board-two-writes-with-undo](../items/board-two-writes-with-undo/item.md),
     then
     [item/work-board-skill-and-packaging](../items/work-board-skill-and-packaging.md)
     — they share files and run in that order.
   - [item/repin-migration-for-board-fields](../items/repin-migration-for-board-fields.md)
     — after a scaffold release carries the fields. It ships in the same plugin
     release as the skill.
-- **[item/research-items-parent-feature](../items/research-items-parent-feature.md)**
+- **[item/research-items-parent-feature](../items/research-items-parent-feature/item.md)**
   (#210) — a done item under an open feature stays in view until the feature is
   done.
 
@@ -80,3 +80,11 @@ One line per branch, appended by `init-branch` as it opens them:
 lands. Leave this section empty until the first branch; do not carry a
 placeholder line into a real cycle.
 -->
+
+- feature/view-entries-carry-board-fields (landed 2026-11-19)
+- feature/board-model-and-selection-rules (landed 2026-11-19)
+- feature/board-server-and-pdocs-bridge (landed 2026-11-19)
+- feature/research-items-parent-feature (landed 2026-11-24)
+- feature/board-shell-and-five-pages (landed 2026-11-24)
+- feature/board-two-writes-with-undo (landed 2026-11-25)
+- feature/work-board-skill-and-packaging (open)

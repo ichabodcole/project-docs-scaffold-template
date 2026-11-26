@@ -191,6 +191,22 @@ exceptions to closing the item:
 - **The work item of the current branch** (the branch is named after its slug)
   is closed by `finalize-branch` when the branch lands: leave it as it is.
 
+**If the write-up recommends a build**, the research item is not archived until
+a build item is filed under the same feature, and you cannot ask the user which
+feature or which items. So:
+
+- When the item has a `parent` feature and your prompt names the build items to
+  file, file each one:
+  `pdocs new item <build-slug> --kind task --parent feature/<feature> --from item/<slug> --title "…" --description "…" --by "<your model>"`.
+  They start in `triage`.
+- Otherwise file nothing. In your report, list the build items you would file,
+  one line each, and say that the research item needs a parent feature and those
+  items before it is archived (`pdocs view board --format json` lists it in
+  `data.askBeforeArchive` as `research-no-open-build` until then; an older
+  `pdocs` has no such key, so say it without citing the list).
+
+A write-up that recommends no build needs neither.
+
 End your report by naming which row or case above applied, and its follow-up.
 
 Put gathered evidence (a benchmark, an audit) in the item's `reports/`:

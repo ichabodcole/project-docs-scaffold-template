@@ -423,15 +423,22 @@ threshold puts it in one advisory: `id` `archive-threshold`, the `threshold`,
 `refs` (every type's candidates), and per type the `count`, `lifecycles`,
 `remediation` and `candidates` (the references `pdocs archive` takes, oldest
 first). Text output ends with the same message and its next step, two lines,
-never one per entity. The view still exits 0 and lists exactly what it would
-without it. Because `portfolio` already leaves finished work out, its message
-says archiving moves them out of the live folders, not that it shortens the
-view.
+never one per entity. `view board` also carries `askBeforeArchive`, whatever the
+threshold: the `done` items to ask about before archiving, each with a `ref`, a
+`parent` and a `reason` — `open-parent` (its feature is still open) or
+`research-no-open-build` (research with no build item under its feature). The
+advisory repeats the list. The view still exits 0 and lists exactly what it
+would without it. Because `portfolio` already leaves finished work out, its
+message says archiving moves them out of the live folders, not that it shortens
+the view.
 
 **Acting on one.** The advisory is not permission to archive. Offer the user a
 concrete selection from `refs` — say, every finished item older than the current
-cycle — and run `pdocs archive <ref>` only for what they agree to. A selection
-they already authorized in this conversation counts; don't ask twice.
+cycle — and run `pdocs archive <ref>` only for what they agree to. Leave the
+items in `askBeforeArchive` out of that selection: each is archived only on the
+user's answer to its own question, even when they already authorized the rest
+(`sweep-project`, The Advisory Path). `pdocs archive` attaches an
+`archive-question` advisory to its output when it has just moved one.
 
 **A bad setting never takes a view down.** An invalid
 `checks.archive.threshold`, or an unknown key in `checks.archive`, makes `check`

@@ -5,8 +5,8 @@ description:
   pdocs view JSON gains description, from and source on every entry, and
   appetite and started on a cycle entry, so a caller outside the repository
   needs nothing else.
-status: draft
-lifecycle: ready
+status: stable
+lifecycle: done
 id: 01a1f70e-fb86-7237-931e-c756125fe373
 kind: task
 generated: { by: claude-fable-5-2, at: 2026-11-19 }
@@ -24,22 +24,22 @@ every entry, and `appetite` and `started` on a cycle entry. Add them to
 the change into the payload. The change is additive: nothing is renamed or
 removed, and text output does not change.
 
-This is Phase 1 of the [plan](../features/pdocs-work-board/plan.md). If #210
+This is Phase 1 of the [plan](../../features/pdocs-work-board/plan.md). If #210
 also changes `view.ts` or `advisories.ts`, this lands first.
 
 ## Definition of done
 
-- [ ] `pdocs view board --features --all`, `view backlog`, `view feature`,
+- [x] `pdocs view board --features --all`, `view backlog`, `view feature`,
       `view cycle` and `view unreviewed` carry `description`, `from` and
       `source` on every entry with `--json`, and `null` where a field is absent.
-- [ ] A cycle entry carries `appetite` and `started`; an item or feature entry
+- [x] A cycle entry carries `appetite` and `started`; an item or feature entry
       has them as `null`.
-- [ ] The new tests in `scripts/pdocs/commands/view.test.ts` fail with the
+- [x] The new tests in `scripts/pdocs/commands/view.test.ts` fail with the
       `entry` change reverted.
-- [ ] The payload copy matches (`npm run check:mirror`), and a project generated
+- [x] The payload copy matches (`npm run check:mirror`), and a project generated
       with cookiecutter shows the new keys on a new item.
-- [ ] `npm run check` passes.
+- [x] `npm run check` passes.
 
 ## Related Documents
 
-- [pdocs Work Board Implementation Plan](../features/pdocs-work-board/plan.md)
+- [pdocs Work Board Implementation Plan](../../features/pdocs-work-board/plan.md)

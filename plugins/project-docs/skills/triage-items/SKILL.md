@@ -60,7 +60,9 @@ pdocs view backlog --format text          # everything unstarted, triage include
 
 If the board ends with an archive advisory (`archive-threshold`), finish the
 triage first, then mention it once and offer the `sweep-project` advisory path.
-Never archive as part of triage.
+Never archive as part of triage. A last line `ask before archiving (N): …` is
+not that advisory: it counts finished items for whoever archives, and triage
+does nothing with it.
 
 An item that duplicates one already on the board is a drop candidate. So is one
 that duplicates a phase in a feature's `plan.md`, when the feature has one
@@ -91,13 +93,28 @@ For each cluster, propose where it lives:
 
 - **An existing feature** — its items get `parent: feature/<slug>`.
 - **A new feature** — when two or more items share an outcome worth shaping and
-  no feature holds it. Name it (kebab-case, 2–4 words). It is created in Step 4
-  with `pdocs new feature`, which starts it in `backlog`.
+  no feature holds it. The one exception is a research item that expects a
+  build, below. Name it (kebab-case, 2–4 words). It is created in Step 4 with
+  `pdocs new feature`, which starts it in `backlog`.
 - **No feature** — a standalone item. Most small fixes are, and that is fine.
+
+**Decide the `parent` of every research item that has none.** Research that
+leads to a build needs a feature to hold the build's items. For each
+`kind: research` item in `triage` whose `parent` is empty, take the first that
+applies, and write which one, and why, in its row:
+
+1. **An existing feature fits** — its answer would feed that feature. Propose
+   it. This comes first, whatever the research expects.
+2. **No feature fits, and the research recommends a build or expects one** (it
+   asks how or whether to build something). Propose a new feature named for that
+   outcome. This is the only case where one item is enough for a new feature.
+3. **Neither** — its question cannot end in a build (why did this fail, what
+   does this code do). Propose no parent, and state that reason.
 
 **Don't force groupings.** Items that don't cluster stay standalone. Prefer a
 few cohesive features over many thin ones; a bad grouping costs more
-coordination than it saves.
+coordination than it saves. Case 2 above is not a thin feature: the build's
+items will join it.
 
 Then the **parallelism** of what is being accepted. For each cluster, list the
 files and directories it touches, and say which clusters can run at the same
@@ -123,7 +140,7 @@ For every item in `triage`, propose:
 | `lifecycle`  | `backlog` · `ready` · `dropped`      | `ready` when its definition of done is settled and nothing blocks it (an item with a `blocked_by` that is not yet all `done` stays `backlog`; `finalize-branch` moves it to `ready` when its last blocker lands); `backlog` when accepted but not yet shaped; `dropped` when it duplicates something, is already done, or is not worth doing |
 | `priority`   | `urgent` · `high` · `medium` · `low` | Optional. Leave it off rather than guess                                                                                                                                                                                                                                                                                                     |
 | `assignee`   | an agent, a seat, or a name          | Only when the item is routed to a particular agent or seat. Usually left off                                                                                                                                                                                                                                                                 |
-| `parent`     | `feature/<slug>`                     | From Step 2                                                                                                                                                                                                                                                                                                                                  |
+| `parent`     | `feature/<slug>`                     | From Step 2. For a research item, a feature, or "none" with the reason"                                                                                                                                                                                                                                                                      |
 | `blocked_by` | item ids                             | From Step 2's dependencies, when one is already visible at triage. Shaping adds any found later (the item template lists shaping as its writer; triage writes it too)                                                                                                                                                                        |
 
 Give a one-line reason for each — especially for a drop. **Dropping is not

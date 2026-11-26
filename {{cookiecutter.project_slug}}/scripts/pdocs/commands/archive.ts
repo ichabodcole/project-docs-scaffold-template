@@ -10,11 +10,23 @@
 // `blocked_by`, `from` or `cycle:` pointing at it still resolves.
 //
 // Archiving what is already archived is a no-op that succeeds.
+//
+// It never refuses a finished item, but it says when the one it moved was a
+// `done` item under a feature that is still open, or finished research with no
+// build item under its feature (`advisories`, `archive-question`): every archive runs
+// through here, whatever asked for it.
 
 import { join, relative } from "node:path";
 import type { Command, Invocation } from "../cli.ts";
 import { ExitCode, UsageError, printEnvelope } from "../envelope.ts";
 import { CYCLE_ENDS, CYCLES_FOLDER, FEATURES_FOLDER, ITEMS_FOLDER } from "../lint/registry.ts";
+import {
+  type Advisory,
+  advisoryLines,
+  archiveQuestion,
+  archiveQuestionAdvisory,
+  parentFeature,
+} from "../advisories.ts";
 import { moveAndRewrite } from "../move.ts";
 import { ARCHIVE, collectWork, resolveRef } from "../work.ts";
 
@@ -25,6 +37,12 @@ export interface ArchiveData {
   moved: boolean;
   rewritten: string[];
   links: number;
+  /**
+   * The `archive-question` advisory when the item just moved was one a
+   * question comes before: `done` under a feature that is still open, or
+   * finished research with no build item under its feature. Empty otherwise.
+   */
+  advisories: Advisory[];
 }
 
 export const archive: Command = {
@@ -41,7 +59,8 @@ export const archive: Command = {
         "archive needs a feature, an item or a cycle — `pdocs archive item/<slug>`."
       );
 
-    const e = resolveRef(collectWork(ctx), ref, ["feature", "item", "cycle"]);
+    const model = collectWork(ctx);
+    const e = resolveRef(model, ref, ["feature", "item", "cycle"]);
     const owner =
       e.entity === "feature" ? FEATURES_FOLDER : e.entity === "item" ? ITEMS_FOLDER : CYCLES_FOLDER;
     const here = e.folder ?? e.docsPath;
@@ -49,7 +68,7 @@ export const archive: Command = {
     let data: ArchiveData;
     if (e.archived) {
       const path = relative(ctx.repoRoot, join(ctx.docsRoot, here));
-      data = { from: path, to: path, moved: false, rewritten: [], links: 0 };
+      data = { from: path, to: path, moved: false, rewritten: [], links: 0, advisories: [] };
     } else {
       // A cycle ends `closed` or `abandoned`; a feature or an item ends in the
       // `completed` or `cancelled` group (`done`, `dropped`).
@@ -76,8 +95,15 @@ export const archive: Command = {
         );
       const from = join(ctx.docsRoot, here);
       const to = join(ctx.docsRoot, owner, ARCHIVE, here.slice(owner.length + 1));
+      // Read before the move: afterwards the item is archived and asks nothing.
+      const question = archiveQuestion(model, e);
+      const parent = question ? parentFeature(model, question.parent) : null;
       const r = moveAndRewrite(ctx, from, to);
-      data = { ...r, moved: true };
+      data = {
+        ...r,
+        moved: true,
+        advisories: question ? [archiveQuestionAdvisory(question, parent)] : [],
+      };
     }
 
     if (format === "json") printEnvelope("archive", data);
@@ -85,6 +111,7 @@ export const archive: Command = {
     else {
       console.log(`${data.from} -> ${data.to}`);
       console.log(`  rewrote ${data.links} link(s) in ${data.rewritten.length} file(s)`);
+      for (const l of advisoryLines(data.advisories)) console.log(l);
     }
     return ExitCode.Success;
   },

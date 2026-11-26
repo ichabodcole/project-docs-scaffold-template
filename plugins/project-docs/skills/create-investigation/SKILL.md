@@ -256,9 +256,39 @@ or monitor):
    in the write-up. Leave the item's `status` as it is: a `draft` item closes
    `draft`, and the review audit picks it up.
 
-3. If it recommends building something, offer the next step: a feature
-   (`create-project`, or `generate-proposal` from this write-up) or work items
-   filed with `--from item/<slug>`.
+3. If it recommends building something, file the build under a feature now. The
+   research item is not archived until a build item is filed under the same
+   feature; research that recommends no build needs none of this.
+   - Agree the feature with the user: the item's `parent` if it has one, an
+     existing feature the build belongs to
+     (`pdocs find --type feature --format text`), or a new one: the
+     `create-project` skill, or `generate-proposal` from this write-up, or
+     `pdocs new feature <feature> --from docs/items/<slug>/write-up.md --title "…" --description "…" --by "<your model or name>"`
+     when the user wants only the folder for now.
+   - Show the user the build items you propose, one line each. File each one
+     they agree to. It starts in `triage`; add `--lifecycle backlog` only for
+     one they said they want done:
+
+     ```bash
+     pdocs new item <build-slug> --kind task --parent feature/<feature> \
+       --from item/<slug> --title "…" --description "…" --by "<your model or name>"
+     ```
+
+     Write each one's body from the write-up: what to build, and a definition of
+     done. Delete its template's leading comment block.
+
+   - Put the research item under the same feature:
+     `pdocs set item/<slug> --parent feature/<feature>`.
+     - Check `data.askBeforeArchive` in `pdocs view board --format json`: the
+       entry for `item/<slug>` now has `reason: open-parent`, not
+       `research-no-open-build`. It stays listed while its feature is open. If
+       `data` has no `askBeforeArchive` key (an older `pdocs`), or the item is
+       not `done` yet, check instead that `pdocs view feature <feature>` lists
+       the research item and at least one item that is not research, and stop
+       there.
+
+   If the user declines to file the build now, say that the item stays listed as
+   `research-no-open-build`, and leave it unarchived.
 
 If the research runs on a branch that `finalize-branch` lands, that skill sets
 the item `done` instead; don't set it twice.

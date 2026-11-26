@@ -14,6 +14,14 @@
 // greater — is named; a view gets ONE advisory naming every such type, never a
 // warning per entity.
 //
+// Not every finished item is free to archive. A `done` item whose `parent`
+// feature is still open drops off the board when it moves, and finished
+// research with no build item filed under its feature loses the build it
+// recommended.
+// `archiveQuestions` names both; `view board` lists them whatever the
+// threshold (`askBeforeArchive`), the archive advisory repeats them, and
+// `pdocs archive` says so when it has just moved one.
+//
 // A setting a view reads that is INVALID never takes the view down: the view
 // lists as usual and carries a `bad-config` advisory, naming the key, the value
 // and what was expected, in place of the advice it could not compute.
@@ -26,7 +34,7 @@ import {
 } from "./docs-lint/config.ts";
 import { CYCLE_ENDS } from "./lint/registry.ts";
 import type { Ctx } from "./lint/rules.ts";
-import type { WorkEntity, WorkModel } from "./work.ts";
+import { type WorkEntity, type WorkModel, isCurrentFeature } from "./work.ts";
 
 /** What every advisory carries. */
 export interface Advisory {
@@ -110,6 +118,177 @@ export interface ArchiveAdvisory extends Advisory {
   threshold: number;
   /** Every type over the threshold, in the order the view asked for them. */
   types: ArchiveTypeCount[];
+  /**
+   * The item candidates a question comes before, oldest first; empty when
+   * there are none. They stay in `refs` and `candidates`: the answer is the
+   * user's.
+   */
+  askBeforeArchive: ArchiveQuestion[];
+}
+
+/** Why a finished item is not simply archived. */
+export type ArchiveQuestionReason = "open-parent" | "research-no-open-build";
+
+/** One unarchived `done` item to ask about before it is archived. */
+export interface ArchiveQuestion {
+  /** `item/<slug>`. */
+  ref: string;
+  /**
+   * `open-parent`: its feature is not `done` or `dropped`, so archiving takes
+   * it off the board while the feature is still in play. Archive it now, or
+   * hold it until the feature is done.
+   * `research-no-open-build`: `kind: research`, and no build item was filed
+   * under its feature — it has no parent, or no item that is not research
+   * and not `dropped` shares it. The id is kept from when only an open item
+   * counted; a build item that is `done`, or archived, counts as filed.
+   */
+  reason: ArchiveQuestionReason;
+  /** The item's `parent`, as written; `null` when it has none. */
+  parent: string | null;
+}
+
+/** The feature a stored `parent:` names, when exactly one does. */
+export function parentFeature(model: WorkModel, parent: string | null): WorkEntity | null {
+  const m = parent === null ? null : /^feature\/(.+)$/.exec(parent);
+  const found = m ? (model.featuresBySlug.get(m[1] as string) ?? []) : [];
+  return found.length === 1 ? (found[0] as WorkEntity) : null;
+}
+
+/**
+ * The question that comes before archiving `item`, or `null` when there is
+ * none: it is not an unarchived `done` item, or its feature is finished too.
+ * A `dropped` item never has one. Research is asked about its build first:
+ * only with a build item filed beside it is it the feature's question.
+ */
+export function archiveQuestion(model: WorkModel, item: WorkEntity): ArchiveQuestion | null {
+  if (item.entity !== "item" || item.archived || item.lifecycle !== "done") return null;
+  const feature = parentFeature(model, item.parent);
+  const open = feature !== null && isCurrentFeature(feature);
+  // A parent that is finished, or archived, settles both questions.
+  if (feature !== null && !open) return null;
+  const q = (reason: ArchiveQuestionReason): ArchiveQuestion => ({
+    ref: `item/${item.slug}`,
+    reason,
+    parent: item.parent,
+  });
+  if (item.kind === "research") {
+    const build =
+      open &&
+      // Filed is enough: a build that is finished, or archived, was still
+      // filed, and asking for it again would file a duplicate.
+      model.items.some(
+        (e) =>
+          e !== item &&
+          e.parent === item.parent &&
+          e.kind !== "research" &&
+          e.lifecycle !== "dropped"
+      );
+    if (!build) return q("research-no-open-build");
+  }
+  return open ? q("open-parent") : null;
+}
+
+/** Every question in the tree, oldest first: what `view board` lists. */
+export function archiveQuestions(model: WorkModel): ArchiveQuestion[] {
+  return [...model.items]
+    .sort(oldestFirst)
+    .flatMap((e) => archiveQuestion(model, e) ?? []);
+}
+
+/** `2 under an open feature, 1 finished research with no build item`. */
+function questionTally(questions: readonly ArchiveQuestion[]): string {
+  const n = (r: ArchiveQuestionReason) => questions.filter((q) => q.reason === r).length;
+  const held = n("open-parent");
+  const research = n("research-no-open-build");
+  return [
+    held > 0 ? `${held} under an open feature` : "",
+    research > 0 ? `${research} finished research with no build item` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+/**
+ * The text line `view board` ends its groups with, or none. Counts only: a
+ * long list of references on one line is unreadable, and JSON carries them.
+ */
+export function archiveQuestionLines(questions: readonly ArchiveQuestion[]): string[] {
+  if (questions.length === 0) return [];
+  return [
+    `ask before archiving (${questions.length}): ${questionTally(questions)}; --format json lists them`,
+  ];
+}
+
+/** What to ask, per reason. One wording for the advisory and for `pdocs archive`. */
+const ASK: Record<ArchiveQuestionReason, string> = {
+  "open-parent": "archive it now, or hold it until its feature is done",
+  "research-no-open-build":
+    "does its write-up recommend a build? If it does, file the build items under a feature first " +
+    "(`pdocs new item <slug> --kind task --parent feature/<slug> --from item/<research-slug>`, and " +
+    "`pdocs set item/<research-slug> --parent feature/<slug>`); if it recommends none, archive it",
+};
+
+/** `2 belong to …; 1 is finished research …`, for the reasons present. */
+function questionCounts(questions: readonly ArchiveQuestion[]): string {
+  const n = (r: ArchiveQuestionReason) => questions.filter((q) => q.reason === r).length;
+  const held = n("open-parent");
+  const research = n("research-no-open-build");
+  return [
+    held > 0 ? `${held} ${held === 1 ? "belongs" : "belong"} to a feature that is still open` : "",
+    research > 0 ? `${research} ${research === 1 ? "is" : "are"} finished research with no build item under a feature` : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
+
+/** The archive-question advisory's `id`: what `pdocs archive` attaches. */
+export const ARCHIVE_QUESTION_ADVISORY = "archive-question";
+
+export interface ArchiveQuestionAdvisory extends Advisory, Omit<ArchiveQuestion, "ref"> {
+  id: typeof ARCHIVE_QUESTION_ADVISORY;
+  /** The one item just archived. */
+  refs: string[];
+}
+
+/**
+ * What `pdocs archive` says after moving an item `question` names. The move
+ * has happened: the message says what is now the case, the action what is
+ * still worth doing. Pure. `feature` is the one its `parent` names, or `null`
+ * when it has no parent or the parent names no feature.
+ */
+export function archiveQuestionAdvisory(
+  question: ArchiveQuestion,
+  feature: Pick<WorkEntity, "lifecycle"> | null
+): ArchiveQuestionAdvisory {
+  const { ref, reason, parent } = question;
+  const slug = (parent ?? "").replace(/^feature\//, "");
+  const base = { id: ARCHIVE_QUESTION_ADVISORY as typeof ARCHIVE_QUESTION_ADVISORY, refs: [ref], reason, parent };
+  if (reason === "open-parent")
+    return {
+      ...base,
+      message:
+        `${ref} is archived while its feature, ${parent}, is still \`${feature?.lifecycle ?? "(none)"}\`. ` +
+        `\`pdocs view board\` no longer lists it; \`pdocs view feature ${slug}\` and \`pdocs view board --all\` do.`,
+      action:
+        "Tell the user. Before archiving another finished item of an open feature, ask: " +
+        `${ASK["open-parent"]}. \`pdocs view board --format json\` lists them in \`askBeforeArchive\`.`,
+    };
+  return {
+    ...base,
+    message:
+      `${ref} is finished research, archived with no build item under a feature ` +
+      `(${
+        parent === null
+          ? "it has no parent"
+          : feature === null
+            ? `its parent, ${parent}, names no feature in this tree`
+            : `its parent, ${parent}, has none`
+      }).`,
+    action:
+      "Read its write-up's recommendation. If it recommends a build, file the build items under a feature now: " +
+      `\`pdocs new item <slug> --kind task --parent feature/<slug> --from ${ref}\`, and ` +
+      `\`pdocs set ${ref} --parent feature/<slug>\`. If it recommends none, nothing more is needed.`,
+  };
 }
 
 const list: Record<Entity, (m: WorkModel) => WorkEntity[]> = {
@@ -166,6 +345,8 @@ export function archiveAdvisory(
   }
   if (over.length === 0) return null;
   const counts = joined(over.map((t) => plural(t.type, t.count)));
+  const ask = over.some((t) => t.type === "item") ? archiveQuestions(model) : [];
+  const reasons = [...new Set(ask.map((q) => q.reason))];
   return {
     id: ARCHIVE_ADVISORY,
     setting: ARCHIVE_SETTING,
@@ -173,12 +354,19 @@ export function archiveAdvisory(
     message:
       `${counts} ${over.length === 1 && over[0]!.count === 1 ? "is" : "are"} not archived, ` +
       `over the threshold of ${threshold} (${ARCHIVE_SETTING}). ` +
-      `${wording.why ?? ARCHIVE_WHY_LIVE} Archiving preserves their records and updates links.`,
+      `${wording.why ?? ARCHIVE_WHY_LIVE} Archiving preserves their records and updates links.` +
+      (ask.length > 0 ? ` Of the items, ${questionCounts(ask)}.` : ""),
     action:
       "Offer the user a concrete selection, then run `pdocs archive <ref>` for each one they agree to; " +
-      "`--format json` lists the candidates. Nothing is archived automatically.",
+      "`--format json` lists the candidates. Nothing is archived automatically." +
+      (ask.length > 0
+        ? " Leave the items in `askBeforeArchive` out of that selection and ask about each: " +
+          reasons.map((r) => `for \`${r}\`, ${ASK[r]}`).join("; ") +
+          "."
+        : ""),
     refs: over.flatMap((t) => t.candidates),
     types: over,
+    askBeforeArchive: ask,
   };
 }
 

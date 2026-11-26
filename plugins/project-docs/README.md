@@ -280,6 +280,27 @@ fields, not folders. Projects still on the older layout (`projects/`,
 
 ## Version History
 
+### 4.7.0 (2026-11-19)
+
+**A finished item is asked about before it is archived, when its feature is
+still open or it is research with no build filed (#210).** The skills read the
+list from `pdocs view board --format json` (`data.askBeforeArchive`), which
+needs a scaffold release that carries it; on an older `pdocs`, `sweep-project`
+applies the two rules by hand.
+
+- **`sweep-project`** takes those items out of an archive selection and asks
+  about each: a `done` item under an open feature is archived now or held until
+  the feature is done; finished research that recommends a build is not archived
+  until the build is filed under a feature. The same check runs for a single
+  item, and for a batch with no archive advisory. Sweeping a feature offers the
+  items held for it.
+- **`create-investigation`** files the build items under a feature, and puts the
+  research item under the same feature, when it closes research that recommends
+  a build. The **`investigator`** agent files them when its prompt names them,
+  and otherwise reports what is missing.
+- **`triage-items`** proposes a parent feature for every research item that has
+  none.
+
 ### 4.6.0 (2026-11-17)
 
 **`project-summary` runs in zsh and on an 8.x tree.** Both changes alter what

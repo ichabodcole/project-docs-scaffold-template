@@ -6,13 +6,14 @@ description:
   pdocs check fixes adopters reported in November.
 tags: [pdocs, research]
 status: stable
-lifecycle: active
+lifecycle: closed
 started: 2026-11-17
 appetite:
   Stop when both write-ups reach a recommendation and the three check fixes ship
   in a scaffold release.
 after: []
 generated: { by: claude-fable-5-2, at: 2026-11-17 }
+closed: 2026-11-19
 ---
 
 # Check fixes and the board and touchpoint research
@@ -59,7 +60,24 @@ this one: most of the projects it serves have already migrated.
 
 ## Outcome
 
-_Written at close, not before — and for an `abandoned` cycle too._
+Closed 2026-11-19. The appetite was met: both write-ups reached a
+recommendation, and the three check fixes shipped in scaffold 9.4.2.
+
+- **Shipped.** Scaffold 9.4.2 carries the fixes for #207, #208 and #209. Plugin
+  project-docs 4.6.0 carries the project-summary fix. CI runs on Bun 1.4.4.
+- **Research.** The board write-up recommended a local board over `pdocs` JSON.
+  The touchpoint write-up recommended an advisory on `pdocs new item`, with the
+  filing skills as a second layer.
+- **Beyond the scope.** The mockups were built in this cycle too, and layout D
+  was chosen. The [work board](../features/pdocs-work-board/feature.md) has a
+  plan, a test plan and seven items, in
+  [the next cycle](./2026-11-work-board.md).
+- **Carried over.**
+  [item/ci-migration-test-git-hang-cause](../items/ci-migration-test-git-hang-cause/item.md)
+  moved to the next cycle still `active`. Its last box needs ten clean CI runs
+  in a row on Bun 1.4.4, and fewer than ten have run.
+- **Not done.** The v3.0 migration still pins scaffold 9.4.1, so an adopter who
+  migrates does not get the three fixes yet.
 
 ## Sessions
 

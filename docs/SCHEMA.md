@@ -551,6 +551,30 @@ archive advisory has `id: "archive-threshold"`, `setting`, `threshold`, `refs`
 exits 0. It reports; the calling workflow offers the user a concrete selection
 and archives only what they agree to.
 
+**Some finished items are asked about first.** In JSON, `view board` always
+carries `askBeforeArchive`, whatever the threshold: the unarchived `done` items
+that are not simply archived, oldest first, empty when there are none. Each
+entry has the item's `ref`, its `parent` as written (or `null`) and a `reason`:
+
+| `reason`                 | The item is                                                                                                                                                                            | Ask the user                                                                                                             |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `open-parent`            | `done`, under a feature that is not `done` or `dropped`. Archived, it leaves `view board` while its feature is still there                                                             | Archive it now, or hold it until the feature is done                                                                     |
+| `research-no-open-build` | `done` research with no build item under its feature: it has no parent, or no item under its open parent is a build item (not research, not `dropped`). A finished parent asks nothing | Does its write-up recommend a build? If so, file the build items under a feature before archiving it; if not, archive it |
+
+The id is kept for compatibility; the build item need not be open. Research with
+a build item filed under the same feature, in any state but `dropped`, archived
+or not, is `open-parent`. A `dropped` item is never listed. In text the board
+ends its groups with one line of counts when there are any, and names no item:
+`ask before archiving (14): 5 under an open feature, 9 finished research with no build item; --format json lists them`.
+The archive advisory repeats the list as its own `askBeforeArchive` when it
+names items, counts both reasons in its `message`, and its `action` says to
+leave those items out of the selection and ask about each. They stay in `refs`
+and `candidates`: the answer is the user's.
+
+`pdocs archive` never refuses a finished item. When the item it moved was one of
+these, its output carries one advisory, `archive-question`, with the item in
+`refs`, the `reason` and the `parent`; its `data.advisories` is empty otherwise.
+
 Set the threshold in `.project-docs.json`, beside `lint`:
 
 ```json
